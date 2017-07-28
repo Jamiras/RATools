@@ -4,6 +4,8 @@ using System.Linq;
 using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Internal;
+using Jamiras.IO.Serialization;
+using System.IO;
 
 namespace RATools.Parser
 {
@@ -20,7 +22,21 @@ namespace RATools.Parser
         private TinyDictionary<string, ExpressionDefinition> _globalVariables;
         private List<Achievement> _achievements;
 
-        public bool Parse(Tokenizer input)
+        public bool Parse(Tokenizer input, string outputDirectory)
+        {
+            if (!Parse(input))
+                return false;
+
+            foreach (var achievement in _achievements)
+                achievement.IsDifferentThanPublished = achievement.IsDifferentThanLocal = true;
+
+            MergePublished(outputDirectory);
+
+
+            return true;
+        }
+
+        private bool Parse(Tokenizer input)
         {
             var tokenizer = new PositionalTokenizer(input);
             do
@@ -70,7 +86,47 @@ namespace RATools.Parser
                 tokenizer.SkipWhitespace();
             } while (tokenizer.NextChar != '\0');
 
-            return false;
+            return true;
+        }
+
+        private void MergePublished(string outputDirectory)
+        {
+            var fileName = Path.Combine(outputDirectory, GameId + ".txt");
+            if (!File.Exists(fileName))
+                return;
+
+            using (var stream = File.OpenRead(fileName))
+            {
+                var publishedData = new JsonObject(stream);
+                var publishedAchievements = publishedData.GetField("Achievements");
+                foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
+                {
+                    var title = publishedAchievement.GetField("Title").StringValue;
+                    var achievement = _achievements.FirstOrDefault(a => a.Title == title);
+                    if (achievement == null)
+                        continue;
+
+                    achievement.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                    achievement.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
+
+                    if (achievement.Points != publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault())
+                    {
+                        achievement.IsDifferentThanPublished = true;
+                    }
+                    else if (achievement.Description != publishedAchievement.GetField("Description").StringValue)
+                    {
+                        achievement.IsDifferentThanPublished = true;
+                    }
+                    else
+                    {
+                        var requirementsString = publishedAchievement.GetField("MemAddr").StringValue;
+                        var cheev = new Achievement();
+                        cheev.ParseRequirements(requirementsString);
+
+                        achievement.IsDifferentThanPublished = cheev.AreRequirementsSame(achievement);
+                    }
+                }
+            }
         }
 
         internal static void SkipWhitespace(PositionalTokenizer tokenizer)

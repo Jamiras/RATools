@@ -54,7 +54,7 @@ namespace RATools.ViewModels
                 using (var stream = File.OpenRead(vm.FileNames[0]))
                 {
                     var parser = new AchievementScriptParser();
-                    if (parser.Parse(Tokenizer.CreateTokenizer(stream)))
+                    if (parser.Parse(Tokenizer.CreateTokenizer(stream), RACacheDirectory))
                     {
                     }
                 }
