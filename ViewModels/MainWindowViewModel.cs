@@ -5,6 +5,9 @@ using Jamiras.IO;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using RATools.Parser;
+using Jamiras.DataModels;
+using RATools.Data;
+using System.Collections.Generic;
 
 namespace RATools.ViewModels
 {
@@ -54,11 +57,23 @@ namespace RATools.ViewModels
                 using (var stream = File.OpenRead(vm.FileNames[0]))
                 {
                     var parser = new AchievementScriptInterpreter();
-                    if (parser.Run(Tokenizer.CreateTokenizer(stream), RACacheDirectory))
+                    if (!parser.Run(Tokenizer.CreateTokenizer(stream), RACacheDirectory))
                     {
+                        MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
+                    }
+                    else
+                    {
+                        Achievements = parser.Achievements;
                     }
                 }
             }
+        }
+
+        public static readonly ModelProperty AchievementsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Achievements", typeof(IEnumerable<Achievement>), null);
+        public IEnumerable<Achievement> Achievements
+        {
+            get { return (IEnumerable<Achievement>)GetValue(AchievementsProperty); }
+            private set { SetValue(AchievementsProperty, value); }
         }
     }
 }

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace RATools.Data
@@ -26,11 +25,6 @@ namespace RATools.Data
         public IEnumerable<Requirement> CoreRequirements { get; internal set; }
         public IEnumerable<IEnumerable<Requirement>> AlternateRequirements { get; internal set; }
 
-        internal void ParseRequirements(string requirementsString)
-        {
-            throw new NotImplementedException();
-        }
-
         public bool AreRequirementsSame(Achievement achievement)
         {
             if (!AreRequirementsSame(CoreRequirements, achievement.CoreRequirements))
@@ -38,7 +32,7 @@ namespace RATools.Data
 
             var enum1 = AlternateRequirements.GetEnumerator();
             var enum2 = achievement.AlternateRequirements.GetEnumerator();
-            while (!enum1.MoveNext())
+            while (enum1.MoveNext())
             {
                 if (!enum2.MoveNext())
                     return false;

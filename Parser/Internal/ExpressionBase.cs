@@ -373,26 +373,6 @@ namespace RATools.Parser.Internal
         }
     }
 
-    public enum ExpressionOperator
-    {
-        None = 0,
-        FunctionCall,
-        Return,
-        Assign,
-        Add,
-        Subtract,
-        Multiply,
-        Not,
-        Equal,
-        NotEqual,
-        GreaterThan,
-        GreaterThanOrEqual,
-        LessThan,
-        LessThanOrEqual,
-        And,
-        Or,
-    }
-
     public enum ExpressionType
     {
         None = 0,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Jamiras.Components;
@@ -16,7 +17,18 @@ namespace RATools.Parser
             _achievements = new List<Achievement>();
         }
 
+        public IEnumerable<Achievement> Achievements
+        {
+            get { return _achievements; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Achievement> _achievements;
+
+        public IEnumerable<Achievement> LocalAchievements
+        {
+            get { return _localAchievements.Achievements; }
+        }
+        private LocalAchievements _localAchievements;
 
         public string ErrorMessage { get; private set; }
 
@@ -32,6 +44,7 @@ namespace RATools.Parser
 
             MergePublished(outputDirectory);
 
+            MergeLocal(outputDirectory);
 
             return true;
         }
@@ -434,85 +447,6 @@ namespace RATools.Parser
             return EvaluationError(functionCall, "unsupported function within achievement");
         }
 
-        private bool EvaluateExpression(ExpressionBase expression, TinyDictionary<string, ExpressionBase> variables, out ExpressionBase operand)
-        {
-            operand = null;
-
-            //switch (expression.Operator)
-            //{
-            //    case ExpressionOperator.FunctionCall:
-            //        var func = _functions.FirstOrDefault(f => f.Name == expression.Identifier);
-            //        if (func != null)
-            //        {
-            //            var parameters = new TinyDictionary<string, ExpressionBase>();
-            //            if (!GetParameters(parameters, func, expression, variables))
-            //                return false;
-
-            //            foreach (var cmd in func.Expressions)
-            //            {
-            //                if (!EvaluateExpression(cmd, parameters, out operand))
-            //                    return false;
-            //            }
-
-            //            return true;
-            //        }
-
-            //        var fieldSize = GetMemoryLookupFunctionSize(expression.Identifier);
-            //        if (fieldSize != FieldSize.None)
-            //        {
-            //            ExpressionBase address;
-            //            if (!EvaluateExpression(expression.Parameters[0], variables, out address))
-            //                return false;
-
-            //            operand = new ExpressionBase { Operator = ExpressionOperator.FunctionCall, Identifier = expression.Identifier };
-            //            operand.Parameters.Add(address);
-            //            return true;
-            //        }
-
-            //        return EvaluationError(expression, "unknown function");
-
-            //    case ExpressionOperator.Return:
-            //        return EvaluateExpression(expression.Operand, variables, out operand);
-
-            //    case ExpressionOperator.None:
-            //        operand = expression;
-            //        return true;
-
-            //    case ExpressionOperator.Equal:
-            //    case ExpressionOperator.NotEqual:
-            //    case ExpressionOperator.LessThan:
-            //    case ExpressionOperator.LessThanOrEqual:
-            //    case ExpressionOperator.GreaterThan:
-            //    case ExpressionOperator.GreaterThanOrEqual:
-            //        // cannot evaluate logic here - it will be evaluated in EvaluateAchievementExpression, just evaluate variables
-            //        ExpressionBase right;
-            //        if (!EvaluateExpression(expression.Operand, variables, out right))
-            //            return false;
-
-            //        ExpressionBase left = GetLeftExpression(expression);
-            //        if (!EvaluateVariables(left, variables, out left))
-            //            return false;
-
-            //        operand = new ExpressionBase { Operator = expression.Operator, Operand = right };
-            //        if (left.Operator == ExpressionOperator.None)
-            //            operand.Identifier = left.Identifier;
-            //        else
-            //            operand.Parameters.Add(left);
-
-            //        return true;
-            //}
-
-            return EvaluateVariables(expression, variables, out operand);
-        }
-
-        //private ExpressionBase GetLeftExpression(ExpressionBase expression)
-        //{
-        //    if (String.IsNullOrEmpty(expression.Identifier))
-        //        return expression.Parameters[0];
-
-        //    return new ExpressionBase { Identifier = expression.Identifier };
-        //}
-
         private FieldSize GetMemoryLookupFunctionSize(string name)
         {
             switch (name)
@@ -591,118 +525,6 @@ namespace RATools.Parser
             return innerScope;
         }
 
-        private bool EvaluateVariables(ExpressionBase expression, TinyDictionary<string, ExpressionBase> variables, out ExpressionBase result)
-        {
-            result = null;
-
-            //var identifier = expression.Identifier;
-            //if (!String.IsNullOrEmpty(identifier) && (Char.IsLetter(identifier[0]) || identifier[0] == '_'))
-            //{
-            //    ExpressionBase variableDefinition;
-            //    if (variables.TryGetValue(identifier, out variableDefinition))
-            //    {
-            //        if (variableDefinition.Operator != ExpressionOperator.None)
-            //        {
-            //            if (!EvaluateVariables(variableDefinition, variables, out variableDefinition))
-            //                return false;
-            //        }
-
-            //        if (expression.Operand == null)
-            //        {
-            //            result = variableDefinition;
-            //            return true;
-            //        }
-                    
-            //        if (variableDefinition.Operator != ExpressionOperator.None)
-            //        {
-            //            result = new ExpressionBase { Operator = expression.Operator, Operand = expression.Operand };
-            //            result.Parameters.Add(variableDefinition);
-            //            return true;
-            //        }
-
-            //        identifier = variableDefinition.Identifier;
-            //        expression = new ExpressionBase { Identifier = identifier, Operator = expression.Operator, Operand = expression.Operand };
-            //    }
-            //}
-
-            //ExpressionBase right;
-            //uint iLeft, iRight;
-
-            //switch (expression.Operator)
-            //{
-            //    case ExpressionOperator.Add:
-            //        if (!EvaluateVariables(expression.Operand, variables, out right))
-            //            return false;
-
-            //        if (identifier.Length > 0 && identifier[0] == '"')
-            //        {
-            //            if (right.Identifier.Length > 0 && right.Identifier[0] == '"')
-            //                identifier += right.Identifier.Substring(1);
-            //            else
-            //                identifier += right.Identifier;
-
-            //            result = new ExpressionBase { Identifier = identifier };
-            //            return true;
-            //        }
-
-            //        if (right.Identifier.Length > 0 && right.Identifier[0] == '"')
-            //        {
-            //            identifier = '\"' + identifier + right.Identifier.Substring(1);
-            //            result = new ExpressionBase { Identifier = identifier };
-            //            return true;
-            //        }
-
-            //        iLeft = ParseNumber(identifier);
-            //        iRight = ParseNumber(right.Identifier);
-            //        result = new ExpressionBase { Identifier = (iLeft + iRight).ToString() };
-            //        return true;
-
-            //    case ExpressionOperator.Multiply:
-            //        if (!EvaluateVariables(expression.Operand, variables, out right))
-            //            return false;
-
-            //        iLeft = ParseNumber(identifier);
-            //        iRight = ParseNumber(right.Identifier);
-            //        result = new ExpressionBase { Identifier = (iLeft * iRight).ToString() };
-            //        return true;
-
-            //    case ExpressionOperator.FunctionCall:
-            //        if (expression.Parameters.Count > 0)
-            //        {
-            //            var newParameters = new List<ExpressionBase>();
-            //            bool parametersModified = false;
-            //            foreach (var parameter in expression.Parameters)
-            //            {
-            //                ExpressionBase newParameter;
-            //                if (!EvaluateVariables(parameter, variables, out newParameter))
-            //                    return false;
-
-            //                newParameters.Add(newParameter);
-            //                if (!ReferenceEquals(newParameter, parameter))
-            //                    parametersModified = true;
-            //            }
-
-            //            if (parametersModified)
-            //            {
-            //                result = new ExpressionBase { Identifier = expression.Identifier, Operator = ExpressionOperator.FunctionCall };
-            //                result.Parameters.AddRange(newParameters);
-            //                return true;
-            //            }
-            //        }
-
-            //        result = expression;
-            //        return true;
-
-            //    case ExpressionOperator.And:
-            //    case ExpressionOperator.Or:
-            //        result = expression;
-            //        return true;
-            //}
-
-            result = expression;
-            return true;
-        }
-
         private bool EvaluationError(ExpressionBase expression, string message)
         {
             ErrorMessage = String.Format("{0}:{1} {2}", expression.Line, expression.Column, message);
@@ -745,12 +567,32 @@ namespace RATools.Parser
                     else
                     {
                         var requirementsString = publishedAchievement.GetField("MemAddr").StringValue;
-                        var cheev = new Achievement();
-                        cheev.ParseRequirements(requirementsString);
+                        var cheev = new AchievementBuilder();
+                        cheev.ParseRequirements(Tokenizer.CreateTokenizer(requirementsString));
 
-                        achievement.IsDifferentThanPublished = cheev.AreRequirementsSame(achievement);
+                        achievement.IsDifferentThanPublished = cheev.ToAchievement().AreRequirementsSame(achievement);
                     }
                 }
+            }
+        }
+
+        private void MergeLocal(string outputDirectory)
+        {
+            var fileName = Path.Combine(outputDirectory, GameId + "-User.txt");
+            _localAchievements = new LocalAchievements(fileName);
+
+            foreach (var achievement in _achievements)
+            {
+                var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
+                if (localAchievement == null)
+                    continue;
+
+                if (achievement.Points != localAchievement.Points)
+                    achievement.IsDifferentThanLocal = true;
+                else if (achievement.Description != localAchievement.Description)
+                    achievement.IsDifferentThanLocal = true;
+                else
+                    achievement.IsDifferentThanLocal = achievement.AreRequirementsSame(localAchievement);
             }
         }
     }

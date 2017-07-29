@@ -68,6 +68,7 @@
     <Compile Include="Parser\Internal\VariableExpression.cs" />
     <Compile Include="Parser\Internal\ExpressionBase.cs" />
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
+    <Compile Include="Parser\LocalAchievements.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
