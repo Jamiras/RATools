@@ -53,11 +53,21 @@
     <Compile Include="Data\Achievement.cs" />
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Requirement.cs" />
-    <Compile Include="Parser\AchievementScriptParser.cs" />
+    <Compile Include="Parser\AchievementScriptInterpreter.cs" />
     <Compile Include="Parser\AchievementBuilder.cs" />
-    <Compile Include="Parser\Internal\ExpressionDefinition.cs" />
-    <Compile Include="Parser\Internal\FunctionDefinition.cs" />
-    <Compile Include="Parser\Internal\StringReference.cs" />
+    <Compile Include="Parser\Internal\AssignmentExpression.cs" />
+    <Compile Include="Parser\Internal\ConditionalExpression.cs" />
+    <Compile Include="Parser\Internal\ComparisonExpression.cs" />
+    <Compile Include="Parser\Internal\InterpreterScope.cs" />
+    <Compile Include="Parser\Internal\ReturnExpression.cs" />
+    <Compile Include="Parser\Internal\IntegerConstantExpression.cs" />
+    <Compile Include="Parser\Internal\StringConstantExpression.cs" />
+    <Compile Include="Parser\Internal\ParseErrorExpression.cs" />
+    <Compile Include="Parser\Internal\FunctionCallExpression.cs" />
+    <Compile Include="Parser\Internal\MathematicExpression.cs" />
+    <Compile Include="Parser\Internal\VariableExpression.cs" />
+    <Compile Include="Parser\Internal\ExpressionBase.cs" />
+    <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>

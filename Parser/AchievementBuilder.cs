@@ -5,7 +5,7 @@ using RATools.Data;
 
 namespace RATools.Parser.Internal
 {
-    [DebuggerDisplay("{Achievement.Title}")]
+    [DebuggerDisplay("{Title} Core:{_core.Count} Alts:{_alts.Count}")]
     public class AchievementBuilder
     {
         public AchievementBuilder()
