@@ -24,15 +24,14 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Achievement> _achievements;
 
-        public IEnumerable<Achievement> LocalAchievements
-        {
-            get { return _localAchievements.Achievements; }
-        }
-        private LocalAchievements _localAchievements;
+        internal LocalAchievements LocalAchievements { get; private set; }
 
         public string ErrorMessage { get; private set; }
 
         public int GameId { get; private set; }
+        public string GameTitle { get; private set; }
+        public int PublishedAchievementCount { get; private set; }
+        public int PublishedAchievementPoints { get; private set; }
 
         public bool Run(Tokenizer input, string outputDirectory)
         {
@@ -436,11 +435,45 @@ namespace RATools.Parser
 
             if (functionCall.FunctionName == "never")
             {
+                var temp = new AchievementBuilder();
+                if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
+                    return false;
+
+                var temp2 = temp.ToAchievement();
+                if (temp2.AlternateRequirements.Any())
+                {
+                    if (temp2.CoreRequirements.Any())
+                        return EvaluationError(functionCall.Parameters.First(), "never does not support &&'d conditions");
+                    foreach (var alt in temp2.AlternateRequirements)
+                    {
+                        if (alt.Count() > 1)
+                            return EvaluationError(functionCall.Parameters.First(), "never does not support &&'d conditions");
+                        
+                        var requirement = alt.First();
+                        requirement.Type = RequirementType.ResetIf;
+                        achievement.Current.Add(requirement);
+                    }
+                }
+                else
+                {
+                    if (temp2.CoreRequirements.Count() > 1)
+                        return EvaluationError(functionCall.Parameters.First(), "never does not support &&'d conditions");
+
+                    var requirement = temp2.CoreRequirements.First();
+                    requirement.Type = RequirementType.ResetIf;
+                    achievement.Current.Add(requirement);
+                }
+
+                return true;
+            }
+
+            if (functionCall.FunctionName == "prev")
+            {
                 if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.First(), scope))
                     return false;
 
                 var requirement = achievement.LastRequirement;
-                requirement.Type = RequirementType.ResetIf;
+                requirement.Left = new Field { Size = requirement.Left.Size, Type = FieldType.PreviousValue, Value = requirement.Left.Value };
                 return true;
             }
 
@@ -545,13 +578,32 @@ namespace RATools.Parser
             using (var stream = File.OpenRead(fileName))
             {
                 var publishedData = new JsonObject(stream);
+                GameTitle = publishedData.GetField("Title").StringValue;
+
                 var publishedAchievements = publishedData.GetField("Achievements");
+                var count = 0;
+                var points = 0;
                 foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
                 {
+                    count++;
+                    points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
+
                     var title = publishedAchievement.GetField("Title").StringValue;
                     var achievement = _achievements.FirstOrDefault(a => a.Title == title);
                     if (achievement == null)
+                    {
+                        var builder = new AchievementBuilder();
+                        builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                        builder.Title = title;
+                        builder.Description = publishedAchievement.GetField("Description").StringValue;
+                        builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
+                        builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
+                        builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
+                        achievement = builder.ToAchievement();
+                        achievement.IsNotGenerated = true;
+                        _achievements.Add(achievement);
                         continue;
+                    }
 
                     achievement.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
                     achievement.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
@@ -570,20 +622,23 @@ namespace RATools.Parser
                         var cheev = new AchievementBuilder();
                         cheev.ParseRequirements(Tokenizer.CreateTokenizer(requirementsString));
 
-                        achievement.IsDifferentThanPublished = cheev.ToAchievement().AreRequirementsSame(achievement);
+                        achievement.IsDifferentThanPublished = !cheev.ToAchievement().AreRequirementsSame(achievement);
                     }
                 }
+
+                PublishedAchievementCount = count;
+                PublishedAchievementPoints = points;
             }
         }
 
         private void MergeLocal(string outputDirectory)
         {
             var fileName = Path.Combine(outputDirectory, GameId + "-User.txt");
-            _localAchievements = new LocalAchievements(fileName);
+            LocalAchievements = new LocalAchievements(fileName);
 
             foreach (var achievement in _achievements)
             {
-                var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
+                var localAchievement = LocalAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
                 if (localAchievement == null)
                     continue;
 
@@ -592,7 +647,7 @@ namespace RATools.Parser
                 else if (achievement.Description != localAchievement.Description)
                     achievement.IsDifferentThanLocal = true;
                 else
-                    achievement.IsDifferentThanLocal = achievement.AreRequirementsSame(localAchievement);
+                    achievement.IsDifferentThanLocal = !achievement.AreRequirementsSame(localAchievement);
             }
         }
     }

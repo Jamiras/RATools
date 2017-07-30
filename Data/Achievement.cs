@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using Jamiras.DataModels;
+using RATools.Parser.Internal;
 
 namespace RATools.Data
 {
     [DebuggerDisplay("{Title} ({Points})")]
-    public class Achievement
+    public class Achievement : ModelBase
     {
         internal Achievement()
         {
@@ -19,47 +21,38 @@ namespace RATools.Data
         public int Id { get; internal set; }
         public string BadgeName { get; internal set; }
 
-        public bool IsDifferentThanPublished { get; internal set; }
-        public bool IsDifferentThanLocal { get; internal set; }
+        public static readonly ModelProperty IsDifferentThanPublishedProperty = ModelProperty.Register(typeof(Achievement), "IsDifferentThanPublished", typeof(bool), false);
+        public bool IsDifferentThanPublished 
+        {
+            get { return (bool)GetValue(IsDifferentThanPublishedProperty); }
+            internal set { SetValue(IsDifferentThanPublishedProperty, value); }
+        }
+
+        public static readonly ModelProperty IsDifferentThanLocalProperty = ModelProperty.Register(typeof(Achievement), "IsDifferentThanLocal", typeof(bool), false);
+        public bool IsDifferentThanLocal
+        {
+            get { return (bool)GetValue(IsDifferentThanLocalProperty); }
+            internal set { SetValue(IsDifferentThanLocalProperty, value); }
+        }
+
+        public static readonly ModelProperty IsNotGeneratedProperty = ModelProperty.Register(typeof(Achievement), "IsNotGenerated", typeof(bool), false);
+        public bool IsNotGenerated
+        {
+            get { return (bool)GetValue(IsNotGeneratedProperty); }
+            internal set { SetValue(IsNotGeneratedProperty, value); }
+        }
 
         public IEnumerable<Requirement> CoreRequirements { get; internal set; }
         public IEnumerable<IEnumerable<Requirement>> AlternateRequirements { get; internal set; }
 
         public bool AreRequirementsSame(Achievement achievement)
         {
-            if (!AreRequirementsSame(CoreRequirements, achievement.CoreRequirements))
-                return false;
+            var builder1 = new AchievementBuilder(this);
+            builder1.Optimize();
+            var builder2 = new AchievementBuilder(achievement);
+            builder2.Optimize();
 
-            var enum1 = AlternateRequirements.GetEnumerator();
-            var enum2 = achievement.AlternateRequirements.GetEnumerator();
-            while (enum1.MoveNext())
-            {
-                if (!enum2.MoveNext())
-                    return false;
-
-                if (!AreRequirementsSame(enum1.Current, enum2.Current))
-                    return false;
-            }
-
-            return !enum2.MoveNext();
-        }
-
-        private static bool AreRequirementsSame(IEnumerable<Requirement> left, IEnumerable<Requirement> right)
-        {
-            var rightRequirements = new List<Requirement>(right);
-            var enumerator = left.GetEnumerator();
-            while (enumerator.MoveNext())
-            {
-                int index = rightRequirements.IndexOf(enumerator.Current);
-                if (index == -1)
-                    return false;
-
-                rightRequirements.RemoveAt(index);
-                if (rightRequirements.Count == 0)
-                    return !enumerator.MoveNext();
-            }
-
-            return rightRequirements.Count == 0;
+            return builder1.AreRequirementsSame(builder2);
         }
     }
 }

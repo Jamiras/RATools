@@ -70,6 +70,8 @@
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="Parser\LocalAchievements.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
+    <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
+    <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

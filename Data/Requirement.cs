@@ -68,7 +68,7 @@ namespace RATools.Data
         public override bool Equals(object obj)
         {
             var that = obj as Requirement;
-            if (that == null)
+            if (ReferenceEquals(that, null))
                 return false;
 
             if (that.Type != this.Type || that.Operator != this.Operator || that.HitCount != this.HitCount)
@@ -80,6 +80,22 @@ namespace RATools.Data
         public override int GetHashCode()
         {
             return base.GetHashCode();
+        }
+
+        public static bool operator ==(Requirement left, Requirement right)
+        {
+            if (ReferenceEquals(left, null))
+                return false;
+
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(Requirement left, Requirement right)
+        {
+            if (ReferenceEquals(left, null))
+                return false;
+
+            return !left.Equals(right);
         }
     }
 

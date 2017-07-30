@@ -154,7 +154,10 @@ namespace RATools.Parser.Internal
                     break;
             }
 
-            result = new MathematicExpression(left, Operation, right);
+            var mathematic = new MathematicExpression(left, Operation, right);
+            mathematic.Line = Line;
+            mathematic.Column = Column;
+            result = mathematic;
             return true;
         }
     }

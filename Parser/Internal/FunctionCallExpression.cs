@@ -48,7 +48,10 @@ namespace RATools.Parser.Internal
                 parameters.Add(value);
             }
 
-            result = new FunctionCallExpression(FunctionName, parameters);
+            var functionCall = new FunctionCallExpression(FunctionName, parameters);
+            functionCall.Line = Line;
+            functionCall.Column = Column;
+            result = functionCall;
             return true;
         }
     }

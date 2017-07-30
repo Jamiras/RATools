@@ -63,7 +63,10 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            result = new ComparisonExpression(left, Operation, right);
+            var comparison = new ComparisonExpression(left, Operation, right);
+            comparison.Line = Line;
+            comparison.Column = Column;
+            result = comparison;
             return true;
         }
 
