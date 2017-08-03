@@ -47,8 +47,8 @@ namespace RATools.Parser.Internal
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase left;
-            if (!Left.ReplaceVariables(scope, out left))
+            ExpressionBase left = null;
+            if (Left != null && !Left.ReplaceVariables(scope, out left))
             {
                 result = left;
                 return false;

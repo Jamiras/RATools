@@ -241,6 +241,10 @@ namespace RATools.Parser.Internal
                     Int32.TryParse(number.ToString(), out value);
                     return new IntegerConstantExpression(value);
 
+                case '{':
+                    tokenizer.Advance();
+                    return ParseDictionary(tokenizer);
+
                 default:
                     var identifier = tokenizer.ReadIdentifier();
                     if (identifier.IsEmpty)
@@ -270,6 +274,22 @@ namespace RATools.Parser.Internal
                             return parseError;
 
                         return new FunctionCallExpression(identifier.ToString(), parameters);
+                    }
+
+                    if (tokenizer.NextChar == '[')
+                    {
+                        tokenizer.Advance();
+
+                        var index = ParseClause(tokenizer);
+                        if (index.Type == ExpressionType.ParseError)
+                            return index;
+
+                        SkipWhitespace(tokenizer);
+                        if (tokenizer.NextChar != ']')
+                            return new ParseErrorExpression("Expecting closing bracket after index");
+                        tokenizer.Advance();
+
+                        return new IndexedVariableExpression(identifier.ToString(), index);
                     }
 
                     return new VariableExpression(identifier.ToString());
@@ -353,6 +373,43 @@ namespace RATools.Parser.Internal
             return new AssignmentExpression(((VariableExpression)variable).Name, value);
         }
 
+        private static ExpressionBase ParseDictionary(PositionalTokenizer tokenizer)
+        {
+            SkipWhitespace(tokenizer);
+
+            var dict = new DictionaryExpression();
+            while (tokenizer.NextChar != '}')
+            {
+                var key = ParseClause(tokenizer);
+                if (key.Type == ExpressionType.ParseError)
+                    return key;
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar != ':')
+                    return new ParseErrorExpression("Expecting colon following key expression");
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+
+                var value = ParseClause(tokenizer);
+                if (value.Type == ExpressionType.ParseError)
+                    return value;
+
+                dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar == '}')
+                    break;
+
+                if (tokenizer.NextChar != ',')
+                    return new ParseErrorExpression("Expecting comma between entries");
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+            }
+
+            tokenizer.Advance();
+            return dict;
+        }
+
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -388,6 +445,7 @@ namespace RATools.Parser.Internal
 
         FunctionDefinition,
         Return,
+        Dictionary,
 
         ParseError,
     }

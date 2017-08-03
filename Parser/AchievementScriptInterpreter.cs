@@ -77,11 +77,6 @@ namespace RATools.Parser
                         scope.AddFunction((FunctionDefinitionExpression)expression);
                         break;
 
-                    case ExpressionType.Assignment:
-                        var assignment = (AssignmentExpression)expression;
-                        scope.AssignVariable(assignment.Variable, assignment.Value);
-                        break;
-
                     default:
                         if (!Evaluate(expression, scope))
                             return false;
@@ -430,6 +425,23 @@ namespace RATools.Parser
 
                 var requirement = achievement.LastRequirement;
                 requirement.HitCount = 1;
+                return true;
+            }
+
+            if (functionCall.FunctionName == "repeated")
+            {
+                if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.ElementAt(1), scope))
+                    return false;
+
+                ExpressionBase times;
+                if (!functionCall.Parameters.First().ReplaceVariables(scope, out times))
+                    return EvaluationError(functionCall.Parameters.First(), ((ParseErrorExpression)times).Message);
+
+                if (times.Type != ExpressionType.IntegerConstant)
+                    return EvaluationError(functionCall.Parameters.First(), "expression does not evaluate to an integer");
+
+                var requirement = achievement.LastRequirement;
+                requirement.HitCount = (ushort)((IntegerConstantExpression)times).Value;
                 return true;
             }
 

@@ -22,7 +22,12 @@ namespace RATools.Parser.Internal
             ExpressionBase value = scope.GetVariable(Name);
             if (value == null)
             {
-                result = new ParseErrorExpression("Unknown variable: " + Name);
+                var func = scope.GetFunction(Name);
+                if (func != null)
+                    result = new ParseErrorExpression("Function used like a variable: " + Name);
+                else
+                    result = new ParseErrorExpression("Unknown variable: " + Name);
+
                 return false;
             }
 
