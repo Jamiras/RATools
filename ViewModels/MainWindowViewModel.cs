@@ -72,11 +72,8 @@ namespace RATools.ViewModels
                         GameTitle = parser.GameTitle;
                         PublishedAchievementCount = parser.PublishedAchievementCount;
                         PublishedAchievementPoints = parser.PublishedAchievementPoints;
-                        Achievements = parser.Achievements;
-                        _localAchievements = parser.LocalAchievements;
 
-                        LocalAchievementCount = Achievements.Count();
-                        LocalAchievementPoints = Achievements.Sum(a => a.Points);
+                        var achievements = new List<Achievement>(parser.Achievements);
 
                         _notes = new TinyDictionary<int, string>();
                         using (var notesStream = File.OpenRead(Path.Combine(RACacheDirectory, parser.GameId + "-Notes2.txt")))
@@ -89,6 +86,26 @@ namespace RATools.ViewModels
                                 _notes[address] = text;
                             }
                         }
+
+                        _richPresence = parser.RichPresence;
+                        var richPresence = new Achievement { Title = "Rich Presence" };
+                        _richFile = Path.Combine(RACacheDirectory, parser.GameId + "-Rich.txt");
+                        if (File.Exists(_richFile))
+                        {
+                            var richLocal = File.ReadAllText(_richFile);
+                            if (String.IsNullOrEmpty(_richPresence))
+                                _richPresence = richLocal;
+                            else if (_richPresence != richLocal)
+                                richPresence.IsDifferentThanLocal = true;
+                        }
+
+                        if (!String.IsNullOrEmpty(_richPresence) && _richPresence.Length > 8)
+                            achievements.Add(richPresence);
+
+                        Achievements = achievements;
+                        _localAchievements = parser.LocalAchievements;
+                        LocalAchievementCount = Achievements.Count();
+                        LocalAchievementPoints = Achievements.Sum(a => a.Points);
                     }
                 }
             }
@@ -96,6 +113,7 @@ namespace RATools.ViewModels
 
         private LocalAchievements _localAchievements;
         private TinyDictionary<int, string> _notes;
+        private string _richFile, _richPresence;
 
         public static readonly ModelProperty AchievementsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Achievements", typeof(IEnumerable<Achievement>), null);
         public IEnumerable<Achievement> Achievements
@@ -140,17 +158,25 @@ namespace RATools.ViewModels
         public CommandBase<Achievement> UpdateLocalCommand { get; private set; }
         private void UpdateLocal(Achievement achievement)
         {
-            var list = (List<Achievement>)_localAchievements.Achievements;
-            int index = 0;
-            while (index < list.Count && list[index].Title != achievement.Title)
-                index++;
-
-            if (index == list.Count)
-                list.Add(achievement);
+            if (achievement.Title == "Rich Presence")
+            {
+                File.WriteAllText(_richFile, _richPresence);
+            }
             else
-                list[index] = achievement;
+            {
+                var list = (List<Achievement>)_localAchievements.Achievements;
+                int index = 0;
+                while (index < list.Count && list[index].Title != achievement.Title)
+                    index++;
 
-            _localAchievements.Commit();
+                if (index == list.Count)
+                    list.Add(achievement);
+                else
+                    list[index] = achievement;
+
+                _localAchievements.Commit();
+            }
+
             achievement.IsDifferentThanLocal = false;
         }
 
@@ -195,12 +221,21 @@ namespace RATools.ViewModels
             {
                 if (SelectedAchievement != null)
                 {
-                    yield return new RequirementGroupViewModel("Core", SelectedAchievement.CoreRequirements, _notes);
-                    int i = 0;
-                    foreach (var alt in SelectedAchievement.AlternateRequirements)
+                    if (SelectedAchievement.Title == "Rich Presence")
                     {
-                        i++;
-                        yield return new RequirementGroupViewModel("Alt " + i, alt, _notes);
+                        var group = new RequirementGroupViewModel("Rich Presence", new Requirement[0], _notes);
+                        ((IList<RequirementViewModel>)group.Requirements).Add(new RequirementViewModel(_richPresence, String.Empty));
+                        yield return group;
+                    }
+                    else
+                    {
+                        yield return new RequirementGroupViewModel("Core", SelectedAchievement.CoreRequirements, _notes);
+                        int i = 0;
+                        foreach (var alt in SelectedAchievement.AlternateRequirements)
+                        {
+                            i++;
+                            yield return new RequirementGroupViewModel("Alt " + i, alt, _notes);
+                        }
                     }
                 }
             }

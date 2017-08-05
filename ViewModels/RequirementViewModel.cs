@@ -54,6 +54,12 @@ namespace RATools.ViewModels
             }
         }
 
+        public RequirementViewModel(string definition, string notes)
+        {
+            Definition = definition;
+            Notes = notes;
+        }
+
         public string Definition { get; private set; }
         public string Notes { get; private set; }
     }

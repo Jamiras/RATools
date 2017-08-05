@@ -4,14 +4,14 @@ namespace RATools.Parser.Internal
 {
     internal class AssignmentExpression : ExpressionBase
     {
-        public AssignmentExpression(string variable, ExpressionBase value)
+        public AssignmentExpression(VariableExpression variable, ExpressionBase value)
             : base(ExpressionType.Assignment)
         {
             Variable = variable;
             Value = value;
         }
 
-        public string Variable { get; private set; }
+        public VariableExpression Variable { get; private set; }
         public ExpressionBase Value { get; private set; }
 
         internal override void AppendString(StringBuilder builder)

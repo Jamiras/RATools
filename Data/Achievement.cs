@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using Jamiras.DataModels;
 using RATools.Parser.Internal;
+using System.Text;
 
 namespace RATools.Data
 {
@@ -40,6 +41,30 @@ namespace RATools.Data
         {
             get { return (bool)GetValue(IsNotGeneratedProperty); }
             internal set { SetValue(IsNotGeneratedProperty, value); }
+        }
+
+        public static readonly ModelProperty StatusProperty = ModelProperty.RegisterDependant(typeof(Achievement), "Status", typeof(string),
+            new[] { IsDifferentThanLocalProperty, IsDifferentThanPublishedProperty, IsNotGeneratedProperty }, GetStatus);
+        public string Status
+        {
+            get { return (string)GetValue(StatusProperty); }
+        }
+
+        private static string GetStatus(ModelBase model)
+        {
+            var achievement = (Achievement)model;
+            if (achievement.Id > 0)
+            {
+                if (achievement.IsDifferentThanPublished)
+                    return achievement.IsDifferentThanLocal ? "Differs from server and local" : "Differs from server";
+                if (achievement.IsNotGenerated)
+                    return achievement.IsDifferentThanLocal ? "Not generated and differs from local" : "Not generated";
+            }
+
+            if (achievement.IsDifferentThanLocal)
+                return "Differs from local";
+
+            return "";
         }
 
         public IEnumerable<Requirement> CoreRequirements { get; internal set; }

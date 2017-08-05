@@ -296,7 +296,7 @@ namespace RATools.Parser.Internal
             else if (requirement.Type == RequirementType.PauseIf)
                 builder.Append("P:");
 
-            SerializeField(requirement.Left, builder);
+            requirement.Left.Serialize(builder);
 
             switch (requirement.Operator)
             {
@@ -308,7 +308,7 @@ namespace RATools.Parser.Internal
                 case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
             }
 
-            SerializeField(requirement.Right, builder);
+            requirement.Right.Serialize(builder);
 
             if (requirement.HitCount > 0)
             {
@@ -316,39 +316,6 @@ namespace RATools.Parser.Internal
                 builder.Append(requirement.HitCount);
                 builder.Append('.');
             }
-        }
-
-        private static void SerializeField(Field field, StringBuilder builder)
-        {
-            if (field.Type == FieldType.Value)
-            {
-                builder.Append(field.Value);
-                return;
-            }
-
-            if (field.Type == FieldType.PreviousValue)
-                builder.Append('d');
-
-            builder.Append("0x");
-
-            switch (field.Size)
-            {
-                case FieldSize.Bit0: builder.Append('M'); break;
-                case FieldSize.Bit1: builder.Append('N'); break;
-                case FieldSize.Bit2: builder.Append('O'); break;
-                case FieldSize.Bit3: builder.Append('P'); break;
-                case FieldSize.Bit4: builder.Append('Q'); break;
-                case FieldSize.Bit5: builder.Append('R'); break;
-                case FieldSize.Bit6: builder.Append('S'); break;
-                case FieldSize.Bit7: builder.Append('T'); break;
-                case FieldSize.LowNibble: builder.Append('L'); break;
-                case FieldSize.HighNibble: builder.Append('U'); break;
-                case FieldSize.Byte: builder.Append('H'); break;
-                case FieldSize.Word: builder.Append(' ');  break;
-                case FieldSize.DWord: builder.Append('X'); break;
-            }
-
-            builder.AppendFormat("{0:x6}", field.Value);
         }
 
         internal bool AreRequirementsSame(AchievementBuilder right)
@@ -399,9 +366,37 @@ namespace RATools.Parser.Internal
         private static void NormalizeComparisons(List<Requirement> requirements)
         {
             var alwaysTrue = new List<Requirement>();
+            var alwaysFalse = new List<Requirement>();
 
             foreach (var requirement in requirements)
             {
+                if (requirement.Right.Type != FieldType.Value)
+                    continue;
+
+                if (requirement.Right.Value == 0)
+                {
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.LessThan: // n < 0 -> never true
+                            alwaysFalse.Add(requirement);
+                            continue;
+
+                        case RequirementOperator.LessThanOrEqual: // n <= 0 -> n == 0
+                            requirement.Operator = RequirementOperator.Equal;
+                            break;
+
+                        case RequirementOperator.GreaterThan: // n > 0 -> n != 0
+                            requirement.Operator = RequirementOperator.NotEqual;
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual: // n >= 0 -> always true
+                            alwaysTrue.Add(requirement);
+                            continue;
+                    }
+                }
+
+                uint max;
+
                 switch (requirement.Left.Size)
                 {
                     case FieldSize.Bit0:
@@ -412,49 +407,80 @@ namespace RATools.Parser.Internal
                     case FieldSize.Bit5:
                     case FieldSize.Bit6:
                     case FieldSize.Bit7:
-                        if (requirement.Right.Type == FieldType.Value)
+                        if (requirement.Right.Value == 0 && requirement.Operator == RequirementOperator.NotEqual) // bit != 0 -> bit == 1
                         {
-                            if (requirement.Right.Value == 0)
+                            requirement.Operator = RequirementOperator.Equal;
+                            requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                            continue;
+                        }
+                        if (requirement.Right.Value == 1)
+                        {
+                            switch (requirement.Operator)
                             {
-                                switch (requirement.Operator)
-                                {
-                                    case RequirementOperator.NotEqual: // bit != 0 -> bit = 1
-                                    case RequirementOperator.GreaterThan: // bit > 0 -> bit = 1
-                                        requirement.Operator = RequirementOperator.Equal;
-                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                                        break;
-
-                                    case RequirementOperator.GreaterThanOrEqual: // bit >= 0 -> always true
-                                        alwaysTrue.Add(requirement);
-                                        break;
-                                }
-                            }
-                            else // value is non-zero
-                            {
-                                if (requirement.Right.Value != 1)
-                                    requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = 1 };
-
-                                switch (requirement.Operator)
-                                {
-                                    case RequirementOperator.NotEqual: // bit != 1 -> bit = 0
-                                    case RequirementOperator.LessThan: // bit < 1 -> bit = 0
-                                        requirement.Operator = RequirementOperator.Equal;
-                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                        break;
-
-                                    case RequirementOperator.LessThanOrEqual: // bit <= 1 -> always true
-                                        alwaysTrue.Add(requirement);
-                                        break;
-                                }
+                                case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                                case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                                    requirement.Operator = RequirementOperator.Equal;
+                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                                    continue;
                             }
                         }
-
+                        max = 1;
                         break;
+
+                    case FieldSize.LowNibble:
+                    case FieldSize.HighNibble:
+                        max = 15;
+                        break;
+
+                    case FieldSize.Byte:
+                        max = 255;
+                        break;
+
+                    case FieldSize.Word:
+                        max = 65535;
+                        break;
+
+                    default:
+                    case FieldSize.DWord:
+                        max = uint.MaxValue;
+                        break;
+                }
+
+                if (requirement.Right.Value > max)
+                    requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = max };
+
+                if (requirement.Right.Value == max)
+                {
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.GreaterThan: // n > max -> always false
+                            alwaysFalse.Add(requirement);
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual: // n >= max -> n == max
+                            requirement.Operator = RequirementOperator.Equal;
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual: // n <= max -> always true
+                            alwaysTrue.Add(requirement);
+                            break;
+
+                        case RequirementOperator.LessThan: // n < max -> n != max
+                            requirement.Operator = RequirementOperator.NotEqual;
+                            break;
+                    }
                 }
             }
 
-            foreach (var requirement in alwaysTrue)
-                requirements.Remove(requirement);
+            if (alwaysFalse.Count > 0)
+            {
+                requirements.Clear();
+            }
+            else
+            {
+                foreach (var requirement in alwaysTrue)
+                    requirements.Remove(requirement);
+            }
         }
 
         private void PromoteCommonAltsToCore()
@@ -774,12 +800,24 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public void Optimize()
+        public string Optimize()
         {
             // normalize BitX() methods to compare against 1
             NormalizeComparisons(_core);
-            foreach (var alt in _alts)
-                NormalizeComparisons(alt);
+            if (_core.Count == 0)
+                return "No core requirements";
+
+            for (int i = _alts.Count - 1; i >= 0; i--)
+            {
+                NormalizeComparisons(_alts[i]);
+                if (_alts[i].Count == 0)
+                    _alts.RemoveAt(i);
+            }
+            if (_alts.Count == 1)
+            {
+                _core.AddRange(_alts[0]);
+                _alts.Clear();
+            }
 
             // remove duplicates
             RemoveDuplicates(_core);
@@ -802,6 +840,29 @@ namespace RATools.Parser.Internal
             // identify any item common to all alts and promote it to core
             if (_alts.Count > 1)
                 PromoteCommonAltsToCore();
+
+            bool hasHitCount = false;
+            bool hasReset = false;
+            bool hasPause = false;
+            foreach (var requirement in _core)
+            {
+                if (requirement.HitCount > 0)
+                    hasHitCount = true;
+                if (requirement.Type == RequirementType.ResetIf)
+                    hasReset = true;
+                if (requirement.Type == RequirementType.PauseIf)
+                    hasPause = true;
+            }
+
+            if (!hasHitCount)
+            {
+                if (hasReset)
+                    return "Reset condition without HitCount";
+                if (hasPause)
+                    return "Pause condition without HitCount";
+            }
+
+            return null;
         }
     }
 }

@@ -263,6 +263,8 @@ namespace RATools.Parser.Internal
 
                     if (identifier == "function")
                         return FunctionDefinitionExpression.Parse(tokenizer);
+                    if (identifier == "for")
+                        return ForExpression.Parse(tokenizer);
 
                     if (tokenizer.NextChar == '(')
                     {
@@ -280,7 +282,7 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
 
-                        var index = ParseClause(tokenizer);
+                        var index = ExpressionBase.Parse(tokenizer);
                         if (index.Type == ExpressionType.ParseError)
                             return index;
 
@@ -370,7 +372,7 @@ namespace RATools.Parser.Internal
             if (value.Type == ExpressionType.ParseError)
                 return value;
 
-            return new AssignmentExpression(((VariableExpression)variable).Name, value);
+            return new AssignmentExpression((VariableExpression)variable, value);
         }
 
         private static ExpressionBase ParseDictionary(PositionalTokenizer tokenizer)
@@ -446,6 +448,7 @@ namespace RATools.Parser.Internal
         FunctionDefinition,
         Return,
         Dictionary,
+        For,
 
         ParseError,
     }

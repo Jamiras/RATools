@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System.Linq;
 
 namespace RATools.Parser.Internal
 {
@@ -49,9 +50,35 @@ namespace RATools.Parser.Internal
             return null;
         }
 
-        public void AssignVariable(string variableName, ExpressionBase value)
+        public void AssignVariable(VariableExpression variable, ExpressionBase value)
         {
-            _variables[variableName] = value;
+            var indexedVariable = variable as IndexedVariableExpression;
+            if (indexedVariable != null)
+            {
+                var existing = GetVariable(indexedVariable.Name);
+                if (existing == null)
+                {
+                    existing = new DictionaryExpression();
+                    _variables[variable.Name] = existing;
+                }
+
+                ExpressionBase index;
+                var dict = existing as DictionaryExpression;
+                if (dict != null && indexedVariable.Index.ReplaceVariables(this, out index))
+                {
+                    var entry = dict.Entries.FirstOrDefault(e => e.Key == index);
+                    if (entry == null)
+                    {
+                        entry = new DictionaryExpression.DictionaryEntry { Key = index };
+                        dict.Entries.Add(entry);
+                    }
+
+                    entry.Value = value;
+                    return;
+                }
+            }
+
+            _variables[variable.Name] = value;
         }
     }
 }

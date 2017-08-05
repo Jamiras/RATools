@@ -15,6 +15,7 @@ namespace RATools.Parser
         {
             _achievements = new List<Achievement>();
             _filename = filename;
+            _version = "0.030";
             Read();
         }
         

@@ -47,6 +47,39 @@ namespace RATools.Data
             return builder.ToString();
         }
 
+        internal void Serialize(StringBuilder builder)
+        {
+            if (Type == FieldType.Value)
+            {
+                builder.Append(Value);
+                return;
+            }
+
+            if (Type == FieldType.PreviousValue)
+                builder.Append('d');
+
+            builder.Append("0x");
+
+            switch (Size)
+            {
+                case FieldSize.Bit0: builder.Append('M'); break;
+                case FieldSize.Bit1: builder.Append('N'); break;
+                case FieldSize.Bit2: builder.Append('O'); break;
+                case FieldSize.Bit3: builder.Append('P'); break;
+                case FieldSize.Bit4: builder.Append('Q'); break;
+                case FieldSize.Bit5: builder.Append('R'); break;
+                case FieldSize.Bit6: builder.Append('S'); break;
+                case FieldSize.Bit7: builder.Append('T'); break;
+                case FieldSize.LowNibble: builder.Append('L'); break;
+                case FieldSize.HighNibble: builder.Append('U'); break;
+                case FieldSize.Byte: builder.Append('H'); break;
+                case FieldSize.Word: builder.Append(' ');  break;
+                case FieldSize.DWord: builder.Append('X'); break;
+            }
+
+            builder.AppendFormat("{0:x6}", Value);
+        }
+
         public override bool Equals(object obj)
         {
             if (!(obj is Field))

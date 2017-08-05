@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Jamiras.Components;
 using Jamiras.IO.Serialization;
 using RATools.Data;
@@ -32,6 +33,8 @@ namespace RATools.Parser
         public string GameTitle { get; private set; }
         public int PublishedAchievementCount { get; private set; }
         public int PublishedAchievementPoints { get; private set; }
+
+        public string RichPresence { get; private set; }
 
         public bool Run(Tokenizer input, string outputDirectory)
         {
@@ -101,70 +104,90 @@ namespace RATools.Parser
             }
         }
 
+        private bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
+        {
+            foreach (var expression in expressions)
+            {
+                if (!Evaluate(expression, scope))
+                    return false;
+            }
+
+            return true;
+        }
+
         private bool Evaluate(ExpressionBase expression, InterpreterScope scope)
         {
-            var assignmentExpression = expression as AssignmentExpression;
-            if (assignmentExpression != null)
+            switch (expression.Type)
             {
-                ExpressionBase result;
-                if (!assignmentExpression.Value.ReplaceVariables(scope, out result))
-                    return false;
+                case ExpressionType.Assignment:
+                    var assignment = (AssignmentExpression)expression;
+                    ExpressionBase result;
+                    if (!assignment.Value.ReplaceVariables(scope, out result))
+                        return EvaluationError(assignment.Value, ((ParseErrorExpression)result).Message);
 
-                scope.AssignVariable(assignmentExpression.Variable, result);
+                    scope.AssignVariable(assignment.Variable, result);
+                    return true;
+
+                case ExpressionType.FunctionCall:
+                    return CallFunction((FunctionCallExpression)expression, scope);
+
+                case ExpressionType.For:
+                    return EvaluateLoop((ForExpression)expression, scope);
+
+                default:
+                    return EvaluationError(expression, "Only assignment statements, function calls and function definitions allowed at outer scope");
+            }
+        }
+
+        private bool EvaluateLoop(ForExpression forExpression, InterpreterScope scope)
+        {
+            ExpressionBase range;
+            if (!forExpression.Range.ReplaceVariables(scope, out range))
+                return EvaluationError(forExpression.Range, ((ParseErrorExpression)range).Message);
+
+            var dict = range as DictionaryExpression;
+            if (dict != null)
+            {
+                var iterator = new VariableExpression(forExpression.IteratorName);
+                foreach (var entry in dict.Entries)
+                {
+                    var loopScope = new InterpreterScope(scope);
+
+                    ExpressionBase key;
+                    if (!entry.Key.ReplaceVariables(scope, out key))
+                        return EvaluationError(entry.Key, ((ParseErrorExpression)key).Message);
+                    
+                    scope.AssignVariable(iterator, key);
+
+                    if (!Evaluate(forExpression.Expressions, loopScope))
+                        return false;
+                }
+
                 return true;
             }
 
-            var functionCallExpression = expression as FunctionCallExpression;
-            if (functionCallExpression != null)
-                return CallFunction(functionCallExpression, scope);
-
-            return EvaluationError(expression, "Only assignment statements, function calls and function definitions allowed at outer scope");
+            return EvaluationError(forExpression.Range, "Cannot iterate over " + forExpression.Range.ToString());
         }
-
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
             var function = scope.GetFunction(expression.FunctionName);
             if (function != null)
-                return ExecuteFunction(function, expression, scope);
+            {
+                scope = GetParameters(function, expression, scope);
+                if (scope == null)
+                    return false;
+
+                return Evaluate(function.Expressions, scope);
+            }
 
             if (expression.FunctionName == "achievement")
                 return ExecuteFunctionAchievement(expression, scope);
 
+            if (expression.FunctionName == "rich_presence_display")
+                return ExecuteRichPresenceDisplay(expression, scope);
+
             return EvaluationError(expression, "Unknown function: " + expression.FunctionName);
-        }
-
-        private bool ExecuteFunction(FunctionDefinitionExpression function, FunctionCallExpression functionCall, InterpreterScope scope)
-        {
-            scope = GetParameters(function, functionCall, scope);
-            if (scope == null)
-                return false;
-
-            foreach (var expression in function.Expressions)
-            {
-                switch (expression.Type)
-                {
-                    case ExpressionType.Assignment:
-                        ExpressionBase value;
-                        var assignment = (AssignmentExpression)expression;
-                        if (!assignment.Value.ReplaceVariables(scope, out value))
-                        {
-                            EvaluationError(assignment.Value, ((ParseErrorExpression)value).Message);
-                            return false;
-                        }
-
-                        scope.AssignVariable(assignment.Variable, value);
-                        break;
-
-                    default:
-                        if (!CallFunction((FunctionCallExpression)expression, scope))
-                            return false;
-
-                        break;
-                }
-            }
-
-            return true;
         }
 
         private static FunctionDefinitionExpression _achievementFunction;
@@ -201,7 +224,10 @@ namespace RATools.Parser
             if (!ExecuteAchievementExpression(achievement, innerScope.GetVariable("trigger"), scope))
                 return false;
 
-            achievement.Optimize();
+            var message = achievement.Optimize();
+            if (message != null)
+                return EvaluationError(expression, message);
+
             _achievements.Add(achievement.ToAchievement());
             return true;
         }
@@ -513,6 +539,252 @@ namespace RATools.Parser
             }
         }
 
+        private bool ExecuteRichPresenceDisplay(FunctionCallExpression expression, InterpreterScope scope)
+        {
+            var displayString = expression.Parameters.ElementAt(0) as StringConstantExpression;
+            if (displayString == null)
+                return EvaluationError(expression.Parameters.ElementAt(0), "First parameter to rich_presence_display must be a string");
+
+            var valueFields = new List<string>();
+            var lookupFields = new TinyDictionary<string, DictionaryExpression>();
+
+            var builder = new StringBuilder();
+            var tokenizer = Tokenizer.CreateTokenizer(displayString.Value);
+            while (tokenizer.NextChar != '\0')
+            {
+                var token = tokenizer.ReadTo('{');
+                builder.Append(token.ToString());
+
+                if (tokenizer.NextChar == '\0')
+                    break;
+
+                tokenizer.Advance();
+                var index = tokenizer.ReadNumber();
+                if (tokenizer.NextChar != '}')
+                    return EvaluationError(displayString, "malformed index");
+                tokenizer.Advance();
+
+                var parameterIndex = Int32.Parse(index.ToString()) + 1;
+                var parameter = expression.Parameters.ElementAt(parameterIndex) as FunctionCallExpression;
+                if (parameter == null)
+                    return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
+                if (parameter.Parameters.Count() < 2)
+                    return EvaluationError(parameter, "parameter must be a rich_presence_ function");
+
+                var variableName = ((StringConstantExpression)parameter.Parameters.ElementAt(0)).Value;
+
+                ExpressionBase addressExpression;
+                if (!parameter.Parameters.ElementAt(1).ReplaceVariables(scope, out addressExpression))
+                    return EvaluationError(parameter.Parameters.ElementAt(1), ((ParseErrorExpression)addressExpression).Message);
+
+                string address;
+                if (!EvaluateAddress(addressExpression, scope, out address))
+                    return false;
+ 
+                if (parameter.FunctionName == "rich_presence_lookup")
+                {
+                    ExpressionBase value;
+                    if (!parameter.Parameters.ElementAt(2).ReplaceVariables(scope, out value))
+                        return EvaluationError(parameter.Parameters.ElementAt(2), ((ParseErrorExpression)value).Message);
+
+                    var dict = value as DictionaryExpression;
+                    if (dict == null)
+                        return EvaluationError(parameter.Parameters.ElementAt(2), "parameter does not evaluate to a dictionary");
+
+                    lookupFields[variableName] = dict;
+                }
+                else if (parameter.FunctionName == "rich_presence_value")
+                {
+                    valueFields.Add(variableName);
+                }
+                else
+                {
+                    return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
+                }
+
+                builder.Append('@');
+                builder.Append(variableName);
+                builder.Append('(');
+                builder.Append(address);
+                builder.Append(')');
+            }
+
+            var display = builder.ToString();
+
+            builder.Length = 0;
+            foreach (var lookup in lookupFields)
+            {
+                builder.Append("Lookup:");
+                builder.AppendLine(lookup.Key);
+
+                var list = new List<DictionaryExpression.DictionaryEntry>(lookup.Value.Entries);
+                list.Sort((l,r) => ((IntegerConstantExpression)l.Key).Value - ((IntegerConstantExpression)r.Key).Value);
+
+                foreach (var entry in list)
+                {
+                    builder.Append(((IntegerConstantExpression)entry.Key).Value);
+                    builder.Append('=');
+                    builder.AppendLine(((StringConstantExpression)entry.Value).Value);
+                }
+
+                builder.AppendLine();
+            }
+
+            foreach (var value in valueFields)
+            {
+                builder.Append("Format:");
+                builder.AppendLine(value);
+                builder.AppendLine("FormatType=VALUE");
+                builder.AppendLine();
+            }
+
+            builder.AppendLine("Display:");
+            builder.AppendLine(display);
+
+            RichPresence = builder.ToString();
+
+            return true;
+        }
+
+        private bool EvaluateAddress(ExpressionBase expression, InterpreterScope scope, out string address)
+        {
+            var builder = new StringBuilder();
+
+            Field addressField;
+            if (EvaluateAddress(expression, scope, out addressField))
+            {
+                addressField.Serialize(builder);
+                address = builder.ToString();
+                return true;
+            }
+
+            var mathematic = expression as MathematicExpression;
+            if (mathematic != null)
+            {
+                string left, right;
+                if (EvaluateAddress(mathematic.Left, scope, out left))
+                {
+                    builder.Append(left);
+
+                    var integer = mathematic.Right as IntegerConstantExpression;
+                    switch (mathematic.Operation)
+                    {
+                        case MathematicOperation.Add:
+                            builder.Append('_');
+
+                            if (integer != null)
+                            {
+                                builder.Append('v');
+                                builder.Append(integer.Value);
+                                address = builder.ToString();
+                                return true;
+                            }
+
+                            if (EvaluateAddress(mathematic.Right, scope, out right))
+                            {
+                                builder.Append(right);
+                                address = builder.ToString();
+                                return true;
+                            }
+                            break;
+
+                        case MathematicOperation.Subtract:
+                            if (integer != null)
+                            {
+                                builder.Append("_v-");
+                                builder.Append(integer.Value);
+                                address = builder.ToString();
+                                return true;
+                            }
+                            break;
+
+                        case MathematicOperation.Multiply:
+                            if (integer != null)
+                            {
+                                builder.Append('*');
+                                builder.Append(integer.Value);
+                                address = builder.ToString();
+                                return true;
+                            }
+                            break;
+                    }
+                }
+            }
+
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                var function = scope.GetFunction(functionCall.FunctionName);
+                if (function != null)
+                {
+                    if (function.Expressions.Count != 1)
+                    {
+                        address = String.Empty;
+                        return EvaluationError(expression, "parameter does not evaluate to a memory address");
+                    }
+
+                    var innerScope = GetParameters(function, functionCall, scope);
+                    if (innerScope != null)
+                    {
+                        var returnExpression = function.Expressions.First() as ReturnExpression;
+                        if (returnExpression != null)
+                            return EvaluateAddress(returnExpression.Value, innerScope, out address);
+
+                        return EvaluateAddress(function.Expressions.First(), innerScope, out address);
+                    }
+                }
+            }
+            
+            address = String.Empty;
+            return EvaluationError(expression, "parameter does not evaluate to a memory address");
+        }
+
+        private bool EvaluateAddress(ExpressionBase expression, InterpreterScope scope, out Field addressField)
+        {
+            addressField = new Field();
+
+            switch (expression.Type)
+            {
+                case ExpressionType.IntegerConstant:
+                    addressField = new Field { Size = FieldSize.Byte, Type = FieldType.MemoryAddress, Value = (uint)((IntegerConstantExpression)expression).Value };
+                    return true;
+
+                case ExpressionType.Return:
+                    return EvaluateAddress(((ReturnExpression)expression).Value, scope, out addressField);
+
+                case ExpressionType.FunctionCall:
+                    var functionCall = (FunctionCallExpression)expression;
+                    var function = scope.GetFunction(functionCall.FunctionName);
+                    if (function != null)
+                    {
+                        if (function.Expressions.Count != 1)
+                            return EvaluationError(expression, "parameter does not evaluate to a memory address");
+
+                        var innerScope = GetParameters(function, functionCall, scope);
+                        if (innerScope == null)
+                            return false;
+
+                        return EvaluateAddress(function.Expressions.First(), innerScope, out addressField);
+                    }
+
+                    var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName);
+                    if (fieldSize == FieldSize.None)
+                        return EvaluationError(expression, "parameter does not evaluate to a memory address");
+
+                    ExpressionBase addressExpression;
+                    if (!functionCall.Parameters.First().ReplaceVariables(scope, out addressExpression))
+                        return EvaluationError(functionCall.Parameters.First(), ((ParseErrorExpression)addressExpression).Message);
+
+                    if (!EvaluateAddress(addressExpression, scope, out addressField))
+                        return false;
+
+                    addressField = new Field { Size = fieldSize, Type = addressField.Type, Value = addressField.Value };
+                    return true;
+            }
+
+            return false;
+        }
+
         private InterpreterScope GetParameters(FunctionDefinitionExpression function, FunctionCallExpression functionCall, InterpreterScope scope)
         {
             var innerScope = new InterpreterScope(scope);
@@ -524,7 +796,7 @@ namespace RATools.Parser
                 var assignedParameter = parameter as AssignmentExpression;
                 if (assignedParameter != null)
                 {
-                    if (!function.Parameters.Contains(assignedParameter.Variable))
+                    if (!function.Parameters.Contains(assignedParameter.Variable.Name))
                     {
                         EvaluationError(parameter, String.Format("{0} does not have a {1} parameter", function.Name, assignedParameter.Variable));
                         return null;
@@ -561,7 +833,7 @@ namespace RATools.Parser
                         return null;
                     }
 
-                    innerScope.AssignVariable(function.Parameters.ElementAt(index), value);
+                    innerScope.AssignVariable(new VariableExpression(function.Parameters.ElementAt(index)), value);
                 }
 
                 ++index;
@@ -574,11 +846,6 @@ namespace RATools.Parser
         {
             ErrorMessage = String.Format("{0}:{1} {2}", expression.Line, expression.Column, message);
             return false;
-        }
-
-        internal static string ParseError(PositionalTokenizer tokenizer, string message)
-        {
-            return String.Format("{0}:{1} {2}", tokenizer.Line, tokenizer.Column, message);
         }
 
         private void MergePublished(string outputDirectory)
