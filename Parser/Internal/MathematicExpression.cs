@@ -50,7 +50,7 @@ namespace RATools.Parser.Internal
                 {
                     if (mathematicRight.Operation == MathematicOperation.Add || mathematicRight.Operation == MathematicOperation.Subtract)
                     {
-                        var newLeft = new MathematicExpression(this, Operation, mathematicRight.Left);
+                        var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
                         return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
                     }
                 }

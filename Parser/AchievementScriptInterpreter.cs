@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Text;
 using Jamiras.Components;
-using Jamiras.IO.Serialization;
 using RATools.Data;
 using RATools.Parser.Internal;
 
@@ -16,6 +14,7 @@ namespace RATools.Parser
         public AchievementScriptInterpreter()
         {
             _achievements = new List<Achievement>();
+            _leaderboards = new List<Leaderboard>();
         }
 
         public IEnumerable<Achievement> Achievements
@@ -25,33 +24,21 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Achievement> _achievements;
 
-        internal LocalAchievements LocalAchievements { get; private set; }
-
         public string ErrorMessage { get; private set; }
 
         public int GameId { get; private set; }
         public string GameTitle { get; private set; }
-        public int PublishedAchievementCount { get; private set; }
-        public int PublishedAchievementPoints { get; private set; }
 
         public string RichPresence { get; private set; }
 
-        public bool Run(Tokenizer input, string outputDirectory)
+        public IEnumerable<Leaderboard> Leaderboards
         {
-            if (!Run(input))
-                return false;
-
-            foreach (var achievement in _achievements)
-                achievement.IsDifferentThanPublished = achievement.IsDifferentThanLocal = true;
-
-            MergePublished(outputDirectory);
-
-            MergeLocal(outputDirectory);
-
-            return true;
+            get { return _leaderboards; }
         }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private List<Leaderboard> _leaderboards;
 
-        private bool Run(Tokenizer input)
+        public bool Run(Tokenizer input)
         {
             var scope = new InterpreterScope();
             var tokenizer = new PositionalTokenizer(input);
@@ -186,6 +173,9 @@ namespace RATools.Parser
 
             if (expression.FunctionName == "rich_presence_display")
                 return ExecuteRichPresenceDisplay(expression, scope);
+
+            if (expression.FunctionName == "leaderboard")
+                return ExecuteLeaderboard(expression, scope);
 
             return EvaluationError(expression, "Unknown function: " + expression.FunctionName);
         }
@@ -785,6 +775,62 @@ namespace RATools.Parser
             return false;
         }
 
+        private static FunctionDefinitionExpression _leaderboardFunction;
+
+        private bool ExecuteLeaderboard(FunctionCallExpression expression, InterpreterScope scope)
+        {
+            if (_leaderboardFunction == null)
+            {
+                _leaderboardFunction = new FunctionDefinitionExpression("leaderboard");
+                _leaderboardFunction.Parameters.Add("title");
+                _leaderboardFunction.Parameters.Add("description");
+                _leaderboardFunction.Parameters.Add("start");
+                _leaderboardFunction.Parameters.Add("cancel");
+                _leaderboardFunction.Parameters.Add("submit");
+                _leaderboardFunction.Parameters.Add("value");
+            }
+
+            scope = GetParameters(_leaderboardFunction, expression, scope);
+            if (scope == null)
+                return false;
+
+            var leaderboard = new Leaderboard();
+
+            var str = scope.GetVariable("title") as StringConstantExpression;
+            if (str != null)
+                leaderboard.Title = str.Value;
+
+            str = scope.GetVariable("description") as StringConstantExpression;
+            if (str != null)
+                leaderboard.Description = str.Value;
+
+            var achievement = new AchievementBuilder();
+            if (!ExecuteAchievementExpression(achievement, scope.GetVariable("start"), scope))
+                return false;
+            achievement.Optimize();
+            leaderboard.Start = achievement.SerializeRequirements();
+
+            achievement = new AchievementBuilder();
+            if (!ExecuteAchievementExpression(achievement, scope.GetVariable("cancel"), scope))
+                return false;
+            achievement.Optimize();
+            leaderboard.Cancel = achievement.SerializeRequirements();
+
+            achievement = new AchievementBuilder();
+            if (!ExecuteAchievementExpression(achievement, scope.GetVariable("submit"), scope))
+                return false;
+            achievement.Optimize();
+            leaderboard.Submit = achievement.SerializeRequirements();
+
+            string value;
+            if (!EvaluateAddress(scope.GetVariable("value"), scope, out value))
+                return false;
+            leaderboard.Value = value;
+
+            _leaderboards.Add(leaderboard);
+            return true;
+        }
+
         private InterpreterScope GetParameters(FunctionDefinitionExpression function, FunctionCallExpression functionCall, InterpreterScope scope)
         {
             var innerScope = new InterpreterScope(scope);
@@ -846,88 +892,6 @@ namespace RATools.Parser
         {
             ErrorMessage = String.Format("{0}:{1} {2}", expression.Line, expression.Column, message);
             return false;
-        }
-
-        private void MergePublished(string outputDirectory)
-        {
-            var fileName = Path.Combine(outputDirectory, GameId + ".txt");
-            if (!File.Exists(fileName))
-                return;
-
-            using (var stream = File.OpenRead(fileName))
-            {
-                var publishedData = new JsonObject(stream);
-                GameTitle = publishedData.GetField("Title").StringValue;
-
-                var publishedAchievements = publishedData.GetField("Achievements");
-                var count = 0;
-                var points = 0;
-                foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
-                {
-                    count++;
-                    points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-
-                    var title = publishedAchievement.GetField("Title").StringValue;
-                    var achievement = _achievements.FirstOrDefault(a => a.Title == title);
-                    if (achievement == null)
-                    {
-                        var builder = new AchievementBuilder();
-                        builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                        builder.Title = title;
-                        builder.Description = publishedAchievement.GetField("Description").StringValue;
-                        builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-                        builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
-                        builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
-                        achievement = builder.ToAchievement();
-                        achievement.IsNotGenerated = true;
-                        _achievements.Add(achievement);
-                        continue;
-                    }
-
-                    achievement.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                    achievement.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
-
-                    if (achievement.Points != publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault())
-                    {
-                        achievement.IsDifferentThanPublished = true;
-                    }
-                    else if (achievement.Description != publishedAchievement.GetField("Description").StringValue)
-                    {
-                        achievement.IsDifferentThanPublished = true;
-                    }
-                    else
-                    {
-                        var requirementsString = publishedAchievement.GetField("MemAddr").StringValue;
-                        var cheev = new AchievementBuilder();
-                        cheev.ParseRequirements(Tokenizer.CreateTokenizer(requirementsString));
-
-                        achievement.IsDifferentThanPublished = !cheev.ToAchievement().AreRequirementsSame(achievement);
-                    }
-                }
-
-                PublishedAchievementCount = count;
-                PublishedAchievementPoints = points;
-            }
-        }
-
-        private void MergeLocal(string outputDirectory)
-        {
-            var fileName = Path.Combine(outputDirectory, GameId + "-User.txt");
-            LocalAchievements = new LocalAchievements(fileName);
-
-            foreach (var achievement in _achievements)
-            {
-                var localAchievement = LocalAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
-                if (localAchievement == null)
-                    continue;
-
-                if (achievement.Points != localAchievement.Points)
-                    achievement.IsDifferentThanLocal = true;
-                else if (achievement.Description != localAchievement.Description)
-                    achievement.IsDifferentThanLocal = true;
-                else
-                    achievement.IsDifferentThanLocal = !achievement.AreRequirementsSame(localAchievement);
-            }
         }
     }
 }

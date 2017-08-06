@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Jamiras.Commands;
 using Jamiras.ViewModels;
 using RATools.Data;
 
@@ -19,5 +20,7 @@ namespace RATools.ViewModels
 
         public string Label { get; private set; }
         public IEnumerable<RequirementViewModel> Requirements { get; private set; }
+
+        public CommandBase CopyCommand { get; internal set; }
     }
 }

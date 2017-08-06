@@ -1,7 +1,14 @@
 ﻿<Window x:Class="RATools.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{Binding GameTitle, StringFormat='RA Tools - {0}'}" Height="768" Width="1024">
+        Title="{Binding Game.Title, StringFormat='RA Tools - {0}', FallbackValue='RA Tools - No Game Loaded'}" Height="768" Width="1024">
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
     <DockPanel>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
@@ -13,20 +20,20 @@
         <Border DockPanel.Dock="Bottom" Height="20" Background="#C0C0C0" BorderBrush="DarkGray" BorderThickness="0,1,0,0">
             <Grid>
                 <TextBlock Margin="6,0,6,0">
-                    <TextBlock Text="{Binding PublishedAchievementCount}" Margin="0,0,-2,0" />
+                    <TextBlock Text="{Binding Game.PublishedAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
                     <Run Text=" published achievements (" />
-                    <TextBlock Text="{Binding PublishedAchievementPoints}" Margin="-2,0,-2,0"/>
+                    <TextBlock Text="{Binding Game.PublishedAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0"/>
                     <Run Text=")" />
                 </TextBlock>
                 <TextBlock Margin="6,0,6,0" HorizontalAlignment="Right">
-                    <TextBlock Text="{Binding LocalAchievementCount}" Margin="0,0,-2,0" />
+                    <TextBlock Text="{Binding Game.LocalAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
                     <Run Text=" local achievements (" />
-                    <TextBlock Text="{Binding LocalAchievementPoints}" Margin="-2,0,-2,0"/>
+                    <TextBlock Text="{Binding Game.LocalAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0"/>
                     <Run Text=")" />
                 </TextBlock>
             </Grid>
         </Border>
-        <Grid>
+        <Grid DataContext="{Binding Game}">
             <Grid.Resources>
                 <DataTemplate x:Key="achievementRowTemplate">
                     <Grid>
@@ -41,11 +48,10 @@
                         <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="2,0,2,0" />
                         <TextBlock Grid.Column="2" Text="{Binding Points}" Margin="2,0,8,0" HorizontalAlignment="Right" />
 
-                        <TextBlock Grid.Column="3" Margin="2,0,2,0" Text="{Binding Status}"
-                                   Tag="{Binding DataContext, ElementName=achievementsGrid}">
+                        <TextBlock Grid.Column="3" Margin="2,0,2,0" Text="{Binding Status}">
                             <TextBlock.ContextMenu>
                                 <ContextMenu DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
-                                    <MenuItem Header="Update Local" Command="{Binding Tag.UpdateLocalCommand}" CommandParameter="{Binding DataContext}" />
+                                    <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
                         </TextBlock>
@@ -58,12 +64,12 @@
             </Grid.ColumnDefinitions>
             <ListBox ItemsSource="{Binding Achievements}" SelectedItem="{Binding SelectedAchievement}"
                      ItemTemplate="{StaticResource achievementRowTemplate}" x:Name="achievementsGrid" />
-            
-            <Grid Grid.Column="1">
+
+            <Grid Grid.Column="1" DataContext="{Binding SelectedAchievement}">
                 <Grid.Style>
                     <Style TargetType="{x:Type Grid}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedAchievement}" Value="{x:Null}">
+                            <DataTrigger Binding="{Binding}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -81,19 +87,35 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 
-                <Image Grid.RowSpan="4" Source="{Binding SelectedAchievementBadge}" Width="64" Height="64" Margin="4" />
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding SelectedAchievement.Title}" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding SelectedAchievement.Description}" VerticalAlignment="Top" />
+                <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" />
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
                 <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                    <TextBlock Text="{Binding SelectedAchievement.Points}" />
+                    <TextBlock Text="{Binding Points}" />
                     <Run Text="points" />
                 </TextBlock>
 
-                <ListBox Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding SelectedAchievementRequirementGroups}">
+                <ListBox Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding RequirementGroups}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Vertical">
-                                <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                    <TextBlock VerticalAlignment="Bottom" Margin="6,0,0,2" FontSize="10">
+                                        <TextBlock.Style>
+                                            <Style TargetType="{x:Type TextBlock}">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CopyCommand}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                        <Hyperlink Command="{Binding CopyCommand}" Style="{StaticResource subtleHyperlink}">
+                                            <TextBlock Text="Copy to Clipboard" />
+                                        </Hyperlink>
+                                    </TextBlock>
+                                </StackPanel>
                                 <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
