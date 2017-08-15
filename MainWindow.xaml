@@ -14,6 +14,14 @@
             <MenuItem Header="_File">
                 <MenuItem Header="Compile _Achievements" Command="{Binding CompileAchievementsCommand}" />
                 <Separator />
+                <MenuItem Header="_Recent" ItemsSource="{Binding RecentFiles}">
+                    <MenuItem.ItemTemplate>
+                        <DataTemplate>
+                            <MenuItem Header="{Binding}" Command="{Binding DataContext.OpenRecentCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type DockPanel}}}" CommandParameter="{Binding}" />
+                        </DataTemplate>
+                    </MenuItem.ItemTemplate>
+                </MenuItem>
+                <Separator />
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
         </Menu>

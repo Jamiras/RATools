@@ -18,13 +18,13 @@ namespace RATools
 
         protected override void OnInitialized(EventArgs e)
         {
-            var viewModel = new MainWindowViewModel();
-            viewModel.Initialize();
-            DataContext = viewModel;
-
             CoreServices.RegisterServices();
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
+
+            var viewModel = new MainWindowViewModel();
+            viewModel.Initialize();
+            DataContext = viewModel;
 
             base.OnInitialized(e);
         }
