@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Linq;
 
 namespace RATools.Parser.Internal
@@ -40,7 +41,7 @@ namespace RATools.Parser.Internal
             var dict = value as DictionaryExpression;
             if (dict != null)
             {
-                var entry = dict.Entries.FirstOrDefault(e => e.Key == index);
+                var entry = dict.Entries.FirstOrDefault(e => Object.Equals(e.Key, index));
                 if (entry != null)
                 {
                     result = entry.Value;

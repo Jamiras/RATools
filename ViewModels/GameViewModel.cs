@@ -198,9 +198,17 @@ namespace RATools.ViewModels
             {
                 var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
                 if (localAchievement == null)
-                    continue;
+                {
+                    localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Description == achievement.Description);
+                    if (localAchievement == null)
+                    {
+                        // TODO: attempt to match achievements by requirements
+                        continue;
+                    }
 
-                if (achievement.Points != localAchievement.Points)
+                    achievement.IsDifferentThanLocal = true;
+                }
+                else if (achievement.Points != localAchievement.Points)
                     achievement.IsDifferentThanLocal = true;
                 else if (achievement.Description != localAchievement.Description)
                     achievement.IsDifferentThanLocal = true;

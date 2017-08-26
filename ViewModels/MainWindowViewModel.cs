@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -90,28 +91,29 @@ namespace RATools.ViewModels
         public CommandBase<string> OpenRecentCommand { get; private set; }
         private void OpenFile(string filename)
         {
+            var parser = new AchievementScriptInterpreter();
+
             using (var stream = File.OpenRead(filename))
             {
                 AddRecentFile(filename);
 
-                var parser = new AchievementScriptInterpreter();
-                if (!parser.Run(Tokenizer.CreateTokenizer(stream)))
-                {
-                    MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
-                }
-                else
+                if (parser.Run(Tokenizer.CreateTokenizer(stream)))
                 {
                     Game = new GameViewModel(parser, RACacheDirectory);
+                    return;
                 }
             }
+
+            MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
         }
 
         private void AddRecentFile(string newFile)
         {
             if (_recentFiles.First() == newFile)
                 return;
-            
-            _recentFiles.Add(newFile);
+
+            if (_recentFiles.FindAndMakeRecent(str => str == newFile) == null)
+                _recentFiles.Add(newFile);
 
             var builder = new StringBuilder();
             foreach (var file in _recentFiles)

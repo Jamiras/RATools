@@ -60,8 +60,7 @@ namespace RATools.Parser
                 switch (expression.Type)
                 {
                     case ExpressionType.ParseError:
-                        ErrorMessage = ((ParseErrorExpression)expression).Message;
-                        return false;
+                        return EvaluationError(expression, ((ParseErrorExpression)expression).Message);
 
                     case ExpressionType.FunctionDefinition:
                         scope.AddFunction((FunctionDefinitionExpression)expression);
@@ -495,6 +494,40 @@ namespace RATools.Parser
                 return true;
             }
 
+            if (functionCall.FunctionName == "unless")
+            {
+                var temp = new AchievementBuilder();
+                if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
+                    return false;
+
+                var temp2 = temp.ToAchievement();
+                if (temp2.AlternateRequirements.Any())
+                {
+                    if (temp2.CoreRequirements.Any())
+                        return EvaluationError(functionCall.Parameters.First(), "unless does not support &&'d conditions");
+                    foreach (var alt in temp2.AlternateRequirements)
+                    {
+                        if (alt.Count() > 1)
+                            return EvaluationError(functionCall.Parameters.First(), "unless does not support &&'d conditions");
+
+                        var requirement = alt.First();
+                        requirement.Type = RequirementType.PauseIf;
+                        achievement.Current.Add(requirement);
+                    }
+                }
+                else
+                {
+                    if (temp2.CoreRequirements.Count() > 1)
+                        return EvaluationError(functionCall.Parameters.First(), "unless does not support &&'d conditions");
+
+                    var requirement = temp2.CoreRequirements.First();
+                    requirement.Type = RequirementType.PauseIf;
+                    achievement.Current.Add(requirement);
+                }
+
+                return true;
+            }
+
             if (functionCall.FunctionName == "prev")
             {
                 if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.First(), scope))
@@ -505,7 +538,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            return EvaluationError(functionCall, "unsupported function within achievement");
+            return EvaluationError(functionCall, "unsupported function within achievement: " + functionCall.FunctionName);
         }
 
         private FieldSize GetMemoryLookupFunctionSize(string name)

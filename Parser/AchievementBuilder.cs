@@ -483,6 +483,236 @@ namespace RATools.Parser.Internal
             }
         }
 
+        private static bool MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
+        {
+            merged = null;
+            if (left.Type != right.Type)
+                return false;
+
+            if (left.HitCount != right.HitCount)
+                return false;
+
+            if (left.Left != right.Left)
+                return false;
+
+            if (left.Operator == right.Operator)
+            {
+                if (left.Right == right.Right)
+                {
+                    merged = left;
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (left.Right.Type != FieldType.Value || right.Right.Type != FieldType.Value)
+                return false;
+
+            bool useRight = false, useLeft = false;
+            RequirementOperator newOperator = RequirementOperator.None;
+            switch (left.Operator)
+            {
+                case RequirementOperator.Equal:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.GreaterThan:
+                            if (right.Right.Value == left.Right.Value)
+                                newOperator = RequirementOperator.GreaterThanOrEqual;
+                            else if (right.Right.Value < left.Right.Value)
+                                useRight = true;
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            useRight = right.Right.Value <= left.Right.Value;
+                            break;
+
+                        case RequirementOperator.LessThan:
+                            if (right.Right.Value == left.Right.Value)
+                                newOperator = RequirementOperator.LessThanOrEqual;
+                            else if (right.Right.Value > left.Right.Value)
+                                useRight = right.Right.Value > left.Right.Value;
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual:
+                            useRight = right.Right.Value >= left.Right.Value;
+                            break;
+                    }
+                    break;
+
+                case RequirementOperator.GreaterThan:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.GreaterThan:
+                            useRight = right.Right.Value < left.Right.Value;
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            useRight = right.Right.Value <= left.Right.Value;
+                            break;
+
+                        case RequirementOperator.Equal:
+                            if (right.Right.Value == left.Right.Value)
+                                newOperator = RequirementOperator.GreaterThanOrEqual;
+                            else if (right.Right.Value > left.Right.Value)
+                                useLeft = true;
+                            break;
+                    }
+                    break;
+
+                case RequirementOperator.GreaterThanOrEqual:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.GreaterThan:
+                            if (right.Right.Value == left.Right.Value)
+                                useLeft = true;
+                            else
+                                useRight = right.Right.Value < left.Right.Value;
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            useRight = right.Right.Value <= left.Right.Value;
+                            break;
+                            
+                        case RequirementOperator.Equal:
+                            useLeft = right.Right.Value >= left.Right.Value;
+                            break;
+                    }
+                    break;
+
+                case RequirementOperator.LessThan:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.LessThan:
+                            useRight = right.Right.Value > left.Right.Value;
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual:
+                            useRight = right.Right.Value >= left.Right.Value;
+                            break;
+
+                        case RequirementOperator.Equal:
+                            if (right.Right.Value == left.Right.Value)
+                                newOperator = RequirementOperator.LessThanOrEqual;
+                            else if (right.Right.Value < left.Right.Value)
+                                useLeft = true;
+                            break;
+                    }
+                    break;
+
+                case RequirementOperator.LessThanOrEqual:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.LessThan:
+                            if (right.Right.Value == left.Right.Value)
+                                useLeft = true;
+                            else
+                                useRight = right.Right.Value > left.Right.Value;
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual:
+                            useRight = right.Right.Value >= left.Right.Value;
+                            break;
+
+                        case RequirementOperator.Equal:
+                            useLeft = right.Right.Value <= left.Right.Value;
+                            break;
+                    }
+                    break;
+            }
+
+            if (condition == ConditionalOperation.Or)
+            {
+                if (useRight)
+                {
+                    merged = right;
+                    return true;
+                }
+
+                if (useLeft)
+                {
+                    merged = left;
+                    return true;
+                }
+
+                if (newOperator != RequirementOperator.None)
+                {
+                    merged = new Requirement { Left = left.Left, Right = left.Right, HitCount = left.HitCount, Operator = newOperator, Type = left.Type };
+                    return true;
+                }
+            }
+            else
+            {
+                if (useRight)
+                {
+                    merged = left;
+                    return true;
+                }
+
+                if (useLeft)
+                {
+                    merged = right;
+                    return true;
+                }
+
+                if (newOperator != RequirementOperator.None)
+                {
+                    merged = new Requirement { Left = left.Left, Right = left.Right, HitCount = left.HitCount, Operator = RequirementOperator.Equal, Type = left.Type };
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void MergeDuplicateAlts()
+        {
+            for (int i = _alts.Count - 1; i > 0; i--)
+            {
+                for (int j = i - 1; j >= 0; j--)
+                {
+                    if (_alts[i].Count != _alts[j].Count)
+                        continue;
+
+                    bool[] matches = new bool[_alts[i].Count];
+                    Requirement[] merged = new Requirement[_alts[i].Count];
+                    for (int k = 0; k < matches.Length; k++)
+                    {
+                        bool matched = false;
+                        for (int l = 0; l < matches.Length; l++)
+                        {
+                            if (matches[l])
+                                continue;
+
+                            if (MergeRequirements(_alts[i][k], _alts[j][l], ConditionalOperation.Or, out merged[k]))
+                            {
+                                matched = true;
+                                matches[l] = true;
+                                break;
+                            }
+                        }
+
+                        if (!matched)
+                            break;
+                    }
+
+                    if (matches.All(m => m == true))
+                    {
+                        _alts[j].Clear();
+                        _alts[j].AddRange(merged);
+                        _alts.RemoveAt(i);
+                        break;
+                    }
+                }
+            }
+
+            if (_alts.Count == 1)
+            {
+                _core.AddRange(_alts[0]);
+                _alts.Clear();
+            }
+        }
+
         private void PromoteCommonAltsToCore()
         {
             var requirementsFoundInAll = new List<Requirement>();
@@ -549,68 +779,15 @@ namespace RATools.Parser.Internal
                 if (requirement.Right.Type != FieldType.Value)
                     continue;
 
-                bool redundant = false;
-                for (int j = 0; j < requirements.Count; j++)
+                for (int j = 0; j < i; j++)
                 {
-                    if (j == i)
-                        continue;
-
-                    var check = requirements[j];
-                    if (check.Right.Type != FieldType.Value)
-                        continue;
-                    if (check.Left.Value != requirement.Left.Value)
-                        continue;
-
-                    switch (check.Operator)
+                    Requirement merged;
+                    if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
                     {
-                        case RequirementOperator.Equal:
-                            if (requirement.Operator == RequirementOperator.GreaterThan && requirement.Right.Value < check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.GreaterThanOrEqual && requirement.Right.Value <= check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.LessThan && requirement.Right.Value > check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.LessThanOrEqual && requirement.Right.Value >= check.Right.Value)
-                                redundant = true;
-                            break;
-
-                        case RequirementOperator.GreaterThan:
-                            if (requirement.Operator == RequirementOperator.GreaterThan && requirement.Right.Value < check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.GreaterThanOrEqual && requirement.Right.Value <= check.Right.Value)
-                                redundant = true;
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            if (requirement.Operator == RequirementOperator.GreaterThan && requirement.Right.Value < check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.GreaterThanOrEqual && requirement.Right.Value < check.Right.Value)
-                                redundant = true;
-                            break;
-
-                        case RequirementOperator.LessThan:
-                            if (requirement.Operator == RequirementOperator.LessThan && requirement.Right.Value > check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.LessThanOrEqual && requirement.Right.Value >= check.Right.Value)
-                                redundant = true;
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            if (requirement.Operator == RequirementOperator.LessThan && requirement.Right.Value > check.Right.Value)
-                                redundant = true;
-                            else if (requirement.Operator == RequirementOperator.LessThanOrEqual && requirement.Right.Value > check.Right.Value)
-                                redundant = true;
-                            break;
-                    }
-
-                    if (redundant)
+                        requirements[j] = merged;
+                        requirements.RemoveAt(i);
                         break;
-                }
-
-                if (redundant)
-                {
-                    requirements.RemoveAt(i);
-                    continue;
+                    }
                 }
             }
         }
@@ -618,6 +795,8 @@ namespace RATools.Parser.Internal
         private static bool IsMergable(Requirement requirement)
         {
             if (requirement.Operator != RequirementOperator.Equal)
+                return false;
+            if (requirement.Left.Type != FieldType.MemoryAddress)
                 return false;
             if (requirement.Right.Type != FieldType.Value)
                 return false;
@@ -819,7 +998,7 @@ namespace RATools.Parser.Internal
                 _alts.Clear();
             }
 
-            // remove duplicates
+            // remove duplicates within a set of requirements
             RemoveDuplicates(_core);
             foreach (var alt in _alts)
             {
@@ -836,6 +1015,9 @@ namespace RATools.Parser.Internal
             MergeBits(_core);
             foreach (var alt in _alts)
                 MergeBits(alt);
+
+            // merge duplicate alts
+            MergeDuplicateAlts();
 
             // identify any item common to all alts and promote it to core
             if (_alts.Count > 1)

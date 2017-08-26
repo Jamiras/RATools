@@ -16,5 +16,19 @@ namespace RATools.Parser.Internal
         {
             builder.Append(Value);
         }
+
+        public override bool Equals(object obj)
+        {
+            var that = obj as IntegerConstantExpression;
+            if (that == null)
+                return false;
+
+            return (this.Value == that.Value);
+        }
+
+        public override int GetHashCode()
+        {
+            return Value;
+        }
     }
 }

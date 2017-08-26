@@ -60,7 +60,7 @@ namespace RATools.Parser.Internal
             if (comparisonRight != null)
             {
                 Right = comparisonRight.Left;
-                comparisonRight.Left = this;
+                comparisonRight.Left = this.Rebalance();
                 return comparisonRight;
             }
 
@@ -68,7 +68,7 @@ namespace RATools.Parser.Internal
             if (conditionalRight != null)
             {
                 Right = conditionalRight.Left;
-                conditionalRight.Left = this;
+                conditionalRight.Left = this.Rebalance();
                 return conditionalRight;
             }
 
