@@ -59,6 +59,7 @@
     <Compile Include="Parser\Internal\AssignmentExpression.cs" />
     <Compile Include="Parser\Internal\ConditionalExpression.cs" />
     <Compile Include="Parser\Internal\ComparisonExpression.cs" />
+    <Compile Include="Parser\Internal\IfExpression.cs" />
     <Compile Include="Parser\Internal\ForExpression.cs" />
     <Compile Include="Parser\Internal\IndexedVariableExpression.cs" />
     <Compile Include="Parser\Internal\DictionaryExpression.cs" />

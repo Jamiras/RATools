@@ -265,6 +265,8 @@ namespace RATools.Parser.Internal
                         return FunctionDefinitionExpression.Parse(tokenizer);
                     if (identifier == "for")
                         return ForExpression.Parse(tokenizer);
+                    if (identifier == "if")
+                        return IfExpression.Parse(tokenizer);
 
                     if (tokenizer.NextChar == '(')
                     {
@@ -412,6 +414,46 @@ namespace RATools.Parser.Internal
             return dict;
         }
 
+        internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)
+        {
+            ExpressionBase.SkipWhitespace(tokenizer);
+
+            if (tokenizer.NextChar != '{')
+            {
+                var statement = ExpressionBase.Parse(tokenizer);
+                if (statement.Type == ExpressionType.ParseError)
+                    return statement;
+
+                expressions.Add(statement);
+            }
+            else
+            {
+                var line = tokenizer.Line;
+                var column = tokenizer.Column;
+
+                tokenizer.Advance();
+                do
+                {
+                    ExpressionBase.SkipWhitespace(tokenizer);
+                    if (tokenizer.NextChar == '}')
+                        break;
+
+                    if (tokenizer.NextChar == '\0')
+                        return new ParseErrorExpression("No matching closing brace found", line, column);
+
+                    var statement = ExpressionBase.Parse(tokenizer);
+                    if (statement.Type == ExpressionType.ParseError)
+                        return statement;
+
+                    expressions.Add(statement);
+                } while (true);
+
+                tokenizer.Advance();
+            }
+
+            return null;
+        }
+
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -429,6 +471,12 @@ namespace RATools.Parser.Internal
         {
             result = this;
             return true;
+        }
+
+        public virtual bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        {
+            error = null;
+            return false;
         }
     }
 
@@ -449,6 +497,7 @@ namespace RATools.Parser.Internal
         Return,
         Dictionary,
         For,
+        If,
 
         ParseError,
     }

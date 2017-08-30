@@ -734,6 +734,30 @@ namespace RATools.Parser.Internal
 
             foreach (var requirement in requirementsFoundInAll)
             {
+                // ResetIf can only be promoted if all HitCounts are also promoted
+                if (requirement.Type == RequirementType.ResetIf)
+                {
+                    bool canPromote = false;
+
+                    foreach (var alt in _alts)
+                    {
+                        for (int i = alt.Count - 1; i >= 0; i--)
+                        {
+                            if (alt[i].HitCount > 0 && !requirementsFoundInAll.Contains(alt[i]))
+                            {
+                                canPromote = false;
+                                break;
+                            }
+                        }
+
+                        if (!canPromote)
+                            break;
+                    }
+
+                    if (!canPromote)
+                        continue;
+                }
+
                 foreach (var alt in _alts)
                 {
                     for (int i = alt.Count - 1; i >= 0; i--)

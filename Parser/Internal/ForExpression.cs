@@ -43,29 +43,10 @@ namespace RATools.Parser.Internal
             if (loop.Range.Type == ExpressionType.ParseError)
                 return loop.Range;
 
-            if (tokenizer.NextChar != '{')
-                return new ParseErrorExpression("Opening brace expected after loop declaration", tokenizer.Line, tokenizer.Column);
+            var error = ExpressionBase.ParseStatementBlock(tokenizer, loop.Expressions);
+            if (error != null)
+                return error;
 
-            var line = tokenizer.Line;
-            var column = tokenizer.Column;
-            tokenizer.Advance();
-            ExpressionBase.SkipWhitespace(tokenizer);
-
-            while (tokenizer.NextChar != '}')
-            {
-                var expression = ExpressionBase.Parse(tokenizer);
-                if (expression.Type == ExpressionType.ParseError)
-                    return expression;
-
-                if (tokenizer.NextChar == '\0')
-                    return new ParseErrorExpression("No matching closing brace found", line, column);
-
-                loop.Expressions.Add(expression);
-
-                ExpressionBase.SkipWhitespace(tokenizer);
-            }
-
-            tokenizer.Advance();
             return loop;
         }
     }

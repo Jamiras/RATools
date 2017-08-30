@@ -120,6 +120,9 @@ namespace RATools.Parser
                 case ExpressionType.For:
                     return EvaluateLoop((ForExpression)expression, scope);
 
+                case ExpressionType.If:
+                    return EvaluateIf((IfExpression)expression, scope);
+
                 default:
                     return EvaluationError(expression, "Only assignment statements, function calls and function definitions allowed at outer scope");
             }
@@ -153,6 +156,21 @@ namespace RATools.Parser
             }
 
             return EvaluationError(forExpression.Range, "Cannot iterate over " + forExpression.Range.ToString());
+        }
+
+        private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
+        {
+            ParseErrorExpression error;
+            bool result = ifExpression.Condition.IsTrue(scope, out error);
+            if (error != null)
+                return EvaluationError(ifExpression.Condition, error.Message);
+
+            if (result)
+                Evaluate(ifExpression.Expressions, scope);
+            else
+                Evaluate(ifExpression.ElseExpressions, scope);
+
+            return true;
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)

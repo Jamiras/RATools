@@ -67,6 +67,32 @@ namespace RATools.Parser.Internal
             result = condition;
             return true;
         }
+
+        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        {
+            bool result = Left.IsTrue(scope, out error);
+            if (error != null)
+                return false;
+
+            switch (Operation)
+            {
+                case ConditionalOperation.And:
+                    if (result)
+                        result = Right.IsTrue(scope, out error);
+                    break;
+
+                case ConditionalOperation.Or:
+                    if (!result)
+                        result = Right.IsTrue(scope, out error);
+                    break;
+
+                case ConditionalOperation.Not:
+                    result = !result;
+                    break;
+            }
+
+            return result;
+        }
     }
 
     public enum ConditionalOperation
