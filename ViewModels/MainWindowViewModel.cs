@@ -81,6 +81,13 @@ namespace RATools.ViewModels
             private set { SetValue(GameProperty, value); }
         }
 
+        public static readonly ModelProperty CurrentFileProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CurrentFile", typeof(string), null);
+        public string CurrentFile
+        {
+            get { return (string)GetValue(CurrentFileProperty); }
+            private set { SetValue(CurrentFileProperty, value); }
+        }
+
         public static readonly ModelProperty RecentFilesProperty = ModelProperty.Register(typeof(MainWindowViewModel), "RecentFiles", typeof(IEnumerable<string>), null);
         public IEnumerable<string> RecentFiles
         {
@@ -99,6 +106,7 @@ namespace RATools.ViewModels
 
                 if (parser.Run(Tokenizer.CreateTokenizer(stream)))
                 {
+                    CurrentFile = filename;
                     Game = new GameViewModel(parser, RACacheDirectory);
                     return;
                 }
