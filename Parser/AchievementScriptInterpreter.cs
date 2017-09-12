@@ -96,6 +96,9 @@ namespace RATools.Parser
             {
                 if (!Evaluate(expression, scope))
                     return false;
+
+                if (scope.IsComplete)
+                    break;
             }
 
             return true;
@@ -150,6 +153,9 @@ namespace RATools.Parser
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
+
+                    if (loopScope.IsComplete)
+                        break;
                 }
 
                 return true;
@@ -239,6 +245,20 @@ namespace RATools.Parser
             return true;
         }
 
+        private bool ExecuteAchievementExpressions(AchievementBuilder achievement, ICollection<ExpressionBase> expressions, InterpreterScope scope)
+        {
+            foreach (var expression in expressions)
+            {
+                if (!ExecuteAchievementExpression(achievement, expression, scope))
+                    return false;
+
+                if (scope.IsComplete)
+                    break;
+            }
+
+            return true;
+        }
+
         private bool ExecuteAchievementExpression(AchievementBuilder achievement, ExpressionBase expression, InterpreterScope scope)
         {
             ExpressionBase operand;
@@ -263,7 +283,11 @@ namespace RATools.Parser
                     return ExecuteAchievementComparison(achievement, (ComparisonExpression)expression, scope);
 
                 case ExpressionType.Return:
-                    return ExecuteAchievementExpression(achievement, ((ReturnExpression)expression).Value, scope);
+                    if (!ExecuteAchievementExpression(achievement, ((ReturnExpression)expression).Value, scope))
+                        return false;
+
+                    scope.IsComplete = true;
+                    return true;
 
                 case ExpressionType.Mathematic:
                     return ExecuteAchievementMathematic(achievement, (MathematicExpression)expression, scope);
@@ -288,14 +312,10 @@ namespace RATools.Parser
             if (error != null)
                 return EvaluationError(ifExpression.Condition, error.Message);
 
-            var expressions = result ? ifExpression.Expressions : ifExpression.ElseExpressions;
-            foreach (var expression in expressions)
-            {
-                if (!ExecuteAchievementExpression(achievement, expression, scope))
-                    return false;
-            }
-
-            return true;
+            if (result)
+                return ExecuteAchievementExpressions(achievement, ifExpression.Expressions, scope);
+            else
+                return ExecuteAchievementExpressions(achievement, ifExpression.ElseExpressions, scope);
         }
 
         private bool ExecuteAchievementMathematic(AchievementBuilder achievement, MathematicExpression mathematic, InterpreterScope scope)
@@ -444,13 +464,7 @@ namespace RATools.Parser
                 if (innerScope == null)
                     return false;
 
-                foreach (var expression in function.Expressions)
-                {
-                    if (!ExecuteAchievementExpression(achievement, expression, innerScope))
-                        return false;
-                }
-
-                return true;
+                return ExecuteAchievementExpressions(achievement, function.Expressions, innerScope);
             }
 
             var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName);

@@ -80,5 +80,10 @@ namespace RATools.Parser.Internal
 
             _variables[variable.Name] = value;
         }
+
+        /// <summary>
+        /// Gets whether or not the processor has encountered an early exit statement (return, break)
+        /// </summary>
+        public bool IsComplete { get; set; }
     }
 }
