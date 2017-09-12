@@ -64,8 +64,8 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" Text="{Binding Id}" Margin="2,0,2,0" HorizontalAlignment="Right" />
-                        <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="2,0,2,0" />
-                        <TextBlock Grid.Column="2" Text="{Binding Points}" Margin="2,0,8,0" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title.Text}" Margin="2,0,2,0" />
+                        <TextBlock Grid.Column="2" Text="{Binding Points.Text}" Margin="2,0,8,0" HorizontalAlignment="Right" />
 
                         <TextBlock Grid.Column="3" Margin="2,0,2,0" Text="{Binding Status}">
                             <TextBlock.ContextMenu>
@@ -76,6 +76,64 @@
                         </TextBlock>
                     </Grid>
                 </DataTemplate>
+                <Grid x:Key="ModifiableTextToolTip">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="50" />
+                        <ColumnDefinition Width="*" MaxWidth="600" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Local:" FontSize="10" VerticalAlignment="Bottom" />
+                    <TextBlock Grid.Column="2" Text="{Binding LocalText}">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LocalText}" Value="Not generated">
+                                        <Setter Property="FontStyle" Value="Italic" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding LocalText}" Value="New">
+                                        <Setter Property="FontStyle" Value="Italic" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <TextBlock Grid.Row="1" Text="Published:" FontSize="10" VerticalAlignment="Bottom" />
+                    <TextBlock Grid.Row="1" Grid.Column="2">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Setters>
+                                    <Setter Property="Text" Value="{Binding PublishedText}" />
+                                </Style.Setters>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding PublishedText}" Value="">
+                                        <Setter Property="Text" Value="Not published" />
+                                        <Setter Property="FontStyle" Value="Italic" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+                <Style x:Key="ModifiableText" TargetType="{x:Type TextBlock}">
+                    <Style.Setters>
+                        <Setter Property="Text" Value="{Binding Text}" />
+                        <Setter Property="ToolTip" Value="{StaticResource ModifiableTextToolTip}" />
+                    </Style.Setters>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding State}" Value="FromLocal">
+                            <Setter Property="Foreground" Value="Blue" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding State}" Value="FromPublished">
+                            <Setter Property="Foreground" Value="Purple" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding State}" Value="NotGenerated">
+                            <Setter Property="Foreground" Value="Orange" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
             </Grid.Resources>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="400" />
@@ -107,10 +165,10 @@
                 </Grid.ColumnDefinitions>
                 
                 <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" />
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" DataContext="{Binding Title}" Style="{StaticResource ModifiableText}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" DataContext="{Binding Description}" Style="{StaticResource ModifiableText}"  VerticalAlignment="Top" />
                 <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                    <TextBlock Text="{Binding Points}" />
+                    <TextBlock DataContext="{Binding Points}" Style="{StaticResource ModifiableText}"  />
                     <Run Text="points" />
                 </TextBlock>
 
@@ -143,7 +201,7 @@
                                                     <ColumnDefinition Width="200" />
                                                     <ColumnDefinition Width="376" />
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Definition}" TextWrapping="Wrap" />
+                                                <TextBlock DataContext="{Binding Definition}" Style="{StaticResource ModifiableText}" />
                                                 <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" />
                                             </Grid>
                                         </DataTemplate>

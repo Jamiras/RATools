@@ -40,7 +40,6 @@ namespace RATools.ViewModels
             foreach (var achievement in parser.Achievements)
             {
                 var achievementViewModel = new AchievementViewModel(this, achievement);
-                achievementViewModel.IsDifferentThanPublished = achievementViewModel.IsDifferentThanLocal = true;
                 achievements.Add(achievementViewModel);
             }
 
@@ -77,11 +76,11 @@ namespace RATools.ViewModels
             set { SetValue(SelectedAchievementProperty, value); }
         }
 
-        internal void UpdateLocal(Achievement achievement)
+        internal void UpdateLocal(Achievement achievement, string localTitle)
         {
             var list = (List<Achievement>)_localAchievements.Achievements;
             int index = 0;
-            while (index < list.Count && list[index].Title != achievement.Title)
+            while (index < list.Count && list[index].Title != localTitle)
                 index++;
 
             if (index == list.Count)
@@ -147,7 +146,7 @@ namespace RATools.ViewModels
                     points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
 
                     var title = publishedAchievement.GetField("Title").StringValue;
-                    var achievement = achievements.FirstOrDefault(a => a.Title == title);
+                    var achievement = achievements.FirstOrDefault(a => a.Title.Text == title);
                     if (achievement == null)
                     {
                         var builder = new AchievementBuilder();
@@ -158,7 +157,10 @@ namespace RATools.ViewModels
                         builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
                         builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
                         achievement = new AchievementViewModel(this, builder.ToAchievement());
-                        achievement.IsNotGenerated = true;
+                        achievement.Title.PublishedText = achievement.Title.Text;
+                        achievement.Description.PublishedText = achievement.Description.Text;
+                        achievement.Points.PublishedText = achievement.Points.Text;
+                        achievement.Title.IsNotGenerated = true;
                         achievements.Add(achievement);
                         continue;
                     }
@@ -166,22 +168,14 @@ namespace RATools.ViewModels
                     achievement.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
                     achievement.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
 
-                    if (achievement.Points != publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault())
-                    {
-                        achievement.IsDifferentThanPublished = true;
-                    }
-                    else if (achievement.Description != publishedAchievement.GetField("Description").StringValue)
-                    {
-                        achievement.IsDifferentThanPublished = true;
-                    }
-                    else
-                    {
-                        var requirementsString = publishedAchievement.GetField("MemAddr").StringValue;
-                        var cheev = new AchievementBuilder();
-                        cheev.ParseRequirements(Tokenizer.CreateTokenizer(requirementsString));
+                    achievement.Title.PublishedText = title;
+                    achievement.Points.PublishedText = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault().ToString();
+                    achievement.Description.PublishedText = publishedAchievement.GetField("Description").StringValue;
 
-                        achievement.IsDifferentThanPublished = !cheev.ToAchievement().AreRequirementsSame(achievement.Achievement);
-                    }
+                    var requirementsString = publishedAchievement.GetField("MemAddr").StringValue;
+                    var cheev = new AchievementBuilder();
+                    cheev.ParseRequirements(Tokenizer.CreateTokenizer(requirementsString));
+                    MergeRequirements(achievement, cheev.ToAchievement(), false);
                 }
 
                 PublishedAchievementCount = count;
@@ -196,30 +190,97 @@ namespace RATools.ViewModels
 
             foreach (var achievement in achievements)
             {
-                var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title);
+                var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title.Text);
                 if (localAchievement == null)
                 {
-                    localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Description == achievement.Description);
+                    localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Description == achievement.Description.Text);
                     if (localAchievement == null)
                     {
                         // TODO: attempt to match achievements by requirements
+                        achievement.Title.LocalText = "New";
                         continue;
                     }
-
-                    achievement.IsDifferentThanLocal = true;
                 }
-                else if (achievement.Points != localAchievement.Points)
-                    achievement.IsDifferentThanLocal = true;
-                else if (achievement.Description != localAchievement.Description)
-                    achievement.IsDifferentThanLocal = true;
-                else
-                    achievement.IsDifferentThanLocal = !achievement.Achievement.AreRequirementsSame(localAchievement);
+
+                achievement.Title.LocalText = localAchievement.Title;
+                achievement.Points.LocalText = localAchievement.Points.ToString();
+                achievement.Description.LocalText = localAchievement.Description;
+
+                MergeRequirements(achievement, localAchievement, true);
 
                 achievement.BadgeName = achievement.Achievement.BadgeName = localAchievement.BadgeName;
             }
 
             LocalAchievementCount = _localAchievements.Achievements.Count();
             LocalAchievementPoints = _localAchievements.Achievements.Sum(a => a.Points);
+        }
+
+        private void MergeRequirements(AchievementViewModel achievementViewModel, Achievement achievement, bool isLocal)
+        {
+            var enumerable = achievementViewModel.RequirementGroups.GetEnumerator();
+            if (!enumerable.MoveNext())
+                return;
+
+            MergeRequirements(enumerable.Current, achievement.CoreRequirements, isLocal);
+
+            foreach (var alt in achievement.AlternateRequirements)
+            {
+                if (enumerable.MoveNext())
+                    MergeRequirements(enumerable.Current, alt, isLocal);
+            }
+
+            while (enumerable.MoveNext())
+            {
+                foreach (var requirement in enumerable.Current.Requirements)
+                {
+                    if (isLocal)
+                        requirement.Definition.LocalText = "New";
+                    else
+                        requirement.Definition.PublishedText = "New";
+                }
+            }
+        }
+
+        private void MergeRequirements(RequirementGroupViewModel requirementGroupViewModel, IEnumerable<Requirement> requirements, bool isLocal)
+        {
+            var enumerable = requirementGroupViewModel.Requirements.GetEnumerator();
+            var unmatchedRequirements = new List<Requirement>(requirements);
+
+            while (enumerable.MoveNext())
+            {
+                Requirement requirement = null;
+                for (int i = 0; i < unmatchedRequirements.Count; i++)
+                {
+                    if (unmatchedRequirements[i] == enumerable.Current.Requirement)
+                    {
+                        requirement = unmatchedRequirements[i];
+                        unmatchedRequirements.RemoveAt(i);
+                        break;
+                    }
+                }
+
+                if (requirement != null)
+                {
+                    if (isLocal)
+                        enumerable.Current.Definition.LocalText = requirement.ToString();
+                    else
+                        enumerable.Current.Definition.PublishedText = requirement.ToString();
+                }
+                else
+                {
+                    if (isLocal)
+                        enumerable.Current.Definition.LocalText = "New";
+                    else
+                        enumerable.Current.Definition.PublishedText = "New";
+                }
+            }
+
+            foreach (var unmatchedRequirement in unmatchedRequirements)
+            {
+                var unmatchedRequirementViewModel = new RequirementViewModel(unmatchedRequirement, Notes);
+                unmatchedRequirementViewModel.Definition.IsNotGenerated = true;
+                ((ICollection<RequirementViewModel>)requirementGroupViewModel.Requirements).Add(unmatchedRequirementViewModel);
+            }
         }
     }
 }

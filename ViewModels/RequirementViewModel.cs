@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using RATools.Data;
 
@@ -10,23 +11,12 @@ namespace RATools.ViewModels
     {
         public RequirementViewModel(Requirement requirement, IDictionary<int, string> notes)
         {
-            Definition = requirement.ToString();
+            Requirement = requirement;
 
-            if (Definition.Length > 32)
-            {
-                var index = 32;
-                while (!Char.IsWhiteSpace(Definition[index]))
-                    index--;
-
-                if (index < 20)
-                {
-                    index = 32;
-                    while (Char.IsLetterOrDigit(Definition[index]))
-                        index--;
-                }
-
-                Definition = Definition.Substring(0, index) + "\n     " + Definition.Substring(index);
-            }
+            Definition = new ModifiableTextFieldViewModel();
+            Definition.Text = requirement.ToString();
+            Definition.AddPropertyChangedHandler(ModifiableTextFieldViewModel.TextProperty, OnDefinitionChanged);
+            OnDefinitionChanged(Definition, new ModelPropertyChangedEventArgs(ModifiableTextFieldViewModel.TextProperty, "", Definition.Text));
 
             if (requirement.Right.Type == FieldType.Value ||
                 (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
@@ -56,11 +46,45 @@ namespace RATools.ViewModels
 
         public RequirementViewModel(string definition, string notes)
         {
-            Definition = definition;
+            Definition = new ModifiableTextFieldViewModel();
+            Definition.Text = definition;
             Notes = notes;
         }
 
-        public string Definition { get; private set; }
+        internal Requirement Requirement { get; private set; }
+
+        public ModifiableTextFieldViewModel Definition { get; private set; }
+
+        public static readonly ModelProperty WrappedDefinitionProperty = ModelProperty.Register(typeof(RequirementViewModel), "WrappedDefinition", typeof(string), "");
+        public string WrappedDefinition
+        {
+            get { return (string)GetValue(WrappedDefinitionProperty); }
+            private set { SetValue(WrappedDefinitionProperty, value); }
+        }
+
+        private void OnDefinitionChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            var definition = Definition.Text;
+
+            if (definition.Length > 32)
+            {
+                var index = 32;
+                while (!Char.IsWhiteSpace(definition[index]))
+                    index--;
+
+                if (index < 20)
+                {
+                    index = 32;
+                    while (Char.IsLetterOrDigit(definition[index]))
+                        index--;
+                }
+
+                definition = definition.Substring(0, index) + "\n     " + definition.Substring(index);
+            }
+
+            WrappedDefinition = definition;
+        }        
+
         public string Notes { get; private set; }
     }
 }

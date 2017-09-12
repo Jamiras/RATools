@@ -332,10 +332,10 @@ namespace RATools.Parser.Internal
                 return null;
             }
 
-            var error = (tokenizer.NextChar == '\0') ? new ParseErrorExpression("No closing parenthesis found") : new ParseErrorExpression("Expected closing parenthesis, found " + tokenizer.NextChar);
-            error.Line = line;
-            error.Column = column;
-            return error;
+            if (tokenizer.NextChar == '\0')
+                return new ParseErrorExpression("No closing parenthesis found", line, column);
+
+            return new ParseErrorExpression("Expected closing parenthesis, found " + tokenizer.NextChar, tokenizer.Line, tokenizer.Column);
         }
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation)

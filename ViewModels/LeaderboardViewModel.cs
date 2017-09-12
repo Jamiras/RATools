@@ -14,8 +14,8 @@ namespace RATools.ViewModels
             : base(owner)
         {
             _leaderboard = leaderboard;
-            Title = "Leaderboard: " + leaderboard.Title;
-            Description = leaderboard.Description;
+            Title.Text = "Leaderboard: " + leaderboard.Title;
+            Description.Text = leaderboard.Description;
         }
 
         private readonly Leaderboard _leaderboard;

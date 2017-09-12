@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
+using Jamiras.Components;
+using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser.Internal;
-using Jamiras.Components;
 
 namespace RATools.Parser
 {
@@ -101,6 +103,8 @@ namespace RATools.Parser
 
         public void Commit()
         {
+            var warning = new StringBuilder();
+
             using (var writer = File.CreateText(_filename))
             {
                 writer.WriteLine(_version);
@@ -112,6 +116,12 @@ namespace RATools.Parser
                     writer.Write(':');
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);
+                    if (requirements.Length + achievement.Title.Length + achievement.Description.Length > 2000)
+                    {
+                        warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit", achievement.Title);
+                        warning.AppendLine();
+                    }
+
                     writer.Write(requirements);
                     writer.Write(':');
 
@@ -132,6 +142,9 @@ namespace RATools.Parser
                     writer.WriteLine();
                 }
             }
+
+            if (warning.Length > 0)
+                MessageBoxViewModel.ShowMessage(warning.ToString());
         }
     }
 }

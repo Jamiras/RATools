@@ -12,32 +12,29 @@ namespace RATools.ViewModels
         public RichPresenceViewModel(GameViewModel owner, string richPresence)
             : base(owner)
         {
-            _richPresence = richPresence;
-            Title = "Rich Presence";
+            Title.Text = "Rich Presence";
+            _richPresence = new RequirementViewModel(richPresence, String.Empty);
 
             _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
             if (File.Exists(_richFile))
             {
-                var richLocal = File.ReadAllText(_richFile);
-                if (String.IsNullOrEmpty(_richPresence))
-                    _richPresence = richLocal;
-                else if (_richPresence != richLocal)
-                    IsDifferentThanLocal = true;
+                _richPresence.Definition.LocalText = File.ReadAllText(_richFile);
+                if (String.IsNullOrEmpty(_richPresence.Definition.LocalText))
+                    _richPresence.Definition.LocalText = "[Empty]";
             }
         }
 
         public string Script
         {
-            get { return _richPresence; }
+            get { return _richPresence.Definition.Text; }
         }
 
-        private readonly string _richPresence;
+        private readonly RequirementViewModel _richPresence;
         private readonly string _richFile;
 
         protected override void UpdateLocal()
         {
-            File.WriteAllText(_richFile, _richPresence);
-            IsDifferentThanLocal = false;
+            File.WriteAllText(_richFile, Script);
         }
 
         protected override List<RequirementGroupViewModel> BuildRequirementGroups()
@@ -45,9 +42,9 @@ namespace RATools.ViewModels
             var groups = new List<RequirementGroupViewModel>();
             var group = new RequirementGroupViewModel("Rich Presence", new Requirement[0], _owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _richPresence))
+                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, Script))
             };
-            ((List<RequirementViewModel>)group.Requirements).Add(new RequirementViewModel(_richPresence, String.Empty));
+            ((List<RequirementViewModel>)group.Requirements).Add(_richPresence);
             groups.Add(group);
             return groups;
         }

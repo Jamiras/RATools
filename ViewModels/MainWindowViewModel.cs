@@ -42,7 +42,6 @@ namespace RATools.ViewModels
             if (recent != null)
             {
                 var list = new List<string>(recent.Split(';'));
-                list.Reverse();
                 foreach (var item in list)
                     _recentFiles.Add(item);
                 RecentFiles = list.ToArray();

@@ -273,9 +273,29 @@ namespace RATools.Parser
                         return EvaluationError(expression, ((ParseErrorExpression)operand).Message);
 
                     return ExecuteAchievementExpression(achievement, operand, scope);
+
+                case ExpressionType.If:
+                    return ExecuteAchievementIf(achievement, (IfExpression)expression, scope);
             }
 
-            return false;
+            return EvaluationError(expression, "Unupported expression in achievement: " + expression.Type);
+        }
+
+        private bool ExecuteAchievementIf(AchievementBuilder achievement, IfExpression ifExpression, InterpreterScope scope)
+        {
+            ParseErrorExpression error;
+            bool result = ifExpression.Condition.IsTrue(scope, out error);
+            if (error != null)
+                return EvaluationError(ifExpression.Condition, error.Message);
+
+            var expressions = result ? ifExpression.Expressions : ifExpression.ElseExpressions;
+            foreach (var expression in expressions)
+            {
+                if (!ExecuteAchievementExpression(achievement, expression, scope))
+                    return false;
+            }
+
+            return true;
         }
 
         private bool ExecuteAchievementMathematic(AchievementBuilder achievement, MathematicExpression mathematic, InterpreterScope scope)

@@ -15,7 +15,11 @@ namespace RATools.ViewModels
         protected AchievementViewModel(GameViewModel owner)
         {
             _owner = owner;
-            UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+            UpdateLocalCommand = new DelegateCommand(ExecuteUpdateLocal);
+
+            Title = new ModifiableTextFieldViewModel();
+            Description = new ModifiableTextFieldViewModel();
+            Points = new ModifiableTextFieldViewModel();
         }
 
         public AchievementViewModel(GameViewModel owner, Achievement achievement)
@@ -24,9 +28,10 @@ namespace RATools.ViewModels
             Achievement = achievement;
 
             Id = achievement.Id;
-            Title = achievement.Title;
-            Description = achievement.Description;
-            Points = achievement.Points;
+            Title.Text = achievement.Title;
+
+            Description.Text = achievement.Description;
+            Points.Text = achievement.Points.ToString();
             BadgeName = achievement.BadgeName;
         }
 
@@ -40,25 +45,24 @@ namespace RATools.ViewModels
             internal set { SetValue(IdProperty, value); }
         }
 
-        public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(AchievementViewModel), "Title", typeof(string), String.Empty);
-        public string Title
-        {
-            get { return (string)GetValue(TitleProperty); }
-            internal set { SetValue(TitleProperty, value); }
-        }
+        public ModifiableTextFieldViewModel Title { get; private set; }
+        public ModifiableTextFieldViewModel Description { get; private set; }
+        public ModifiableTextFieldViewModel Points { get; private set; }
 
-        public static readonly ModelProperty DescriptionProperty = ModelProperty.Register(typeof(AchievementViewModel), "Description", typeof(string), String.Empty);
-        public string Description
+        private IEnumerable<ModifiableTextFieldViewModel> ModifiableTextFields
         {
-            get { return (string)GetValue(DescriptionProperty); }
-            internal set { SetValue(DescriptionProperty, value); }
-        }
+            get
+            {
+                yield return Title;
+                yield return Description;
+                yield return Points;
 
-        public static readonly ModelProperty PointsProperty = ModelProperty.Register(typeof(AchievementViewModel), "Points", typeof(int), 0);
-        public int Points
-        {
-            get { return (int)GetValue(PointsProperty); }
-            internal set { SetValue(PointsProperty, value); }
+                foreach (var group in RequirementGroups)
+                {
+                    foreach (var requirement in group.Requirements)
+                        yield return requirement.Definition;
+                }
+            }
         }
 
         public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(AchievementViewModel), "BadgeName", typeof(string), String.Empty);
@@ -107,56 +111,84 @@ namespace RATools.ViewModels
             return groups;
         }
 
-        public static readonly ModelProperty IsDifferentThanPublishedProperty = ModelProperty.Register(typeof(AchievementViewModel), "IsDifferentThanPublished", typeof(bool), false);
-        public bool IsDifferentThanPublished
-        {
-            get { return (bool)GetValue(IsDifferentThanPublishedProperty); }
-            internal set { SetValue(IsDifferentThanPublishedProperty, value); }
-        }
-
-        public static readonly ModelProperty IsDifferentThanLocalProperty = ModelProperty.Register(typeof(AchievementViewModel), "IsDifferentThanLocal", typeof(bool), false);
-        public bool IsDifferentThanLocal
-        {
-            get { return (bool)GetValue(IsDifferentThanLocalProperty); }
-            internal set { SetValue(IsDifferentThanLocalProperty, value); }
-        }
-
-        public static readonly ModelProperty IsNotGeneratedProperty = ModelProperty.Register(typeof(AchievementViewModel), "IsNotGenerated", typeof(bool), false);
-        public bool IsNotGenerated
-        {
-            get { return (bool)GetValue(IsNotGeneratedProperty); }
-            internal set { SetValue(IsNotGeneratedProperty, value); }
-        }
-
-        public static readonly ModelProperty StatusProperty = ModelProperty.RegisterDependant(typeof(AchievementViewModel), "Status", typeof(string),
-            new[] { IsDifferentThanLocalProperty, IsDifferentThanPublishedProperty, IsNotGeneratedProperty }, GetStatus);
         public string Status
         {
-            get { return (string)GetValue(StatusProperty); }
-        }
-
-        private static string GetStatus(ModelBase model)
-        {
-            var achievement = (AchievementViewModel)model;
-            if (achievement.Id > 0)
+            get 
             {
-                if (achievement.IsDifferentThanPublished)
-                    return achievement.IsDifferentThanLocal ? "Differs from server and local" : "Differs from server";
-                if (achievement.IsNotGenerated)
-                    return achievement.IsDifferentThanLocal ? "Not generated and differs from local" : "Not generated";
+                if (_status == null)
+                    _status = GetStatus();
+
+                return _status;
+            }
+        }
+        private string _status;
+
+        private string GetStatus()
+        {
+            if (Id > 0)
+            {
+                if (DiffersFromPublished())
+                    return DiffersFromLocal() ? "Differs from server and local" : "Differs from server";
+                if (IsNotGenerated())
+                    return DiffersFromLocal() ? "Not generated and differs from local" : "Not generated";
             }
 
-            if (achievement.IsDifferentThanLocal)
+            if (DiffersFromLocal())
                 return "Differs from local";
 
             return "";
         }
 
+        private bool DiffersFromPublished()
+        {
+            foreach (var field in ModifiableTextFields)
+            {
+                if (field.IsModifiedFromPublished)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool DiffersFromLocal()
+        {
+            foreach (var field in ModifiableTextFields)
+            {
+                if (field.IsModifiedFromLocal)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool IsNotGenerated()
+        {
+            foreach (var field in ModifiableTextFields)
+            {
+                if (field.IsNotGenerated)
+                    return true;
+            }
+
+            return false;
+        }
+
         public CommandBase UpdateLocalCommand { get; private set; }
+        private void ExecuteUpdateLocal()
+        {
+            UpdateLocal();
+
+            foreach (var field in ModifiableTextFields)
+                field.LocalText = field.Text;
+
+            if (_status != null)
+            {
+                _status = null;
+                OnPropertyChanged(() => Status);
+            }
+        }
         protected virtual void UpdateLocal()
         {
-            _owner.UpdateLocal(Achievement);
-            IsDifferentThanLocal = false;
+            _owner.UpdateLocal(Achievement, Title.LocalText);
         }
     }
 }
