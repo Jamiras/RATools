@@ -93,7 +93,7 @@
                                     <DataTrigger Binding="{Binding LocalText}" Value="Not generated">
                                         <Setter Property="FontStyle" Value="Italic" />
                                     </DataTrigger>
-                                    <DataTrigger Binding="{Binding LocalText}" Value="New">
+                                    <DataTrigger Binding="{Binding IsNewLocal}" Value="True">
                                         <Setter Property="FontStyle" Value="Italic" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -125,6 +125,9 @@
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding State}" Value="FromLocal">
                             <Setter Property="Foreground" Value="Blue" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding State}" Value="NewLocal">
+                            <Setter Property="Foreground" Value="Green" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding State}" Value="FromPublished">
                             <Setter Property="Foreground" Value="Purple" />

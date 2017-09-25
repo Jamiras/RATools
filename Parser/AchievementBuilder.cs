@@ -537,6 +537,11 @@ namespace RATools.Parser.Internal
                         case RequirementOperator.LessThanOrEqual:
                             useRight = right.Right.Value >= left.Right.Value;
                             break;
+
+                        case RequirementOperator.NotEqual:
+                            if (right.Right.Value != left.Right.Value)
+                                useRight = true;
+                            break;
                     }
                     break;
 
@@ -616,6 +621,16 @@ namespace RATools.Parser.Internal
 
                         case RequirementOperator.Equal:
                             useLeft = right.Right.Value <= left.Right.Value;
+                            break;
+                    }
+                    break;
+
+                case RequirementOperator.NotEqual:
+                    switch (right.Operator)
+                    {
+                        case RequirementOperator.Equal:
+                            if (right.Right.Value != left.Right.Value)
+                                useRight = true;
                             break;
                     }
                     break;

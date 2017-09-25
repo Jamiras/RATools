@@ -197,7 +197,7 @@ namespace RATools.ViewModels
                     if (localAchievement == null)
                     {
                         // TODO: attempt to match achievements by requirements
-                        achievement.Title.LocalText = "New";
+                        achievement.Title.IsNewLocal = true;
                         continue;
                     }
                 }
@@ -234,7 +234,7 @@ namespace RATools.ViewModels
                 foreach (var requirement in enumerable.Current.Requirements)
                 {
                     if (isLocal)
-                        requirement.Definition.LocalText = "New";
+                        requirement.Definition.IsNewLocal = true;
                     else
                         requirement.Definition.PublishedText = "New";
                 }
@@ -259,6 +259,20 @@ namespace RATools.ViewModels
                     }
                 }
 
+                if (requirement == null && enumerable.Current.Requirement.Left.Type == FieldType.MemoryAddress)
+                {
+                    for (int i = 0; i < unmatchedRequirements.Count; i++)
+                    {
+                        if (unmatchedRequirements[i].Left.Type == FieldType.MemoryAddress && 
+                            unmatchedRequirements[i].Left.Value == enumerable.Current.Requirement.Left.Value)
+                        {
+                            requirement = unmatchedRequirements[i];
+                            unmatchedRequirements.RemoveAt(i);
+                            break;
+                        }
+                    }
+                }
+
                 if (requirement != null)
                 {
                     if (isLocal)
@@ -269,7 +283,7 @@ namespace RATools.ViewModels
                 else
                 {
                     if (isLocal)
-                        enumerable.Current.Definition.LocalText = "New";
+                        enumerable.Current.Definition.IsNewLocal = true;
                     else
                         enumerable.Current.Definition.PublishedText = "New";
                 }

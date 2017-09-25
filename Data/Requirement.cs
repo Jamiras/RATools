@@ -84,7 +84,9 @@ namespace RATools.Data
 
         public static bool operator ==(Requirement left, Requirement right)
         {
-            if (ReferenceEquals(left, null))
+            if (ReferenceEquals(left, right))
+                return true;
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
                 return false;
 
             return left.Equals(right);
@@ -92,8 +94,10 @@ namespace RATools.Data
 
         public static bool operator !=(Requirement left, Requirement right)
         {
-            if (ReferenceEquals(left, null))
+            if (ReferenceEquals(left, right))
                 return false;
+            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
+                return true;
 
             return !left.Equals(right);
         }

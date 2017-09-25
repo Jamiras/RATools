@@ -43,6 +43,9 @@ namespace RATools.ViewModels
                 if (vm.LocalText == NotGeneratedText)
                     return ModifiedState.NotGenerated;
 
+                if (vm.LocalText == NewText)
+                    return ModifiedState.NewLocal;
+
                 if (vm.LocalText != vm.Text)
                     return ModifiedState.FromLocal;
             }
@@ -69,7 +72,14 @@ namespace RATools.ViewModels
             set { LocalText = value ? NotGeneratedText : (string)LocalTextProperty.DefaultValue; }
         }
 
+        public bool IsNewLocal
+        {
+            get { return LocalText == NewText; }
+            set { LocalText = value ? NewText : (string)LocalTextProperty.DefaultValue; }
+        }
+
         public static string NotGeneratedText = "Not generated";
+        public static string NewText = "New";
     }
 
     public enum ModifiedState
@@ -78,5 +88,6 @@ namespace RATools.ViewModels
         FromLocal = 1,
         FromPublished = 2,
         NotGenerated = 3,
+        NewLocal = 4,
     }
 }
