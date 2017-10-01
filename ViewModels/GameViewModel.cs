@@ -84,9 +84,18 @@ namespace RATools.ViewModels
                 index++;
 
             if (index == list.Count)
+            {
                 list.Add(achievement);
+                LocalAchievementCount++;
+                LocalAchievementPoints += achievement.Points;
+            }
             else
+            {
+                var diff = achievement.Points - list[index].Points;
+                if (diff != 0)
+                    LocalAchievementPoints += diff;
                 list[index] = achievement;
+            }
 
             _localAchievements.Commit();
         }
@@ -188,12 +197,17 @@ namespace RATools.ViewModels
             var fileName = Path.Combine(RACacheDirectory, gameId + "-User.txt");
             _localAchievements = new LocalAchievements(fileName);
 
+            if (String.IsNullOrEmpty(_localAchievements.Title))
+                _localAchievements.Title = Title;
+
+            var localAchievements = new List<Achievement>(_localAchievements.Achievements);
+
             foreach (var achievement in achievements)
             {
-                var localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Title == achievement.Title.Text);
+                var localAchievement = localAchievements.FirstOrDefault(a => a.Title == achievement.Title.Text);
                 if (localAchievement == null)
                 {
-                    localAchievement = _localAchievements.Achievements.FirstOrDefault(a => a.Description == achievement.Description.Text);
+                    localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Description.Text);
                     if (localAchievement == null)
                     {
                         // TODO: attempt to match achievements by requirements
@@ -202,6 +216,8 @@ namespace RATools.ViewModels
                     }
                 }
 
+                localAchievements.Remove(localAchievement);
+
                 achievement.Title.LocalText = localAchievement.Title;
                 achievement.Points.LocalText = localAchievement.Points.ToString();
                 achievement.Description.LocalText = localAchievement.Description;
@@ -209,6 +225,13 @@ namespace RATools.ViewModels
                 MergeRequirements(achievement, localAchievement, true);
 
                 achievement.BadgeName = achievement.Achievement.BadgeName = localAchievement.BadgeName;
+            }
+
+            foreach (var localAchievement in localAchievements)
+            {
+                var vm = new AchievementViewModel(this, localAchievement);
+                vm.Title.IsNotGenerated = true;
+                achievements.Add(vm);
             }
 
             LocalAchievementCount = _localAchievements.Achievements.Count();

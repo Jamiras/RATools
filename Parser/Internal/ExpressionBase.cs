@@ -282,18 +282,30 @@ namespace RATools.Parser.Internal
 
                     if (tokenizer.NextChar == '[')
                     {
-                        tokenizer.Advance();
+                        IndexedVariableExpression parent = null;
 
-                        var index = ExpressionBase.Parse(tokenizer);
-                        if (index.Type == ExpressionType.ParseError)
-                            return index;
+                        do
+                        {
+                            tokenizer.Advance();
 
-                        SkipWhitespace(tokenizer);
-                        if (tokenizer.NextChar != ']')
-                            return new ParseErrorExpression("Expecting closing bracket after index");
-                        tokenizer.Advance();
+                            var index = ExpressionBase.Parse(tokenizer);
+                            if (index.Type == ExpressionType.ParseError)
+                                return index;
 
-                        return new IndexedVariableExpression(identifier.ToString(), index);
+                            SkipWhitespace(tokenizer);
+                            if (tokenizer.NextChar != ']')
+                                return new ParseErrorExpression("Expecting closing bracket after index");
+                            tokenizer.Advance();
+                            SkipWhitespace(tokenizer);
+
+                            if (parent != null)
+                                parent = new IndexedVariableExpression(parent, index);
+                            else
+                                parent = new IndexedVariableExpression(identifier.ToString(), index);
+
+                        } while (tokenizer.NextChar == '[');
+
+                        return parent;
                     }
 
                     return new VariableExpression(identifier.ToString());

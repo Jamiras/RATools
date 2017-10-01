@@ -12,11 +12,22 @@ namespace RATools.Parser.Internal
             Index = index;
         }
 
+        public IndexedVariableExpression(ExpressionBase variable, ExpressionBase index)
+            : this(String.Empty, index)
+        {
+            Variable = variable;
+        }
+
+        public ExpressionBase Variable { get; private set; }
         public ExpressionBase Index { get; private set; }
 
         internal override void AppendString(StringBuilder builder)
         {
-            builder.Append(Name);
+            if (Variable != null)
+                Variable.AppendString(builder);
+            else
+                builder.Append(Name);
+
             builder.Append('[');
             Index.AppendString(builder);
             builder.Append(']');
@@ -31,11 +42,24 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            ExpressionBase value = scope.GetVariable(Name);
-            if (value == null)
+            ExpressionBase value;
+            if (Variable != null)
             {
-                result = new ParseErrorExpression("Unknown variable: " + Name);
-                return false;
+                if (!Variable.ReplaceVariables(scope, out value))
+                {
+                    result = value;
+                    return false;
+                }
+            }
+            else
+            {
+                value = scope.GetVariable(Name);
+
+                if (value == null)
+                {
+                    result = new ParseErrorExpression("Unknown variable: " + Name, Line, Column);
+                    return false;
+                }
             }
 
             var dict = value as DictionaryExpression;

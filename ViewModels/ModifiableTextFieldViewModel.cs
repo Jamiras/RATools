@@ -40,10 +40,10 @@ namespace RATools.ViewModels
             var vm = (ModifiableTextFieldViewModel)model;
             if (!String.IsNullOrEmpty(vm.LocalText))
             {
-                if (vm.LocalText == NotGeneratedText)
+                if (vm._isNotGenerated)
                     return ModifiedState.NotGenerated;
 
-                if (vm.LocalText == NewText)
+                if (vm._isNewLocal)
                     return ModifiedState.NewLocal;
 
                 if (vm.LocalText != vm.Text)
@@ -68,14 +68,40 @@ namespace RATools.ViewModels
 
         public bool IsNotGenerated
         {
-            get { return LocalText == NotGeneratedText; }
-            set { LocalText = value ? NotGeneratedText : (string)LocalTextProperty.DefaultValue; }
+            get { return _isNotGenerated; }
+            set
+            {
+                if (_isNotGenerated != value)
+                {
+                    _isNotGenerated = value;
+                    UpdateLocalText();
+                }
+            }
         }
+        private bool _isNotGenerated;
 
         public bool IsNewLocal
         {
-            get { return LocalText == NewText; }
-            set { LocalText = value ? NewText : (string)LocalTextProperty.DefaultValue; }
+            get { return _isNewLocal; }
+            set
+            {
+                if (_isNewLocal != value)
+                {
+                    _isNewLocal = value;
+                    UpdateLocalText();
+                }
+            }
+        }
+        private bool _isNewLocal;
+
+        private void UpdateLocalText()
+        {
+            if (_isNotGenerated)
+                LocalText = NotGeneratedText;
+            else if (_isNewLocal)
+                LocalText = NewText;
+            else
+                LocalText = (string)LocalTextProperty.DefaultValue;
         }
 
         public static string NotGeneratedText = "Not generated";

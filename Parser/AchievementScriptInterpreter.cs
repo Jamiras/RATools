@@ -60,7 +60,7 @@ namespace RATools.Parser
                 switch (expression.Type)
                 {
                     case ExpressionType.ParseError:
-                        return EvaluationError(expression, ((ParseErrorExpression)expression).Message);
+                        return EvaluationError(expression, expression);
 
                     case ExpressionType.FunctionDefinition:
                         scope.AddFunction((FunctionDefinitionExpression)expression);
@@ -112,7 +112,7 @@ namespace RATools.Parser
                     var assignment = (AssignmentExpression)expression;
                     ExpressionBase result;
                     if (!assignment.Value.ReplaceVariables(scope, out result))
-                        return EvaluationError(assignment.Value, ((ParseErrorExpression)result).Message);
+                        return EvaluationError(assignment.Value, result);
 
                     scope.AssignVariable(assignment.Variable, result);
                     return true;
@@ -135,7 +135,7 @@ namespace RATools.Parser
         {
             ExpressionBase range;
             if (!forExpression.Range.ReplaceVariables(scope, out range))
-                return EvaluationError(forExpression.Range, ((ParseErrorExpression)range).Message);
+                return EvaluationError(forExpression.Range, range);
 
             var dict = range as DictionaryExpression;
             if (dict != null)
@@ -147,7 +147,7 @@ namespace RATools.Parser
 
                     ExpressionBase key;
                     if (!entry.Key.ReplaceVariables(scope, out key))
-                        return EvaluationError(entry.Key, ((ParseErrorExpression)key).Message);
+                        return EvaluationError(entry.Key, key);
                     
                     scope.AssignVariable(iterator, key);
 
@@ -271,7 +271,7 @@ namespace RATools.Parser
                 case ExpressionType.Assignment:
                     var assignment = (AssignmentExpression)expression;
                     if (!assignment.Value.ReplaceVariables(scope, out operand))
-                        return EvaluationError(assignment.Value, ((ParseErrorExpression)operand).Message);
+                        return EvaluationError(assignment.Value, operand);
 
                     scope.AssignVariable(assignment.Variable, operand);
                     return true;
@@ -294,7 +294,7 @@ namespace RATools.Parser
 
                 case ExpressionType.Variable:
                     if (!((VariableExpression)expression).ReplaceVariables(scope, out operand))
-                        return EvaluationError(expression, ((ParseErrorExpression)operand).Message);
+                        return EvaluationError(expression, operand);
 
                     return ExecuteAchievementExpression(achievement, operand, scope);
 
@@ -310,7 +310,7 @@ namespace RATools.Parser
             ParseErrorExpression error;
             bool result = ifExpression.Condition.IsTrue(scope, out error);
             if (error != null)
-                return EvaluationError(ifExpression.Condition, error.Message);
+                return EvaluationError(ifExpression.Condition, error);
 
             if (result)
                 return ExecuteAchievementExpressions(achievement, ifExpression.Expressions, scope);
@@ -387,13 +387,13 @@ namespace RATools.Parser
 
             ExpressionBase left;
             if (!comparison.Left.ReplaceVariables(scope, out left))
-                return false;
+                return EvaluationError(comparison.Left, left);
             if (!ExecuteAchievementExpression(achievement, left, scope))
                 return false;
 
             ExpressionBase right;
             if (!comparison.Right.ReplaceVariables(scope, out right))
-                return false;
+                return EvaluationError(comparison.Right, right);
 
             var op = GetRequirementOperator(comparison.Operation);
             if (achievement.IsInNot)
@@ -472,7 +472,7 @@ namespace RATools.Parser
             {
                 ExpressionBase address;
                 if (!functionCall.Parameters.First().ReplaceVariables(scope, out address))
-                    return EvaluationError(functionCall.Parameters.First(), ((ParseErrorExpression)address).Message);
+                    return EvaluationError(functionCall.Parameters.First(), address);
 
                 var addressInteger = address as IntegerConstantExpression;
                 if (addressInteger == null)
@@ -502,7 +502,7 @@ namespace RATools.Parser
 
                 ExpressionBase times;
                 if (!functionCall.Parameters.First().ReplaceVariables(scope, out times))
-                    return EvaluationError(functionCall.Parameters.First(), ((ParseErrorExpression)times).Message);
+                    return EvaluationError(functionCall.Parameters.First(), times);
 
                 if (times.Type != ExpressionType.IntegerConstant)
                     return EvaluationError(functionCall.Parameters.First(), "expression does not evaluate to an integer");
@@ -650,7 +650,7 @@ namespace RATools.Parser
 
                 ExpressionBase addressExpression;
                 if (!parameter.Parameters.ElementAt(1).ReplaceVariables(scope, out addressExpression))
-                    return EvaluationError(parameter.Parameters.ElementAt(1), ((ParseErrorExpression)addressExpression).Message);
+                    return EvaluationError(parameter.Parameters.ElementAt(1), addressExpression);
 
                 string address;
                 if (!EvaluateAddress(addressExpression, scope, out address))
@@ -660,7 +660,7 @@ namespace RATools.Parser
                 {
                     ExpressionBase value;
                     if (!parameter.Parameters.ElementAt(2).ReplaceVariables(scope, out value))
-                        return EvaluationError(parameter.Parameters.ElementAt(2), ((ParseErrorExpression)value).Message);
+                        return EvaluationError(parameter.Parameters.ElementAt(2), value);
 
                     var dict = value as DictionaryExpression;
                     if (dict == null)
@@ -848,7 +848,7 @@ namespace RATools.Parser
 
                     ExpressionBase addressExpression;
                     if (!functionCall.Parameters.First().ReplaceVariables(scope, out addressExpression))
-                        return EvaluationError(functionCall.Parameters.First(), ((ParseErrorExpression)addressExpression).Message);
+                        return EvaluationError(functionCall.Parameters.First(), addressExpression);
 
                     if (!EvaluateAddress(addressExpression, scope, out addressField))
                         return false;
@@ -936,7 +936,7 @@ namespace RATools.Parser
                     ExpressionBase value;
                     if (!assignedParameter.Value.ReplaceVariables(scope, out value))
                     {
-                        EvaluationError(assignedParameter.Value, ((ParseErrorExpression)value).Message);
+                        EvaluationError(assignedParameter.Value, value);
                         return null;
                     }
 
@@ -960,7 +960,7 @@ namespace RATools.Parser
                     ExpressionBase value;
                     if (!parameter.ReplaceVariables(scope, out value))
                     {
-                        EvaluationError(parameter, ((ParseErrorExpression)value).Message);
+                        EvaluationError(parameter, (ParseErrorExpression)value);
                         return null;
                     }
 
@@ -976,6 +976,24 @@ namespace RATools.Parser
         private bool EvaluationError(ExpressionBase expression, string message)
         {
             ErrorMessage = String.Format("{0}:{1} {2}", expression.Line, expression.Column, message);
+            return false;
+        }
+
+        private bool EvaluationError(ExpressionBase expression, ExpressionBase error)
+        {
+            var parseError = error as ParseErrorExpression;
+            if (parseError != null)
+            {
+                if (error.Line != 0)
+                    ErrorMessage = String.Format("{0}:{1} {2}", error.Line, error.Column, parseError.Message);
+                else
+                    ErrorMessage = String.Format("{0}:{1} {2}", expression.Line, expression.Column, parseError.Message);
+            }
+            else
+            {
+                ErrorMessage = String.Format("{0}:{1} Unknown error", expression.Line, expression.Column);
+            }
+
             return false;
         }
     }

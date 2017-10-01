@@ -23,6 +23,12 @@ namespace RATools.Parser
         
         private readonly string _filename;
         private string _version;
+
+        public string Title
+        {
+            get { return _title; }
+            internal set { _title = value; }
+        }
         private string _title;
 
         public IEnumerable<Achievement> Achievements

@@ -18,5 +18,19 @@ namespace RATools.Parser.Internal
             builder.Append(Value);
             builder.Append('"');
         }
+
+        public override bool Equals(object obj)
+        {
+            var that = obj as StringConstantExpression;
+            if (that == null)
+                return false;
+
+            return (this.Value == that.Value);
+        }
+
+        public override int GetHashCode()
+        {
+            return Value.GetHashCode();
+        }
     }
 }

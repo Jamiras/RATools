@@ -130,11 +130,19 @@ namespace RATools.ViewModels
                 if (DiffersFromPublished())
                     return DiffersFromLocal() ? "Differs from server and local" : "Differs from server";
                 if (IsNotGenerated())
-                    return DiffersFromLocal() ? "Not generated and differs from local" : "Not generated";
+                    return !IsNewLocal() && DiffersFromLocal() ? "Not generated and differs from local" : "Not generated";
             }
 
             if (DiffersFromLocal())
+            {
+                if (Title.IsNewLocal)
+                    return "New";
+
+                if (Title.IsNotGenerated)
+                    return "Not generated";
+
                 return "Differs from local";
+            }
 
             return "";
         }
@@ -172,6 +180,17 @@ namespace RATools.ViewModels
             return false;
         }
 
+        private bool IsNewLocal()
+        {
+            foreach (var field in ModifiableTextFields)
+            {
+                if (field.IsNewLocal)
+                    return true;
+            }
+
+            return false;
+        }
+
         public CommandBase UpdateLocalCommand { get; private set; }
         private void ExecuteUpdateLocal()
         {
@@ -188,6 +207,10 @@ namespace RATools.ViewModels
         }
         protected virtual void UpdateLocal()
         {
+            if (Id > 0)
+                Achievement.Id = Id;
+            if (!String.IsNullOrEmpty(BadgeName))
+                Achievement.BadgeName = BadgeName;
             _owner.UpdateLocal(Achievement, Title.LocalText);
         }
     }

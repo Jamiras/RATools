@@ -100,6 +100,12 @@ namespace RATools.Parser.Internal
                     requirement.HitCount = (ushort)ReadNumber(tokenizer);
                     tokenizer.Advance(); // second period
                 }
+                else if (tokenizer.NextChar == '(') // old format
+                {
+                    tokenizer.Advance(); // '('
+                    requirement.HitCount = (ushort)ReadNumber(tokenizer);
+                    tokenizer.Advance(); // ')'
+                }
 
                 switch (tokenizer.NextChar)
                 {
@@ -730,6 +736,7 @@ namespace RATools.Parser.Internal
 
         private void PromoteCommonAltsToCore()
         {
+            // first pass, ignore PauseIfs
             var requirementsFoundInAll = new List<Requirement>();
             foreach (var requirement in _alts[0])
             {
@@ -749,8 +756,8 @@ namespace RATools.Parser.Internal
 
             foreach (var requirement in requirementsFoundInAll)
             {
-                // ResetIf can only be promoted if all HitCounts are also promoted
-                if (requirement.Type == RequirementType.ResetIf)
+                // ResetIf and PauseIf can only be promoted if all HitCounts are also promoted
+                if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
                 {
                     bool canPromote = false;
 
@@ -1077,10 +1084,22 @@ namespace RATools.Parser.Internal
 
             if (!hasHitCount)
             {
-                if (hasReset)
-                    return "Reset condition without HitCount";
-                if (hasPause)
-                    return "Pause condition without HitCount";
+                foreach (var alt in _alts)
+                {
+                    foreach (var requirement in alt)
+                    {
+                        if (requirement.HitCount > 0)
+                            hasHitCount = true;
+                    }
+                }
+
+                if (!hasHitCount)
+                {
+                    if (hasReset)
+                        return "Reset condition without HitCount";
+                    if (hasPause)
+                        return "Pause condition without HitCount";
+                }
             }
 
             return null;

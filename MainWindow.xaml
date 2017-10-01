@@ -73,6 +73,16 @@
                                     <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
                                 </ContextMenu>
                             </TextBlock.ContextMenu>
+                            <TextBlock.Style>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Status}" Value="Not generated">
+                                            <Setter Property="Foreground" Value="#C0C0C0" />
+                                            <Setter Property="FontStyle" Value="Italic" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
                         </TextBlock>
                     </Grid>
                 </DataTemplate>
@@ -130,7 +140,7 @@
                             <Setter Property="Foreground" Value="Green" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding State}" Value="FromPublished">
-                            <Setter Property="Foreground" Value="Purple" />
+                            <Setter Property="Foreground" Value="Violet" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding State}" Value="NotGenerated">
                             <Setter Property="Foreground" Value="Orange" />

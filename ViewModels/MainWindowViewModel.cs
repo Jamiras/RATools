@@ -106,7 +106,17 @@ namespace RATools.ViewModels
                 if (parser.Run(Tokenizer.CreateTokenizer(stream)))
                 {
                     CurrentFile = filename;
-                    Game = new GameViewModel(parser, RACacheDirectory);
+
+                    foreach (var directory in Tokenizer.Split(RACacheDirectory, ';'))
+                    {
+                        var notesFile = Path.Combine(directory.ToString(), parser.GameId + "-Notes2.txt");
+                        if (File.Exists(notesFile))
+                        {
+                            Game = new GameViewModel(parser, directory.ToString());
+                            break;
+                        }
+                    }
+
                     return;
                 }
             }
