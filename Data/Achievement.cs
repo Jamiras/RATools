@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Jamiras.DataModels;
 using RATools.Parser.Internal;
@@ -20,6 +21,9 @@ namespace RATools.Data
 
         public int Id { get; internal set; }
         public string BadgeName { get; internal set; }
+
+        public DateTime Published { get; internal set; }
+        public DateTime LastModified { get; internal set; }
 
         public IEnumerable<Requirement> CoreRequirements { get; internal set; }
         public IEnumerable<IEnumerable<Requirement>> AlternateRequirements { get; internal set; }

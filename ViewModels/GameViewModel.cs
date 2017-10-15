@@ -135,6 +135,8 @@ namespace RATools.ViewModels
             private set { SetValue(LocalAchievementPointsProperty, value); }
         }
 
+        private static DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
         private void MergePublished(int gameId, List<AchievementViewModel> achievements)
         {
             var fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
@@ -165,11 +167,21 @@ namespace RATools.ViewModels
                         builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
                         builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
                         builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
+
                         achievement = new AchievementViewModel(this, builder.ToAchievement());
                         achievement.Title.PublishedText = achievement.Title.Text;
                         achievement.Description.PublishedText = achievement.Description.Text;
                         achievement.Points.PublishedText = achievement.Points.Text;
                         achievement.Title.IsNotGenerated = true;
+                        achievement.Achievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
+                        achievement.Achievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
+                        
+                        foreach (var requirementGroup in achievement.RequirementGroups)
+                        {
+                            foreach (var requirement in requirementGroup.Requirements)
+                                requirement.Definition.PublishedText = requirement.Definition.Text;
+                        }
+                        
                         achievements.Add(achievement);
                         continue;
                     }

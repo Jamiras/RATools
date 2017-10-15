@@ -20,6 +20,7 @@ namespace RATools.ViewModels
             ExitCommand = new DelegateCommand(Exit);
             CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
+            DumpPublishedCommand = new DelegateCommand(DumpPublished);
 
             _recentFiles = new RecencyBuffer<string>(8);
         }
@@ -144,6 +145,100 @@ namespace RATools.ViewModels
             persistance.SetValue("RecentFiles", builder.ToString());
 
             RecentFiles = _recentFiles.ToArray();
+        }
+
+        public CommandBase DumpPublishedCommand { get; private set; }
+        private void DumpPublished()
+        {
+            if (Game == null)
+            {
+                MessageBoxViewModel.ShowMessage("No game loaded");
+                return;
+            }
+
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Select dump file";
+            vm.Filters["Script file"] = "*.txt";
+            vm.FileNames = new[] { Game.Title + ".txt" };
+
+            if (vm.ShowSaveFileDialog() != DialogResult.Ok)
+                return;
+
+            using (var stream = File.CreateText(vm.FileNames[0]))
+            {
+                stream.Write("// ");
+                stream.WriteLine(Game.Title);
+                stream.Write("// #ID = ");
+                stream.WriteLine(String.Format("{0}", Game.GameId));
+                stream.WriteLine();
+
+                foreach (var achievement in Game.Achievements)
+                {
+                    if (achievement.Achievement.Id != 0)
+                    {
+                        stream.WriteLine("achievement(");
+
+                        stream.Write("    id = ");
+                        stream.Write(achievement.Achievement.Id);
+                        stream.WriteLine(",");
+
+                        stream.Write("    published = \"");
+                        stream.Write(achievement.Achievement.Published);
+                        stream.WriteLine("\",");
+                        
+                        stream.Write("    modified = \"");
+                        stream.Write(achievement.Achievement.LastModified);
+                        stream.WriteLine("\",");
+
+                        stream.Write("    title = \"");
+                        stream.Write(achievement.Title.PublishedText);
+                        stream.WriteLine("\",");
+
+                        stream.Write("    description = \"");
+                        stream.Write(achievement.Description.PublishedText);
+                        stream.WriteLine("\",");
+
+                        stream.Write("    points = ");
+                        stream.Write(achievement.Points.PublishedText);
+                        stream.WriteLine(",");
+
+                        var groupEnumerator = achievement.RequirementGroups.GetEnumerator();
+                        groupEnumerator.MoveNext();
+                        stream.Write("    trigger = ");
+                        DumpPublishedRequirements(stream, groupEnumerator.Current);
+                        while (groupEnumerator.MoveNext())
+                        {
+                            stream.WriteLine(" || ");
+                            stream.Write("              (");
+                            DumpPublishedRequirements(stream, groupEnumerator.Current);
+                            stream.Write(")");
+                        }
+                        stream.WriteLine();
+
+                        stream.WriteLine(")");
+                        stream.WriteLine();
+                    }
+                }
+            }
+        }
+
+        private void DumpPublishedRequirements(StreamWriter stream, RequirementGroupViewModel requirementGroupViewModel)
+        {
+            bool needsAmpersand = false;
+
+            var requirementEnumerator = requirementGroupViewModel.Requirements.GetEnumerator();
+            while (requirementEnumerator.MoveNext())
+            {
+                if (!String.IsNullOrEmpty(requirementEnumerator.Current.Definition.PublishedText))
+                {
+                    if (needsAmpersand)
+                        stream.Write(" && ");
+                    else
+                        needsAmpersand = true;
+
+                    stream.Write(requirementEnumerator.Current.Definition.PublishedText);
+                }
+            }
         }
     }
 }
