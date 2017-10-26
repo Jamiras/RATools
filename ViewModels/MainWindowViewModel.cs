@@ -178,37 +178,32 @@ namespace RATools.ViewModels
                     {
                         stream.WriteLine("achievement(");
 
-                        stream.Write("    id = ");
-                        stream.Write(achievement.Achievement.Id);
-                        stream.WriteLine(",");
-
-                        stream.Write("    published = \"");
-                        stream.Write(achievement.Achievement.Published);
-                        stream.WriteLine("\",");
-                        
-                        stream.Write("    modified = \"");
-                        stream.Write(achievement.Achievement.LastModified);
-                        stream.WriteLine("\",");
-
                         stream.Write("    title = \"");
                         stream.Write(achievement.Title.PublishedText);
-                        stream.WriteLine("\",");
-
-                        stream.Write("    description = \"");
+                        stream.Write(", description = \"");
                         stream.Write(achievement.Description.PublishedText);
-                        stream.WriteLine("\",");
-
-                        stream.Write("    points = ");
+                        stream.Write(", points = ");
                         stream.Write(achievement.Points.PublishedText);
                         stream.WriteLine(",");
+
+                        stream.Write("    id = ");
+                        stream.Write(achievement.Achievement.Id);
+                        stream.Write(", published = \"");
+                        stream.Write(achievement.Achievement.Published);
+                        stream.Write(", modified = \"");
+                        stream.Write(achievement.Achievement.LastModified);
+                        stream.WriteLine("\",");
 
                         var groupEnumerator = achievement.RequirementGroups.GetEnumerator();
                         groupEnumerator.MoveNext();
                         stream.Write("    trigger = ");
                         DumpPublishedRequirements(stream, groupEnumerator.Current);
+                        bool first = true;
                         while (groupEnumerator.MoveNext())
                         {
-                            stream.WriteLine(" || ");
+                            stream.WriteLine(first ? " && " : " || ");
+                            first = false;
+
                             stream.Write("              (");
                             DumpPublishedRequirements(stream, groupEnumerator.Current);
                             stream.Write(")");

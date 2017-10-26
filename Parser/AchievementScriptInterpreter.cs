@@ -640,6 +640,8 @@ namespace RATools.Parser
                 tokenizer.Advance();
 
                 var parameterIndex = Int32.Parse(index.ToString()) + 1;
+                if (parameterIndex >= expression.Parameters.Count)
+                    return EvaluationError(expression.Parameters.ElementAt(0), "invalid parameter index: " + (parameterIndex - 1));
                 var parameter = expression.Parameters.ElementAt(parameterIndex) as FunctionCallExpression;
                 if (parameter == null)
                     return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
