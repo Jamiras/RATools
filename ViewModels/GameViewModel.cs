@@ -157,7 +157,7 @@ namespace RATools.ViewModels
                     points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
 
                     var title = publishedAchievement.GetField("Title").StringValue;
-                    var achievement = achievements.FirstOrDefault(a => a.Title.Text == title);
+                    var achievement = achievements.FirstOrDefault(a => String.Compare(a.Title.Text, title, StringComparison.CurrentCultureIgnoreCase) == 0);
                     if (achievement == null)
                     {
                         var builder = new AchievementBuilder();

@@ -1095,10 +1095,8 @@ namespace RATools.Parser.Internal
 
                 if (!hasHitCount)
                 {
-                    if (hasReset)
+                    if (hasReset && Id == 0)
                         return "Reset condition without HitCount";
-                    if (hasPause)
-                        return "Pause condition without HitCount";
                 }
             }
 
