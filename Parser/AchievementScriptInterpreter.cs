@@ -228,12 +228,10 @@ namespace RATools.Parser
             var achievement = new AchievementBuilder();
 
             var stringExpression = innerScope.GetVariable("title") as StringConstantExpression;
-            if (stringExpression != null)
-                achievement.Title = stringExpression.Value;
+            achievement.Title = (stringExpression != null) ? stringExpression.Value : String.Empty;
 
             stringExpression = innerScope.GetVariable("description") as StringConstantExpression;
-            if (stringExpression != null)
-                achievement.Description = stringExpression.Value;
+            achievement.Description = (stringExpression != null) ? stringExpression.Value : String.Empty;
 
             var integerExpression = innerScope.GetVariable("points") as IntegerConstantExpression;
             if (integerExpression != null)

@@ -114,10 +114,11 @@ namespace RATools.ViewModels
                         if (File.Exists(notesFile))
                         {
                             Game = new GameViewModel(parser, directory.ToString());
-                            break;
+                            return;
                         }
                     }
 
+                    MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
                     return;
                 }
             }
@@ -174,15 +175,15 @@ namespace RATools.ViewModels
 
                 foreach (var achievement in Game.Achievements)
                 {
-                    if (achievement.Achievement.Id != 0)
+                    if (achievement.Achievement != null && achievement.Achievement.Id != 0)
                     {
                         stream.WriteLine("achievement(");
 
                         stream.Write("    title = \"");
                         stream.Write(achievement.Title.PublishedText);
-                        stream.Write(", description = \"");
+                        stream.Write("\", description = \"");
                         stream.Write(achievement.Description.PublishedText);
-                        stream.Write(", points = ");
+                        stream.Write("\", points = ");
                         stream.Write(achievement.Points.PublishedText);
                         stream.WriteLine(",");
 
@@ -190,7 +191,7 @@ namespace RATools.ViewModels
                         stream.Write(achievement.Achievement.Id);
                         stream.Write(", published = \"");
                         stream.Write(achievement.Achievement.Published);
-                        stream.Write(", modified = \"");
+                        stream.Write("\", modified = \"");
                         stream.Write(achievement.Achievement.LastModified);
                         stream.WriteLine("\",");
 

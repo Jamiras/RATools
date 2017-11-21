@@ -42,7 +42,12 @@ namespace RATools.ViewModels
             var groups = new List<RequirementGroupViewModel>();
             var group = new RequirementGroupViewModel("Rich Presence", new Requirement[0], _owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, Script))
+                CopyCommand = new DelegateCommand(() => {
+                    Clipboard.SetData(DataFormats.Text, Script);
+
+                    if (Script.Length > 2500)
+                        MessageBox.Show("Rich Presence exceeds maximum length of 2500 characters (" + Script.Length + ")", "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                })
             };
             ((List<RequirementViewModel>)group.Requirements).Add(_richPresence);
             groups.Add(group);

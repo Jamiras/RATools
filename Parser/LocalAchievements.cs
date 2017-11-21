@@ -122,9 +122,9 @@ namespace RATools.Parser
                     writer.Write(':');
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);
-                    if (requirements.Length + achievement.Title.Length + achievement.Description.Length > 2000)
+                    if (requirements.Length > 1024)
                     {
-                        warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit", achievement.Title);
+                        warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit ({1}/{2})", achievement.Title, requirements.Length, 1024);
                         warning.AppendLine();
                     }
 

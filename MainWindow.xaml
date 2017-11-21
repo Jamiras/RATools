@@ -196,45 +196,47 @@
                     <Run Text="points" />
                 </TextBlock>
 
-                <ListBox Grid.Row="4" Grid.ColumnSpan="2" ItemsSource="{Binding RequirementGroups}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
-                                    <TextBlock VerticalAlignment="Bottom" Margin="6,0,0,2" FontSize="10">
-                                        <TextBlock.Style>
-                                            <Style TargetType="{x:Type TextBlock}">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding CopyCommand}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                        <Hyperlink Command="{Binding CopyCommand}" Style="{StaticResource subtleHyperlink}">
-                                            <TextBlock Text="Copy to Clipboard" />
-                                        </Hyperlink>
-                                    </TextBlock>
+                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RequirementGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Vertical">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                        <TextBlock VerticalAlignment="Bottom" Margin="6,0,0,2" FontSize="10">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CopyCommand}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                            <Hyperlink Command="{Binding CopyCommand}" Style="{StaticResource subtleHyperlink}">
+                                                <TextBlock Text="Copy to Clipboard" />
+                                            </Hyperlink>
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2,0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="200" />
+                                                        <ColumnDefinition Width="376" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock DataContext="{Binding Definition}" Style="{StaticResource ModifiableText}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </StackPanel>
-                                <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,2,0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="200" />
-                                                    <ColumnDefinition Width="376" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock DataContext="{Binding Definition}" Style="{StaticResource ModifiableText}" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </Grid>
         </Grid>
     </DockPanel>
