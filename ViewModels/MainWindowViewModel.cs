@@ -21,6 +21,7 @@ namespace RATools.ViewModels
             CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
             DumpPublishedCommand = new DelegateCommand(DumpPublished);
+            GameStatsCommand = new DelegateCommand(GameStats);
 
             _recentFiles = new RecencyBuffer<string>(8);
         }
@@ -235,6 +236,13 @@ namespace RATools.ViewModels
                     stream.Write(requirementEnumerator.Current.Definition.PublishedText);
                 }
             }
+        }
+
+        public CommandBase GameStatsCommand { get; private set; }
+        private void GameStats()
+        {
+            var vm = new GameStatsViewModel();
+            vm.ShowDialog();
         }
     }
 }

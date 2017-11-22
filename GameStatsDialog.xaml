@@ -1,0 +1,73 @@
+﻿<UserControl x:Class="RATools.GameStatsDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RATools"
+             mc:Ignorable="d" 
+             Width="480" Height="520">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="24" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Non-Hardcore Users:" />
+        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding NonHardcoreUserCount}" Margin="4,0,4,0" />
+
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Hardcore Users:" />
+        <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreUserCount}" Margin="4,0,4,0" />
+
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Median Hardcore User Score:" />
+        <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianHardcoreUserScore}" Margin="4,0,4,0" />
+
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Times Mastered (Hardcore):" />
+        <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreMasteredUserCount}" Margin="4,0,4,0" />
+
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Median Time to Master (Hardcore):" />
+        <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianTimeToMaster}" Margin="4,0,4,0" />
+
+        <StackPanel Grid.Column="2" Grid.RowSpan="3" Width="150" HorizontalAlignment="Right">
+            <TextBlock Text="Game ID" />
+            <TextBox Text="{Binding GameId}" />
+        </StackPanel>
+        
+        <TextBlock Grid.Row="5" VerticalAlignment="Bottom" Text="Top Hardcore Users" />
+        <ListView Grid.Row="6" Grid.ColumnSpan="3" ItemsSource="{Binding TopUsers}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="200" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding User}" />
+                        <TextBlock Grid.Column="1" Text="{Binding PointsEarned}" HorizontalAlignment="Right" Margin="4,0,4,0" />
+                        <TextBlock Grid.Column="2" Text="{Binding Summary}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <ContentPresenter Grid.ColumnSpan="3" Grid.RowSpan="7" Margin="-4" Content="{Binding Progress}" />
+    </Grid>
+</UserControl>

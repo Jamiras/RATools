@@ -54,6 +54,9 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="GameStatsDialog.xaml.cs">
+      <DependentUpon>GameStatsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Parser\AchievementScriptInterpreter.cs" />
     <Compile Include="Parser\AchievementBuilder.cs" />
     <Compile Include="Parser\Internal\AssignmentExpression.cs" />
@@ -75,6 +78,7 @@
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="Parser\LocalAchievements.cs" />
     <Compile Include="ViewModels\AchievementViewModel.cs" />
+    <Compile Include="ViewModels\GameStatsViewModel.cs" />
     <Compile Include="ViewModels\LeaderboardViewModel.cs" />
     <Compile Include="ViewModels\GameViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
@@ -82,6 +86,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="GameStatsDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

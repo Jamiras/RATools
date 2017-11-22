@@ -3,6 +3,7 @@ using System.Windows;
 using RATools.ViewModels;
 using Jamiras.Components;
 using Jamiras.Services;
+using Jamiras.Controls;
 
 namespace RATools
 {
@@ -21,6 +22,8 @@ namespace RATools
             CoreServices.RegisterServices();
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
+
+            dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new OkCancelView(new GameStatsDialog()));
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
