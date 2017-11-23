@@ -1,0 +1,68 @@
+﻿<UserControl x:Class="RATools.OpenTicketsDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:RATools"
+             mc:Ignorable="d" 
+             Width="720" Height="480">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="24" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="100" />
+            <ColumnDefinition Width="180" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Open Tickets:" />
+        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OpenTickets}" Margin="4,0,4,0" />
+        
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Text="Most Problematic Games" />
+        <ListView Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding TopGames}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="40" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding GameName}" />
+                        <TextBlock Grid.Column="1" Text="{Binding OpenTickets}" HorizontalAlignment="Right" Margin="4,0,4,0" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" Text="Most Problematic Achievements" />
+        <ListView Grid.Row="2" Grid.Column="2" ItemsSource="{Binding TopAchievements}">
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="40" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{Binding AchievementName}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Game.GameName}" Margin="4,0,4,0" />
+                        <TextBlock Grid.Column="2" Text="{Binding OpenTickets.Count}" HorizontalAlignment="Right" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <ContentPresenter Grid.ColumnSpan="3" Grid.RowSpan="3" Margin="-4" Content="{Binding Progress}" />
+    </Grid>
+</UserControl>

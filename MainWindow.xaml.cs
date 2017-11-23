@@ -24,6 +24,7 @@ namespace RATools
             dialogService.MainWindow = this;
 
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new OkCancelView(new GameStatsDialog()));
+            dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OkCancelView(new OpenTicketsDialog()));
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();

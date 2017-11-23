@@ -54,6 +54,9 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="OpenTicketsDialog.xaml.cs">
+      <DependentUpon>OpenTicketsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="GameStatsDialog.xaml.cs">
       <DependentUpon>GameStatsDialog.xaml</DependentUpon>
     </Compile>
@@ -78,6 +81,7 @@
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="Parser\LocalAchievements.cs" />
     <Compile Include="ViewModels\AchievementViewModel.cs" />
+    <Compile Include="ViewModels\OpenTicketsViewModel.cs" />
     <Compile Include="ViewModels\GameStatsViewModel.cs" />
     <Compile Include="ViewModels\LeaderboardViewModel.cs" />
     <Compile Include="ViewModels\GameViewModel.cs" />
@@ -86,6 +90,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="OpenTicketsDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="GameStatsDialog.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
