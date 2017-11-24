@@ -27,6 +27,8 @@ namespace RATools.ViewModels
             _backgroundWorkerService = backgroundWorkerService;
 
             Progress = new ProgressFieldViewModel { Label = String.Empty };
+            DialogTitle = "Game Stats";
+            CanClose = true;
         }
 
         private readonly IFileSystemService _fileSystemService;

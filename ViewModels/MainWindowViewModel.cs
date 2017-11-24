@@ -175,29 +175,29 @@ namespace RATools.ViewModels
                 stream.WriteLine(String.Format("{0}", Game.GameId));
                 stream.WriteLine();
 
-                foreach (var achievement in Game.Achievements)
+                foreach (var achievement in Game.Achievements.OfType<GeneratedAchievementViewModel>())
                 {
-                    if (achievement.Achievement != null && achievement.Achievement.Id != 0)
+                    if (achievement.Core.Achievement != null && achievement.Core.Achievement.Id != 0)
                     {
                         stream.WriteLine("achievement(");
 
                         stream.Write("    title = \"");
-                        stream.Write(achievement.Title.PublishedText);
+                        stream.Write(achievement.Core.Title.Text);
                         stream.Write("\", description = \"");
-                        stream.Write(achievement.Description.PublishedText);
+                        stream.Write(achievement.Core.Description.Text);
                         stream.Write("\", points = ");
-                        stream.Write(achievement.Points.PublishedText);
+                        stream.Write(achievement.Core.Points.Value);
                         stream.WriteLine(",");
 
                         stream.Write("    id = ");
-                        stream.Write(achievement.Achievement.Id);
+                        stream.Write(achievement.Core.Achievement.Id);
                         stream.Write(", published = \"");
-                        stream.Write(achievement.Achievement.Published);
+                        stream.Write(achievement.Core.Achievement.Published);
                         stream.Write("\", modified = \"");
-                        stream.Write(achievement.Achievement.LastModified);
+                        stream.Write(achievement.Core.Achievement.LastModified);
                         stream.WriteLine("\",");
 
-                        var groupEnumerator = achievement.RequirementGroups.GetEnumerator();
+                        var groupEnumerator = achievement.Core.RequirementGroups.GetEnumerator();
                         groupEnumerator.MoveNext();
                         stream.Write("    trigger = ");
                         DumpPublishedRequirements(stream, groupEnumerator.Current);
@@ -227,14 +227,14 @@ namespace RATools.ViewModels
             var requirementEnumerator = requirementGroupViewModel.Requirements.GetEnumerator();
             while (requirementEnumerator.MoveNext())
             {
-                if (!String.IsNullOrEmpty(requirementEnumerator.Current.Definition.PublishedText))
+                if (!String.IsNullOrEmpty(requirementEnumerator.Current.Definition))
                 {
                     if (needsAmpersand)
                         stream.Write(" && ");
                     else
                         needsAmpersand = true;
 
-                    stream.Write(requirementEnumerator.Current.Definition.PublishedText);
+                    stream.Write(requirementEnumerator.Current.Definition);
                 }
             }
         }

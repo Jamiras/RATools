@@ -25,6 +25,9 @@ namespace RATools.ViewModels
             _httpRequestService = httpRequestService;
             _backgroundWorkerService = backgroundWorkerService;
 
+            DialogTitle = "Open Tickets";
+            CanClose = true;
+
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             backgroundWorkerService.RunAsync(LoadTickets);
         }

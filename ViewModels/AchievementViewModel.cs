@@ -1,29 +1,29 @@
-﻿using System;
+﻿using Jamiras.DataModels;
+using Jamiras.ViewModels;
+using Jamiras.ViewModels.Fields;
+using RATools.Data;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Jamiras.Commands;
-using Jamiras.DataModels;
-using Jamiras.ViewModels;
-using RATools.Data;
 
 namespace RATools.ViewModels
 {
-    public class AchievementViewModel : ViewModelBase
+    [DebuggerDisplay("{Title}")]
+    public class AchievementViewModel : ViewModelBase, ICompositeViewModel
     {
-        protected AchievementViewModel(GameViewModel owner)
+        public AchievementViewModel(GameViewModel owner)
         {
             _owner = owner;
-            UpdateLocalCommand = new DelegateCommand(ExecuteUpdateLocal);
 
-            Title = new ModifiableTextFieldViewModel();
-            Description = new ModifiableTextFieldViewModel();
-            Points = new ModifiableTextFieldViewModel();
+            Title = new TextFieldViewModel("Title", 240);
+            Description = new TextFieldViewModel("Description", 240);
+            Points = new IntegerFieldViewModel("Points", 0, 100);
         }
 
-        public AchievementViewModel(GameViewModel owner, Achievement achievement)
-            : this(owner)
+        internal void LoadAchievement(Achievement achievement)
         {
             Achievement = achievement;
 
@@ -31,8 +31,21 @@ namespace RATools.ViewModels
             Title.Text = achievement.Title;
 
             Description.Text = achievement.Description;
-            Points.Text = achievement.Points.ToString();
+            Points.Value = achievement.Points;
             BadgeName = achievement.BadgeName;
+
+            if (_requirementGroups != null)
+            {
+                _requirementGroups = null;
+                OnPropertyChanged(() => RequirementGroups);
+            }
+
+            Modified = GetModified();
+        }
+
+        protected virtual ModifiedState GetModified()
+        {
+            return ModifiedState.Unmodified;
         }
 
         internal Achievement Achievement { get; private set; }
@@ -45,25 +58,9 @@ namespace RATools.ViewModels
             internal set { SetValue(IdProperty, value); }
         }
 
-        public ModifiableTextFieldViewModel Title { get; private set; }
-        public ModifiableTextFieldViewModel Description { get; private set; }
-        public ModifiableTextFieldViewModel Points { get; private set; }
-
-        private IEnumerable<ModifiableTextFieldViewModel> ModifiableTextFields
-        {
-            get
-            {
-                yield return Title;
-                yield return Description;
-                yield return Points;
-
-                foreach (var group in RequirementGroups)
-                {
-                    foreach (var requirement in group.Requirements)
-                        yield return requirement.Definition;
-                }
-            }
-        }
+        public TextFieldViewModel Title { get; private set; }
+        public TextFieldViewModel Description { get; private set; }
+        public IntegerFieldViewModel Points { get; private set; }
 
         public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(AchievementViewModel), "BadgeName", typeof(string), String.Empty);
         public string BadgeName
@@ -111,107 +108,24 @@ namespace RATools.ViewModels
             return groups;
         }
 
-        public string Status
+        public static readonly ModelProperty ModifiedProperty = ModelProperty.Register(typeof(AchievementViewModel), "Modified", typeof(ModifiedState), ModifiedState.None);
+        public ModifiedState Modified
         {
-            get 
-            {
-                if (_status == null)
-                    _status = GetStatus();
-
-                return _status;
-            }
-        }
-        private string _status;
-
-        private string GetStatus()
-        {
-            if (Id > 0)
-            {
-                if (DiffersFromPublished())
-                    return DiffersFromLocal() ? "Differs from server and local" : "Differs from server";
-                if (IsNotGenerated())
-                    return !IsNewLocal() && DiffersFromLocal() ? "Not generated and differs from local" : "Not generated";
-            }
-
-            if (DiffersFromLocal())
-            {
-                if (Title.IsNewLocal)
-                    return "New";
-
-                if (Title.IsNotGenerated)
-                    return "Not generated";
-
-                return "Differs from local";
-            }
-
-            return "";
+            get { return (ModifiedState)GetValue(ModifiedProperty); }
+            private set { SetValue(ModifiedProperty, value); }
         }
 
-        private bool DiffersFromPublished()
+        IEnumerable<ViewModelBase> ICompositeViewModel.GetChildren()
         {
-            foreach (var field in ModifiableTextFields)
+            yield return Title;
+            yield return Description;
+            yield return Points;
+
+            if (_requirementGroups != null)
             {
-                if (field.IsModifiedFromPublished)
-                    return true;
+                foreach (var group in _requirementGroups)
+                    yield return group;
             }
-
-            return false;
-        }
-
-        private bool DiffersFromLocal()
-        {
-            foreach (var field in ModifiableTextFields)
-            {
-                if (field.IsModifiedFromLocal)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private bool IsNotGenerated()
-        {
-            foreach (var field in ModifiableTextFields)
-            {
-                if (field.IsNotGenerated)
-                    return true;
-            }
-
-            return false;
-        }
-
-        private bool IsNewLocal()
-        {
-            foreach (var field in ModifiableTextFields)
-            {
-                if (field.IsNewLocal)
-                    return true;
-            }
-
-            return false;
-        }
-
-        public CommandBase UpdateLocalCommand { get; private set; }
-        private void ExecuteUpdateLocal()
-        {
-            UpdateLocal();
-
-            foreach (var field in ModifiableTextFields)
-                field.LocalText = field.Text;
-
-            if (_status != null)
-            {
-                _status = null;
-                OnPropertyChanged(() => Status);
-            }
-        }
-        protected virtual void UpdateLocal()
-        {
-            if (Id > 0)
-                Achievement.Id = Id;
-            if (!String.IsNullOrEmpty(BadgeName))
-                Achievement.BadgeName = BadgeName;
-            _owner.UpdateLocal(Achievement, Title.LocalText);
         }
     }
 }

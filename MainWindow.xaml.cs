@@ -23,8 +23,8 @@ namespace RATools
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
 
-            dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new OkCancelView(new GameStatsDialog()));
-            dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OkCancelView(new OpenTicketsDialog()));
+            dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new GameStatsDialog());
+            dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();

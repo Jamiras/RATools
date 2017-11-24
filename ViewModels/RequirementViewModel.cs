@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Jamiras.DataModels;
+﻿using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using RATools.Data;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -13,58 +13,64 @@ namespace RATools.ViewModels
         {
             Requirement = requirement;
 
-            Definition = new ModifiableTextFieldViewModel();
-            Definition.Text = requirement.ToString();
-            Definition.AddPropertyChangedHandler(ModifiableTextFieldViewModel.TextProperty, OnDefinitionChanged);
-            OnDefinitionChanged(Definition, new ModelPropertyChangedEventArgs(ModifiableTextFieldViewModel.TextProperty, "", Definition.Text));
-
-            if (requirement.Right.Type == FieldType.Value ||
-                (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
+            if (requirement != null)
             {
-                string note;
-                if (notes.TryGetValue((int)requirement.Left.Value, out note))
-                    Notes = note;
-            }
-            else
-            {
-                var builder = new StringBuilder();
+                Definition = requirement.ToString();
 
-                string note;
-                if (notes.TryGetValue((int)requirement.Left.Value, out note))
-                    builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
-
-                if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                if (requirement.Right.Type == FieldType.Value ||
+                    (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
                 {
-                    if (builder.Length > 0)
-                        builder.AppendLine();
-                    builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note);
+                    string note;
+                    if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                        Notes = note;
                 }
+                else
+                {
+                    var builder = new StringBuilder();
 
-                Notes = builder.ToString();
+                    string note;
+                    if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                        builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
+
+                    if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                    {
+                        if (builder.Length > 0)
+                            builder.AppendLine();
+                        builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note);
+                    }
+
+                    Notes = builder.ToString();
+                }
             }
         }
 
         public RequirementViewModel(string definition, string notes)
         {
-            Definition = new ModifiableTextFieldViewModel();
-            Definition.Text = definition;
+            Definition = definition;
             Notes = notes;
         }
 
         internal Requirement Requirement { get; private set; }
 
-        public ModifiableTextFieldViewModel Definition { get; private set; }
+        public static readonly ModelProperty DefinitionProperty = ModelProperty.Register(typeof(RequirementViewModel), "Definition", typeof(string), "");
+        public string Definition
+        {
+            get { return (string)GetValue(DefinitionProperty); }
+            private set { SetValue(DefinitionProperty, value); }
+        }
 
-        public static readonly ModelProperty WrappedDefinitionProperty = ModelProperty.Register(typeof(RequirementViewModel), "WrappedDefinition", typeof(string), "");
+
+        public static readonly ModelProperty WrappedDefinitionProperty = 
+            ModelProperty.RegisterDependant(typeof(RequirementViewModel), "WrappedDefinition", typeof(string), new[] { DefinitionProperty }, GetWrappedDefinition);
+
         public string WrappedDefinition
         {
             get { return (string)GetValue(WrappedDefinitionProperty); }
-            private set { SetValue(WrappedDefinitionProperty, value); }
         }
 
-        private void OnDefinitionChanged(object sender, ModelPropertyChangedEventArgs e)
+        private static string GetWrappedDefinition(ModelBase model)
         {
-            var definition = Definition.Text;
+            var definition = ((RequirementViewModel)model).Definition;
 
             if (definition.Length > 32)
             {
@@ -82,7 +88,7 @@ namespace RATools.ViewModels
                 definition = definition.Substring(0, index) + "\n     " + definition.Substring(index);
             }
 
-            WrappedDefinition = definition;
+            return definition;
         }        
 
         public string Notes { get; private set; }

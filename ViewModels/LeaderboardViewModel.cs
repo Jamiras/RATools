@@ -1,63 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Windows;
-using Jamiras.Commands;
+﻿using Jamiras.Commands;
 using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Windows;
 
 namespace RATools.ViewModels
 {
-    public class LeaderboardViewModel : AchievementViewModel
+    public class LeaderboardViewModel : GeneratedItemViewModelBase
     {
         public LeaderboardViewModel(GameViewModel owner, Leaderboard leaderboard)
-            : base(owner)
         {
             _leaderboard = leaderboard;
-            Title.Text = "Leaderboard: " + leaderboard.Title;
-            Description.Text = leaderboard.Description;
-        }
+            Title = "Leaderboard: " + leaderboard.Title;
 
-        private readonly Leaderboard _leaderboard;
-
-        protected override void UpdateLocal()
-        {
-        }
-
-        protected override List<RequirementGroupViewModel> BuildRequirementGroups()
-        {
-            var groups = new List<RequirementGroupViewModel>();
+            var groups = new List<LeaderboardGroupViewModel>();
 
             var achievement = new AchievementBuilder();
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Start));
-            groups.Add(new RequirementGroupViewModel("Start Conditions", achievement.ToAchievement().CoreRequirements, _owner.Notes)
+            groups.Add(new LeaderboardGroupViewModel("Start Conditions", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Start))
+                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Start))
             });
 
             achievement = new AchievementBuilder();
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Cancel));
-            groups.Add(new RequirementGroupViewModel("Cancel Condition", achievement.ToAchievement().CoreRequirements, _owner.Notes)
+            groups.Add(new LeaderboardGroupViewModel("Cancel Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Cancel))
+                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Cancel))
             });
 
             achievement = new AchievementBuilder();
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Submit));
-            groups.Add(new RequirementGroupViewModel("Submit Condition", achievement.ToAchievement().CoreRequirements, _owner.Notes)
+            groups.Add(new LeaderboardGroupViewModel("Submit Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Submit))
+                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Submit))
             });
 
-
-            var group = new RequirementGroupViewModel("Value", new Requirement[0], _owner.Notes)
+            achievement = new AchievementBuilder();
+            achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Value));
+            groups.Add(new LeaderboardGroupViewModel("Value", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Value))
-            };
-            ((List<RequirementViewModel>)group.Requirements).Add(new RequirementViewModel(_leaderboard.Value, String.Empty));
-            groups.Add(group);
+                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Value))
+            });
 
-            return groups;
+            Groups = groups;
         }
+
+        private readonly Leaderboard _leaderboard;
+
+        public class LeaderboardGroupViewModel
+        {
+            public LeaderboardGroupViewModel(string label, IEnumerable<Requirement> requirements, IDictionary<int, string> notes)
+            {
+                Label = label;
+
+                var conditions = new List<RequirementViewModel>();
+                foreach (var requirement in requirements)
+                    conditions.Add(new RequirementViewModel(requirement, notes));
+                Conditions = conditions;
+            }
+
+            public string Label { get; private set; }
+            public IEnumerable<RequirementViewModel> Conditions { get; private set; }
+            public CommandBase CopyToClipboardCommand { get; set; }
+        }
+
+        public IEnumerable<LeaderboardGroupViewModel> Groups { get; private set; }
+
+        //protected override void UpdateLocal()
+        //{
+        //}
     }
 }
