@@ -5,32 +5,31 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:RATools"
              mc:Ignorable="d" 
-             Width="720" Height="480">
+             Width="770" Height="480">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="24" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="100" />
-            <ColumnDefinition Width="180" />
+            <ColumnDefinition Width="280" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Open Tickets:" />
-        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding OpenTickets}" Margin="4,0,4,0" />
-        
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Text="Most Problematic Games" />
-        <ListView Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding TopGames}">
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" VerticalAlignment="Bottom" Margin="2,0,2,0">
+            <TextBlock Text="Games with Tickets: " />
+            <TextBlock Text="{Binding TopGames.Count}" />
+        </TextBlock>
+        <ListView Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding TopGames}" x:Name="topGamesList">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
@@ -38,25 +37,48 @@
                             <ColumnDefinition Width="200" />
                             <ColumnDefinition Width="40" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding GameName}" />
-                        <TextBlock Grid.Column="1" Text="{Binding OpenTickets}" HorizontalAlignment="Right" Margin="4,0,4,0" />
+                        <TextBlock>
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                                       Command="{Binding DataContext.OpenGameCommand, ElementName=topGamesList}" CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding GameName}" />
+                            </Hyperlink>                            
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" HorizontalAlignment="Right" Margin="4,0,4,0">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                                       Command="{Binding DataContext.OpenGameTicketsCommand, ElementName=topGamesList}" CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding OpenTickets}" />
+                            </Hyperlink>                            
+                        </TextBlock>
                     </Grid>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
 
-        <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Bottom" Text="Most Problematic Achievements" />
-        <ListView Grid.Row="2" Grid.Column="2" ItemsSource="{Binding TopAchievements}">
+        <TextBlock Grid.Row="0" Grid.Column="1" VerticalAlignment="Bottom" Margin="2,0,2,0">
+            <TextBlock Text="Achievements with Tickets: " />
+            <TextBlock Text="{Binding TopAchievements.Count}" />
+        </TextBlock>
+        <ListView Grid.Row="1" Grid.Column="1" ItemsSource="{Binding TopAchievements}" x:Name="problematicAchievementsList">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="200" />
-                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="200" />
                             <ColumnDefinition Width="40" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding AchievementName}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Game.GameName}" Margin="4,0,4,0" />
+                        <TextBlock>
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                                       Command="{Binding DataContext.OpenAchievementCommand, ElementName=problematicAchievementsList}" CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding AchievementName}" />
+                            </Hyperlink>                            
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" Margin="4,0,4,0">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                                       Command="{Binding DataContext.OpenGameCommand, ElementName=problematicAchievementsList}" CommandParameter="{Binding Game}">
+                                <TextBlock Text="{Binding Game.GameName}" />
+                            </Hyperlink>
+                        </TextBlock>
                         <TextBlock Grid.Column="2" Text="{Binding OpenTickets.Count}" HorizontalAlignment="Right" />
                     </Grid>
                 </DataTemplate>

@@ -1,4 +1,5 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
@@ -28,6 +29,10 @@ namespace RATools.ViewModels
             DialogTitle = "Open Tickets";
             CanClose = true;
 
+            OpenGameCommand = new DelegateCommand<GameTickets>(OpenGame);
+            OpenGameTicketsCommand = new DelegateCommand<GameTickets>(OpenGameTickets);
+            OpenAchievementCommand = new DelegateCommand<AchievementTickets>(OpenAchievement);
+
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             backgroundWorkerService.RunAsync(LoadTickets);
         }
@@ -37,7 +42,6 @@ namespace RATools.ViewModels
         private readonly IBackgroundWorkerService _backgroundWorkerService;
 
         public ProgressFieldViewModel Progress { get; private set; }
-
 
         [DebuggerDisplay("{GameName} ({GameId})")]
         public class GameTickets
@@ -59,6 +63,27 @@ namespace RATools.ViewModels
             public string AchievementName { get; set; }
             public GameTickets Game { get; set; }
             public List<int> OpenTickets { get; set; }
+        }
+
+        public CommandBase<AchievementTickets> OpenAchievementCommand { get; private set; }
+        private void OpenAchievement(AchievementTickets achievement)
+        {
+            var url = "http://retroachievements.org/Achievement/" + achievement.AchievementId;
+            Process.Start(url);
+        }
+
+        public CommandBase<GameTickets> OpenGameCommand { get; private set; }
+        private void OpenGame(GameTickets game)
+        {
+            var url = "http://retroachievements.org/Game/" + game.GameId;
+            Process.Start(url);
+        }
+
+        public CommandBase<GameTickets> OpenGameTicketsCommand { get; private set; }
+        private void OpenGameTickets(GameTickets game)
+        {
+            var url = "http://retroachievements.org/ticketmanager.php?ampt=1&g=" + game.GameId;
+            Process.Start(url);
         }
 
         public static readonly ModelProperty OpenTicketsProperty = ModelProperty.Register(typeof(OpenTicketsViewModel), "OpenTickets", typeof(int), 0);
@@ -147,7 +172,7 @@ namespace RATools.ViewModels
                         tokenizer.Advance(2);
                         achievementTickets.AchievementName = tokenizer.ReadTo("</a>").ToString();
 
-                        tickets[ticketId] = achievementTickets;
+                        tickets[achievementId] = achievementTickets;
                     }
 
                     achievementTickets.OpenTickets.Add(ticketId);
@@ -190,6 +215,7 @@ namespace RATools.ViewModels
             TopGames = gameList;
 
             OpenTickets = totalTickets;
+            DialogTitle = "Open Tickets: " + totalTickets;
 
             Progress.Label = String.Empty;
         }
