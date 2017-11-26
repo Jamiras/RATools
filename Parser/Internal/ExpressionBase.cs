@@ -138,6 +138,8 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.And);
+                        if (clause.Type == ExpressionType.ParseError)
+                            return new ParseErrorExpression("Invalid expression following &&", clause.Line, clause.Column);
                     }
                     break;
 
@@ -151,6 +153,8 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or);
+                        if (clause.Type == ExpressionType.ParseError)
+                            return new ParseErrorExpression("Invalid expression following ||", clause.Line, clause.Column);
                     }
                     break;
 
@@ -236,10 +240,23 @@ namespace RATools.Parser.Internal
                 case '7':
                 case '8':
                 case '9':
-                    var number = tokenizer.ReadNumber();
-                    int value;
-                    Int32.TryParse(number.ToString(), out value);
-                    return new IntegerConstantExpression(value);
+                    {
+                        var number = tokenizer.ReadNumber();
+                        int value;
+                        Int32.TryParse(number.ToString(), out value);
+                        return new IntegerConstantExpression(value);
+                    }
+
+                case '-':
+                    tokenizer.Advance();
+                    if (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
+                    {
+                        var number = tokenizer.ReadNumber();
+                        int value;
+                        Int32.TryParse(number.ToString(), out value);
+                        return new IntegerConstantExpression(-value);
+                    }
+                    return new ParseErrorExpression("No identifier found");
 
                 case '{':
                     tokenizer.Advance();

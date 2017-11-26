@@ -23,19 +23,23 @@ namespace RATools.ViewModels
             if (_compareAchievement == null)
                 return base.BuildRequirementGroups();
 
+            var coreRequirements = Achievement != null ? Achievement.CoreRequirements : new Requirement[0];
             var groups = new List<RequirementGroupViewModel>();
-            groups.Add(new RequirementGroupViewModel("Core", Achievement.CoreRequirements, _compareAchievement.CoreRequirements, _owner.Notes));
+            groups.Add(new RequirementGroupViewModel("Core", coreRequirements, _compareAchievement.CoreRequirements, _owner.Notes));
 
             int i = 0;
-            var altEnumerator = Achievement.AlternateRequirements.GetEnumerator();
             var altCompareEnumerator = _compareAchievement.AlternateRequirements.GetEnumerator();
 
-            while (altEnumerator.MoveNext())
+            if (Achievement != null)
             {
-                i++;
+                var altEnumerator = Achievement.AlternateRequirements.GetEnumerator();
+                while (altEnumerator.MoveNext())
+                {
+                    i++;
 
-                IEnumerable<Requirement> altCompareRequirements = altCompareEnumerator.MoveNext() ? altCompareEnumerator.Current : new Requirement[0];
-                groups.Add(new RequirementGroupViewModel("Alt " + i, altEnumerator.Current, altCompareRequirements, _owner.Notes));
+                    IEnumerable<Requirement> altCompareRequirements = altCompareEnumerator.MoveNext() ? altCompareEnumerator.Current : new Requirement[0];
+                    groups.Add(new RequirementGroupViewModel("Alt " + i, altEnumerator.Current, altCompareRequirements, _owner.Notes));
+                }
             }
 
             while (altCompareEnumerator.MoveNext())

@@ -138,7 +138,7 @@ namespace RATools.Parser.Internal
             return value;
         }
 
-        private static Field ReadField(Tokenizer tokenizer)
+        internal static Field ReadField(Tokenizer tokenizer)
         {
             var fieldType = FieldType.MemoryAddress;
             if (tokenizer.NextChar == 'd')

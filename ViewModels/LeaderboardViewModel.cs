@@ -37,9 +37,7 @@ namespace RATools.ViewModels
                 CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Submit))
             });
 
-            achievement = new AchievementBuilder();
-            achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Value));
-            groups.Add(new LeaderboardGroupViewModel("Value", achievement.ToAchievement().CoreRequirements, owner.Notes)
+            groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
             {
                 CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Value))
             });
@@ -61,15 +59,62 @@ namespace RATools.ViewModels
                 Conditions = conditions;
             }
 
+            public LeaderboardGroupViewModel(string label, string valueString, IDictionary<int, string> notes)
+            {
+                Label = label;
+
+                var conditions = new List<RequirementViewModel>();
+                var tokenizer = Tokenizer.CreateTokenizer(valueString);
+                while (tokenizer.NextChar != '\0')
+                {
+                    string requirement, note;
+                    if (tokenizer.NextChar == 'v')
+                    {
+                        tokenizer.Advance();
+
+                        var number = tokenizer.ReadNumber();
+                        requirement = number.ToString();
+                        note = null;
+                    }
+                    else
+                    {
+                        var field = AchievementBuilder.ReadField(tokenizer);
+                        requirement = field.ToString();
+                        note = (field.Type == FieldType.MemoryAddress) ? notes[(int)field.Value] : null;
+
+                        if (tokenizer.NextChar == '*')
+                        {
+                            requirement += " * ";
+
+                            tokenizer.Advance();
+                            if (tokenizer.NextChar == '-')
+                            {
+                                requirement += '-';
+                                tokenizer.Advance();
+                            }
+
+                            var number = tokenizer.ReadNumber();
+                            requirement += number.ToString();
+                        }
+                    }
+
+                    if (tokenizer.NextChar == '_')
+                    {
+                        tokenizer.Advance();
+                        requirement += " + ";
+                    }
+
+                    conditions.Add(new RequirementViewModel(requirement, note));
+                }
+
+                Conditions = conditions;
+            }
+
             public string Label { get; private set; }
             public IEnumerable<RequirementViewModel> Conditions { get; private set; }
             public CommandBase CopyToClipboardCommand { get; set; }
         }
 
         public IEnumerable<LeaderboardGroupViewModel> Groups { get; private set; }
-
-        //protected override void UpdateLocal()
-        //{
-        //}
     }
 }

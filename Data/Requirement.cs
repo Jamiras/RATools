@@ -54,7 +54,8 @@ namespace RATools.Data
                     break;
             }
 
-            builder.Append(Right.ToString());
+            if (Operator != RequirementOperator.None)
+                builder.Append(Right.ToString());
 
             if (Type != RequirementType.None)
                 builder.Append(')');

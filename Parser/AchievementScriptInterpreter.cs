@@ -746,52 +746,59 @@ namespace RATools.Parser
             if (mathematic != null)
             {
                 string left, right;
-                if (EvaluateAddress(mathematic.Left, scope, out left))
+                if (!EvaluateAddress(mathematic.Left, scope, out left))
                 {
-                    builder.Append(left);
+                    address = String.Empty;
+                    return false; // nested call will have already set error message
+                }
 
-                    var integer = mathematic.Right as IntegerConstantExpression;
-                    switch (mathematic.Operation)
-                    {
-                        case MathematicOperation.Add:
-                            builder.Append('_');
+                builder.Append(left);
 
-                            if (integer != null)
-                            {
-                                builder.Append('v');
-                                builder.Append(integer.Value);
-                                address = builder.ToString();
-                                return true;
-                            }
+                var integer = mathematic.Right as IntegerConstantExpression;
+                switch (mathematic.Operation)
+                {
+                    case MathematicOperation.Add:
+                        builder.Append('_');
 
-                            if (EvaluateAddress(mathematic.Right, scope, out right))
-                            {
-                                builder.Append(right);
-                                address = builder.ToString();
-                                return true;
-                            }
-                            break;
+                        if (integer != null)
+                        {
+                            builder.Append('v');
+                            builder.Append(integer.Value);
+                            address = builder.ToString();
+                            return true;
+                        }
 
-                        case MathematicOperation.Subtract:
-                            if (integer != null)
-                            {
-                                builder.Append("_v-");
-                                builder.Append(integer.Value);
-                                address = builder.ToString();
-                                return true;
-                            }
-                            break;
+                        if (!EvaluateAddress(mathematic.Right, scope, out right))
+                        {
+                            address = String.Empty;
+                            return false; // nested call will have already set error message
+                        }
 
-                        case MathematicOperation.Multiply:
-                            if (integer != null)
-                            {
-                                builder.Append('*');
-                                builder.Append(integer.Value);
-                                address = builder.ToString();
-                                return true;
-                            }
-                            break;
-                    }
+                        builder.Append(right);
+                        address = builder.ToString();
+                        return true;
+
+                    case MathematicOperation.Subtract:
+                        if (integer != null)
+                        {
+                            builder.Append("_v-");
+                            builder.Append(integer.Value);
+                            address = builder.ToString();
+                            return true;
+                        }
+
+                        address = String.Empty;
+                        return EvaluationError(mathematic.Right, "Only constants can be subtracted");
+
+                    case MathematicOperation.Multiply:
+                        if (integer != null)
+                        {
+                            builder.Append('*');
+                            builder.Append(integer.Value);
+                            address = builder.ToString();
+                            return true;
+                        }
+                        break;
                 }
             }
 
@@ -799,23 +806,26 @@ namespace RATools.Parser
             if (functionCall != null)
             {
                 var function = scope.GetFunction(functionCall.FunctionName);
-                if (function != null)
+                if (function == null)
                 {
-                    if (function.Expressions.Count != 1)
-                    {
-                        address = String.Empty;
-                        return EvaluationError(expression, "parameter does not evaluate to a memory address");
-                    }
+                    address = String.Empty;
+                    return EvaluationError(expression, "Unknown function: " + functionCall.FunctionName);
+                }
 
-                    var innerScope = GetParameters(function, functionCall, scope);
-                    if (innerScope != null)
-                    {
-                        var returnExpression = function.Expressions.First() as ReturnExpression;
-                        if (returnExpression != null)
-                            return EvaluateAddress(returnExpression.Value, innerScope, out address);
+                if (function.Expressions.Count != 1)
+                {
+                    address = String.Empty;
+                    return EvaluationError(expression, "parameter does not evaluate to a memory address");
+                }
 
-                        return EvaluateAddress(function.Expressions.First(), innerScope, out address);
-                    }
+                var innerScope = GetParameters(function, functionCall, scope);
+                if (innerScope != null)
+                {
+                    var returnExpression = function.Expressions.First() as ReturnExpression;
+                    if (returnExpression != null)
+                        return EvaluateAddress(returnExpression.Value, innerScope, out address);
+
+                    return EvaluateAddress(function.Expressions.First(), innerScope, out address);
                 }
             }
             
