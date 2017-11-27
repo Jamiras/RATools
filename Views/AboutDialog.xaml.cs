@@ -12,14 +12,14 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace RATools
+namespace RATools.Views
 {
     /// <summary>
-    /// Interaction logic for GameStatsDialog.xaml
+    /// Interaction logic for AboutDialog.xaml
     /// </summary>
-    public partial class GameStatsDialog : UserControl
+    public partial class AboutDialog : UserControl
     {
-        public GameStatsDialog()
+        public AboutDialog()
         {
             InitializeComponent();
         }

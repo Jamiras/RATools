@@ -6,6 +6,9 @@
         <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <SolidColorBrush x:Key="newValueColor" Color="#00D040" />
+    <SolidColorBrush x:Key="oldValueColor" Color="#E04040" />
+
     <DataTemplate x:Key="achievementRowTemplate">
         <Grid>
             <Grid.Resources>
@@ -32,7 +35,7 @@
                 <ColumnDefinition Width="16" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="{Binding Id}" Margin="2,0,2,0" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="0" Text="{Binding Id}" Margin="2,0,2,0" Foreground="DarkGray" HorizontalAlignment="Right" />
             <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="2,0,2,0" />
             <TextBlock Grid.Column="2" Text="{Binding Points}" Margin="2,0,8,0" HorizontalAlignment="Right" />
 
@@ -67,7 +70,7 @@
                             <DataTrigger Binding="{Binding LocalModified}" Value="Modified">
                                 <Setter Property="Opacity" Value="1.0" />
                                 <Setter Property="Text" Value="L*" />
-                                <Setter Property="Foreground" Value="Red" />
+                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding LocalModified}" Value="Unmodified">
                                 <Setter Property="Text" Value="L" />
@@ -92,14 +95,14 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding UnofficialModified}" Value="Modified">
                                 <Setter Property="Text" Value="U*" />
-                                <Setter Property="Foreground" Value="Red" />
+                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding UnofficialModified}" Value="Unmodified">
                                 <Setter Property="Text" Value="U" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CoreModified}" Value="Modified">
                                 <Setter Property="Text" Value="C*" />
-                                <Setter Property="Foreground" Value="Red" />
+                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CoreModified}" Value="Unmodified">
                                 <Setter Property="Text" Value="C" />
@@ -182,7 +185,7 @@
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
-                                <Setter Property="Foreground" Value="Green" />
+                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
                                 <Setter Property="ToolTip" Value="{Binding Other.Title}" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -194,7 +197,7 @@
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
-                                <Setter Property="Foreground" Value="Green" />
+                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
                                 <Setter Property="ToolTip" Value="{Binding Other.Description}" />
                             </DataTrigger>
                         </Style.Triggers>
@@ -207,7 +210,7 @@
                         <Style TargetType="{x:Type TextBlock}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
-                                    <Setter Property="Foreground" Value="Green" />
+                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
                                     <Setter Property="ToolTip" Value="{Binding Other.Points}" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -238,7 +241,7 @@
                                                         <Style TargetType="{x:Type TextBlock}">
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                                    <Setter Property="Foreground" Value="Green" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -249,7 +252,7 @@
                                                         <Style TargetType="{x:Type TextBlock}">
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                                    <Setter Property="Foreground" Value="Red" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
@@ -352,7 +355,7 @@
                                             <Style TargetType="{x:Type TextBlock}">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                        <Setter Property="Foreground" Value="Green" />
+                                                        <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -363,7 +366,7 @@
                                             <Style TargetType="{x:Type TextBlock}">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                        <Setter Property="Foreground" Value="Red" />
+                                                        <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>

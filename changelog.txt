@@ -1,0 +1,2 @@
+v1.0 - 26 Nov 2017
+* initial public release build candidate

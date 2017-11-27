@@ -1,4 +1,4 @@
-﻿<Window x:Class="RATools.MainWindow"
+﻿<Window x:Class="RATools.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{Binding Game.Title, StringFormat='RA Tools - {0}', FallbackValue='RA Tools - No Game Loaded'}" Height="768" Width="1024">
@@ -49,6 +49,9 @@
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />
                 <MenuItem Header="Game _Stats" Command="{Binding GameStatsCommand}" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About" Command="{Binding AboutCommand}" />
             </MenuItem>
         </Menu>
         <Border DockPanel.Dock="Bottom" Height="20" Background="#C0C0C0" BorderBrush="DarkGray" BorderThickness="0,1,0,0">

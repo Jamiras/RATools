@@ -1,6 +1,6 @@
 ﻿using System.Windows.Controls;
 
-namespace RATools
+namespace RATools.Views
 {
     /// <summary>
     /// Interaction logic for OpenTicketsDialog.xaml

@@ -23,6 +23,7 @@ namespace RATools.ViewModels
             DumpPublishedCommand = new DelegateCommand(DumpPublished);
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
+            AboutCommand = new DelegateCommand(About);
 
             _recentFiles = new RecencyBuffer<string>(8);
         }
@@ -250,6 +251,13 @@ namespace RATools.ViewModels
         private void OpenTickets()
         {
             var vm = new OpenTicketsViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase AboutCommand { get; private set; }
+        private void About()
+        {
+            var vm = new AboutDialogViewModel();
             vm.ShowDialog();
         }
     }

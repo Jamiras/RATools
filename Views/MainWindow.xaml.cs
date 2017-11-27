@@ -1,11 +1,11 @@
-﻿using System;
-using System.Windows;
-using RATools.ViewModels;
-using Jamiras.Components;
-using Jamiras.Services;
+﻿using Jamiras.Components;
 using Jamiras.Controls;
+using Jamiras.Services;
+using RATools.ViewModels;
+using System;
+using System.Windows;
 
-namespace RATools
+namespace RATools.Views
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
@@ -25,6 +25,7 @@ namespace RATools
 
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new GameStatsDialog());
             dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());
+            dialogService.RegisterDialogHandler(typeof(AboutDialogViewModel), vm => new OkCancelView(new AboutDialog()));
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
