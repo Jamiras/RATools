@@ -21,34 +21,40 @@ namespace RATools.ViewModels
         {
             Label = label;
 
-            var unmatchedRequirements = new List<Requirement>(compareRequirements);
+            var unmatchedCompareRequirements = new List<Requirement>(compareRequirements);
             var matches = new Dictionary<Requirement, Requirement>();
+            var unmatchedRequirements = new List<Requirement>();
 
             foreach (var requirement in requirements)
             {
-                for (int i = 0; i < unmatchedRequirements.Count; i++)
+                bool matched = false;
+                for (int i = 0; i < unmatchedCompareRequirements.Count; i++)
                 {
-                    if (unmatchedRequirements[i] == requirement)
+                    if (unmatchedCompareRequirements[i] == requirement)
                     {
-                        matches[requirement] = unmatchedRequirements[i];
-                        unmatchedRequirements.RemoveAt(i);
+                        matches[requirement] = unmatchedCompareRequirements[i];
+                        unmatchedCompareRequirements.RemoveAt(i);
+                        matched = true;
                         break;
                     }
                 }
+
+                if (!matched)
+                    unmatchedRequirements.Add(requirement);
             }
 
-            var list = new List<RequirementViewModel>();
-            foreach (var requirement in requirements)
+            while (unmatchedRequirements.Count > 0)
             {
-                Requirement match;
-                if (!matches.TryGetValue(requirement, out match))
-                {
-                    var bestScore = 0;
-                    var matchIndex = -1;
+                var bestScore = 0;
+                var matchIndex = -1;
+                var compareIndex = -1;
 
-                    for (int i = 0; i < unmatchedRequirements.Count; i++)
+                for (var i = 0; i < unmatchedRequirements.Count; i++)
+                {
+                    var requirement = unmatchedRequirements[i];
+                    for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
                     {
-                        var test = unmatchedRequirements[i];
+                        var test = unmatchedCompareRequirements[j];
                         var score = 0;
 
                         if (test.Type == requirement.Type)
@@ -74,20 +80,28 @@ namespace RATools.ViewModels
                         {
                             bestScore = score;
                             matchIndex = i;
+                            compareIndex = j;
                         }
-                    }
-
-                    if (bestScore > 16)
-                    {
-                        match = unmatchedRequirements[matchIndex];
-                        unmatchedRequirements.RemoveAt(matchIndex);
                     }
                 }
 
+                if (bestScore < 12)
+                    break;
+
+                matches[unmatchedRequirements[matchIndex]] = unmatchedCompareRequirements[compareIndex];
+                unmatchedRequirements.RemoveAt(matchIndex);
+                unmatchedCompareRequirements.RemoveAt(compareIndex);
+            }
+
+            var list = new List<RequirementViewModel>();
+            foreach (var requirement in requirements)
+            {
+                Requirement match;
+                matches.TryGetValue(requirement, out match);
                 list.Add(new RequirementComparisonViewModel(requirement, match, notes));
             }
 
-            foreach (var requirement in unmatchedRequirements)
+            foreach (var requirement in unmatchedCompareRequirements)
                 list.Add(new RequirementComparisonViewModel(null, requirement, notes));
 
             Requirements = list;

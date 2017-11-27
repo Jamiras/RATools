@@ -102,28 +102,5 @@ namespace RATools.ViewModels
             get { return (bool)GetValue(IsPointsModifiedProperty); }
             private set { SetValue(IsPointsModifiedProperty, value); }
         }
-
-        //public CommandBase UpdateLocalCommand { get; private set; }
-        //private void ExecuteUpdateLocal()
-        //{
-        //    UpdateLocal();
-
-        //    foreach (var field in ModifiableTextFields)
-        //        field.LocalText = field.Text;
-
-        //    if (_status != null)
-        //    {
-        //        _status = null;
-        //        OnPropertyChanged(() => Status);
-        //    }
-        //}
-        //protected virtual void UpdateLocal()
-        //{
-        //    if (Id > 0)
-        //        Achievement.Id = Id;
-        //    if (!String.IsNullOrEmpty(BadgeName))
-        //        Achievement.BadgeName = BadgeName;
-        //    _owner.UpdateLocal(Achievement, Title.LocalText);
-        //}
     }
 }

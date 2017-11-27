@@ -84,6 +84,11 @@ namespace RATools.ViewModels
                 Title = Unofficial.Title.Text;
                 Points = Unofficial.Points.Value.GetValueOrDefault();
             }
+            else if (Local.Achievement != null)
+            {
+                Title = Local.Title.Text;
+                Points = Local.Points.Value.GetValueOrDefault();
+            }
 
             if (Core.Achievement != null)
                 Id = Core.Id;
