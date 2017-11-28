@@ -2,12 +2,33 @@
 
 namespace RATools.Data
 {
+    /// <summary>
+    /// Defines a <see cref="Requirement"/> field.
+    /// </summary>
     public struct Field
     {
+        /// <summary>
+        /// Gets or sets the field type.
+        /// </summary>
         public FieldType Type { get; set; }
+
+        /// <summary>
+        /// Gets or sets the field size.
+        /// </summary>
         public FieldSize Size { get; set; }
+
+        /// <summary>
+        /// Gets or sets the field value.
+        /// </summary>
+        /// <remarks>
+        /// For <see cref="FieldType.MemoryAddress"/> or <see cref="FieldType.PreviousValue"/> fields, this is the memory address.
+        /// For <see cref="FieldType.Value"/> fields, this is a raw value.
+        /// </remarks>
         public uint Value { get; set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
         public override string ToString()
         {
             if (Type == FieldType.None)
@@ -47,6 +68,12 @@ namespace RATools.Data
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Appends the serialized field to the <paramref name="builder"/>
+        /// </summary>
+        /// <remarks>
+        /// This is a custom serialization format.
+        /// </remarks>
         internal void Serialize(StringBuilder builder)
         {
             if (Type == FieldType.Value)
@@ -80,6 +107,13 @@ namespace RATools.Data
             builder.AppendFormat("{0:x6}", Value);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             if (!(obj is Field))
@@ -89,45 +123,133 @@ namespace RATools.Data
             return that.Type == Type && that.Size == Size && that.Value == Value;
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return base.GetHashCode();
         }
 
+        /// <summary>
+        /// Determines if two <see cref="Field"/>s are equivalent.
+        /// </summary>
         public static bool operator ==(Field left, Field right)
         {
             return left.Equals(right);
         }
 
+        /// <summary>
+        /// Determines if two <see cref="Field"/>s are not equivalent.
+        /// </summary>
         public static bool operator !=(Field left, Field right)
         {
             return !left.Equals(right);
         }
     }
 
+    /// <summary>
+    /// Supported field types
+    /// </summary>
     public enum FieldType
     {
+        /// <summary>
+        /// Unspecified.
+        /// </summary>
         None = 0,
+        
+        /// <summary>
+        /// The value at a memory address.
+        /// </summary>
         MemoryAddress = 1,
+        
+        /// <summary>
+        /// A raw value.
+        /// </summary>
         Value = 3,
+
+        /// <summary>
+        /// The previous value at a memory address.
+        /// </summary>
         PreviousValue = 2, // Delta
     }
 
+    /// <summary>
+    /// The amount of data to pull from the related field.
+    /// </summary>
     public enum FieldSize
     {
+        /// <summary>
+        /// Unspecified
+        /// </summary>
         None = 0,
+
+        /// <summary>
+        /// Bit 0 of a byte.
+        /// </summary>
         Bit0,
+
+        /// <summary>
+        /// Bit 1 of a byte.
+        /// </summary>
         Bit1,
+
+        /// <summary>
+        /// Bit 2 of a byte.
+        /// </summary>
         Bit2,
+
+        /// <summary>
+        /// Bit 3 of a byte.
+        /// </summary>
         Bit3,
+
+        /// <summary>
+        /// Bit 4 of a byte.
+        /// </summary>
         Bit4,
+
+        /// <summary>
+        /// Bit 5 of a byte.
+        /// </summary>
         Bit5,
+
+        /// <summary>
+        /// Bit 6 of a byte.
+        /// </summary>
         Bit6,
+
+        /// <summary>
+        /// Bit 7 of a byte.
+        /// </summary>
         Bit7,
-        LowNibble, // b0-3
-        HighNibble, // b4-7
+
+        /// <summary>
+        /// Bits 0-3 of a byte.
+        /// </summary>
+        LowNibble,
+
+        /// <summary>
+        /// Bits 4-7 of a byte.
+        /// </summary>
+        HighNibble,
+
+        /// <summary>
+        /// A byte (8-bits).
+        /// </summary>
         Byte,
+
+        /// <summary>
+        /// Two bytes (16-bit). Read from memory in little-endian mode.
+        /// </summary>
         Word,
+
+        /// <summary>
+        /// Four bytes (32-bit). Read from memory in little-endian mode.
+        /// </summary>
         DWord,
     }
 }

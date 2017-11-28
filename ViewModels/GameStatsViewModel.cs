@@ -1,12 +1,13 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -14,30 +15,26 @@ namespace RATools.ViewModels
     public class GameStatsViewModel : DialogViewModelBase
     {
         public GameStatsViewModel()
-            : this(ServiceRepository.Instance.FindService<IFileSystemService>(),
-                   ServiceRepository.Instance.FindService<IHttpRequestService>(),
-                   ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
+            : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
         {
         }
 
-        public GameStatsViewModel(IFileSystemService fileSystemService, IHttpRequestService httpRequestService, IBackgroundWorkerService backgroundWorkerService)
+        public GameStatsViewModel(IBackgroundWorkerService backgroundWorkerService)
         {
-            _fileSystemService = fileSystemService;
-            _httpRequestService = httpRequestService;
             _backgroundWorkerService = backgroundWorkerService;
 
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             DialogTitle = "Game Stats";
             CanClose = true;
+
+            SearchCommand = new DelegateCommand(Search);
         }
 
-        private readonly IFileSystemService _fileSystemService;
-        private readonly IHttpRequestService _httpRequestService;
         private readonly IBackgroundWorkerService _backgroundWorkerService;
 
         public ProgressFieldViewModel Progress { get; private set; }
 
-        public static readonly ModelProperty GameIdProperty = ModelProperty.Register(typeof(GameStatsViewModel), "GameId", typeof(int), 0, OnGameIdChanged);
+        public static readonly ModelProperty GameIdProperty = ModelProperty.Register(typeof(GameStatsViewModel), "GameId", typeof(int), 0);
 
         public int GameId
         {
@@ -45,12 +42,18 @@ namespace RATools.ViewModels
             set { SetValue(GameIdProperty, value); }
         }
 
+        public CommandBase SearchCommand { get; private set; }
+        private void Search()
+        {
+            Progress.Label = "Fetching Game " + GameId;
+            Progress.IsEnabled = true;
+            _backgroundWorkerService.RunAsync(LoadGame);
+        }
+
         private static void OnGameIdChanged(object sender, ModelPropertyChangedEventArgs e)
         {
             var vm = (GameStatsViewModel)sender;
-            vm.Progress.Label = "Fetching Game " + vm.GameId;
-            vm.Progress.IsEnabled = true;
-            vm._backgroundWorkerService.RunAsync(vm.LoadGame);
+            vm.Search();
         }
 
         [DebuggerDisplay("{Title} ({Id})")]
@@ -154,7 +157,7 @@ namespace RATools.ViewModels
 
         private void LoadGame()
         {
-            var gamePage = GetGamePage();
+            var gamePage = RAWebCache.Instance.GetGamePage(GameId);
             if (gamePage == null)
                 return;
 
@@ -230,7 +233,7 @@ namespace RATools.ViewModels
             var userStats = new List<UserStats>();
             foreach (var achievement in allStats)
             {
-                var achievementPage = GetAchievementPage(achievement.Id);
+                var achievementPage = RAWebCache.Instance.GetAchievementPage(achievement.Id);
                 if (achievementPage != null)
                 {
                     tokenizer = Tokenizer.CreateTokenizer(achievementPage);
@@ -333,64 +336,6 @@ namespace RATools.ViewModels
             TopUsers = userStats;
 
             Progress.Label = String.Empty;
-        }
-
-        private string GetGamePage()
-        {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.html", GameId));
-            if (!_fileSystemService.FileExists(filename))                
-            {
-                var url = String.Format("http://retroachievements.org/Game/{0}", GameId);
-                var request = new HttpRequest(url);
-                var response = _httpRequestService.Request(request);
-                if (response.Status != System.Net.HttpStatusCode.OK)
-                    return null;
-
-                using (var outputStream = _fileSystemService.CreateFile(filename))
-                {
-                    byte[] buffer = new byte[4096];
-                    using (var stream = response.GetResponseStream())
-                    {
-                        int bytesRead;
-                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-                            outputStream.Write(buffer, 0, bytesRead);
-                    }
-                }
-            }
-
-            using (var stream = new StreamReader(_fileSystemService.OpenFile(filename, OpenFileMode.Read)))
-            {
-                return stream.ReadToEnd();
-            }
-        }
-
-        private string GetAchievementPage(int achievementId)
-        {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raAch{0}.html", achievementId));
-            if (!_fileSystemService.FileExists(filename))
-            {
-                var url = String.Format("http://retroachievements.org/Achievement/{0}", achievementId);
-                var request = new HttpRequest(url);
-                var response = _httpRequestService.Request(request);
-                if (response.Status != System.Net.HttpStatusCode.OK)
-                    return null;
-
-                using (var outputStream = _fileSystemService.CreateFile(filename))
-                {
-                    byte[] buffer = new byte[4096];
-                    using (var stream = response.GetResponseStream())
-                    {
-                        int bytesRead;
-                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-                            outputStream.Write(buffer, 0, bytesRead);
-                    }
-                }
-            }
-
-            using (var stream = new StreamReader(_fileSystemService.OpenFile(filename, OpenFileMode.Read)))
-            {
-                return stream.ReadToEnd();
-            }
         }
     }
 }

@@ -1,5 +1,7 @@
 ﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
+using Jamiras.Services;
 using Jamiras.ViewModels;
 using System.Collections.Generic;
 using System.IO;
@@ -120,7 +122,7 @@ namespace RATools.ViewModels
             {
                 CopyToClipboardCommand = new DelegateCommand(() =>
                 {
-                    Clipboard.SetData(DataFormats.Text, _richPresence);
+                    ServiceRepository.Instance.FindService<IClipboardService>().SetData(_richPresence);
 
                     if (_richPresence.Length > 2500)
                         MessageBoxViewModel.ShowMessage("Rich Presence exceeds maximum length of 2500 characters (" + _richPresence.Length + ")");

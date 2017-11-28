@@ -386,12 +386,14 @@
             <Grid Background="White">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
                 <TextBlock FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" />
+                <TextBlock Grid.Row="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
 
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Groups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>

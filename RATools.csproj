@@ -35,10 +35,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Jamiras.Core, Version=1.0.0.0, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>lib\Jamiras.Core.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
@@ -58,6 +54,7 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="Views\AboutDialog.xaml.cs">
       <DependentUpon>AboutDialog.xaml</DependentUpon>
@@ -154,6 +151,24 @@
     </None>
     <AppDesigner Include="Properties\" />
   </ItemGroup>
+  <Choose>
+    <When Condition="'$(SolutionFileName)' == 'RATools + Core.sln'">
+      <ItemGroup>
+        <ProjectReference Include="..\Core\Jamiras.Core.csproj">
+          <Project>{4141f2ae-9e32-4a93-9fea-360a7dc7d97f}</Project>
+          <Name>Jamiras.Core</Name>
+        </ProjectReference>
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <Reference Include="Jamiras.Core.dll">
+          <HintPath>lib\Jamiras.Core.dll</HintPath>
+          <Name>Jamiras.Core.dll</Name>
+        </Reference>
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

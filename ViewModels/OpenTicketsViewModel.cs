@@ -4,10 +4,10 @@ using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 
 namespace RATools.ViewModels
 {
@@ -123,7 +123,7 @@ namespace RATools.ViewModels
             int page = 0;
             do
             {
-                var ticketsPage = GetTicketsPage(page);
+                var ticketsPage = RAWebCache.Instance.GetOpenTicketsPage(page);
                 if (ticketsPage == null)
                     return;
 
@@ -218,38 +218,6 @@ namespace RATools.ViewModels
             DialogTitle = "Open Tickets: " + totalTickets;
 
             Progress.Label = String.Empty;
-        }
-
-        private string GetTicketsPage(int pageIndex)
-        {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", pageIndex));
-            if (!_fileSystemService.FileExists(filename))
-            {
-                var url = "http://retroachievements.org/ticketmanager.php";
-                if (pageIndex > 0)
-                    url += "?u=&t=1&o=" + (pageIndex * 100);
-
-                var request = new HttpRequest(url);
-                var response = _httpRequestService.Request(request);
-                if (response.Status != System.Net.HttpStatusCode.OK)
-                    return null;
-
-                using (var outputStream = _fileSystemService.CreateFile(filename))
-                {
-                    byte[] buffer = new byte[4096];
-                    using (var stream = response.GetResponseStream())
-                    {
-                        int bytesRead;
-                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
-                            outputStream.Write(buffer, 0, bytesRead);
-                    }
-                }
-            }
-
-            using (var stream = new StreamReader(_fileSystemService.OpenFile(filename, OpenFileMode.Read)))
-            {
-                return stream.ReadToEnd();
-            }
         }
     }
 }

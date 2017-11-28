@@ -1,9 +1,9 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.Services;
 using RATools.Data;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
-using System.Windows;
 
 namespace RATools.ViewModels
 {
@@ -11,8 +11,11 @@ namespace RATools.ViewModels
     {
         public LeaderboardViewModel(GameViewModel owner, Leaderboard leaderboard)
         {
+            _clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+
             _leaderboard = leaderboard;
             Title = "Leaderboard: " + leaderboard.Title;
+            Description = leaderboard.Description;
 
             var groups = new List<LeaderboardGroupViewModel>();
 
@@ -20,31 +23,32 @@ namespace RATools.ViewModels
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Start));
             groups.Add(new LeaderboardGroupViewModel("Start Conditions", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Start))
+                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Start))
             });
 
             achievement = new AchievementBuilder();
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Cancel));
             groups.Add(new LeaderboardGroupViewModel("Cancel Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Cancel))
+                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Cancel))
             });
 
             achievement = new AchievementBuilder();
             achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Submit));
             groups.Add(new LeaderboardGroupViewModel("Submit Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
             {
-                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Submit))
+                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Submit))
             });
 
             groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
             {
-                CopyToClipboardCommand = new DelegateCommand(() => Clipboard.SetData(DataFormats.Text, _leaderboard.Value))
+                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
             });
 
             Groups = groups;
         }
 
+        private readonly IClipboardService _clipboard;
         private readonly Leaderboard _leaderboard;
 
         public class LeaderboardGroupViewModel

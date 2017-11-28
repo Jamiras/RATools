@@ -45,9 +45,10 @@
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Median Time to Master (Hardcore):" />
         <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianTimeToMaster}" Margin="4,0,4,0" />
 
-        <StackPanel Grid.Column="2" Grid.RowSpan="3" Width="150" HorizontalAlignment="Right">
+        <StackPanel Grid.Column="2" Grid.RowSpan="5" Width="150" HorizontalAlignment="Right">
             <TextBlock Text="Game ID" />
             <TextBox Text="{Binding GameId}" />
+            <Button Command="{Binding SearchCommand}" Content="Search" Margin="64,4,0,4" />
         </StackPanel>
         
         <TextBlock Grid.Row="5" VerticalAlignment="Bottom" Text="Top Hardcore Users" />

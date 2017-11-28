@@ -2,14 +2,43 @@
 
 namespace RATools.Data
 {
+    /// <summary>
+    /// Defines a single requirement within an <see cref="Achievement"/>.
+    /// </summary>
     public class Requirement
     {
+        /// <summary>
+        /// Gets or sets the left part of the requirement.
+        /// </summary>
         public Field Left { get; set; }
+
+        /// <summary>
+        /// Gets or sets the right part of the requirement.
+        /// </summary>
         public Field Right { get; set; }
+
+        /// <summary>
+        /// Gets or sets the requirement type.
+        /// </summary>
         public RequirementType Type { get; set; }
+
+        /// <summary>
+        /// Gets or sets the requirement operator.
+        /// </summary>
         public RequirementOperator Operator { get; set; }
+
+        /// <summary>
+        /// Gets or sets the required hit count for the requirement.
+        /// </summary>
+        /// <remarks>
+        /// <c>0</c> means the requirement must be true at the time the achievement triggers.
+        /// Any other value indicates the number of frames a requirement must be true before the achievement can trigger.
+        /// </remarks>
         public ushort HitCount { get; set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -66,6 +95,13 @@ namespace RATools.Data
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
         public override bool Equals(object obj)
         {
             var that = obj as Requirement;
@@ -78,11 +114,20 @@ namespace RATools.Data
             return (that.Left == this.Left && that.Right == this.Right);
         }
 
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
         public override int GetHashCode()
         {
             return base.GetHashCode();
         }
 
+        /// <summary>
+        /// Determines if two <see cref="Requirement"/>s are equivalent.
+        /// </summary>
         public static bool operator ==(Requirement left, Requirement right)
         {
             if (ReferenceEquals(left, right))
@@ -93,6 +138,9 @@ namespace RATools.Data
             return left.Equals(right);
         }
 
+        /// <summary>
+        /// Determines if two <see cref="Requirement"/>s are not equivalent.
+        /// </summary>
         public static bool operator !=(Requirement left, Requirement right)
         {
             if (ReferenceEquals(left, right))
@@ -104,21 +152,65 @@ namespace RATools.Data
         }
     }
 
+    /// <summary>
+    /// Specifies how the <see cref="Requirement.Left"/> and <see cref="Requirement.Right"/> values should be compared.
+    /// </summary>
     public enum RequirementOperator
     {
+        /// <summary>
+        /// Unspecified.
+        /// </summary>
         None = 0,
+
+        /// <summary>
+        /// The left and right values are equivalent.
+        /// </summary>
         Equal,
+
+        /// <summary>
+        /// The left and right values are not equivalent.
+        /// </summary>
         NotEqual,
+
+        /// <summary>
+        /// The left value is less than the right value.
+        /// </summary>
         LessThan,
+
+        /// <summary>
+        /// The left value is less than or equal to the right value.
+        /// </summary>
         LessThanOrEqual,
+
+        /// <summary>
+        /// The left value is greater than the right value.
+        /// </summary>
         GreaterThan,
+
+        /// <summary>
+        /// The left value is greater than or equal to the right value.
+        /// </summary>
         GreaterThanOrEqual,
     }
 
+    /// <summary>
+    /// Special requirement behaviors
+    /// </summary>
     public enum RequirementType
     {
+        /// <summary>
+        /// No special behavior.
+        /// </summary>
         None = 0,
+
+        /// <summary>
+        /// Resets any HitCounts in the current requirement group if true.
+        /// </summary>
         ResetIf,
+
+        /// <summary>
+        /// Pauses processing of the achievement if true.
+        /// </summary>
         PauseIf,
     }
 }
