@@ -1,5 +1,4 @@
 ﻿using Jamiras.Components;
-using System.Linq;
 
 namespace RATools.Parser.Internal
 {
@@ -21,6 +20,11 @@ namespace RATools.Parser.Internal
         private readonly TinyDictionary<string, ExpressionBase> _variables;
         private readonly InterpreterScope _parent;
 
+        /// <summary>
+        /// Gets the function definition for a function.
+        /// </summary>
+        /// <param name="functionName">Name of the function.</param>
+        /// <returns>Requested <see cref="FunctionDefinitionExpression"/>, <c>null</c> if not found.</returns>
         public FunctionDefinitionExpression GetFunction(string functionName)
         {
             FunctionDefinitionExpression function;
@@ -33,11 +37,19 @@ namespace RATools.Parser.Internal
             return null;
         }
 
+        /// <summary>
+        /// Adds the function definition.
+        /// </summary>
         public void AddFunction(FunctionDefinitionExpression function)
         {
             _functions[function.Name] = function;
         }
 
+        /// <summary>
+        /// Gets the value of a variable.
+        /// </summary>
+        /// <param name="variableName">Name of the variable.</param>
+        /// <returns>Value of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariable(string variableName)
         {
             ExpressionBase variable;
@@ -50,32 +62,20 @@ namespace RATools.Parser.Internal
             return null;
         }
 
+        /// <summary>
+        /// Assigns the value to a variable.
+        /// </summary>
+        /// <param name="variable">The variable.</param>
+        /// <param name="value">The value.</param>
         public void AssignVariable(VariableExpression variable, ExpressionBase value)
         {
             var indexedVariable = variable as IndexedVariableExpression;
             if (indexedVariable != null)
             {
-                var existing = GetVariable(indexedVariable.Name);
-                if (existing == null)
-                {
-                    existing = new DictionaryExpression();
-                    _variables[variable.Name] = existing;
-                }
-
-                ExpressionBase index;
-                var dict = existing as DictionaryExpression;
-                if (dict != null && indexedVariable.Index.ReplaceVariables(this, out index))
-                {
-                    var entry = dict.Entries.FirstOrDefault(e => e.Key == index);
-                    if (entry == null)
-                    {
-                        entry = new DictionaryExpression.DictionaryEntry { Key = index };
-                        dict.Entries.Add(entry);
-                    }
-
-                    entry.Value = value;
-                    return;
-                }
+                ExpressionBase result;
+                var entry = indexedVariable.GetDictionaryEntry(this, out result, true);
+                entry.Value = value;
+                return;
             }
 
             _variables[variable.Name] = value;

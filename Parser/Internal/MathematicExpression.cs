@@ -1,5 +1,5 @@
-﻿
-using System.Text;
+﻿using System.Text;
+
 namespace RATools.Parser.Internal
 {
     internal class MathematicExpression : ExpressionBase
@@ -12,10 +12,24 @@ namespace RATools.Parser.Internal
             Right = right;
         }
 
+        /// <summary>
+        /// Gets the left side of the equation.
+        /// </summary>
         public ExpressionBase Left { get; private set; }
+
+        /// <summary>
+        /// Gets the mathematic operation.
+        /// </summary>
         public MathematicOperation Operation { get; private set; }
+
+        /// <summary>
+        /// Gets the right side of the equation.
+        /// </summary>
         public ExpressionBase Right { get; private set; }
 
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder" />.
+        /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
             Left.AppendString(builder);
@@ -41,6 +55,9 @@ namespace RATools.Parser.Internal
             Right.AppendString(builder);
         }
 
+        /// <summary>
+        /// Rebalances this expression based on the precendence of operators.
+        /// </summary>
         internal override ExpressionBase Rebalance()
         {
             var mathematicRight = Right as MathematicExpression;
@@ -75,6 +92,14 @@ namespace RATools.Parser.Internal
             return base.Rebalance();
         }
 
+        /// <summary>
+        /// Replaces the variables in the expression with values from <paramref name="scope" />.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values.</param>
+        /// <param name="result">[out] The new expression containing the replaced variables.</param>
+        /// <returns>
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             ExpressionBase left;
@@ -160,14 +185,49 @@ namespace RATools.Parser.Internal
             result = mathematic;
             return true;
         }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="MathematicExpression" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="MathematicExpression" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="MathematicExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = (MathematicExpression)obj;
+            return Operation == that.Operation && Left == that.Left && Right == that.Right;
+        }
     }
 
+    /// <summary>
+    /// Specifies how the two sides of the <see cref="MathematicExpression"/> should be combined.
+    /// </summary>
     public enum MathematicOperation
     {
+        /// <summary>
+        /// Unspecified
+        /// </summary>
         None = 0,
+
+        /// <summary>
+        /// Add the two values.
+        /// </summary>
         Add,
+
+        /// <summary>
+        /// Subtract the second value from the first.
+        /// </summary>
         Subtract,
+
+        /// <summary>
+        /// Multiply the two values.
+        /// </summary>
         Multiply,
+
+        /// <summary>
+        /// Divide the first value by the second.
+        /// </summary>
         Divide,
     }
 }

@@ -88,6 +88,22 @@
   <ItemGroup>
     <Compile Include="Data\RequirementTests.cs" />
     <Compile Include="Data\FieldTests.cs" />
+    <Compile Include="Parser\Internal\ExpressionBaseTests.cs" />
+    <Compile Include="Parser\Internal\IndexedVariableExpressionTests.cs" />
+    <Compile Include="Parser\Internal\InterpreterScopeTests.cs" />
+    <Compile Include="Parser\Internal\VariableExpressionTests.cs" />
+    <Compile Include="Parser\Internal\StringConstantExpressionTests.cs" />
+    <Compile Include="Parser\Internal\ReturnExpressionTests.cs" />
+    <Compile Include="Parser\Internal\MathematicExpressionTests.cs" />
+    <Compile Include="Parser\Internal\IntegerConstantExpressionTests.cs" />
+    <Compile Include="Parser\Internal\IfExpressionTests.cs" />
+    <Compile Include="Parser\Internal\FunctionDefinitionExpressionTests.cs" />
+    <Compile Include="Parser\Internal\FunctionCallExpressionTests.cs" />
+    <Compile Include="Parser\Internal\ForExpressionTests.cs" />
+    <Compile Include="Parser\Internal\DictionaryExpressionTests.cs" />
+    <Compile Include="Parser\Internal\ConditionalExpressionTests.cs" />
+    <Compile Include="Parser\Internal\ComparisonExpressionTests.cs" />
+    <Compile Include="Parser\Internal\AssignmentExpressionTests.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(SolutionFileName)' == 'RATools + Core.sln'">

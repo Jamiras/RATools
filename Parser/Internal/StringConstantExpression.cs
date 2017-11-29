@@ -10,8 +10,14 @@ namespace RATools.Parser.Internal
             Value = value;
         }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         public string Value { get; private set; }
 
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder" />.
+        /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append('"');
@@ -19,18 +25,17 @@ namespace RATools.Parser.Internal
             builder.Append('"');
         }
 
-        public override bool Equals(object obj)
+        /// <summary>
+        /// Determines whether the specified <see cref="StringConstantExpression" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="StringConstantExpression" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="StringConstantExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as StringConstantExpression;
-            if (that == null)
-                return false;
-
-            return (this.Value == that.Value);
-        }
-
-        public override int GetHashCode()
-        {
-            return Value.GetHashCode();
+            var that = (StringConstantExpression)obj;
+            return (Value == that.Value);
         }
     }
 }

@@ -10,25 +10,30 @@ namespace RATools.Parser.Internal
             Value = value;
         }
 
+        /// <summary>
+        /// Gets the value.
+        /// </summary>
         public int Value { get; private set; }
 
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder" />.
+        /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append(Value);
         }
 
-        public override bool Equals(object obj)
+        /// <summary>
+        /// Determines whether the specified <see cref="IntegerConstantExpression" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="IntegerConstantExpression" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="IntegerConstantExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as IntegerConstantExpression;
-            if (that == null)
-                return false;
-
-            return (this.Value == that.Value);
-        }
-
-        public override int GetHashCode()
-        {
-            return Value;
+            var that = (IntegerConstantExpression)obj;
+            return (Value == that.Value);
         }
     }
 }

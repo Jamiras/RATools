@@ -1,7 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
+﻿using Jamiras.Components;
+using System.Collections.Generic;
 using System.Text;
-using Jamiras.Components;
 
 namespace RATools.Parser.Internal
 {
@@ -13,18 +12,31 @@ namespace RATools.Parser.Internal
             Name = name;
         }
 
-        public FunctionDefinitionExpression()
+        private FunctionDefinitionExpression()
             : base(ExpressionType.FunctionDefinition)
         {
             Parameters = new List<string>();
             Expressions = new List<ExpressionBase>();
         }
 
+        /// <summary>
+        /// Gets the name of the function.
+        /// </summary>
         public string Name { get; private set; }
 
+        /// <summary>
+        /// Gets the names of the parameters.
+        /// </summary>
         public ICollection<string> Parameters { get; private set; }
+
+        /// <summary>
+        /// Gets the expressions for the contents of the function.
+        /// </summary>
         public ICollection<ExpressionBase> Expressions { get; private set; }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -32,6 +44,9 @@ namespace RATools.Parser.Internal
             return builder.ToString();
         }
 
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder" />.
+        /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append("function ");
@@ -51,6 +66,12 @@ namespace RATools.Parser.Internal
             builder.Append(')');
         }
 
+        /// <summary>
+        /// Parses a function definition.
+        /// </summary>
+        /// <remarks>
+        /// Assumes the 'function' keyword has already been consumed.
+        /// </remarks>
         internal new static ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
             var function = new FunctionDefinitionExpression();
@@ -143,6 +164,19 @@ namespace RATools.Parser.Internal
 
             tokenizer.Advance();
             return function;
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="FunctionDefinitionExpression" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="FunctionDefinitionExpression" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="FunctionDefinitionExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = (FunctionDefinitionExpression)obj;
+            return Name == that.Name && Parameters == that.Parameters && Expressions == that.Expressions;
         }
     }
 }

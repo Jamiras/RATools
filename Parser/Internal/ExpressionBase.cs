@@ -1,11 +1,13 @@
-﻿using System;
+﻿using Jamiras.Components;
+using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using Jamiras.Components;
 
 namespace RATools.Parser.Internal
 {
+    /// <summary>
+    /// Base class for a part of an expression.
+    /// </summary>
     internal abstract class ExpressionBase
     {
         protected ExpressionBase(ExpressionType type)
@@ -13,10 +15,25 @@ namespace RATools.Parser.Internal
             Type = type;
         }
 
+        /// <summary>
+        /// Gets the type of this part of the expression.
+        /// </summary>
         public ExpressionType Type { get; private set; }
+
+        /// <summary>
+        /// Gets the line where this expression started.
+        /// </summary>
         public int Line { get; protected set; }
+
+        /// <summary>
+        /// Gets the column where this expression started.
+        /// </summary>
         public int Column { get; protected set; }
 
+        /// <summary>
+        /// Rebalances this expression based on the precendence of operators.
+        /// </summary>
+        /// <returns>Rebalanced expression</returns>
         internal virtual ExpressionBase Rebalance()
         {
             return this;
@@ -35,6 +52,9 @@ namespace RATools.Parser.Internal
             } while (true);
         }
 
+        /// <summary>
+        /// Gets the next expression from the input.
+        /// </summary>
         public static ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
             SkipWhitespace(tokenizer);
@@ -483,6 +503,9 @@ namespace RATools.Parser.Internal
             return null;
         }
 
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
         public override string ToString()
         {
             var builder = new StringBuilder();
@@ -492,16 +515,98 @@ namespace RATools.Parser.Internal
             return builder.ToString();
         }
 
-        internal virtual void AppendString(StringBuilder builder)
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder"/>.
+        /// </summary>
+        internal abstract void AppendString(StringBuilder builder);
+
+        /// <summary>
+        /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        public override sealed bool Equals(object obj)
         {
+            var that = obj as ExpressionBase;
+            if (that == null)
+                return false;
+
+            if (Type != that.Type)
+                return false;
+
+            return Equals(that);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="ExpressionBase" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="ExpressionBase" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="ExpressionBase" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected abstract bool Equals(ExpressionBase obj);
+
+        /// <summary>
+        /// Returns a hash code for this instance.
+        /// </summary>
+        /// <returns>
+        /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table. 
+        /// </returns>
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="ExpressionBase"/>s are equivalent.
+        /// </summary>
+        public static bool operator ==(ExpressionBase left, ExpressionBase right)
+        {
+            if (ReferenceEquals(left, null))
+                return ReferenceEquals(right, null);
+            if (ReferenceEquals(right, null))
+                return false;
+            if (left.Type != right.Type)
+                return false;
+
+            return left.Equals(right);
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="ExpressionBase"/>s are not equivalent.
+        /// </summary>
+        public static bool operator !=(ExpressionBase left, ExpressionBase right)
+        {
+            if (ReferenceEquals(left, null))
+                return !ReferenceEquals(right, null);
+            if (ReferenceEquals(right, null))
+                return true;
+            if (left.Type != right.Type)
+                return true;
+
+            return !left.Equals(right);
+        }
+
+        /// <summary>
+        /// Replaces the variables in the expression with values from <paramref name="scope"/>.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values.</param>
+        /// <param name="result">[out] The new expression containing the replaced variables.</param>
+        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
         public virtual bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             result = this;
             return true;
         }
 
+        /// <summary>
+        /// Determines whether the expression evaluates to true for the provided <paramref name="scope"/>
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values.</param>
+        /// <param name="error">[out] The error that prevented evaluation (or null if successful).</param>
+        /// <returns>The result of evaluating the expression</returns>
         public virtual bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
             error = null;
@@ -509,25 +614,85 @@ namespace RATools.Parser.Internal
         }
     }
 
+    /// <summary>
+    /// The supported expression types.
+    /// </summary>
     public enum ExpressionType
     {
+        /// <summary>
+        /// Unspecified
+        /// </summary>
         None = 0,
 
+        /// <summary>
+        /// A variable reference.
+        /// </summary>
         Variable,
+
+        /// <summary>
+        /// An integer constant.
+        /// </summary>
         IntegerConstant,
+
+        /// <summary>
+        /// A string constant.
+        /// </summary>
         StringConstant,
+
+        /// <summary>
+        /// A function call.
+        /// </summary>
         FunctionCall,
+
+        /// <summary>
+        /// A mathematic equation.
+        /// </summary>
         Mathematic,
+
+        /// <summary>
+        /// A comparison.
+        /// </summary>
         Comparison,
+        /// <summary>
+        /// The conditional
+        /// </summary>
         Conditional,
+
+        /// <summary>
+        /// An assignment.
+        /// </summary>
         Assignment,
 
+
+        /// <summary>
+        /// A function definition.
+        /// </summary>
         FunctionDefinition,
+
+        /// <summary>
+        /// A return statement.
+        /// </summary>
         Return,
+
+        /// <summary>
+        /// A dictionary.
+        /// </summary>
         Dictionary,
+
+        /// <summary>
+        /// A for loop.
+        /// </summary>
         For,
+
+        /// <summary>
+        /// An if statement.
+        /// </summary>
         If,
 
+
+        /// <summary>
+        /// A parse error.
+        /// </summary>
         ParseError,
     }
 }
