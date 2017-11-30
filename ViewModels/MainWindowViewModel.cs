@@ -268,7 +268,7 @@ namespace RATools.ViewModels
         public CommandBase AboutCommand { get; private set; }
         private void About()
         {
-            var vm = new AboutDialogViewModel();
+            var vm = new AboutDialogViewModel(RACacheDirectory);
             vm.ShowDialog();
         }
     }

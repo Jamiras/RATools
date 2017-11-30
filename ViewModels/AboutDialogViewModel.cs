@@ -1,25 +1,36 @@
 ﻿using Jamiras.Commands;
 using Jamiras.ViewModels;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Reflection;
 
 namespace RATools.ViewModels
 {
     public class AboutDialogViewModel : DialogViewModelBase
     {
-        public AboutDialogViewModel()
+        public AboutDialogViewModel(string raCacheDirectory)
         {
             DialogTitle = "About";
             SourceLinkCommand = new DelegateCommand(OpenSourceLink);
             CancelButtonText = null;
+
+            var directories = new List<LookupItem>();
+            foreach (var path in raCacheDirectory.Split(';'))
+                directories.Add(new LookupItem(Directory.Exists(path) ? 1 : 0, path));
+
+            DataDirectories = directories;
         }
 
         public string ProductVersion
         {
             get
             {
-                return String.Format("{0} {1}", GetAssemblyAttribute<AssemblyTitleAttribute>().Title, Assembly.GetExecutingAssembly().GetName().Version.ToString());
+                var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                if (version.EndsWith(".0"))
+                    version = version.Substring(0, version.Length - 2);
+                return String.Format("{0} {1}", GetAssemblyAttribute<AssemblyTitleAttribute>().Title, version);
             }
         }
 
@@ -59,5 +70,7 @@ namespace RATools.ViewModels
         {
             Process.Start(SourceLink);
         }
+
+        public IEnumerable<LookupItem> DataDirectories { get; private set; }
     }
 }
