@@ -60,33 +60,36 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal override ExpressionBase Rebalance()
         {
-            var mathematicRight = Right as MathematicExpression;
-            if (mathematicRight != null)
+            if (!Right.IsLogicalUnit)
             {
-                if (Operation == MathematicOperation.Multiply || Operation == MathematicOperation.Divide)
+                var mathematicRight = Right as MathematicExpression;
+                if (mathematicRight != null)
                 {
-                    if (mathematicRight.Operation == MathematicOperation.Add || mathematicRight.Operation == MathematicOperation.Subtract)
+                    if (Operation == MathematicOperation.Multiply || Operation == MathematicOperation.Divide)
                     {
-                        var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
-                        return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
+                        if (mathematicRight.Operation == MathematicOperation.Add || mathematicRight.Operation == MathematicOperation.Subtract)
+                        {
+                            var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
+                            return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
+                        }
                     }
                 }
-            }
 
-            var comparisonRight = Right as ComparisonExpression;
-            if (comparisonRight != null)
-            {
-                Right = comparisonRight.Left;
-                comparisonRight.Left = this.Rebalance();
-                return comparisonRight;
-            }
+                var comparisonRight = Right as ComparisonExpression;
+                if (comparisonRight != null)
+                {
+                    Right = comparisonRight.Left;
+                    comparisonRight.Left = this.Rebalance();
+                    return comparisonRight;
+                }
 
-            var conditionalRight = Right as ConditionalExpression;
-            if (conditionalRight != null)
-            {
-                Right = conditionalRight.Left;
-                conditionalRight.Left = this.Rebalance();
-                return conditionalRight;
+                var conditionalRight = Right as ConditionalExpression;
+                if (conditionalRight != null)
+                {
+                    Right = conditionalRight.Left;
+                    conditionalRight.Left = this.Rebalance();
+                    return conditionalRight;
+                }
             }
 
             return base.Rebalance();

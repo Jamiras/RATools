@@ -101,12 +101,15 @@ namespace RATools.Parser.Internal
         /// </returns>
         internal override ExpressionBase Rebalance()
         {
-            var conditionalRight = Right as ConditionalExpression;
-            if (conditionalRight != null)
+            if (!Right.IsLogicalUnit)
             {
-                Right = conditionalRight.Left;
-                conditionalRight.Left = this;
-                return conditionalRight;
+                var conditionalRight = Right as ConditionalExpression;
+                if (conditionalRight != null)
+                {
+                    Right = conditionalRight.Left;
+                    conditionalRight.Left = this.Rebalance();
+                    return conditionalRight;
+                }
             }
 
             return base.Rebalance();

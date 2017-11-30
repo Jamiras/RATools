@@ -42,5 +42,23 @@ namespace RATools.Test.Parser.Internal
             Assert.That(((ConditionalExpression)result).Operation, Is.EqualTo(expr.Operation));
             Assert.That(((ConditionalExpression)result).Right, Is.EqualTo(value2));
         }
+
+        [Test]
+        public void TestRebalanceConditional()
+        {
+            // "A && B || C" => "(A && B) || C"
+            var variable1 = new VariableExpression("variable1");
+            var variable2 = new VariableExpression("variable2");
+            var value = new IntegerConstantExpression(99);
+            var conditional = new ConditionalExpression(value, ConditionalOperation.And, variable2);
+            var expr = new ComparisonExpression(variable1, ComparisonOperation.LessThan, conditional);
+
+            var result = expr.Rebalance() as ConditionalExpression;
+            Assert.That(result, Is.Not.Null);
+            var expected = new ComparisonExpression(expr.Left, expr.Operation, value);
+            Assert.That(result.Left, Is.EqualTo(expected));
+            Assert.That(result.Operation, Is.EqualTo(ConditionalOperation.And));
+            Assert.That(result.Right, Is.EqualTo(variable2));
+        }
     }
 }

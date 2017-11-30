@@ -205,6 +205,55 @@ namespace RATools.Parser
 
         private static FunctionDefinitionExpression _achievementFunction;
 
+        // internal for unit tests
+        internal class ScriptInterpreterAchievementBuilder : AchievementBuilder
+        {
+            public ScriptInterpreterAchievementBuilder() : base()
+            {
+                Current = CoreRequirements;
+            }
+
+            public ICollection<Requirement> Current { get; set; }
+
+            public bool IsInNot { get; set; }
+            public int EqualityModifier { get; set; }
+
+            /// <summary>
+            /// Begins an new alt group.
+            /// </summary>
+            /// <returns>The requirement collection for the new alt group.</returns>
+            public void BeginAlt()
+            {
+                if (ReferenceEquals(Current, CoreRequirements) || Current.Count > 0)
+                {
+                    var newAlt = new List<Requirement>();
+                    Current = newAlt;
+                    AlternateRequirements.Add(newAlt);
+                }
+            }
+
+            /// <summary>
+            /// Gets the last requirement added to the achievement.
+            /// </summary>
+            public Requirement LastRequirement
+            {
+                get { return Current.Last(); }
+            }
+
+            /// <summary>
+            /// Populates the <see cref="AchievementBuilder"/> from an expression.
+            /// </summary>
+            /// <param name="expression">The expression to populate from.</param>
+            /// <returns><c>null</c> if successful, otherwise an error message indicating why it failed.</returns>
+            public string PopulateFromExpression(ExpressionBase expression)
+            {
+                var interpreter = new AchievementScriptInterpreter();
+                var scope = new InterpreterScope();
+                interpreter.ExecuteAchievementExpression(this, expression, scope);
+                return interpreter.ErrorMessage;
+            }
+        }
+
         private bool ExecuteFunctionAchievement(FunctionCallExpression expression, InterpreterScope scope)
         {
             if (_achievementFunction == null)
@@ -225,7 +274,7 @@ namespace RATools.Parser
             if (innerScope == null)
                 return false;
 
-            var achievement = new AchievementBuilder();
+            var achievement = new ScriptInterpreterAchievementBuilder();
 
             var stringExpression = innerScope.GetVariable("title") as StringConstantExpression;
             achievement.Title = (stringExpression != null) ? stringExpression.Value : String.Empty;
@@ -252,7 +301,7 @@ namespace RATools.Parser
             return true;
         }
 
-        private bool ExecuteAchievementExpressions(AchievementBuilder achievement, ICollection<ExpressionBase> expressions, InterpreterScope scope)
+        private bool ExecuteAchievementExpressions(ScriptInterpreterAchievementBuilder achievement, ICollection<ExpressionBase> expressions, InterpreterScope scope)
         {
             foreach (var expression in expressions)
             {
@@ -266,7 +315,7 @@ namespace RATools.Parser
             return true;
         }
 
-        private bool ExecuteAchievementExpression(AchievementBuilder achievement, ExpressionBase expression, InterpreterScope scope)
+        private bool ExecuteAchievementExpression(ScriptInterpreterAchievementBuilder achievement, ExpressionBase expression, InterpreterScope scope)
         {
             ExpressionBase operand;
 
@@ -312,7 +361,7 @@ namespace RATools.Parser
             return EvaluationError(expression, "Unupported expression in achievement: " + expression.Type);
         }
 
-        private bool ExecuteAchievementIf(AchievementBuilder achievement, IfExpression ifExpression, InterpreterScope scope)
+        private bool ExecuteAchievementIf(ScriptInterpreterAchievementBuilder achievement, IfExpression ifExpression, InterpreterScope scope)
         {
             ParseErrorExpression error;
             bool result = ifExpression.Condition.IsTrue(scope, out error);
@@ -325,7 +374,7 @@ namespace RATools.Parser
                 return ExecuteAchievementExpressions(achievement, ifExpression.ElseExpressions, scope);
         }
 
-        private bool ExecuteAchievementMathematic(AchievementBuilder achievement, MathematicExpression mathematic, InterpreterScope scope)
+        private bool ExecuteAchievementMathematic(ScriptInterpreterAchievementBuilder achievement, MathematicExpression mathematic, InterpreterScope scope)
         {
             if (!ExecuteAchievementExpression(achievement, mathematic.Left, scope))
                 return false;
@@ -351,7 +400,7 @@ namespace RATools.Parser
             return false;
         }
 
-        private bool ExecuteAchievementConditional(AchievementBuilder achievement, ConditionalExpression condition, InterpreterScope scope)
+        private bool ExecuteAchievementConditional(ScriptInterpreterAchievementBuilder achievement, ConditionalExpression condition, InterpreterScope scope)
         {
             switch (condition.Operation)
             {
@@ -388,7 +437,7 @@ namespace RATools.Parser
             return false;
         }
 
-        private bool ExecuteAchievementComparison(AchievementBuilder achievement, ComparisonExpression comparison, InterpreterScope scope)
+        private bool ExecuteAchievementComparison(ScriptInterpreterAchievementBuilder achievement, ComparisonExpression comparison, InterpreterScope scope)
         {
             achievement.EqualityModifier = 0;
 
@@ -424,7 +473,7 @@ namespace RATools.Parser
                     return EvaluationError(right, "expansion of function calls results in non-zero modifier when comparing multiple memory addresses");
 
                 var extraRequirement = achievement.LastRequirement;
-                achievement.Current.RemoveAt(achievement.Current.Count - 1);
+                achievement.Current.Remove(extraRequirement);
 
                 var requirement = achievement.LastRequirement;
                 requirement.Operator = op;
@@ -462,7 +511,7 @@ namespace RATools.Parser
             }
         }
 
-        private bool ExecuteAchievementFunction(AchievementBuilder achievement, FunctionCallExpression functionCall, InterpreterScope scope)
+        private bool ExecuteAchievementFunction(ScriptInterpreterAchievementBuilder achievement, FunctionCallExpression functionCall, InterpreterScope scope)
         {
             var function = scope.GetFunction(functionCall.FunctionName);
             if (function != null)
@@ -521,7 +570,7 @@ namespace RATools.Parser
 
             if (functionCall.FunctionName == "never")
             {
-                var temp = new AchievementBuilder();
+                var temp = new ScriptInterpreterAchievementBuilder();
                 if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
                     return false;
 
@@ -555,7 +604,7 @@ namespace RATools.Parser
 
             if (functionCall.FunctionName == "unless")
             {
-                var temp = new AchievementBuilder();
+                var temp = new ScriptInterpreterAchievementBuilder();
                 if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
                     return false;
 
@@ -908,19 +957,19 @@ namespace RATools.Parser
             if (str != null)
                 leaderboard.Description = str.Value;
 
-            var achievement = new AchievementBuilder();
+            var achievement = new ScriptInterpreterAchievementBuilder();
             if (!ExecuteAchievementExpression(achievement, scope.GetVariable("start"), scope))
                 return false;
             achievement.Optimize();
             leaderboard.Start = achievement.SerializeRequirements();
 
-            achievement = new AchievementBuilder();
+            achievement = new ScriptInterpreterAchievementBuilder();
             if (!ExecuteAchievementExpression(achievement, scope.GetVariable("cancel"), scope))
                 return false;
             achievement.Optimize();
             leaderboard.Cancel = achievement.SerializeRequirements();
 
-            achievement = new AchievementBuilder();
+            achievement = new ScriptInterpreterAchievementBuilder();
             if (!ExecuteAchievementExpression(achievement, scope.GetVariable("submit"), scope))
                 return false;
             achievement.Optimize();
@@ -987,6 +1036,12 @@ namespace RATools.Parser
                 }
 
                 ++index;
+            }
+
+            if (!namedParameters && index != function.Parameters.Count)
+            {
+                EvaluationError(functionCall, "not enough parameters passed to function");
+                return null;
             }
 
             return innerScope;

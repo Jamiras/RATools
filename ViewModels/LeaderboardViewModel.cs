@@ -2,7 +2,7 @@
 using Jamiras.Components;
 using Jamiras.Services;
 using RATools.Data;
-using RATools.Parser.Internal;
+using RATools.Parser;
 using System.Collections.Generic;
 
 namespace RATools.ViewModels
@@ -82,7 +82,7 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        var field = AchievementBuilder.ReadField(tokenizer);
+                        var field = Field.Deserialize(tokenizer);
                         requirement = field.ToString();
                         note = (field.Type == FieldType.MemoryAddress) ? notes[(int)field.Value] : null;
 

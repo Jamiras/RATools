@@ -31,6 +31,14 @@ namespace RATools.Parser.Internal
         public int Column { get; protected set; }
 
         /// <summary>
+        /// Gets or sets whether this is a logical unit.
+        /// </summary>
+        /// <remarks>
+        /// If <c>true</c>, this element was wrapped in parenthesis and cannot be broken by rebalancing.
+        /// </remarks>
+        public bool IsLogicalUnit { get; set; }
+
+        /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
@@ -221,6 +229,7 @@ namespace RATools.Parser.Internal
                         return new ParseErrorExpression("Expected closing parenthesis, found " + tokenizer.NextChar);
                     }
 
+                    clause.IsLogicalUnit = true;
                     tokenizer.Advance();
                     return clause;
 
@@ -262,9 +271,9 @@ namespace RATools.Parser.Internal
                 case '9':
                     {
                         var number = tokenizer.ReadNumber();
-                        int value;
-                        Int32.TryParse(number.ToString(), out value);
-                        return new IntegerConstantExpression(value);
+                        uint value;
+                        UInt32.TryParse(number.ToString(), out value);
+                        return new IntegerConstantExpression((int)value);
                     }
 
                 case '-':

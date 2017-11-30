@@ -205,13 +205,24 @@ namespace RATools.ViewModels
                         bool first = true;
                         while (groupEnumerator.MoveNext())
                         {
-                            stream.WriteLine(first ? " && " : " || ");
-                            first = false;
+                            if (first)
+                            {
+                                stream.WriteLine(" &&");
+                                stream.Write("              ((");
+                                first = false;
+                            }
+                            else
+                            {
+                                stream.WriteLine(" ||");
+                                stream.Write("               (");
+                            }
 
-                            stream.Write("              (");
                             DumpPublishedRequirements(stream, groupEnumerator.Current);
                             stream.Write(")");
                         }
+                        if (!first)
+                            stream.Write(')');
+
                         stream.WriteLine();
 
                         stream.WriteLine(")");

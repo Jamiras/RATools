@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Jamiras.Components;
+using System.Text;
 
 namespace RATools.Data
 {
@@ -105,6 +106,105 @@ namespace RATools.Data
             }
 
             builder.AppendFormat("{0:x6}", Value);
+        }
+
+
+        /// <summary>
+        /// Creates a <see cref="Field"/> from a serialized value.
+        /// </summary>
+        /// <param name="tokenizer">The tokenizer.</param>
+        internal static Field Deserialize(Tokenizer tokenizer)
+        {
+            var fieldType = FieldType.MemoryAddress;
+            if (tokenizer.NextChar == 'd')
+            {
+                fieldType = FieldType.PreviousValue;
+                tokenizer.Advance();
+            }
+
+            if (!tokenizer.Match("0x"))
+                return new Field { Type = FieldType.Value, Value = ReadNumber(tokenizer) };
+
+            FieldSize size = FieldSize.None;
+            switch (tokenizer.NextChar)
+            {
+                case 'M': size = FieldSize.Bit0; tokenizer.Advance(); break;
+                case 'N': size = FieldSize.Bit1; tokenizer.Advance(); break;
+                case 'O': size = FieldSize.Bit2; tokenizer.Advance(); break;
+                case 'P': size = FieldSize.Bit3; tokenizer.Advance(); break;
+                case 'Q': size = FieldSize.Bit4; tokenizer.Advance(); break;
+                case 'R': size = FieldSize.Bit5; tokenizer.Advance(); break;
+                case 'S': size = FieldSize.Bit6; tokenizer.Advance(); break;
+                case 'T': size = FieldSize.Bit7; tokenizer.Advance(); break;
+                case 'L': size = FieldSize.LowNibble; tokenizer.Advance(); break;
+                case 'U': size = FieldSize.HighNibble; tokenizer.Advance(); break;
+                case 'H': size = FieldSize.Byte; tokenizer.Advance(); break;
+                case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9': size = FieldSize.Word; break;
+                case ' ': size = FieldSize.Word; tokenizer.Advance(); break;
+            }
+
+            uint address = 0;
+            do
+            {
+                uint charValue = 255;
+                switch (tokenizer.NextChar)
+                {
+                    case '0': charValue = 0; break;
+                    case '1': charValue = 1; break;
+                    case '2': charValue = 2; break;
+                    case '3': charValue = 3; break;
+                    case '4': charValue = 4; break;
+                    case '5': charValue = 5; break;
+                    case '6': charValue = 6; break;
+                    case '7': charValue = 7; break;
+                    case '8': charValue = 8; break;
+                    case '9': charValue = 9; break;
+                    case 'a':
+                    case 'A': charValue = 10; break;
+                    case 'b':
+                    case 'B': charValue = 11; break;
+                    case 'c':
+                    case 'C': charValue = 12; break;
+                    case 'd':
+                    case 'D': charValue = 13; break;
+                    case 'e':
+                    case 'E': charValue = 14; break;
+                    case 'f':
+                    case 'F': charValue = 15; break;
+                }
+
+                if (charValue == 255)
+                    break;
+
+                tokenizer.Advance();
+                address <<= 4;
+                address += charValue;
+            } while (true);
+
+            return new Field { Size = size, Type = fieldType, Value = address };
+        }
+
+        private static uint ReadNumber(Tokenizer tokenizer)
+        {
+            uint value = 0;
+            while (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
+            {
+                value *= 10;
+                value += (uint)(tokenizer.NextChar - '0');
+                tokenizer.Advance();
+            }
+
+            return value;
         }
 
         /// <summary>

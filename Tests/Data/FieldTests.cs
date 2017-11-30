@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Data;
 using System.Text;
 
@@ -60,6 +61,32 @@ namespace RATools.Tests.Data
             var builder = new StringBuilder();
             field.Serialize(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("0xM001234", FieldSize.Bit0, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xN001234", FieldSize.Bit1, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xO001234", FieldSize.Bit2, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xP001234", FieldSize.Bit3, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xQ001234", FieldSize.Bit4, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xR001234", FieldSize.Bit5, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xS001234", FieldSize.Bit6, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xT001234", FieldSize.Bit7, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xL001234", FieldSize.LowNibble, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xU001234", FieldSize.HighNibble, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xH001234", FieldSize.Byte, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0x 001234", FieldSize.Word, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("0xX001234", FieldSize.DWord, FieldType.MemoryAddress, 0x1234)]
+        [TestCase("d0xH001234", FieldSize.Byte, FieldType.PreviousValue, 0x1234)]
+        [TestCase("4660", FieldSize.None, FieldType.Value, 0x1234)]
+        [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456)]
+        public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, int value)
+        {
+            var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
+            Assert.That(field, Is.Not.Null);
+            Assert.That(field.Size, Is.EqualTo(fieldSize));
+            Assert.That(field.Type, Is.EqualTo(fieldType));
+            Assert.That(field.Value, Is.EqualTo(value));
         }
 
         [Test]

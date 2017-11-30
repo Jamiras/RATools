@@ -1,21 +1,26 @@
-﻿using System;
+﻿using Jamiras.Components;
+using RATools.Data;
+using RATools.Parser.Internal;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using RATools.Data;
-using Jamiras.Components;
 using System.Text;
-using System.Collections;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser
 {
-    [DebuggerDisplay("{Title} Core:{_core.Count} Alts:{_alts.Count}")]
+    [DebuggerDisplay("{Title} ({Points}) Core:{_core.Count} Alts:{_alts.Count}")]
     public class AchievementBuilder
     {
         public AchievementBuilder()
         {
-            Current = _core = new List<Requirement>();
-            _alts = new List<List<Requirement>>();
+            Title = String.Empty;
+            Description = String.Empty;
+            BadgeName = String.Empty;
+
+            _core = new List<Requirement>();
+            _alts = new List<ICollection<Requirement>>();
         }
 
         public AchievementBuilder(Achievement source)
@@ -30,40 +35,56 @@ namespace RATools.Parser.Internal
             _core.AddRange(source.CoreRequirements);
             foreach (var alt in source.AlternateRequirements)
                 _alts.Add(new List<Requirement>(alt));
-
-            if (_alts.Count > 0)
-                Current = _alts.Last();
         }
 
+        /// <summary>
+        /// Gets or sets the achievement title.
+        /// </summary>
         public string Title { get; set; }
+
+        /// <summary>
+        /// Gets or sets the achievement description.
+        /// </summary>
         public string Description { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of points that the achievement is worth.
+        /// </summary>
         public int Points { get; set; }
+
+        /// <summary>
+        /// Gets or sets the unique identifier of the achievement.
+        /// </summary>
         public int Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the badge for the achievement.
+        /// </summary>
         public string BadgeName { get; set; }
 
+        /// <summary>
+        /// Gets the core requirements collection.
+        /// </summary>
+        public ICollection<Requirement> CoreRequirements
+        {
+            get { return _core; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Requirement> _core;
-        private List<List<Requirement>> _alts;
 
-        internal List<Requirement> Current { get; set; }
-
-        internal bool IsInNot { get; set; }
-        internal int EqualityModifier { get; set; }
-
-        public void BeginAlt()
+        /// <summary>
+        /// Gets the alt requirement group collections.
+        /// </summary>
+        public ICollection<ICollection<Requirement>> AlternateRequirements
         {
-            if (Current == _core || Current.Count > 0)
-            {
-                var newAlt = new List<Requirement>();
-                Current = newAlt;
-                _alts.Add(newAlt);
-            }
+            get { return _alts; }
         }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private List<ICollection<Requirement>> _alts;
 
-        public Requirement LastRequirement
-        {
-            get { return Current.Last(); }
-        }
-
+        /// <summary>
+        /// Constructs an <see cref="Achievement"/> from the current state of the builder.
+        /// </summary>
         public Achievement ToAchievement()
         {
             var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = _core.ToArray(), Id = Id, BadgeName = BadgeName };
@@ -74,8 +95,12 @@ namespace RATools.Parser.Internal
             return achievement;
         }
 
+        /// <summary>
+        /// Populates the core and alt requirements from a serialized requirement string.
+        /// </summary>
         public void ParseRequirements(Tokenizer tokenizer)
         {
+            var current = _core;
             do
             {
                 var requirement = new Requirement();
@@ -85,14 +110,14 @@ namespace RATools.Parser.Internal
                 else if (tokenizer.Match("P:"))
                     requirement.Type = RequirementType.PauseIf;
 
-                requirement.Left = ReadField(tokenizer);
+                requirement.Left = Field.Deserialize(tokenizer);
                 requirement.Operator = ReadOperator(tokenizer);
-                requirement.Right = ReadField(tokenizer);
+                requirement.Right = Field.Deserialize(tokenizer);
 
                 if (requirement.Right.Size == FieldSize.None)
                     requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
 
-                Current.Add(requirement);
+                current.Add(requirement);
 
                 if (tokenizer.NextChar == '.')
                 {
@@ -118,7 +143,11 @@ namespace RATools.Parser.Internal
 
                     case 'S': // ||
                         tokenizer.Advance();
-                        BeginAlt();
+                        if (ReferenceEquals(current, _core) || current.Count != 0)
+                        {
+                            current = new List<Requirement>();
+                            _alts.Add(current);                            
+                        }
                         continue;
                 }
 
@@ -136,87 +165,6 @@ namespace RATools.Parser.Internal
             }
 
             return value;
-        }
-
-        internal static Field ReadField(Tokenizer tokenizer)
-        {
-            var fieldType = FieldType.MemoryAddress;
-            if (tokenizer.NextChar == 'd')
-            {
-                fieldType = FieldType.PreviousValue;
-                tokenizer.Advance();
-            }
-
-            if (!tokenizer.Match("0x"))
-                return new Field { Type = FieldType.Value, Value = ReadNumber(tokenizer) };
-
-            FieldSize size = FieldSize.None;
-            switch (tokenizer.NextChar)
-            {
-                case 'M': size = FieldSize.Bit0; tokenizer.Advance(); break;
-                case 'N': size = FieldSize.Bit1; tokenizer.Advance(); break;
-                case 'O': size = FieldSize.Bit2; tokenizer.Advance(); break;
-                case 'P': size = FieldSize.Bit3; tokenizer.Advance(); break;
-                case 'Q': size = FieldSize.Bit4; tokenizer.Advance(); break;
-                case 'R': size = FieldSize.Bit5; tokenizer.Advance(); break;
-                case 'S': size = FieldSize.Bit6; tokenizer.Advance(); break;
-                case 'T': size = FieldSize.Bit7; tokenizer.Advance(); break;
-                case 'L': size = FieldSize.LowNibble; tokenizer.Advance(); break;
-                case 'U': size = FieldSize.HighNibble; tokenizer.Advance(); break;
-                case 'H': size = FieldSize.Byte; tokenizer.Advance(); break;
-                case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
-                case '0':
-                case '1':
-                case '2':
-                case '3':
-                case '4':
-                case '5':
-                case '6':
-                case '7':
-                case '8':
-                case '9': size = FieldSize.Word; break;
-                case ' ': size = FieldSize.Word; tokenizer.Advance(); break;
-            }
-
-            uint address = 0;
-            do
-            {
-                uint charValue = 255;
-                switch (tokenizer.NextChar)
-                {
-                    case '0': charValue = 0; break;
-                    case '1': charValue = 1; break;
-                    case '2': charValue = 2; break;
-                    case '3': charValue = 3; break;
-                    case '4': charValue = 4; break;
-                    case '5': charValue = 5; break;
-                    case '6': charValue = 6; break;
-                    case '7': charValue = 7; break;
-                    case '8': charValue = 8; break;
-                    case '9': charValue = 9; break;
-                    case 'a':
-                    case 'A': charValue = 10; break;
-                    case 'b':
-                    case 'B': charValue = 11; break;
-                    case 'c':
-                    case 'C': charValue = 12; break;
-                    case 'd':
-                    case 'D': charValue = 13; break;
-                    case 'e':
-                    case 'E': charValue = 14; break;
-                    case 'f':
-                    case 'F': charValue = 15; break;
-                }
-
-                if (charValue == 255)
-                    break;
-
-                tokenizer.Advance();
-                address <<= 4;
-                address += charValue;
-            } while (true);
-
-            return new Field { Size = size, Type = fieldType, Value = address };
         }
 
         private static RequirementOperator ReadOperator(Tokenizer tokenizer)
@@ -258,11 +206,17 @@ namespace RATools.Parser.Internal
             return RequirementOperator.None;
         }
 
+        /// <summary>
+        /// Creates a serialized requirements string from the core and alt groups.
+        /// </summary>
         public string SerializeRequirements()
         {
             return SerializeRequirements(_core, _alts);
         }
 
+        /// <summary>
+        /// Creates a serialized requirements string from the core and alt groups of a provided <see cref="Achievement"/>.
+        /// </summary>
         public static string SerializeRequirements(Achievement achievement)
         {
             return SerializeRequirements(achievement.CoreRequirements, achievement.AlternateRequirements);
@@ -278,11 +232,14 @@ namespace RATools.Parser.Internal
                 builder.Append('_');
             }
 
-            builder.Length--; // remove last _
+            if (builder.Length > 0)
+                builder.Length--; // remove last _
 
             foreach (IEnumerable<Requirement> alt in alts)
             {
-                builder.Append('S');
+                if (builder.Length > 0)
+                    builder.Append('S');
+
                 foreach (Requirement requirement in alt)
                 {
                     SerializeRequirement(requirement, builder);
@@ -321,6 +278,57 @@ namespace RATools.Parser.Internal
                 builder.Append('.');
                 builder.Append(requirement.HitCount);
                 builder.Append('.');
+            }
+        }
+
+        /// <summary>
+        /// Gets the requirements formatted as a human-readable string.
+        /// </summary>
+        internal string RequirementsDebugString
+        {
+            get
+            {
+                var builder = new StringBuilder();
+                foreach (var requirement in CoreRequirements)
+                {
+                    builder.Append(requirement);
+                    builder.Append(" && ");
+                }
+
+                if (AlternateRequirements.Count > 0)
+                {
+                    if (CoreRequirements.Count > 0)
+                        builder.Append('(');
+
+                    foreach (var altGroup in AlternateRequirements)
+                    {
+                        if (altGroup.Count > 1)
+                            builder.Append('(');
+
+                        foreach (var requirement in altGroup)
+                        {
+                            builder.Append(requirement);
+                            builder.Append(" && ");
+                        }
+                        builder.Length -= 4;
+
+                        if (altGroup.Count > 1)
+                            builder.Append(')');
+
+                        builder.Append(" || ");
+                    }
+
+                    builder.Length -= 4;
+
+                    if (CoreRequirements.Count > 0)
+                        builder.Append(')');
+                }
+                else if (builder.Length > 4)
+                {
+                    builder.Length -= 4;
+                }
+
+                return builder.ToString();
             }
         }
 
@@ -369,7 +377,9 @@ namespace RATools.Parser.Internal
             return rightRequirements.Count == 0;
         }
 
-        private static void NormalizeComparisons(List<Requirement> requirements)
+        // ==== Optimize helpers ====
+
+        private static void NormalizeComparisons(ICollection<Requirement> requirements)
         {
             var alwaysTrue = new List<Requirement>();
             var alwaysFalse = new List<Requirement>();
@@ -400,6 +410,13 @@ namespace RATools.Parser.Internal
                             continue;
                     }
                 }
+                else if (requirement.Right.Value == 1 && requirement.Operator == RequirementOperator.LessThan)
+                {
+                    // n < 1 -> n == 0
+                    requirement.Operator = RequirementOperator.Equal;
+                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                    continue;
+                }
 
                 uint max;
 
@@ -413,23 +430,6 @@ namespace RATools.Parser.Internal
                     case FieldSize.Bit5:
                     case FieldSize.Bit6:
                     case FieldSize.Bit7:
-                        if (requirement.Right.Value == 0 && requirement.Operator == RequirementOperator.NotEqual) // bit != 0 -> bit == 1
-                        {
-                            requirement.Operator = RequirementOperator.Equal;
-                            requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                            continue;
-                        }
-                        if (requirement.Right.Value == 1)
-                        {
-                            switch (requirement.Operator)
-                            {
-                                case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
-                                case RequirementOperator.LessThan: // bit < 1 -> bit == 0
-                                    requirement.Operator = RequirementOperator.Equal;
-                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                    continue;
-                            }
-                        }
                         max = 1;
                         break;
 
@@ -454,6 +454,32 @@ namespace RATools.Parser.Internal
 
                 if (requirement.Right.Value > max)
                     requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = max };
+
+                if (max == 1)
+                {
+                    if (requirement.Right.Value == 0)
+                    {
+                        switch (requirement.Operator)
+                        {
+                            case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
+                            case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
+                                requirement.Operator = RequirementOperator.Equal;
+                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                                continue;
+                        }
+                    }
+                    else
+                    {
+                        switch (requirement.Operator)
+                        {
+                            case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                            case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                                requirement.Operator = RequirementOperator.Equal;
+                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                                continue;
+                        }
+                    }
+                }
 
                 if (requirement.Right.Value == max)
                 {
@@ -489,6 +515,58 @@ namespace RATools.Parser.Internal
             }
         }
 
+        private void NormalizeNonHitCountResetAndPauseIfs()
+        {
+            // if this is a dumped achievement, don't convert these, it just makes the diff hard to read.
+            if (Id != 0)
+                return;
+
+            // a ResetIf condition in an achievement without any HitCount conditions is the same as a non-ResetIf 
+            // condition for the opposite comparison (i.e. ResetIf val = 0 is the same as val != 0). Some developers 
+            // use ResetIf conditions to keep the HitCount counter at 0 until the achievement is activated. This is 
+            // a bad practice, as it makes the achievement harder to read, and it normally adds an additional 
+            // condition to be evaluated every frame.
+            foreach (var requirement in _core)
+            {
+                if (requirement.HitCount > 0)
+                    return;
+            }
+
+            foreach (var alt in _alts)
+            {
+                foreach (var requirement in alt)
+                {
+                    if (requirement.HitCount > 0)
+                        return;
+                }
+            }
+
+            // no hit counts found. invert any PauseIfs or ResetIfs
+            NormalizeNonHitCountResetAndPauseIfs(_core);
+            foreach (var alt in _alts)
+                NormalizeNonHitCountResetAndPauseIfs(alt);
+        }
+
+        private static void NormalizeNonHitCountResetAndPauseIfs(ICollection<Requirement> requirements)
+        {
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
+                {
+                    requirement.Type = RequirementType.None;
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.Equal: requirement.Operator = RequirementOperator.NotEqual; break;
+                        case RequirementOperator.NotEqual: requirement.Operator = RequirementOperator.Equal; break;
+                        case RequirementOperator.LessThan: requirement.Operator = RequirementOperator.GreaterThanOrEqual; break;
+                        case RequirementOperator.LessThanOrEqual: requirement.Operator = RequirementOperator.GreaterThan; break;
+                        case RequirementOperator.GreaterThan: requirement.Operator = RequirementOperator.LessThanOrEqual; break;
+                        case RequirementOperator.GreaterThanOrEqual: requirement.Operator = RequirementOperator.LessThan; break;
+                    }
+                }
+            }
+        }
+
         private static bool MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
         {
             merged = null;
@@ -508,14 +586,12 @@ namespace RATools.Parser.Internal
                     merged = left;
                     return true;
                 }
-
-                return false;
             }
 
             if (left.Right.Type != FieldType.Value || right.Right.Type != FieldType.Value)
                 return false;
 
-            bool useRight = false, useLeft = false;
+            bool useRight = false, useLeft = false, conflicting = false;
             RequirementOperator newOperator = RequirementOperator.None;
             switch (left.Operator)
             {
@@ -548,6 +624,13 @@ namespace RATools.Parser.Internal
                             if (right.Right.Value != left.Right.Value)
                                 useRight = true;
                             break;
+
+                        case RequirementOperator.Equal:
+                            if (right.Right.Value == left.Right.Value)
+                                useRight = true;
+                            else
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
                     }
                     break;
 
@@ -567,6 +650,18 @@ namespace RATools.Parser.Internal
                                 newOperator = RequirementOperator.GreaterThanOrEqual;
                             else if (right.Right.Value > left.Right.Value)
                                 useLeft = true;
+                            break;
+
+                        case RequirementOperator.LessThan:
+                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.Or)
+                                newOperator = RequirementOperator.NotEqual;
+                            else if (right.Right.Value <= left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual:
+                            if (right.Right.Value < left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
                             break;
                     }
                     break;
@@ -588,6 +683,18 @@ namespace RATools.Parser.Internal
                         case RequirementOperator.Equal:
                             useLeft = right.Right.Value >= left.Right.Value;
                             break;
+
+                        case RequirementOperator.LessThan:
+                            if (right.Right.Value <= left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
+
+                        case RequirementOperator.LessThanOrEqual:
+                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.And)
+                                newOperator = RequirementOperator.Equal;
+                            else if (right.Right.Value < left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
                     }
                     break;
 
@@ -607,6 +714,18 @@ namespace RATools.Parser.Internal
                                 newOperator = RequirementOperator.LessThanOrEqual;
                             else if (right.Right.Value < left.Right.Value)
                                 useLeft = true;
+                            break;
+
+                        case RequirementOperator.GreaterThan:
+                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.Or)
+                                newOperator = RequirementOperator.NotEqual;
+                            else if (right.Right.Value >= left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            if (right.Right.Value > left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
                             break;
                     }
                     break;
@@ -628,6 +747,18 @@ namespace RATools.Parser.Internal
                         case RequirementOperator.Equal:
                             useLeft = right.Right.Value <= left.Right.Value;
                             break;
+
+                        case RequirementOperator.GreaterThan:
+                            if (right.Right.Value >= left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.And)
+                                newOperator = RequirementOperator.Equal;
+                            else if (right.Right.Value > left.Right.Value)
+                                conflicting = (condition == ConditionalOperation.And);
+                            break;
                     }
                     break;
 
@@ -636,10 +767,23 @@ namespace RATools.Parser.Internal
                     {
                         case RequirementOperator.Equal:
                             if (right.Right.Value != left.Right.Value)
-                                useRight = true;
+                                useLeft = true;
                             break;
                     }
                     break;
+            }
+
+            if (conflicting)
+            {
+                if (left.HitCount > 0 || right.HitCount > 0)
+                    return false;
+                if (left.Type == RequirementType.PauseIf || right.Type == RequirementType.PauseIf)
+                    return false;
+                if (left.Type == RequirementType.ResetIf || right.Type == RequirementType.ResetIf)
+                    return false;
+
+                merged = null;
+                return true;
             }
 
             if (condition == ConditionalOperation.Or)
@@ -690,13 +834,17 @@ namespace RATools.Parser.Internal
         {
             for (int i = _alts.Count - 1; i > 0; i--)
             {
+                var altsI = (IList<Requirement>)_alts[i];
+
                 for (int j = i - 1; j >= 0; j--)
                 {
-                    if (_alts[i].Count != _alts[j].Count)
+                    var altsJ = (IList<Requirement>)_alts[j];
+
+                    if (altsI.Count != altsJ.Count)
                         continue;
 
-                    bool[] matches = new bool[_alts[i].Count];
-                    Requirement[] merged = new Requirement[_alts[i].Count];
+                    bool[] matches = new bool[altsI.Count];
+                    Requirement[] merged = new Requirement[altsI.Count];
                     for (int k = 0; k < matches.Length; k++)
                     {
                         bool matched = false;
@@ -705,7 +853,7 @@ namespace RATools.Parser.Internal
                             if (matches[l])
                                 continue;
 
-                            if (MergeRequirements(_alts[i][k], _alts[j][l], ConditionalOperation.Or, out merged[k]))
+                            if (MergeRequirements(altsI[k], altsJ[l], ConditionalOperation.Or, out merged[k]))
                             {
                                 matched = true;
                                 matches[l] = true;
@@ -719,8 +867,9 @@ namespace RATools.Parser.Internal
 
                     if (matches.All(m => m == true))
                     {
-                        _alts[j].Clear();
-                        _alts[j].AddRange(merged);
+                        altsJ.Clear();
+                        foreach (var requirement in merged)
+                            altsJ.Add(requirement);
                         _alts.RemoveAt(i);
                         break;
                     }
@@ -736,7 +885,7 @@ namespace RATools.Parser.Internal
 
         private void PromoteCommonAltsToCore()
         {
-            // first pass, ignore PauseIfs
+            // identify requirements present in all alt groups.
             var requirementsFoundInAll = new List<Requirement>();
             foreach (var requirement in _alts[0])
             {
@@ -756,12 +905,13 @@ namespace RATools.Parser.Internal
 
             foreach (var requirement in requirementsFoundInAll)
             {
-                // ResetIf and PauseIf can only be promoted if all HitCounts are also promoted
-                if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
+                // PauseIf only affects the alt group that it's in, so it can only be promoted if all 
+                // the HitCounts in the alt group are also promoted
+                if (requirement.Type == RequirementType.PauseIf)
                 {
                     bool canPromote = false;
 
-                    foreach (var alt in _alts)
+                    foreach (IList<Requirement> alt in _alts)
                     {
                         for (int i = alt.Count - 1; i >= 0; i--)
                         {
@@ -780,7 +930,8 @@ namespace RATools.Parser.Internal
                         continue;
                 }
 
-                foreach (var alt in _alts)
+                // remove the requirement from each alt group
+                foreach (IList<Requirement> alt in _alts)
                 {
                     for (int i = alt.Count - 1; i >= 0; i--)
                     {
@@ -789,11 +940,12 @@ namespace RATools.Parser.Internal
                     }
                 }
 
+                // and put it in the core group
                 _core.Add(requirement);
             }
         }
 
-        private void RemoveDuplicates(List<Requirement> requirements)
+        private void RemoveDuplicates(IList<Requirement> requirements)
         {
             for (int i = 0; i < requirements.Count; i++)
             {
@@ -805,7 +957,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private void RemoveAltsAlreadyInCore(List<Requirement> requirements)
+        private void RemoveAltsAlreadyInCore(IList<Requirement> requirements)
         {
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
@@ -817,7 +969,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private static void RemoveRedundancies(List<Requirement> requirements)
+        private static void RemoveRedundancies(IList<Requirement> requirements)
         {
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
@@ -830,6 +982,13 @@ namespace RATools.Parser.Internal
                     Requirement merged;
                     if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
                     {
+                        if (merged == null)
+                        {
+                            // conflicting requirements, void out the entire requirement set
+                            requirements.Clear();
+                            return;
+                        }
+
                         requirements[j] = merged;
                         requirements.RemoveAt(i);
                         break;
@@ -854,7 +1013,7 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        private void MergeBits(List<Requirement> requirements)
+        private void MergeBits(IList<Requirement> requirements)
         {
             var references = new TinyDictionary<uint, int>();
             foreach (var requirement in requirements)
@@ -939,7 +1098,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private static void MergeBits(List<Requirement> requirements, uint address, FieldSize newSize, int newValue)
+        private static void MergeBits(IList<Requirement> requirements, uint address, FieldSize newSize, int newValue)
         {
             bool insert = true;
             int insertAt = 0;
@@ -1030,7 +1189,12 @@ namespace RATools.Parser.Internal
             // normalize BitX() methods to compare against 1
             NormalizeComparisons(_core);
             if (_core.Count == 0)
-                return "No core requirements";
+            {
+                if (_alts.Count > 0)
+                    return "Ambiguous logic clauses. Please put parentheses around all of the alt group clauses.";
+
+                return "No valid requirements found.";
+            }
 
             for (int i = _alts.Count - 1; i >= 0; i--)
             {
@@ -1044,9 +1208,12 @@ namespace RATools.Parser.Internal
                 _alts.Clear();
             }
 
+            // convert ResetIfs and PauseIfs without HitCounts to standard requirements
+            NormalizeNonHitCountResetAndPauseIfs();
+
             // remove duplicates within a set of requirements
             RemoveDuplicates(_core);
-            foreach (var alt in _alts)
+            foreach (IList<Requirement> alt in _alts)
             {
                 RemoveDuplicates(alt);
                 RemoveAltsAlreadyInCore(alt);
@@ -1054,12 +1221,12 @@ namespace RATools.Parser.Internal
 
             // remove redundancies (i > 3 && i > 5) => (i > 5)
             RemoveRedundancies(_core);
-            foreach (var alt in _alts)
+            foreach (IList<Requirement> alt in _alts)
                 RemoveRedundancies(alt);
 
             // bit1(x) && bit2(x) && bit3(x) && bit4(x) => low4(x)
             MergeBits(_core);
-            foreach (var alt in _alts)
+            foreach (IList<Requirement> alt in _alts)
                 MergeBits(alt);
 
             // merge duplicate alts
@@ -1069,37 +1236,7 @@ namespace RATools.Parser.Internal
             if (_alts.Count > 1)
                 PromoteCommonAltsToCore();
 
-            bool hasHitCount = false;
-            bool hasReset = false;
-            bool hasPause = false;
-            foreach (var requirement in _core)
-            {
-                if (requirement.HitCount > 0)
-                    hasHitCount = true;
-                if (requirement.Type == RequirementType.ResetIf)
-                    hasReset = true;
-                if (requirement.Type == RequirementType.PauseIf)
-                    hasPause = true;
-            }
-
-            if (!hasHitCount)
-            {
-                foreach (var alt in _alts)
-                {
-                    foreach (var requirement in alt)
-                    {
-                        if (requirement.HitCount > 0)
-                            hasHitCount = true;
-                    }
-                }
-
-                if (!hasHitCount)
-                {
-                    if (hasReset && Id == 0)
-                        return "Reset condition without HitCount";
-                }
-            }
-
+            // success!
             return null;
         }
     }
