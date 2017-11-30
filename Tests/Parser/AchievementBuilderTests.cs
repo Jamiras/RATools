@@ -4,7 +4,6 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Test.Parser
 {

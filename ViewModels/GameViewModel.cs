@@ -5,6 +5,7 @@ using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Internal;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -78,26 +79,20 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement)
         {
-            var list = (List<Achievement>)_localAchievements.Achievements;
-            int index = 0;
-            while (index < list.Count && !ReferenceEquals(list[index], localAchievement))
-                index++;
-
-            if (index == list.Count)
+            var previous = _localAchievements.Replace(localAchievement, achievement);
+            if (previous != null)
             {
-                list.Add(achievement);
-                LocalAchievementCount++;
-                LocalAchievementPoints += achievement.Points;
+                var diff = achievement.Points - previous.Points;
+                if (diff != 0)
+                    LocalAchievementPoints += diff;
             }
             else
             {
-                var diff = achievement.Points - list[index].Points;
-                if (diff != 0)
-                    LocalAchievementPoints += diff;
-                list[index] = achievement;
+                LocalAchievementCount++;
+                LocalAchievementPoints += achievement.Points;
             }
 
-            _localAchievements.Commit();
+            _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName);
         }
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Title", typeof(string), String.Empty);

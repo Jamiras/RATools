@@ -1,36 +1,52 @@
-﻿using System;
+﻿using Jamiras.Components;
+using Jamiras.Services;
+using Jamiras.ViewModels;
+using RATools.Data;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using Jamiras.Components;
-using Jamiras.ViewModels;
-using RATools.Data;
-using RATools.Parser.Internal;
 
 namespace RATools.Parser
 {
+    /// <summary>
+    /// Class for interacting with the local achievements file for a game.
+    /// </summary>
     [DebuggerDisplay("LocalAchievements: {_title}")]
-    internal class LocalAchievements
+    public class LocalAchievements
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="LocalAchievements"/> class.
+        /// </summary>
+        /// <param name="filename">The path to the 'XXX-User.txt' file.</param>
         public LocalAchievements(string filename)
+            : this(filename, ServiceRepository.Instance.FindService<IFileSystemService>())
         {
+        }
+
+        internal LocalAchievements(string filename, IFileSystemService fileSystemService)
+        {
+            _fileSystemService = fileSystemService;
             _achievements = new List<Achievement>();
             _filename = filename;
             _version = "0.030";
+
             Read();
         }
-        
+
+        private readonly IFileSystemService _fileSystemService;
         private readonly string _filename;
         private string _version;
 
-        public string Title
-        {
-            get { return _title; }
-            internal set { _title = value; }
-        }
-        private string _title;
+        /// <summary>
+        /// Gets the title of the associated game.
+        /// </summary>
+        public string Title { get; internal set; }
 
+        /// <summary>
+        /// Gets the achievements read from the file.
+        /// </summary>
         public IEnumerable<Achievement> Achievements
         {
             get { return _achievements; }
@@ -40,13 +56,13 @@ namespace RATools.Parser
 
         private void Read()
         {
-            if (!File.Exists(_filename))
+            if (!_fileSystemService.FileExists(_filename))
                 return;
 
-            using (var reader = File.OpenText(_filename))
+            using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
             {
                 _version = reader.ReadLine();
-                _title = reader.ReadLine();
+                Title = reader.ReadLine();
 
                 while (!reader.EndOfStream)
                 {
@@ -107,14 +123,37 @@ namespace RATools.Parser
             }
         }
 
-        public void Commit()
+        /// <summary>
+        /// Replaces the an achievement in the list with a new version, or appends a new achievement to the list.
+        /// </summary>
+        /// <param name="existingAchievement">The existing achievement.</param>
+        /// <param name="newAchievement">The new achievement.</param>
+        /// <returns>The previous version if the item was replaced, <c>null</c> if the <paramref name="existingAchievement"/> was not in the list.</returns>
+        public Achievement Replace(Achievement existingAchievement, Achievement newAchievement)
+        {
+            var index = _achievements.IndexOf(existingAchievement);
+            if (index == -1)
+            {
+                _achievements.Add(newAchievement);
+                return null;
+            }
+
+            var previousAchievement = _achievements[index];
+            _achievements[index] = newAchievement;
+            return previousAchievement;
+        }
+
+        /// <summary>
+        /// Commits the achivement list back to the 'XXX-User.txt' file.
+        /// </summary>
+        public void Commit(string author)
         {
             var warning = new StringBuilder();
 
-            using (var writer = File.CreateText(_filename))
+            using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
                 writer.WriteLine(_version);
-                writer.WriteLine(_title);
+                writer.WriteLine(Title);
 
                 foreach (var achievement in _achievements)
                 {
@@ -137,12 +176,15 @@ namespace RATools.Parser
                     writer.Write(achievement.Description);
                     writer.Write(':');
 
-                    writer.Write(" : : :Jamiras:"); // discontinued features,author
+                    writer.Write(" : : :"); // discontinued features
+
+                    writer.Write(author); // author
+                    writer.Write(':');
 
                     writer.Write(achievement.Points);
                     writer.Write(':');
 
-                    writer.Write("0:0:59080:25:"); // created, modified, upvotes, downvotes
+                    writer.Write("0:0:0:0:"); // created, modified, upvotes, downvotes
 
                     writer.Write(achievement.BadgeName);
                     writer.WriteLine();

@@ -57,7 +57,9 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="Services\ISettings.cs" />
     <Compile Include="Services\RAWebCache.cs" />
+    <Compile Include="Services\Settings.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="Views\AboutDialog.xaml.cs">
       <DependentUpon>AboutDialog.xaml</DependentUpon>

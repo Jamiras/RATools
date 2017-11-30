@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
+using Jamiras.DataModels;
+using Jamiras.Services;
+using Jamiras.ViewModels;
+using RATools.Parser;
+using RATools.Services;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Jamiras.Commands;
-using Jamiras.Components;
-using Jamiras.DataModels;
-using Jamiras.IO;
-using Jamiras.Services;
-using Jamiras.ViewModels;
-using RATools.Parser;
 
 namespace RATools.ViewModels
 {
@@ -30,16 +30,7 @@ namespace RATools.ViewModels
 
         public bool Initialize()
         {
-            var file = new IniFile("RATools.ini");
-            try
-            {
-                var values = file.Read();
-                RACacheDirectory = values["RACacheDirectory"];
-            }
-            catch (FileNotFoundException)
-            {
-                return false;
-            }
+            ServiceRepository.Instance.RegisterInstance<ISettings>(new Settings());
 
             var persistance = ServiceRepository.Instance.FindService<IPersistantDataRepository>();
             var recent = persistance.GetValue("RecentFiles");
@@ -54,7 +45,6 @@ namespace RATools.ViewModels
             return true;
         }
 
-        private string RACacheDirectory;
         private RecencyBuffer<string> _recentFiles;
 
         public CommandBase ExitCommand { get; private set; }
@@ -111,7 +101,7 @@ namespace RATools.ViewModels
                 {
                     CurrentFile = filename;
 
-                    foreach (var directory in Tokenizer.Split(RACacheDirectory, ';'))
+                    foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
                     {
                         var notesFile = Path.Combine(directory.ToString(), parser.GameId + "-Notes2.txt");
                         if (File.Exists(notesFile))
@@ -268,7 +258,7 @@ namespace RATools.ViewModels
         public CommandBase AboutCommand { get; private set; }
         private void About()
         {
-            var vm = new AboutDialogViewModel(RACacheDirectory);
+            var vm = new AboutDialogViewModel();
             vm.ShowDialog();
         }
     }

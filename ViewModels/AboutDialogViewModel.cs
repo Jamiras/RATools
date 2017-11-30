@@ -1,5 +1,7 @@
 ﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.ViewModels;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,14 +12,14 @@ namespace RATools.ViewModels
 {
     public class AboutDialogViewModel : DialogViewModelBase
     {
-        public AboutDialogViewModel(string raCacheDirectory)
+        public AboutDialogViewModel()
         {
             DialogTitle = "About";
             SourceLinkCommand = new DelegateCommand(OpenSourceLink);
             CancelButtonText = null;
 
             var directories = new List<LookupItem>();
-            foreach (var path in raCacheDirectory.Split(';'))
+            foreach (var path in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
                 directories.Add(new LookupItem(Directory.Exists(path) ? 1 : 0, path));
 
             DataDirectories = directories;
