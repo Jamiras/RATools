@@ -20,7 +20,7 @@ namespace RATools.Services
                 DataDirectories = values["RACacheDirectory"].Split(';');
 
                 string user;
-                if (values.TryGetValue("User", out user))
+                if (values.TryGetValue("User", out user) && user.Length > 0)
                     UserName = user;
             }
             catch (FileNotFoundException)

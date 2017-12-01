@@ -17,6 +17,7 @@ namespace RATools.Parser.Internal
         {
             Parameters = new List<string>();
             Expressions = new List<ExpressionBase>();
+            DefaultParameters = new TinyDictionary<string, ExpressionBase>();
         }
 
         /// <summary>
@@ -28,6 +29,11 @@ namespace RATools.Parser.Internal
         /// Gets the names of the parameters.
         /// </summary>
         public ICollection<string> Parameters { get; private set; }
+
+        /// <summary>
+        /// Gets default values for the parameters.
+        /// </summary>
+        public IDictionary<string, ExpressionBase> DefaultParameters { get; private set; }
 
         /// <summary>
         /// Gets the expressions for the contents of the function.
