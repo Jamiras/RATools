@@ -114,6 +114,15 @@ namespace RATools.ViewModels
                     MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
                     return;
                 }
+                else if (parser.GameId != 0)
+                {
+                    CurrentFile = filename;
+
+                    if (!String.IsNullOrEmpty(parser.GameTitle))
+                        Game = new GameViewModel(parser.GameId, parser.GameTitle);
+                    else
+                        Game = null;
+                }
             }
 
             MessageBoxViewModel.ShowMessage(parser.ErrorMessage);

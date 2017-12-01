@@ -57,6 +57,12 @@ namespace RATools.ViewModels
             Achievements = achievements;
         }
 
+        public GameViewModel(int gameId, string title)
+        {
+            GameId = gameId;
+            Title = title;
+        }
+
         private LocalAchievements _localAchievements;
 
         internal int GameId { get; private set; }
