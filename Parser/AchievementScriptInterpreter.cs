@@ -177,7 +177,7 @@ namespace RATools.Parser
                     if (!entry.Key.ReplaceVariables(scope, out key))
                         return EvaluationError(entry.Key, key);
                     
-                    scope.AssignVariable(iterator, key);
+                    scope.DefineVariable(iterator, key);
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
@@ -1048,7 +1048,7 @@ namespace RATools.Parser
                         return null;
                     }
 
-                    innerScope.AssignVariable(assignedParameter.Variable, value);
+                    innerScope.DefineVariable(assignedParameter.Variable, value);
                     namedParameters = true;
                 }
                 else
@@ -1074,7 +1074,7 @@ namespace RATools.Parser
 
                     var variableName = function.Parameters.ElementAt(index);
                     providedParameters.Remove(variableName);
-                    innerScope.AssignVariable(new VariableExpression(variableName), value);
+                    innerScope.DefineVariable(new VariableExpression(variableName), value);
                 }
 
                 ++index;
@@ -1095,7 +1095,7 @@ namespace RATools.Parser
                     return null;
                 }
 
-                innerScope.AssignVariable(new VariableExpression(parameter), value);
+                innerScope.DefineVariable(new VariableExpression(parameter), value);
             }
 
             return innerScope;

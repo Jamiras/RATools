@@ -256,6 +256,39 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestVariableScopeGlobal()
+        {
+            var parser = Parse("p = 5\n" +
+                               "function test() { p = 6 }\n" +
+                               "test()\n" +
+                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Points, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void TestVariableScopeParameter()
+        {
+            var parser = Parse("p = 5\n" +
+                               "function test(p) { p = 6 }\n" +
+                               "test(p)\n" +
+                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Points, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void TestVariableScopeLocal()
+        {
+            var parser = Parse("function test() { p = 6 }\n" +
+                               "test()\n" +
+                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("3:17 Unknown variable: p"));
+        }
+
+        [Test]
         public void TestRichPresenceDisplay()
         {
             var parser = Parse("rich_presence_display(\"simple string\")");

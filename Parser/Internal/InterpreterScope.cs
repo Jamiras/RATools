@@ -63,7 +63,7 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Assigns the value to a variable.
+        /// Updates the value of a variable.
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <param name="value">The value.</param>
@@ -78,6 +78,30 @@ namespace RATools.Parser.Internal
                 return;
             }
 
+            // find the scope where the variable is defined and update it there.
+            var scope = this;
+            while (scope != null)
+            {
+                if (scope._variables.ContainsKey(variable.Name))
+                {
+                    scope._variables[variable.Name] = value;
+                    return;
+                }
+
+                scope = scope._parent;
+            }
+
+            // variable not defined, store in the current scope.
+            _variables[variable.Name] = value;
+        }
+
+        /// <summary>
+        /// Assigns the value to a variable for the current scope.
+        /// </summary>
+        /// <param name="variable">The variable.</param>
+        /// <param name="value">The value.</param>
+        public void DefineVariable(VariableExpression variable, ExpressionBase value)
+        {
             _variables[variable.Name] = value;
         }
 

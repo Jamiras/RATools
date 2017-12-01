@@ -1,9 +1,5 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Internal;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -62,6 +58,7 @@ namespace RATools.Test.Parser.Internal
             scope.AssignVariable(variable, value);
             var scope2 = new InterpreterScope(scope);
             Assert.That(scope2.GetVariable("test"), Is.SameAs(value));
+            Assert.That(scope.GetVariable("test"), Is.SameAs(value));
         }
 
         [Test]
@@ -74,6 +71,32 @@ namespace RATools.Test.Parser.Internal
             var scope2 = new InterpreterScope(scope);
             scope.AssignVariable(variable, value);
             scope2.AssignVariable(variable, value2);
+            Assert.That(scope2.GetVariable("test"), Is.SameAs(value2));
+            Assert.That(scope.GetVariable("test"), Is.SameAs(value2));
+        }
+
+        [Test]
+        public void TestDefineAndGetVariableNested()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var scope = new InterpreterScope();
+            scope.DefineVariable(variable, value);
+            var scope2 = new InterpreterScope(scope);
+            Assert.That(scope2.GetVariable("test"), Is.SameAs(value));
+            Assert.That(scope.GetVariable("test"), Is.SameAs(value));
+        }
+
+        [Test]
+        public void TestDefineAndGetVariableNestedOverride()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var value2 = new IntegerConstantExpression(98);
+            var scope = new InterpreterScope();
+            var scope2 = new InterpreterScope(scope);
+            scope.DefineVariable(variable, value);
+            scope2.DefineVariable(variable, value2);
             Assert.That(scope2.GetVariable("test"), Is.SameAs(value2));
             Assert.That(scope.GetVariable("test"), Is.SameAs(value));
         }
