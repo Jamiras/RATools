@@ -1,2 +1,5 @@
-v1.0 - 26 Nov 2017
+v1.0.1 - TBD
+* prevent exception attempting to open non-existing file
+
+v1.0.0 - 1 Dec 2017
 * initial public release build candidate

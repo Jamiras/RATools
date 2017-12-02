@@ -92,6 +92,12 @@ namespace RATools.ViewModels
         public CommandBase<string> OpenRecentCommand { get; private set; }
         private void OpenFile(string filename)
         {
+            if (!File.Exists(filename))
+            {
+                MessageBoxViewModel.ShowMessage("Could not open " + filename);
+                return;
+            }
+
             var parser = new AchievementScriptInterpreter();
 
             using (var stream = File.OpenRead(filename))
