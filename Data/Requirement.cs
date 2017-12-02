@@ -61,6 +61,16 @@ namespace RATools.Data
 
             builder.Append(Left.ToString());
 
+            switch (Type)
+            {
+                case RequirementType.AddSource:
+                    builder.Append(" + ");
+                    break;
+                case RequirementType.SubSource:
+                    builder.Append(" - ");
+                    break;
+            }
+
             switch (Operator)
             {
                 case RequirementOperator.Equal:
@@ -86,8 +96,13 @@ namespace RATools.Data
             if (Operator != RequirementOperator.None)
                 builder.Append(Right.ToString());
 
-            if (Type != RequirementType.None)
-                builder.Append(')');
+            switch (Type)
+            {
+                case RequirementType.ResetIf:
+                case RequirementType.PauseIf:
+                    builder.Append(')');
+                    break;
+            }
 
             if (HitCount != 0)
                 builder.Append(')');
@@ -212,5 +227,20 @@ namespace RATools.Data
         /// Pauses processing of the achievement if true.
         /// </summary>
         PauseIf,
+
+        /// <summary>
+        /// Adds the Left part of the requirement to the Left part of the next requirement.
+        /// </summary>
+        AddSource,
+
+        /// <summary>
+        /// Subtracts the Left part of the next requirement from the Left part of the requirement.
+        /// </summary>
+        SubSource,
+
+        /// <summary>
+        /// Adds the HitsCounts from this requirement to the next requirement.
+        /// </summary>
+        AddHits,
     }
 }

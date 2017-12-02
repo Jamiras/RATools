@@ -8,6 +8,7 @@ namespace RATools.Tests.Data
     {
         public enum TestField
         {
+            None,
             Byte1234,
             Byte2345,
             Word2345,
@@ -43,6 +44,8 @@ namespace RATools.Tests.Data
         [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 2, "repeated(2, byte(0x001234) == 99)")]
         [TestCase(RequirementType.ResetIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "never(byte(0x001234) == 99)")]
         [TestCase(RequirementType.PauseIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "unless(byte(0x001234) == 99)")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) + ")]
+        [TestCase(RequirementType.SubSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) - ")]
         public void TestToString(RequirementType requirementType, TestField left, RequirementOperator requirementOperator, TestField right, int hitCount, string expected)
         {
             var requirement = new Requirement

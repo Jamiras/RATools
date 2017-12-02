@@ -167,11 +167,15 @@ namespace RATools.Test.Parser
         [TestCase("0xH000028=3", "byte(0x000028) == 3")]
         [TestCase("0xU00616a=8", "high4(0x00616A) == 8")]
         [TestCase("0x 000042=5786", "word(0x000042) == 5786")]
+        [TestCase("0x1234=5786", "word(0x001234) == 5786")]
+        [TestCase("0xfedc=5786", "word(0x00FEDC) == 5786")]
         [TestCase("0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000", "byte(0x000028) == 12 && word(0x000042) == 25959 && (byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)")]
         [TestCase("0xH000440=140.1.", "once(byte(0x000440) == 140)")]
         [TestCase("0xH000440=140(1)", "once(byte(0x000440) == 140)")] // old format
         [TestCase("R:0xH000440=0", "never(byte(0x000440) == 0)")]
         [TestCase("P:0xH000440=0", "unless(byte(0x000440) == 0)")]
+        [TestCase("A:0xN20770f=0", "bit1(0x20770F) + ")]
+        [TestCase("B:0xN20770f=0", "bit1(0x20770F) - ")]
         public void TestParseRequirements(string input, string expected)
         {
             var builder = new AchievementBuilder();

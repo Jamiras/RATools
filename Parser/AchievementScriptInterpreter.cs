@@ -300,6 +300,8 @@ namespace RATools.Parser
                 _achievementFunction.DefaultParameters["published"] = new StringConstantExpression("");
                 _achievementFunction.Parameters.Add("modified");
                 _achievementFunction.DefaultParameters["modified"] = new StringConstantExpression("");
+                _achievementFunction.Parameters.Add("badge");
+                _achievementFunction.DefaultParameters["badge"] = new StringConstantExpression("0");
             }
 
             var innerScope = GetParameters(_achievementFunction, expression, scope);
@@ -313,6 +315,9 @@ namespace RATools.Parser
 
             stringExpression = innerScope.GetVariable("description") as StringConstantExpression;
             achievement.Description = (stringExpression != null) ? stringExpression.Value : String.Empty;
+
+            stringExpression = innerScope.GetVariable("badge") as StringConstantExpression;
+            achievement.BadgeName = (stringExpression != null) ? stringExpression.Value : String.Empty;
 
             var integerExpression = innerScope.GetVariable("points") as IntegerConstantExpression;
             if (integerExpression != null)

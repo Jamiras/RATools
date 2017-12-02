@@ -59,6 +59,8 @@ namespace RATools.Parser
             if (!_fileSystemService.FileExists(_filename))
                 return;
 
+            var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
             using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
             {
                 _version = reader.ReadLine();
@@ -71,6 +73,10 @@ namespace RATools.Parser
                     var achievement = new AchievementBuilder();
 
                     var part = tokenizer.ReadTo(':'); // id
+
+                    if (part.StartsWith("L")) // ignore leaderboards in N64 file
+                        continue;
+
                     int num;
                     if (Int32.TryParse(part.ToString(), out num))
                         achievement.Id = num;
@@ -102,10 +108,10 @@ namespace RATools.Parser
                         achievement.Points = num;
                     tokenizer.Advance();
 
-                    tokenizer.ReadTo(':'); // created timestamp
+                    var published = tokenizer.ReadTo(':'); // created timestamp
                     tokenizer.Advance();
 
-                    tokenizer.ReadTo(':'); // updated timestamp
+                    var updated = tokenizer.ReadTo(':'); // updated timestamp
                     tokenizer.Advance();
 
                     tokenizer.ReadTo(':'); // upvotes
@@ -118,7 +124,13 @@ namespace RATools.Parser
                     if (achievement.BadgeName.EndsWith("_lock"))
                         achievement.BadgeName.Remove(achievement.BadgeName.Length - 5);
 
-                    _achievements.Add(achievement.ToAchievement());
+                    var builtAchievement = achievement.ToAchievement();
+                    if (published != "0" && Int32.TryParse(published.ToString(), out num))
+                        builtAchievement.Published = unixEpoch.AddSeconds(num);
+                    if (updated != "0" && Int32.TryParse(updated.ToString(), out num))
+                        builtAchievement.LastModified = unixEpoch.AddSeconds(num);
+
+                    _achievements.Add(builtAchievement);
                 }
             }
         }

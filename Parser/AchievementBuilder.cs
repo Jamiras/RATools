@@ -109,11 +109,28 @@ namespace RATools.Parser
                     requirement.Type = RequirementType.ResetIf;
                 else if (tokenizer.Match("P:"))
                     requirement.Type = RequirementType.PauseIf;
+                else if (tokenizer.Match("A:"))
+                    requirement.Type = RequirementType.AddSource;
+                else if (tokenizer.Match("B:"))
+                    requirement.Type = RequirementType.SubSource;
+                else if (tokenizer.Match("C:"))
+                    requirement.Type = RequirementType.AddHits;
 
                 requirement.Left = Field.Deserialize(tokenizer);
+
                 requirement.Operator = ReadOperator(tokenizer);
                 requirement.Right = Field.Deserialize(tokenizer);
 
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        requirement.Operator = RequirementOperator.None;
+                        requirement.Right = new Field();
+                        break;
+                }
+                
                 if (requirement.Right.Size == FieldSize.None)
                     requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
 
@@ -254,24 +271,40 @@ namespace RATools.Parser
 
         private static void SerializeRequirement(Requirement requirement, StringBuilder builder)
         {
-            if (requirement.Type == RequirementType.ResetIf)
-                builder.Append("R:");
-            else if (requirement.Type == RequirementType.PauseIf)
-                builder.Append("P:");
+            switch (requirement.Type)
+            {
+                case RequirementType.ResetIf: builder.Append("R:"); break;
+                case RequirementType.PauseIf: builder.Append("P:"); break;
+                case RequirementType.AddSource: builder.Append("A:"); break;
+                case RequirementType.SubSource: builder.Append("B:"); break;
+                case RequirementType.AddHits: builder.Append("C:"); break;
+            }
 
             requirement.Left.Serialize(builder);
 
-            switch (requirement.Operator)
+            switch (requirement.Type)
             {
-                case RequirementOperator.Equal: builder.Append('='); break;
-                case RequirementOperator.NotEqual: builder.Append("!="); break;
-                case RequirementOperator.LessThan: builder.Append('<'); break;
-                case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
-                case RequirementOperator.GreaterThan: builder.Append('>'); break;
-                case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                case RequirementType.AddSource:
+                case RequirementType.SubSource:
+                case RequirementType.AddHits:
+                    builder.Append("=0");
+                    break;
+
+                default:
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.Equal: builder.Append('='); break;
+                        case RequirementOperator.NotEqual: builder.Append("!="); break;
+                        case RequirementOperator.LessThan: builder.Append('<'); break;
+                        case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
+                        case RequirementOperator.GreaterThan: builder.Append('>'); break;
+                        case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                    }
+
+                    requirement.Right.Serialize(builder);
+                    break;
             }
 
-            requirement.Right.Serialize(builder);
 
             if (requirement.HitCount > 0)
             {

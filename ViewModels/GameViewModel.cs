@@ -26,12 +26,48 @@ namespace RATools.ViewModels
             Notes = new TinyDictionary<int, string>();
             using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, parser.GameId + "-Notes2.txt")))
             {
-                var notes = new JsonObject(notesStream);
-                foreach (var note in notes.GetField("CodeNotes").ObjectArrayValue)
+                var reader = new StreamReader(notesStream);
+                var firstChar = reader.Peek();
+                notesStream.Seek(0, SeekOrigin.Begin);
+
+                if (firstChar == '{')
                 {
-                    var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
-                    var text = note.GetField("Note").StringValue;
-                    Notes[address] = text;
+                    _isN64 = false;
+
+                    // standard JSON format
+                    var notes = new JsonObject(notesStream);
+                    foreach (var note in notes.GetField("CodeNotes").ObjectArrayValue)
+                    {
+                        var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
+                        var text = note.GetField("Note").StringValue;
+                        Notes[address] = text;
+                    }
+                }
+                else
+                {
+                    _isN64 = true;
+
+                    // N64 unique format
+                    var tokenizer = Tokenizer.CreateTokenizer(notesStream);
+                    do
+                    {
+                        var unused = tokenizer.ReadTo(':');
+                        if (tokenizer.NextChar == '\0')
+                            break;
+                        tokenizer.Advance();
+
+                        int address;
+                        if (tokenizer.Match("0x"))
+                            address = Int32.Parse(tokenizer.ReadTo(':').ToString(), System.Globalization.NumberStyles.HexNumber);
+                        else
+                            address = Int32.Parse(tokenizer.ReadTo(':').ToString());
+                        tokenizer.Advance();
+
+                        var text = tokenizer.ReadTo('#');
+                        tokenizer.Advance();
+
+                        Notes[address] = text.ToString();
+                    } while (true);
                 }
             }
 
@@ -42,7 +78,11 @@ namespace RATools.ViewModels
                 achievements.Add(achievementViewModel);
             }
 
-            MergePublished(parser.GameId, achievements);
+            if (_isN64)
+                MergePublishedN64(parser.GameId, achievements);
+            else
+                MergePublished(parser.GameId, achievements);
+
             MergeLocal(parser.GameId, achievements);
 
             if (!String.IsNullOrEmpty(parser.RichPresence) && parser.RichPresence.Length > 8)
@@ -64,6 +104,7 @@ namespace RATools.ViewModels
         }
 
         private LocalAchievements _localAchievements;
+        private bool _isN64;
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
@@ -186,6 +227,53 @@ namespace RATools.ViewModels
                 PublishedAchievementCount = count;
                 PublishedAchievementPoints = points;
             }
+        }
+
+        private void MergePublishedN64(int gameId, List<GeneratedItemViewModelBase> achievements)
+        {
+            var fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
+            if (!File.Exists(fileName))
+                return;
+
+            var count = 0;
+            var points = 0;
+
+            var officialAchievements = new LocalAchievements(fileName);
+            foreach (var publishedAchievement in officialAchievements.Achievements)
+            {
+                var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                if (achievement == null)
+                {
+                    achievement = new GeneratedAchievementViewModel(this, null);
+                    achievements.Add(achievement);
+                }
+
+                achievement.Core.LoadAchievement(publishedAchievement);
+                count++;
+                points += publishedAchievement.Points;
+            }
+
+            fileName = Path.Combine(RACacheDirectory, gameId + "-Unofficial.txt");
+            if (File.Exists(fileName))
+            {
+                var unofficialAchievements = new LocalAchievements(fileName);
+                foreach (var publishedAchievement in unofficialAchievements.Achievements)
+                {
+                    var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                    if (achievement == null)
+                    {
+                        achievement = new GeneratedAchievementViewModel(this, null);
+                        achievements.Add(achievement);
+                    }
+
+                    achievement.Unofficial.LoadAchievement(publishedAchievement);
+                    count++;
+                    points += publishedAchievement.Points;
+                }
+            }
+
+            PublishedAchievementCount = count;
+            PublishedAchievementPoints = points;
         }
 
         private void MergeLocal(int gameId, List<GeneratedItemViewModelBase> achievements)

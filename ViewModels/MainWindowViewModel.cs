@@ -3,6 +3,7 @@ using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
+using RATools.Data;
 using RATools.Parser;
 using RATools.Services;
 using System;
@@ -162,7 +163,13 @@ namespace RATools.ViewModels
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Select dump file";
             vm.Filters["Script file"] = "*.txt";
-            vm.FileNames = new[] { Game.Title + ".txt" };
+
+            var cleansed = Game.Title;
+            foreach (var c in Path.GetInvalidFileNameChars())
+                cleansed = cleansed.Replace(c.ToString(), "");
+            if (String.IsNullOrEmpty(cleansed))
+                cleansed = Game.GameId.ToString();
+            vm.FileNames = new[] { cleansed + ".txt" };
 
             if (vm.ShowSaveFileDialog() != DialogResult.Ok)
                 return;
@@ -191,7 +198,9 @@ namespace RATools.ViewModels
 
                         stream.Write("    id = ");
                         stream.Write(achievement.Core.Achievement.Id);
-                        stream.Write(", published = \"");
+                        stream.Write(", badge = \"");
+                        stream.Write(achievement.Core.Achievement.BadgeName);
+                        stream.Write("\", published = \"");
                         stream.Write(achievement.Core.Achievement.Published);
                         stream.Write("\", modified = \"");
                         stream.Write(achievement.Core.Achievement.LastModified);
@@ -246,6 +255,15 @@ namespace RATools.ViewModels
                         needsAmpersand = true;
 
                     stream.Write(requirementEnumerator.Current.Definition);
+
+                    switch (requirementEnumerator.Current.Requirement.Type)
+                    {
+                        case RequirementType.AddSource:
+                        case RequirementType.SubSource:
+                        case RequirementType.AddHits:
+                            needsAmpersand = false;
+                            break;
+                    }
                 }
             }
         }

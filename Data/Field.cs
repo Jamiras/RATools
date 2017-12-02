@@ -149,7 +149,19 @@ namespace RATools.Data
                 case '6':
                 case '7':
                 case '8':
-                case '9': size = FieldSize.Word; break;
+                case '9':
+                case 'A':
+                case 'a':
+                case 'B':
+                case 'b':
+                case 'C':
+                case 'c':
+                case 'D':
+                case 'd':
+                case 'E':
+                case 'e':
+                case 'F':
+                case 'f': size = FieldSize.Word; break;
                 case ' ': size = FieldSize.Word; tokenizer.Advance(); break;
             }
 

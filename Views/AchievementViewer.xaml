@@ -23,6 +23,9 @@
                         <DataTrigger Binding="{Binding LocalModified}" Value="Unmodified">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding IsGenerated}" Value="False">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
@@ -273,25 +276,25 @@
 
     <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
         <TabControl>
-            <TabItem Header="Core">
+            <TabItem>
                 <TabItem.Style>
                     <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Content" Value="{Binding Core}" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Core.Modified}" Value="None">
-                                <Setter Property="Content" Value="{x:Null}" />
+                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Unmodified">
+                                <Setter Property="Content" Value="{Binding Unofficial}" />
+                                <Setter Property="Header" Value="Unofficial" />
                             </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TabItem.Style>
-            </TabItem>
-            <TabItem Header="Unofficial">
-                <TabItem.Style>
-                    <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Content" Value="{Binding Unofficial}" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Unofficial.Modified}" Value="None">
-                                <Setter Property="Content" Value="{x:Null}" />
+                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Modified">
+                                <Setter Property="Content" Value="{Binding Unofficial}" />
+                                <Setter Property="Header" Value="Unofficial" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CoreModified}" Value="Unmodified">
+                                <Setter Property="Content" Value="{Binding Core}" />
+                                <Setter Property="Header" Value="Core" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CoreModified}" Value="Modified">
+                                <Setter Property="Content" Value="{Binding Core}" />
+                                <Setter Property="Header" Value="Core" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
