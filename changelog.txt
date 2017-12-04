@@ -1,4 +1,5 @@
-v1.0.1 - TBD
+v1.0.1 - 3 Dec 2017
+* prevent exception if no recent files exist
 * prevent exception attempting to open non-existing file
 
 v1.0.0 - 1 Dec 2017

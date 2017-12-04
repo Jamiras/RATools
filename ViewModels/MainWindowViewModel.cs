@@ -137,7 +137,7 @@ namespace RATools.ViewModels
 
         private void AddRecentFile(string newFile)
         {
-            if (_recentFiles.First() == newFile)
+            if (_recentFiles.FirstOrDefault() == newFile)
                 return;
 
             if (_recentFiles.FindAndMakeRecent(str => str == newFile) == null)
