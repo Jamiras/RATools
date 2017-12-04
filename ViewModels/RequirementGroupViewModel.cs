@@ -58,21 +58,43 @@ namespace RATools.ViewModels
                         var score = 0;
 
                         if (test.Type == requirement.Type)
-                            score += 1;
+                            score++;
+                        else
+                            score--;
+
                         if (test.Operator == requirement.Operator)
                             score += 3;
+                        else
+                            score--;
+
                         if (test.HitCount == requirement.HitCount)
                             score += 2;
+                        else
+                            score--;
+
                         if (test.Left.Type == requirement.Left.Type)
                             score += 5;
+                        else
+                            score--;
+
                         if (test.Left.Size == requirement.Left.Size)
                             score += 3;
+                        else
+                            score--;
+
                         if (test.Left.Value == requirement.Left.Value)
                             score += 8;
+
                         if (test.Right.Type == requirement.Right.Type)
                             score += 5;
+                        else
+                            score--;
+
                         if (test.Right.Size == requirement.Right.Size)
                             score += 3;
+                        else
+                            score--;
+
                         if (test.Right.Value == requirement.Right.Value)
                             score += 8;
 
