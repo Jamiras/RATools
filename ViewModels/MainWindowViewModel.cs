@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -42,6 +43,16 @@ namespace RATools.ViewModels
                     _recentFiles.Add(item);
                 RecentFiles = list.ToArray();
             }
+
+            var logService = ServiceRepository.Instance.FindService<ILogService>();
+            var logger = new FileLogger("RATools.log");
+            logService.Loggers.Add(logger);
+            logService.IsTimestampLogged = true;
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            if (version.EndsWith(".0"))
+                version = version.Substring(0, version.Length - 2);
+            logger.Write("RATools v" + version);
 
             return true;
         }
@@ -98,6 +109,9 @@ namespace RATools.ViewModels
                 return;
             }
 
+            var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
+            logger.WriteVerbose("Opening " + filename);
+
             var parser = new AchievementScriptInterpreter();
 
             using (var stream = File.OpenRead(filename))
@@ -106,23 +120,33 @@ namespace RATools.ViewModels
 
                 if (parser.Run(Tokenizer.CreateTokenizer(stream)))
                 {
+                    logger.WriteVerbose("Game ID: " + parser.GameId);
+                    logger.WriteVerbose("Generated " + parser.Achievements.Count() + " achievements");
+                    if (!String.IsNullOrEmpty(parser.RichPresence))
+                        logger.WriteVerbose("Generated Rich Presence");
+                    if (parser.Leaderboards.Count() > 0)
+                        logger.WriteVerbose("Generated " + parser.Leaderboards.Count() + " leaderboards");
+
                     CurrentFile = filename;
 
                     foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
                     {
-                        var notesFile = Path.Combine(directory.ToString(), parser.GameId + "-Notes2.txt");
+                        var notesFile = Path.Combine(directory, parser.GameId + "-Notes2.txt");
                         if (File.Exists(notesFile))
                         {
+                            logger.WriteVerbose("Found code notes in " + directory);
                             Game = new GameViewModel(parser, directory.ToString());
                             return;
                         }
                     }
 
+                    logger.WriteVerbose("Could not find code notes");
                     MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
                     return;
                 }
                 else if (parser.GameId != 0)
                 {
+                    logger.WriteVerbose("Game ID: " + parser.GameId);
                     CurrentFile = filename;
 
                     if (!String.IsNullOrEmpty(parser.GameTitle))
@@ -132,6 +156,7 @@ namespace RATools.ViewModels
                 }
             }
 
+            logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
             MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
         }
 
@@ -179,6 +204,9 @@ namespace RATools.ViewModels
 
             if (vm.ShowSaveFileDialog() != DialogResult.Ok)
                 return;
+
+            var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
+            logger.WriteVerbose("Dumping to file " + vm.FileNames[0]);
 
             using (var stream = File.CreateText(vm.FileNames[0]))
             {

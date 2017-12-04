@@ -1,10 +1,10 @@
 ﻿using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.IO.Serialization;
+using Jamiras.Services;
 using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -71,6 +71,9 @@ namespace RATools.ViewModels
                 }
             }
 
+            _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
+            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
+
             var achievements = new List<GeneratedItemViewModelBase>(parser.Achievements.Count());
             foreach (var achievement in parser.Achievements)
             {
@@ -104,7 +107,8 @@ namespace RATools.ViewModels
         }
 
         private LocalAchievements _localAchievements;
-        private bool _isN64;
+        private readonly bool _isN64;
+        private readonly ILogger _logger;
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
@@ -126,6 +130,11 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement)
         {
+            if (localAchievement != null)
+                _logger.WriteVerbose(String.Format("Updating {0} in local achievements", achievement.Title));
+            else
+                _logger.WriteVerbose(String.Format("Committing {0} to local achievements", achievement.Title));
+
             var previous = _localAchievements.Replace(localAchievement, achievement);
             if (previous != null)
             {
@@ -226,6 +235,8 @@ namespace RATools.ViewModels
 
                 PublishedAchievementCount = count;
                 PublishedAchievementPoints = points;
+
+                _logger.WriteVerbose(String.Format("Merged {0} published achievements ({1} points)", count, points));
             }
         }
 
@@ -274,6 +285,8 @@ namespace RATools.ViewModels
 
             PublishedAchievementCount = count;
             PublishedAchievementPoints = points;
+
+            _logger.WriteVerbose(String.Format("Merged {0} published achievements ({1} points)", count, points));
         }
 
         private void MergeLocal(int gameId, List<GeneratedItemViewModelBase> achievements)
@@ -313,6 +326,8 @@ namespace RATools.ViewModels
 
             LocalAchievementCount = _localAchievements.Achievements.Count();
             LocalAchievementPoints = _localAchievements.Achievements.Sum(a => a.Points);
+
+            _logger.WriteVerbose(String.Format("Merged {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
         }
     }
 }
