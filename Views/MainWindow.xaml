@@ -46,6 +46,9 @@
                 <Separator />
                 <MenuItem Header="_Exit" Command="{Binding ExitCommand}" />
             </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="_Hexadecimal Values" IsCheckable="True" IsChecked="{Binding ShowHexValues}" />
+            </MenuItem>
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />
                 <MenuItem Header="Game _Stats" Command="{Binding GameStatsCommand}" />

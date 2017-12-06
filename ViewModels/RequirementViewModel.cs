@@ -9,13 +9,13 @@ namespace RATools.ViewModels
 {
     public class RequirementViewModel : ViewModelBase
     {
-        public RequirementViewModel(Requirement requirement, IDictionary<int, string> notes)
+        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<int, string> notes)
         {
             Requirement = requirement;
 
             if (requirement != null)
             {
-                Definition = requirement.ToString();
+                UpdateDefinition(numberFormat);
 
                 if (requirement.Right.Type == FieldType.Value ||
                     (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
@@ -92,5 +92,18 @@ namespace RATools.ViewModels
         }        
 
         public string Notes { get; private set; }
+
+        internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            if (Requirement != null)
+                UpdateDefinition((bool)e.NewValue ? NumberFormat.Hexadecimal : NumberFormat.Decimal);
+        }
+
+        private void UpdateDefinition(NumberFormat numberFormat)
+        {
+            var builder = new StringBuilder();
+            Requirement.AppendString(builder, numberFormat);
+            Definition = builder.ToString();
+        }
     }
 }

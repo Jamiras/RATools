@@ -32,13 +32,66 @@ namespace RATools.Data
         /// </summary>
         public override string ToString()
         {
+            var builder = new StringBuilder();
+            AppendString(builder, NumberFormat.Decimal);
+            return builder.ToString();
+        }
+
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder"/>.
+        /// </summary>
+        internal void AppendString(StringBuilder builder, NumberFormat numberFormat)
+        {
             if (Type == FieldType.None)
-                return "none";
+            {
+                builder.Append("none");
+                return;
+            }
 
             if (Type == FieldType.Value)
-                return Value.ToString();
+            {
+                if (numberFormat == NumberFormat.Decimal)
+                {
+                    builder.Append(Value);
+                }
+                else
+                {
+                    builder.Append("0x");
+                    switch (Size)
+                    {
+                        case FieldSize.Bit0:
+                        case FieldSize.Bit1:
+                        case FieldSize.Bit2:
+                        case FieldSize.Bit3:
+                        case FieldSize.Bit4:
+                        case FieldSize.Bit5:
+                        case FieldSize.Bit6:
+                        case FieldSize.Bit7:
+                            builder.Append(Value);
+                            break;
 
-            var builder = new StringBuilder();
+                        case FieldSize.LowNibble:
+                        case FieldSize.HighNibble:
+                            builder.AppendFormat("{0:X1}", Value);
+                            break;
+
+                        case FieldSize.Byte:
+                            builder.AppendFormat("{0:X2}", Value);
+                            break;
+
+                        case FieldSize.Word:
+                            builder.AppendFormat("{0:X4}", Value);
+                            break;
+
+                        case FieldSize.DWord:
+                            builder.AppendFormat("{0:X8}", Value);
+                            break;
+                    }
+                }
+
+                return;
+            }
+
             if (Type == FieldType.PreviousValue)
                 builder.Append("prev(");
 
@@ -65,8 +118,6 @@ namespace RATools.Data
 
             if (Type == FieldType.PreviousValue)
                 builder.Append(')');
-
-            return builder.ToString();
         }
 
         /// <summary>
@@ -261,6 +312,22 @@ namespace RATools.Data
         {
             return !left.Equals(right);
         }
+    }
+
+    /// <summary>
+    /// Supported number formats
+    /// </summary>
+    public enum NumberFormat
+    {
+        /// <summary>
+        /// Display values as decimal numbers.
+        /// </summary>
+        Decimal,
+
+        /// <summary>
+        /// Display values as hexadecimal numbers.
+        /// </summary>
+        Hexadecimal,
     }
 
     /// <summary>

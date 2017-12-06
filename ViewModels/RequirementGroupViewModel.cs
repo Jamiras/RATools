@@ -1,4 +1,5 @@
-﻿using Jamiras.ViewModels;
+﻿using Jamiras.DataModels;
+using Jamiras.ViewModels;
 using RATools.Data;
 using System.Collections.Generic;
 
@@ -6,18 +7,18 @@ namespace RATools.ViewModels
 {
     public class RequirementGroupViewModel : ViewModelBase
     {
-        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IDictionary<int, string> notes)
+        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, NumberFormat numberFormat, IDictionary<int, string> notes)
         {
             Label = label;
 
             var list = new List<RequirementViewModel>();
             foreach (var requirement in requirements)
-                list.Add(new RequirementViewModel(requirement, notes));
+                list.Add(new RequirementViewModel(requirement, numberFormat, notes));
 
             Requirements = list;
         }
 
-        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, IDictionary<int, string> notes)
+        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, NumberFormat numberFormat, IDictionary<int, string> notes)
         {
             Label = label;
 
@@ -120,16 +121,22 @@ namespace RATools.ViewModels
             {
                 Requirement match;
                 matches.TryGetValue(requirement, out match);
-                list.Add(new RequirementComparisonViewModel(requirement, match, notes));
+                list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
             }
 
             foreach (var requirement in unmatchedCompareRequirements)
-                list.Add(new RequirementComparisonViewModel(null, requirement, notes));
+                list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
 
             Requirements = list;
         }
 
         public string Label { get; private set; }
         public IEnumerable<RequirementViewModel> Requirements { get; private set; }
+
+        internal void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            foreach (var requirement in Requirements)
+                requirement.OnShowHexValuesChanged(e);
+        }
     }
 }

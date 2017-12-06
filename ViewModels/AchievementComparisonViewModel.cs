@@ -1,5 +1,7 @@
-﻿using Jamiras.DataModels;
+﻿using Jamiras.Components;
+using Jamiras.DataModels;
 using RATools.Data;
+using RATools.Services;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -23,9 +25,11 @@ namespace RATools.ViewModels
             if (_compareAchievement == null)
                 return base.BuildRequirementGroups();
 
+            var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+
             var coreRequirements = Achievement != null ? Achievement.CoreRequirements : new Requirement[0];
             var groups = new List<RequirementGroupViewModel>();
-            groups.Add(new RequirementGroupViewModel("Core", coreRequirements, _compareAchievement.CoreRequirements, _owner.Notes));
+            groups.Add(new RequirementGroupViewModel("Core", coreRequirements, _compareAchievement.CoreRequirements, numberFormat, _owner.Notes));
 
             int i = 0;
             var altCompareEnumerator = _compareAchievement.AlternateRequirements.GetEnumerator();
@@ -38,14 +42,14 @@ namespace RATools.ViewModels
                     i++;
 
                     IEnumerable<Requirement> altCompareRequirements = altCompareEnumerator.MoveNext() ? altCompareEnumerator.Current : new Requirement[0];
-                    groups.Add(new RequirementGroupViewModel("Alt " + i, altEnumerator.Current, altCompareRequirements, _owner.Notes));
+                    groups.Add(new RequirementGroupViewModel("Alt " + i, altEnumerator.Current, altCompareRequirements, numberFormat, _owner.Notes));
                 }
             }
 
             while (altCompareEnumerator.MoveNext())
             {
                 i++;
-                groups.Add(new RequirementGroupViewModel("Alt " + i, new Requirement[0], altCompareEnumerator.Current, _owner.Notes));
+                groups.Add(new RequirementGroupViewModel("Alt " + i, new Requirement[0], altCompareEnumerator.Current, numberFormat, _owner.Notes));
             }
 
             return groups;

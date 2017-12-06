@@ -42,7 +42,15 @@ namespace RATools.Data
         public override string ToString()
         {
             var builder = new StringBuilder();
+            AppendString(builder, NumberFormat.Decimal);
+            return builder.ToString();
+        }
 
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder"/>.
+        /// </summary>
+        internal void AppendString(StringBuilder builder, NumberFormat numberFormat)
+        {
             if (HitCount == 1)
                 builder.Append("once(");
             else if (HitCount > 0)
@@ -59,7 +67,7 @@ namespace RATools.Data
                     break;
             }
 
-            builder.Append(Left.ToString());
+            Left.AppendString(builder, numberFormat);
 
             switch (Type)
             {
@@ -94,7 +102,7 @@ namespace RATools.Data
             }
 
             if (Operator != RequirementOperator.None)
-                builder.Append(Right.ToString());
+                Right.AppendString(builder, numberFormat);
 
             switch (Type)
             {
@@ -106,8 +114,6 @@ namespace RATools.Data
 
             if (HitCount != 0)
                 builder.Append(')');
-
-            return builder.ToString();
         }
 
         /// <summary>

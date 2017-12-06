@@ -2,13 +2,14 @@
 using RATools.Data;
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.ViewModels
 {
     public class RequirementComparisonViewModel : RequirementViewModel
     {
-        public RequirementComparisonViewModel(Requirement requirement, Requirement compareRequirement, IDictionary<int, string> notes)
-            : base(requirement, notes)
+        public RequirementComparisonViewModel(Requirement requirement, Requirement compareRequirement, NumberFormat numberFormat, IDictionary<int, string> notes)
+            : base(requirement, numberFormat, notes)
         {
             if (compareRequirement == null)
             {
@@ -16,7 +17,8 @@ namespace RATools.ViewModels
             }
             else
             {
-                OtherDefinition = compareRequirement.ToString();
+                CompareRequirement = compareRequirement;
+                UpdateOtherDefinition(numberFormat);
 
                 if (!compareRequirement.Equals(requirement))
                     IsModified = true;
@@ -37,6 +39,21 @@ namespace RATools.ViewModels
         {
             get { return (string)GetValue(OtherDefinitionProperty); }
             private set { SetValue(OtherDefinitionProperty, value); }
+        }
+
+        internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            base.OnShowHexValuesChanged(e);
+
+            if (CompareRequirement != null)
+                UpdateOtherDefinition((bool)e.NewValue ? NumberFormat.Hexadecimal : NumberFormat.Decimal);
+        }
+
+        private void UpdateOtherDefinition(NumberFormat numberFormat)
+        {
+            var builder = new StringBuilder();
+            CompareRequirement.AppendString(builder, numberFormat);
+            OtherDefinition = builder.ToString();
         }
     }
 }

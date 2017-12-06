@@ -32,7 +32,9 @@ namespace RATools.ViewModels
 
         public bool Initialize()
         {
-            ServiceRepository.Instance.RegisterInstance<ISettings>(new Settings());
+            var settings = new Settings();
+            ServiceRepository.Instance.RegisterInstance<ISettings>(settings);
+            ShowHexValues = settings.HexValues;
 
             var persistance = ServiceRepository.Instance.FindService<IPersistantDataRepository>();
             var recent = persistance.GetValue("RecentFiles");
@@ -299,6 +301,24 @@ namespace RATools.ViewModels
                             break;
                     }
                 }
+            }
+        }
+
+        public static readonly ModelProperty ShowHexValuesProperty = ModelProperty.Register(typeof(MainWindowViewModel), "ShowHexValues", typeof(bool), false, OnShowHexValuesChanged);
+        public bool ShowHexValues
+        {
+            get { return (bool)GetValue(ShowHexValuesProperty); }
+            set { SetValue(ShowHexValuesProperty, value); }
+        }
+
+        private static void OnShowHexValuesChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            ServiceRepository.Instance.FindService<ISettings>().HexValues = (bool)e.NewValue;
+            var vm = (MainWindowViewModel)sender;
+            if (vm.Game != null)
+            {
+                foreach (var achievement in vm.Game.Achievements)
+                    achievement.OnShowHexValuesChanged(e);
             }
         }
 

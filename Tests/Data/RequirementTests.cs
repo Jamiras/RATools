@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using RATools.Data;
+using System.Text;
 
 namespace RATools.Tests.Data
 {
@@ -58,6 +59,36 @@ namespace RATools.Tests.Data
             };
 
             Assert.That(requirement.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "byte(0x001234) == 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.NotEqual, TestField.Value99, 0, "byte(0x001234) != 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.LessThan, TestField.Value99, 0, "byte(0x001234) < 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.LessThanOrEqual, TestField.Value99, 0, "byte(0x001234) <= 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.GreaterThan, TestField.Value99, 0, "byte(0x001234) > 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.GreaterThanOrEqual, TestField.Value99, 0, "byte(0x001234) >= 0x63")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Byte2345, 0, "byte(0x001234) == byte(0x002345)")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 1, "once(byte(0x001234) == 0x63)")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 2, "repeated(2, byte(0x001234) == 0x63)")]
+        [TestCase(RequirementType.ResetIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "never(byte(0x001234) == 0x63)")]
+        [TestCase(RequirementType.PauseIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "unless(byte(0x001234) == 0x63)")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) + ")]
+        [TestCase(RequirementType.SubSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) - ")]
+        public void TestAppendStringHex(RequirementType requirementType, TestField left, RequirementOperator requirementOperator, TestField right, int hitCount, string expected)
+        {
+            var requirement = new Requirement
+            {
+                Type = requirementType,
+                Left = GetField(left),
+                Operator = requirementOperator,
+                Right = GetField(right),
+                HitCount = (ushort)hitCount
+            };
+
+            var builder = new StringBuilder();
+            requirement.AppendString(builder, NumberFormat.Hexadecimal);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
         [Test]

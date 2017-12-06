@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Data;
+using System;
 using System.Text;
 
 namespace RATools.Tests.Data
@@ -29,6 +30,33 @@ namespace RATools.Tests.Data
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
             Assert.That(field.ToString(), Is.EqualTo(expected));
+        }
+
+        [TestCase(FieldSize.Bit0, 0, "0x0")]
+        [TestCase(FieldSize.Bit0, 1, "0x1")]
+        [TestCase(FieldSize.Bit1, 1, "0x1")]
+        [TestCase(FieldSize.Bit2, 1, "0x1")]
+        [TestCase(FieldSize.Bit3, 1, "0x1")]
+        [TestCase(FieldSize.Bit4, 1, "0x1")]
+        [TestCase(FieldSize.Bit5, 1, "0x1")]
+        [TestCase(FieldSize.Bit6, 1, "0x1")]
+        [TestCase(FieldSize.Bit7, 1, "0x1")]
+        [TestCase(FieldSize.LowNibble, 0, "0x0")]
+        [TestCase(FieldSize.LowNibble, 15, "0xF")]
+        [TestCase(FieldSize.HighNibble, 0, "0x0")]
+        [TestCase(FieldSize.HighNibble, 15, "0xF")]
+        [TestCase(FieldSize.Byte, 0, "0x00")]
+        [TestCase(FieldSize.Byte, 255, "0xFF")]
+        [TestCase(FieldSize.Word, 0, "0x0000")]
+        [TestCase(FieldSize.Word, 65535, "0xFFFF")]
+        [TestCase(FieldSize.DWord, 0, "0x00000000")]
+        [TestCase(FieldSize.DWord, Int32.MaxValue, "0x7FFFFFFF")]
+        public void TestAppendStringHex(FieldSize fieldSize, int value, string expected)
+        {
+            var field = new Field { Size = fieldSize, Type = FieldType.Value, Value = (uint)value };
+            var builder = new StringBuilder();
+            field.AppendString(builder, NumberFormat.Hexadecimal);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
         [Test]

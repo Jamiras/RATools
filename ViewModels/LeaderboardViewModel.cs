@@ -3,7 +3,9 @@ using Jamiras.Components;
 using Jamiras.Services;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Services;
 using System.Collections.Generic;
+using Jamiras.DataModels;
 
 namespace RATools.ViewModels
 {
@@ -57,9 +59,11 @@ namespace RATools.ViewModels
             {
                 Label = label;
 
+                var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+
                 var conditions = new List<RequirementViewModel>();
                 foreach (var requirement in requirements)
-                    conditions.Add(new RequirementViewModel(requirement, notes));
+                    conditions.Add(new RequirementViewModel(requirement, numberFormat, notes));
                 Conditions = conditions;
             }
 
@@ -117,8 +121,21 @@ namespace RATools.ViewModels
             public string Label { get; private set; }
             public IEnumerable<RequirementViewModel> Conditions { get; private set; }
             public CommandBase CopyToClipboardCommand { get; set; }
+
+            internal void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+            {
+                foreach (var condition in Conditions)
+                    condition.OnShowHexValuesChanged(e);
+            }
         }
 
         public IEnumerable<LeaderboardGroupViewModel> Groups { get; private set; }
+
+        internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            foreach (var group in Groups)
+                group.OnShowHexValuesChanged(e);
+            base.OnShowHexValuesChanged(e);
+        }
     }
 }

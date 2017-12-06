@@ -146,5 +146,15 @@ namespace RATools.ViewModels
             OnPropertyChanged(() => Local);
             OnPropertyChanged(() => LocalModified);
         }
+
+        internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            Generated.OnShowHexValuesChanged(e);
+            Local.OnShowHexValuesChanged(e);
+            Unofficial.OnShowHexValuesChanged(e);
+            Core.OnShowHexValuesChanged(e);
+
+            base.OnShowHexValuesChanged(e);
+        }
     }
 }

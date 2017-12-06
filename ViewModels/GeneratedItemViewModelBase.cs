@@ -43,6 +43,8 @@ namespace RATools.ViewModels
         public virtual bool IsGenerated { get { return false; } }
 
         public CommandBase UpdateLocalCommand { get; protected set; }
+
+        internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e) { }
     }
 
     public enum ModifiedState

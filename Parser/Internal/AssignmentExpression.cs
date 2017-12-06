@@ -30,7 +30,6 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
-        /// <param name="builder"></param>
         internal override void AppendString(StringBuilder builder)
         {
             Variable.AppendString(builder);

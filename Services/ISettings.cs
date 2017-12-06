@@ -13,5 +13,10 @@ namespace RATools.Services
         /// Gets the name of the user.
         /// </summary>
         string UserName { get; }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether values should be displayed in hexadecimal.
+        /// </summary>
+        bool HexValues { get; set; }
     }
 }

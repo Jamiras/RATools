@@ -1,7 +1,9 @@
-﻿using Jamiras.DataModels;
+﻿using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
 using RATools.Data;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -96,13 +98,15 @@ namespace RATools.ViewModels
 
         protected virtual List<RequirementGroupViewModel> BuildRequirementGroups()
         {
+            var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+
             var groups = new List<RequirementGroupViewModel>();
-            groups.Add(new RequirementGroupViewModel("Core", Achievement.CoreRequirements, _owner.Notes));
+            groups.Add(new RequirementGroupViewModel("Core", Achievement.CoreRequirements, numberFormat, _owner.Notes));
             int i = 0;
             foreach (var alt in Achievement.AlternateRequirements)
             {
                 i++;
-                groups.Add(new RequirementGroupViewModel("Alt " + i, alt, _owner.Notes));
+                groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, _owner.Notes));
             }
 
             return groups;
@@ -125,6 +129,15 @@ namespace RATools.ViewModels
             {
                 foreach (var group in _requirementGroups)
                     yield return group;
+            }
+        }
+
+        internal void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        {
+            if (_requirementGroups != null)
+            {
+                foreach (var group in _requirementGroups)
+                    group.OnShowHexValuesChanged(e);
             }
         }
     }
