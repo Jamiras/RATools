@@ -1,6 +1,7 @@
 v1.1.0 - TBD
 * add "Hexadecimal Values" toggle
 * add F5 shortcut for "Refresh Current"
+* add "Dump Published" dialog to select achievements to dump and provide simple function definitions
 
 v1.0.1 - 3 Dec 2017
 * prevent exception if no recent files exist
