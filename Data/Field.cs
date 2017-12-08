@@ -95,29 +95,52 @@ namespace RATools.Data
             if (Type == FieldType.PreviousValue)
                 builder.Append("prev(");
 
-            switch (Size)
-            {
-                case FieldSize.Bit0: builder.Append("bit0"); break;
-                case FieldSize.Bit1: builder.Append("bit1"); break;
-                case FieldSize.Bit2: builder.Append("bit2"); break;
-                case FieldSize.Bit3: builder.Append("bit3"); break;
-                case FieldSize.Bit4: builder.Append("bit4"); break;
-                case FieldSize.Bit5: builder.Append("bit5"); break;
-                case FieldSize.Bit6: builder.Append("bit6"); break;
-                case FieldSize.Bit7: builder.Append("bit7"); break;
-                case FieldSize.LowNibble: builder.Append("low4"); break;
-                case FieldSize.HighNibble: builder.Append("high4"); break;
-                case FieldSize.Byte: builder.Append("byte"); break;
-                case FieldSize.Word: builder.Append("word"); break;
-                case FieldSize.DWord: builder.Append("dword"); break;
-            }
-
-            builder.Append("(0x");
-            builder.AppendFormat("{0:X6}", Value);
-            builder.Append(')');
+            AppendMemoryReference(builder, Value, Size);
 
             if (Type == FieldType.PreviousValue)
                 builder.Append(')');
+        }
+
+        /// <summary>
+        /// Gets a string representing the function call to reference the specified memory.
+        /// </summary>
+        public static string GetMemoryReference(uint address, FieldSize size)
+        {
+            var builder = new StringBuilder();
+            AppendMemoryReference(builder, address, size);
+            return builder.ToString();
+        }
+
+        private static void AppendMemoryReference(StringBuilder builder, uint address, FieldSize size)
+        {
+            builder.Append(GetSizeFunction(size));
+            builder.Append("(0x");
+            builder.AppendFormat("{0:X6}", address);
+            builder.Append(')');
+        }
+
+        /// <summary>
+        /// Gets a string representing the function call for retrieving the specified amount of memory.
+        /// </summary>
+        public static string GetSizeFunction(FieldSize size)
+        {
+            switch (size)
+            {
+                case FieldSize.Bit0: return "bit0";
+                case FieldSize.Bit1: return "bit1";
+                case FieldSize.Bit2: return "bit2";
+                case FieldSize.Bit3: return "bit3";
+                case FieldSize.Bit4: return "bit4";
+                case FieldSize.Bit5: return "bit5";
+                case FieldSize.Bit6: return "bit6";
+                case FieldSize.Bit7: return "bit7";
+                case FieldSize.LowNibble: return "low4";
+                case FieldSize.HighNibble: return "high4";
+                case FieldSize.Byte: return "byte";
+                case FieldSize.Word: return "word";
+                case FieldSize.DWord: return "dword";
+                default: return size.ToString();
+            }
         }
 
         /// <summary>

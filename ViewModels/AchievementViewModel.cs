@@ -13,7 +13,7 @@ using System.Windows.Media.Imaging;
 
 namespace RATools.ViewModels
 {
-    [DebuggerDisplay("{Title}")]
+    [DebuggerDisplay("{Title.Text} ({Points.Text} points)")]
     public class AchievementViewModel : ViewModelBase, ICompositeViewModel
     {
         public AchievementViewModel(GameViewModel owner)
