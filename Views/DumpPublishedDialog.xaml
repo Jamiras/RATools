@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:RATools.Views"
-             mc:Ignorable="d" Width="960" Height="480"
+             mc:Ignorable="d" Width="960" Height="488"
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -14,17 +14,24 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" MinWidth="240" />
+            <ColumnDefinition Width="270" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <ListView ItemsSource="{Binding Achievements}" Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <TextBlock Margin="4,0,0,0" FontSize="11" Text="Achievements to dump" />
+        <TextBlock Margin="0,0,24,0" FontSize="11" Text="Open Tickets" HorizontalAlignment="Right" />
+        <ListView Grid.Row="1" ItemsSource="{Binding Achievements}" Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="20" />
+                            <ColumnDefinition Width="16" />
                             <ColumnDefinition Width="200" />
                             <ColumnDefinition Width="20" />
                         </Grid.ColumnDefinitions>
@@ -45,7 +52,14 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+        <UniformGrid Grid.Row="2" Columns="3">
+            <Button Content="_All" Margin="2" Command="{Binding CheckAllCommand}" />
+            <Button Content="_None" Margin="2" Command="{Binding UncheckAllCommand}" />
+            <Button Content="With _Tickets" Margin="2" Command="{Binding CheckWithTicketsCommand}" />
+        </UniformGrid>
 
-        <ContentPresenter Grid.Column="1" Content="{Binding MemoryAddresses}" />
+        <TextBlock Grid.Column="1" Margin="4,0,0,0" FontSize="11" Text="Referenced memory addresses" />
+        <ContentPresenter Grid.Row="1" Grid.Column="1" Content="{Binding MemoryAddresses}" />
+        <Button Grid.Row="2" Grid.Column="1" Margin="2" HorizontalAlignment="Right" Content="_Dump" Width="80" Command="{Binding OkCommand}" />
     </Grid>
 </UserControl>

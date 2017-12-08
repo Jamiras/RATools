@@ -48,6 +48,20 @@ namespace RATools.Services
             return GetPage(filename, url);
         }
 
+        public string GetOpenTicketsForGame(int gameId)
+        {
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTickets{0}.html", gameId));
+            var url = "http://retroachievements.org/ticketmanager.php?ampt=1&g=" + gameId;
+            return GetPage(filename, url);
+        }
+
+        public string GetTicketPage(int ticketId)
+        {
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTicket{0}.html", ticketId));
+            var url = "http://retroachievements.org/ticketmanager.php?i=" + ticketId;
+            return GetPage(filename, url);
+        }
+
         private string GetPage(string filename, string url)
         {
             bool fileValid = false;

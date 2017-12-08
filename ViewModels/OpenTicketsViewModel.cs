@@ -127,59 +127,7 @@ namespace RATools.ViewModels
                 if (ticketsPage == null)
                     return;
 
-                var tokenizer = Tokenizer.CreateTokenizer(ticketsPage);
-
-                pageTickets = 0;
-                do
-                {
-                    tokenizer.ReadTo("<a href='/ticketmanager.php?i=");
-                    if (tokenizer.NextChar == '\0')
-                        break;
-
-                    tokenizer.ReadTo("'>");
-                    tokenizer.Advance(2);
-                    if (tokenizer.Match("Show"))
-                        continue;
-
-                    var ticketId = Int32.Parse(tokenizer.ReadNumber().ToString());
-
-                    tokenizer.ReadTo("<a href='/Game/");
-                    tokenizer.Advance(15);
-                    var gameId = Int32.Parse(tokenizer.ReadNumber().ToString());
-
-                    GameTickets gameTickets;
-                    if (!games.TryGetValue(gameId, out gameTickets))
-                    {
-                        gameTickets = new GameTickets { GameId = gameId };
-
-                        tokenizer.ReadTo("/>");
-                        tokenizer.Advance(2);
-                        gameTickets.GameName = tokenizer.ReadTo("</a>").ToString();
-
-                        games[gameId] = gameTickets;
-                    }
-
-                    tokenizer.ReadTo("<a href='/Achievement/");
-                    tokenizer.Advance(22);
-                    var achievementId = Int32.Parse(tokenizer.ReadNumber().ToString());
-
-                    AchievementTickets achievementTickets;
-                    if (!tickets.TryGetValue(achievementId, out achievementTickets))
-                    {
-                        achievementTickets = new AchievementTickets { AchievementId = achievementId, Game = gameTickets };
-
-                        tokenizer.ReadTo("/>");
-                        tokenizer.Advance(2);
-                        achievementTickets.AchievementName = tokenizer.ReadTo("</a>").ToString();
-
-                        tickets[achievementId] = achievementTickets;
-                    }
-
-                    achievementTickets.OpenTickets.Add(ticketId);
-                    gameTickets.OpenTickets++;
-
-                    ++pageTickets;
-                } while (true);
+                pageTickets = GetPageTickets(games, tickets, ticketsPage);
 
                 ++page;
                 totalTickets += pageTickets;
@@ -218,6 +166,84 @@ namespace RATools.ViewModels
             DialogTitle = "Open Tickets: " + totalTickets;
 
             Progress.Label = String.Empty;
+        }
+
+        /// <summary>
+        /// Gets the open tickets for the specified game.
+        /// </summary>
+        /// <param name="gameId">The game identifier.</param>
+        /// <returns>Mapping of achievement id to ticket data, or <c>null</c> if the data cannot be retrieved.</returns>
+        public static Dictionary<int, AchievementTickets> GetGameTickets(int gameId)
+        {
+            var ticketsPage = RAWebCache.Instance.GetOpenTicketsForGame(gameId);
+            if (ticketsPage == null)
+                return null;
+
+            var games = new Dictionary<int, GameTickets>();
+            var tickets = new Dictionary<int, AchievementTickets>();
+
+            GetPageTickets(games, tickets, ticketsPage);
+
+            return tickets;
+        }
+
+        private static int GetPageTickets(Dictionary<int, GameTickets> games, Dictionary<int, AchievementTickets> tickets, string ticketsPage)
+        {
+            int pageTickets;
+            var tokenizer = Tokenizer.CreateTokenizer(ticketsPage);
+
+            pageTickets = 0;
+            do
+            {
+                tokenizer.ReadTo("<a href='/ticketmanager.php?i=");
+                if (tokenizer.NextChar == '\0')
+                    break;
+
+                tokenizer.ReadTo("'>");
+                tokenizer.Advance(2);
+                if (tokenizer.Match("Show"))
+                    continue;
+
+                var ticketId = Int32.Parse(tokenizer.ReadNumber().ToString());
+
+                tokenizer.ReadTo("<a href='/Game/");
+                tokenizer.Advance(15);
+                var gameId = Int32.Parse(tokenizer.ReadNumber().ToString());
+
+                GameTickets gameTickets;
+                if (!games.TryGetValue(gameId, out gameTickets))
+                {
+                    gameTickets = new GameTickets { GameId = gameId };
+
+                    tokenizer.ReadTo("/>");
+                    tokenizer.Advance(2);
+                    gameTickets.GameName = tokenizer.ReadTo("</a>").ToString();
+
+                    games[gameId] = gameTickets;
+                }
+
+                tokenizer.ReadTo("<a href='/Achievement/");
+                tokenizer.Advance(22);
+                var achievementId = Int32.Parse(tokenizer.ReadNumber().ToString());
+
+                AchievementTickets achievementTickets;
+                if (!tickets.TryGetValue(achievementId, out achievementTickets))
+                {
+                    achievementTickets = new AchievementTickets { AchievementId = achievementId, Game = gameTickets };
+
+                    tokenizer.ReadTo("/>");
+                    tokenizer.Advance(2);
+                    achievementTickets.AchievementName = tokenizer.ReadTo("</a>").ToString();
+
+                    tickets[achievementId] = achievementTickets;
+                }
+
+                achievementTickets.OpenTickets.Add(ticketId);
+                gameTickets.OpenTickets++;
+
+                ++pageTickets;
+            } while (true);
+            return pageTickets;
         }
     }
 }

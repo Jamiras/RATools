@@ -1,4 +1,5 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.DataModels.Metadata;
 using Jamiras.Services;
@@ -6,6 +7,7 @@ using Jamiras.ViewModels;
 using Jamiras.ViewModels.Converters;
 using Jamiras.ViewModels.Grid;
 using RATools.Data;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -22,10 +24,16 @@ namespace RATools.ViewModels
             DialogTitle = game.Title + " - Dump Published";
             OkButtonText = "_Dump";
             CancelButtonText = "_Close";
+            CanClose = true;
+
+            CheckAllCommand = new DelegateCommand(CheckAll);
+            UncheckAllCommand = new DelegateCommand(UncheckAll);
+            CheckWithTicketsCommand = new DelegateCommand(CheckWithTickets);
 
             _game = game;
             _achievements = new List<DumpAchievementItem>();
             _memoryItems = new List<MemoryItem>();
+            _ticketNotes = new TinyDictionary<int, string>();
 
             foreach (var achievement in game.Achievements.OfType<GeneratedAchievementViewModel>())
             {
@@ -62,14 +70,43 @@ namespace RATools.ViewModels
             }
 
             MemoryAddresses = new GridViewModel();
-            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => a.ToString(), null)) { Width = 60 });
+            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
             MemoryAddresses.Columns.Add(new TextColumnDefinition("Function Name", MemoryItem.FunctionNameProperty, new StringFieldMetadata("Function Name", 40, StringFieldAttributes.Required)) { Width = 120 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Notes", MemoryItem.NotesProperty));
 
             UpdateMemoryGrid();
 
-            // TODO: query and merge open tickets
+            ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
+        }
+
+        private void MergeOpenTickets()
+        {
+            var openTickets = new List<int>();
+
+            var tickets = OpenTicketsViewModel.GetGameTickets(_game.GameId);
+            foreach (var kvp in tickets)
+            {
+                var achievement = _achievements.FirstOrDefault(a => a.Id == kvp.Key);
+                if (achievement != null)
+                {
+                    openTickets.AddRange(kvp.Value.OpenTickets);
+                    achievement.OpenTickets.AddRange(kvp.Value.OpenTickets);
+                    achievement.RaiseOpenTicketCountChanged();
+                }
+            }
+
+            foreach (var ticket in openTickets)
+            {
+                var ticketPage = RAWebCache.Instance.GetTicketPage(ticket);
+                var tokenizer = Tokenizer.CreateTokenizer(ticketPage);
+                tokenizer.ReadTo("<td>Notes: </td>");
+                tokenizer.ReadTo("<code>");
+                tokenizer.Advance(6);
+
+                var notes = tokenizer.ReadTo("</code>").ToString();
+                _ticketNotes[ticket] = notes.ToString();
+            }
         }
 
         private MemoryItem AddMemoryAddress(Field field)
@@ -100,6 +137,7 @@ namespace RATools.ViewModels
         }
 
         private readonly GameViewModel _game;
+        private readonly TinyDictionary<int, string> _ticketNotes;
         
         public class DumpAchievementItem : LookupItem
         {
@@ -116,6 +154,11 @@ namespace RATools.ViewModels
             }
             internal List<int> OpenTickets { get; private set; }
 
+            internal void RaiseOpenTicketCountChanged()
+            {
+                OnPropertyChanged(() => OpenTicketCount);
+            }
+
             internal List<MemoryItem> MemoryAddresses { get; private set; }
         }
 
@@ -129,6 +172,27 @@ namespace RATools.ViewModels
         {
             if (e.PropertyName == "IsSelected")
                 UpdateMemoryGrid();
+        }
+
+        public CommandBase CheckAllCommand { get; private set; }
+        private void CheckAll()
+        {
+            foreach (var achievment in _achievements)
+                achievment.IsSelected = true;
+        }
+
+        public CommandBase UncheckAllCommand { get; private set; }
+        private void UncheckAll()
+        {
+            foreach (var achievment in _achievements)
+                achievment.IsSelected = false;
+        }
+
+        public CommandBase CheckWithTicketsCommand { get; private set; }
+        private void CheckWithTickets()
+        {
+            foreach (var achievment in _achievements)
+                achievment.IsSelected = (achievment.OpenTicketCount > 0);
         }
 
         public GridViewModel MemoryAddresses { get; private set; }
@@ -293,6 +357,18 @@ namespace RATools.ViewModels
                     var achievement = _game.Achievements.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
                     if (achievement == null)
                         continue;
+
+                    foreach (var ticket in dumpAchievement.OpenTickets)
+                    {
+                        string notes;
+                        if (_ticketNotes.TryGetValue(ticket, out notes))
+                        {
+                            stream.Write("// ");
+                            stream.Write(ticket);
+                            stream.Write(": ");
+                            stream.WriteLine(notes.Replace("\n", "\n//        "));
+                        }
+                    }
 
                     stream.WriteLine("achievement(");
 
