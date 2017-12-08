@@ -21,6 +21,7 @@ namespace RATools.ViewModels
         {
             ExitCommand = new DelegateCommand(Exit);
             CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
+            RefreshCurrentCommand = new DelegateCommand(RefreshCurrent);
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
             DumpPublishedCommand = new DelegateCommand(DumpPublished);
             GameStatsCommand = new DelegateCommand(GameStats);
@@ -100,6 +101,12 @@ namespace RATools.ViewModels
         {
             get { return (IEnumerable<string>)GetValue(RecentFilesProperty); }
             private set { SetValue(RecentFilesProperty, value); }
+        }
+
+        public CommandBase RefreshCurrentCommand { get; private set; }
+        private void RefreshCurrent()
+        {
+            OpenFile(CurrentFile);
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }

@@ -4,6 +4,7 @@ using Jamiras.Services;
 using RATools.ViewModels;
 using System;
 using System.Windows;
+using System.Windows.Input;
 
 namespace RATools.Views
 {
@@ -31,6 +32,8 @@ namespace RATools.Views
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
             DataContext = viewModel;
+
+            InputBindings.Add(new KeyBinding(viewModel.RefreshCurrentCommand, new KeyGesture(Key.F5)));
 
             base.OnInitialized(e);
         }

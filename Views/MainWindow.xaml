@@ -14,7 +14,7 @@
             <MenuItem Header="_File">
                 <MenuItem Header="Compile _Achievements" Command="{Binding CompileAchievementsCommand}" />
                 <Separator />
-                <MenuItem Header="Refresh _Current" Command="{Binding OpenRecentCommand}" CommandParameter="{Binding CurrentFile}">
+                <MenuItem Header="Refresh _Current" Command="{Binding RefreshCurrentCommand}" InputGestureText="F5">
                     <MenuItem.Style>
                         <Style TargetType="{x:Type MenuItem}">
                             <Style.Triggers>
@@ -62,17 +62,17 @@
                 <TextBlock Margin="6,0,6,0">
                     <TextBlock Text="{Binding Game.PublishedAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
                     <Run Text=" published achievements (" />
-                    <TextBlock Text="{Binding Game.PublishedAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0"/>
+                    <TextBlock Text="{Binding Game.PublishedAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0" />
                     <Run Text=")" />
                 </TextBlock>
                 <TextBlock Margin="6,0,6,0" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding Game.LocalAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
                     <Run Text=" local achievements (" />
-                    <TextBlock Text="{Binding Game.LocalAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0"/>
+                    <TextBlock Text="{Binding Game.LocalAchievementPoints, FallbackValue=0}" Margin="-2,0,-2,0" />
                     <Run Text=")" />
                 </TextBlock>
             </Grid>
         </Border>
-        <ContentPresenter Content="{Binding Game}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+        <ContentPresenter Content="{Binding Game}" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" />
     </DockPanel>
 </Window>
