@@ -279,6 +279,7 @@
             <TabItem>
                 <TabItem.Style>
                     <Style TargetType="{x:Type TabItem}">
+                        <Setter Property="Header" Value="Core" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding UnofficialModified}" Value="Unmodified">
                                 <Setter Property="Content" Value="{Binding Unofficial}" />

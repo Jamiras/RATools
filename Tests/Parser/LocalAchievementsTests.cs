@@ -95,6 +95,20 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestReplaceRemove()
+        {
+            var achievements = Initialize("0.099\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
+            Assert.That(achievements.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = achievements.Achievements.First();
+
+            var previous = achievements.Replace(achievement, null);
+            Assert.That(previous, Is.SameAs(achievement));
+
+            Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
         public void TestCommit()
         {
             var memoryStream = new MemoryStream();

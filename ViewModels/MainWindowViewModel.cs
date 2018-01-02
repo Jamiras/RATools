@@ -3,7 +3,6 @@ using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
-using RATools.Data;
 using RATools.Parser;
 using RATools.Services;
 using System;
@@ -24,6 +23,7 @@ namespace RATools.ViewModels
             RefreshCurrentCommand = new DelegateCommand(RefreshCurrent);
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
             DumpPublishedCommand = new DelegateCommand(DumpPublished);
+            UpdateLocalCommand = new DelegateCommand(UpdateLocal);
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
             AboutCommand = new DelegateCommand(About);
@@ -201,6 +201,19 @@ namespace RATools.ViewModels
             }
 
             var dialog = new DumpPublishedDialogViewModel(Game);
+            dialog.ShowDialog();
+        }
+
+        public CommandBase UpdateLocalCommand { get; private set; }
+        private void UpdateLocal()
+        {
+            if (Game == null)
+            {
+                MessageBoxViewModel.ShowMessage("No game loaded");
+                return;
+            }
+
+            var dialog = new UpdateLocalViewModel(Game);
             dialog.ShowDialog();
         }
 

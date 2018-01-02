@@ -130,22 +130,35 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement)
         {
-            if (localAchievement != null)
-                _logger.WriteVerbose(String.Format("Updating {0} in local achievements", achievement.Title));
-            else
-                _logger.WriteVerbose(String.Format("Committing {0} to local achievements", achievement.Title));
-
-            var previous = _localAchievements.Replace(localAchievement, achievement);
-            if (previous != null)
+            if (achievement == null)
             {
-                var diff = achievement.Points - previous.Points;
-                if (diff != 0)
-                    LocalAchievementPoints += diff;
+                _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localAchievement.Title));
+
+                var previous = _localAchievements.Replace(localAchievement, null);
+                if (previous != null && previous.Points != 0)
+                    LocalAchievementPoints -= previous.Points;
+
+                LocalAchievementCount--;
             }
             else
             {
-                LocalAchievementCount++;
-                LocalAchievementPoints += achievement.Points;
+                if (localAchievement != null)
+                    _logger.WriteVerbose(String.Format("Updating {0} in local achievements", achievement.Title));
+                else
+                    _logger.WriteVerbose(String.Format("Committing {0} to local achievements", achievement.Title));
+
+                var previous = _localAchievements.Replace(localAchievement, achievement);
+                if (previous != null)
+                {
+                    var diff = achievement.Points - previous.Points;
+                    if (diff != 0)
+                        LocalAchievementPoints += diff;
+                }
+                else
+                {
+                    LocalAchievementCount++;
+                    LocalAchievementPoints += achievement.Points;
+                }
             }
 
             _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName);

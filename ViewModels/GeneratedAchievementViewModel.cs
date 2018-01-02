@@ -24,6 +24,7 @@ namespace RATools.ViewModels
             Core = new AchievementComparisonViewModel(owner, generatedAchievement);
 
             UpdateLocalCommand = new DelegateCommand(() => UpdateLocal(owner));
+            DeleteLocalCommand = new DelegateCommand(() => DeleteLocal(owner));
         }
 
         public static readonly ModelProperty BadgeProperty = ModelProperty.RegisterDependant(typeof(GeneratedAchievementViewModel), "Badge", typeof(ImageSource), new ModelProperty[0], GetBadge);
@@ -142,6 +143,17 @@ namespace RATools.ViewModels
 
             Local = new AchievementViewModel(owner);
             Local.LoadAchievement(achievement);
+
+            OnPropertyChanged(() => Local);
+            OnPropertyChanged(() => LocalModified);
+        }
+
+        public CommandBase DeleteLocalCommand { get; protected set; }
+        private void DeleteLocal(GameViewModel owner)
+        {
+            owner.UpdateLocal(null, Local.Achievement);
+
+            Local = new AchievementComparisonViewModel(owner, Generated.Achievement);
 
             OnPropertyChanged(() => Local);
             OnPropertyChanged(() => LocalModified);
