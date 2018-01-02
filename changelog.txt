@@ -1,5 +1,6 @@
 v1.2.0 - 1 Jan 2017
 * added "Update Local" dialog for updating multiple items at a time
+* support indexing dictionary using function call result
 
 v1.1.0 - 7 Dec 2017
 * added "Hexadecimal Values" toggle

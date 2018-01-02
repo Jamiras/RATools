@@ -59,7 +59,21 @@ namespace RATools.Parser.Internal
             foreach (var entry in Entries)
             {
                 ExpressionBase key, value;
-                if (!entry.Key.ReplaceVariables(scope, out key))
+                key = entry.Key;
+
+                if (key.Type == ExpressionType.FunctionCall)
+                {
+                    var expression = (FunctionCallExpression)key;
+                    if (!expression.Evaluate(scope, out value))
+                    {
+                        result = value;
+                        return false;
+                    }
+
+                    key = value;
+                }
+
+                if (!key.ReplaceVariables(scope, out key))
                 {
                     result = key;
                     return false;
@@ -67,7 +81,7 @@ namespace RATools.Parser.Internal
 
                 if (key.Type != ExpressionType.StringConstant && key.Type != ExpressionType.IntegerConstant)
                 {
-                    result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key.Line, key.Column);
+                    result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
                     return false;
                 }
 

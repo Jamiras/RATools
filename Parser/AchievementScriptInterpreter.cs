@@ -118,7 +118,7 @@ namespace RATools.Parser
             }
         }
 
-        private bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
+        internal bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
         {
             foreach (var expression in expressions)
             {
@@ -132,7 +132,7 @@ namespace RATools.Parser
             return true;
         }
 
-        private bool Evaluate(ExpressionBase expression, InterpreterScope scope)
+        internal bool Evaluate(ExpressionBase expression, InterpreterScope scope)
         {
             switch (expression.Type)
             {
@@ -154,9 +154,23 @@ namespace RATools.Parser
                 case ExpressionType.If:
                     return EvaluateIf((IfExpression)expression, scope);
 
+                case ExpressionType.Return:
+                    return EvaluateReturn((ReturnExpression)expression, scope);
+
                 default:
                     return EvaluationError(expression, "Only assignment statements, function calls and function definitions allowed at outer scope");
             }
+        }
+
+        private bool EvaluateReturn(ReturnExpression expression, InterpreterScope scope)
+        {
+            ExpressionBase result;
+            if (!expression.Value.ReplaceVariables(scope, out result))
+                return EvaluationError(expression.Value, result);
+
+            scope.ReturnValue = result;
+            scope.IsComplete = true;
+            return true;
         }
 
         private bool EvaluateLoop(ForExpression forExpression, InterpreterScope scope)
@@ -212,9 +226,10 @@ namespace RATools.Parser
             var function = scope.GetFunction(expression.FunctionName);
             if (function != null)
             {
-                scope = GetParameters(function, expression, scope);
+                ExpressionBase error;
+                scope = expression.GetParameters(function, scope, out error);
                 if (scope == null)
-                    return false;
+                    return EvaluationError(error, ((ParseErrorExpression)error).Message);
 
                 return Evaluate(function.Expressions, scope);
             }
@@ -304,9 +319,10 @@ namespace RATools.Parser
                 _achievementFunction.DefaultParameters["badge"] = new StringConstantExpression("0");
             }
 
-            var innerScope = GetParameters(_achievementFunction, expression, scope);
+            ExpressionBase error;
+            var innerScope = expression.GetParameters(_achievementFunction, scope, out error);
             if (innerScope == null)
-                return false;
+                return EvaluationError(error, ((ParseErrorExpression)error).Message);
 
             var achievement = new ScriptInterpreterAchievementBuilder();
 
@@ -553,9 +569,10 @@ namespace RATools.Parser
             var function = scope.GetFunction(functionCall.FunctionName);
             if (function != null)
             {
-                var innerScope = GetParameters(function, functionCall, scope);
+                ExpressionBase error;
+                var innerScope = functionCall.GetParameters(function, scope, out error);
                 if (innerScope == null)
-                    return false;
+                    return EvaluationError(error, ((ParseErrorExpression)error).Message);
 
                 return ExecuteAchievementExpressions(achievement, function.Expressions, innerScope);
             }
@@ -904,15 +921,19 @@ namespace RATools.Parser
                     return EvaluationError(expression, "parameter does not evaluate to a memory address");
                 }
 
-                var innerScope = GetParameters(function, functionCall, scope);
-                if (innerScope != null)
+                ExpressionBase error;
+                var innerScope = functionCall.GetParameters(function, scope, out error);
+                if (innerScope == null)
                 {
-                    var returnExpression = function.Expressions.First() as ReturnExpression;
-                    if (returnExpression != null)
-                        return EvaluateAddress(returnExpression.Value, innerScope, out address);
-
-                    return EvaluateAddress(function.Expressions.First(), innerScope, out address);
+                    address = String.Empty;
+                    return EvaluationError(error, ((ParseErrorExpression)error).Message);
                 }
+
+                var returnExpression = function.Expressions.First() as ReturnExpression;
+                if (returnExpression != null)
+                    return EvaluateAddress(returnExpression.Value, innerScope, out address);
+
+                return EvaluateAddress(function.Expressions.First(), innerScope, out address);
             }
             
             address = String.Empty;
@@ -940,9 +961,10 @@ namespace RATools.Parser
                         if (function.Expressions.Count != 1)
                             return EvaluationError(expression, "parameter does not evaluate to a memory address");
 
-                        var innerScope = GetParameters(function, functionCall, scope);
-                        if (innerScope == null)
-                            return false;
+                        ExpressionBase error;
+                        var innerScope = functionCall.GetParameters(function, scope, out error);
+                        if (scope == null)
+                            return EvaluationError(error, ((ParseErrorExpression)error).Message);
 
                         return EvaluateAddress(function.Expressions.First(), innerScope, out addressField);
                     }
@@ -980,9 +1002,10 @@ namespace RATools.Parser
                 _leaderboardFunction.Parameters.Add("value");
             }
 
-            scope = GetParameters(_leaderboardFunction, expression, scope);
+            ExpressionBase error;
+            scope = expression.GetParameters(_leaderboardFunction, scope, out error);
             if (scope == null)
-                return false;
+                return EvaluationError(error, ((ParseErrorExpression)error).Message);
 
             var leaderboard = new Leaderboard();
 
@@ -1019,91 +1042,6 @@ namespace RATools.Parser
 
             _leaderboards.Add(leaderboard);
             return true;
-        }
-
-        private InterpreterScope GetParameters(FunctionDefinitionExpression function, FunctionCallExpression functionCall, InterpreterScope scope)
-        {
-            var innerScope = new InterpreterScope(scope);
-
-            var providedParameters = new List<string>(function.Parameters);
-
-            int index = 0;
-            bool namedParameters = false;
-            foreach (var parameter in functionCall.Parameters)
-            {
-                var assignedParameter = parameter as AssignmentExpression;
-                if (assignedParameter != null)
-                {
-                    if (!providedParameters.Remove(assignedParameter.Variable.Name))
-                    {
-                        if (!function.Parameters.Contains(assignedParameter.Variable.Name))
-                        {
-                            EvaluationError(parameter, String.Format("{0} does not have a {1} parameter", function.Name, assignedParameter.Variable));
-                            return null;
-                        }
-
-                        EvaluationError(parameter, String.Format("{0} already has a value"));
-                        return null;
-                    }
-
-                    ExpressionBase value;
-                    if (!assignedParameter.Value.ReplaceVariables(scope, out value))
-                    {
-                        EvaluationError(assignedParameter.Value, value);
-                        return null;
-                    }
-
-                    innerScope.DefineVariable(assignedParameter.Variable, value);
-                    namedParameters = true;
-                }
-                else
-                {
-                    if (namedParameters)
-                    {
-                        EvaluationError(parameter, "non-named parameter following named parameter");
-                        return null;
-                    }
-
-                    if (index == function.Parameters.Count)
-                    {
-                        EvaluationError(parameter, "too many parameters passed to function");
-                        return null;
-                    }
-
-                    ExpressionBase value;
-                    if (!parameter.ReplaceVariables(scope, out value))
-                    {
-                        EvaluationError(parameter, (ParseErrorExpression)value);
-                        return null;
-                    }
-
-                    var variableName = function.Parameters.ElementAt(index);
-                    providedParameters.Remove(variableName);
-                    innerScope.DefineVariable(new VariableExpression(variableName), value);
-                }
-
-                ++index;
-            }
-
-            foreach (var parameter in providedParameters)
-            {
-                ExpressionBase value;
-                if (!function.DefaultParameters.TryGetValue(parameter, out value))
-                {
-                    EvaluationError(functionCall, String.Format("required parameter '{0}' not provided", parameter));
-                    return null;
-                }
-
-                if (!value.ReplaceVariables(scope, out value))
-                {
-                    EvaluationError(functionCall, (ParseErrorExpression)value);
-                    return null;
-                }
-
-                innerScope.DefineVariable(new VariableExpression(parameter), value);
-            }
-
-            return innerScope;
         }
 
         private bool EvaluationError(ExpressionBase expression, string message)

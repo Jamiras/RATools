@@ -17,6 +17,34 @@ namespace RATools.Parser.Internal
             Column = column;
         }
 
+        public ParseErrorExpression(string message, ExpressionBase expression)
+            : this(message, expression.Line, expression.Column)
+        {
+        }
+
+        public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
+            : base(ExpressionType.ParseError)
+        {
+            Line = expression.Line;
+            Column = expression.Column;
+
+            var parseError = error as ParseErrorExpression;
+            if (parseError != null)
+            {
+                Message = parseError.Message;
+
+                if (parseError.Line != 0)
+                {
+                    Line = parseError.Line;
+                    Column = parseError.Column;
+                }
+            }
+            else
+            {
+                Message = "Unknown error: " + error.Type;
+            }
+        }
+
         /// <summary>
         /// Gets the message.
         /// </summary>

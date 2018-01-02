@@ -20,6 +20,11 @@ namespace RATools.Parser.Internal
         private readonly TinyDictionary<string, ExpressionBase> _variables;
         private readonly InterpreterScope _parent;
 
+        internal int VariableCount
+        {
+            get { return _variables.Count; }
+        }
+
         /// <summary>
         /// Gets the function definition for a function.
         /// </summary>
@@ -108,6 +113,11 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets whether or not the processor has encountered an early exit statement (return, break)
         /// </summary>
-        public bool IsComplete { get; set; }
+        public bool IsComplete { get; internal set; }
+
+        /// <summary>
+        /// Gets the value to return when leaving the scope.
+        /// </summary>
+        public ExpressionBase ReturnValue { get; internal set; }
     }
 }
