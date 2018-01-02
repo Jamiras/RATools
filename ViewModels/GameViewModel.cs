@@ -208,15 +208,21 @@ namespace RATools.ViewModels
                     points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
 
                     var title = publishedAchievement.GetField("Title").StringValue;
-                    var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, title, StringComparison.CurrentCultureIgnoreCase) == 0);
+
+                    var id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                    var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => a.Generated.Id == id);
                     if (achievement == null)
                     {
-                        achievement = new GeneratedAchievementViewModel(this, null);
-                        achievements.Add(achievement);
+                        achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                        if (achievement == null)
+                        {
+                            achievement = new GeneratedAchievementViewModel(this, null);
+                            achievements.Add(achievement);
+                        }
                     }
 
                     var builder = new AchievementBuilder();
-                    builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                    builder.Id = id;
                     builder.Title = title;
                     builder.Description = publishedAchievement.GetField("Description").StringValue;
                     builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
@@ -301,14 +307,21 @@ namespace RATools.ViewModels
 
             foreach (var achievement in achievements.OfType<GeneratedAchievementViewModel>())
             {
-                var localAchievement = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Generated.Title.Text, StringComparison.CurrentCultureIgnoreCase) == 0);
+                Achievement localAchievement = null;
+                if (achievement.Id > 0)
+                    localAchievement = localAchievements.FirstOrDefault(a => a.Id == achievement.Id);
+
                 if (localAchievement == null)
                 {
-                    localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
+                    localAchievement = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Generated.Title.Text, StringComparison.CurrentCultureIgnoreCase) == 0);
                     if (localAchievement == null)
                     {
-                        // TODO: attempt to match achievements by requirements                        
-                        continue;
+                        localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
+                        if (localAchievement == null)
+                        {
+                            // TODO: attempt to match achievements by requirements                        
+                            continue;
+                        }
                     }
                 }
 
