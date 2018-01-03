@@ -171,6 +171,23 @@ namespace RATools.Data
 
             return !left.Equals(right);
         }
+
+        /// <summary>
+        /// Gets the logically opposing operator.
+        /// </summary>
+        public static RequirementOperator GetOpposingOperator(RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.Equal: return RequirementOperator.NotEqual;
+                case RequirementOperator.NotEqual: return RequirementOperator.Equal;
+                case RequirementOperator.LessThan: return RequirementOperator.GreaterThanOrEqual;
+                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThan;
+                case RequirementOperator.GreaterThan: return RequirementOperator.LessThanOrEqual;
+                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThan;
+                default: return RequirementOperator.None;
+            }
+        }
     }
 
     /// <summary>

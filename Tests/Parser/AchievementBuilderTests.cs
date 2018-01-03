@@ -357,6 +357,10 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) >= 2 && byte(0x001234) <= 2", "byte(0x001234) == 2")] // only overlap is the one value
         [TestCase("once(byte(0x001234) == 2) && once(byte(0x001234) == 3)", "once(byte(0x001234) == 2) && once(byte(0x001234) == 3)")] // cannot both be true at the same time, but can each be true once
         [TestCase("never(byte(0x001234) == 2) && never(byte(0x001234) == 3)", "byte(0x001234) != 2 && byte(0x001234) != 3")] // cannot both be true at the same time, but can each be true once
+        [TestCase("never(byte(0x001234) == 2) && byte(0x001234) != 2", "byte(0x001234) != 2")] // no hitcount, only keep non-resetif
+        [TestCase("byte(0x001234) == 2 && never(byte(0x001234) != 2)", "byte(0x001234) == 2")] // no hitcount, only keep non-resetif
+        [TestCase("never(byte(0x001234) == 2) && byte(0x001234) != 2 && once(byte(0x001235) == 3)", "never(byte(0x001234) == 2) && once(byte(0x001235) == 3)")] // hitcount, only keep resetif
+        [TestCase("byte(0x001234) == 2 && never(byte(0x001234) != 2) && once(byte(0x001235) == 3)", "never(byte(0x001234) != 2) && once(byte(0x001235) == 3)")] // hitcount, only keep resetif
         // ==== MergeDuplicateAlts ====
         [TestCase("byte(0x001234) > 1 || byte(0x001234) > 2", "byte(0x001234) > 1")] // >1 || >2 is only >1
         [TestCase("byte(0x001234) > 1 || byte(0x001235) > 2", "byte(0x001234) > 1 || byte(0x001235) > 2")] // different addresses

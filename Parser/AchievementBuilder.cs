@@ -130,7 +130,7 @@ namespace RATools.Parser
                         requirement.Right = new Field();
                         break;
                 }
-                
+
                 if (requirement.Right.Size == FieldSize.None)
                     requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
 
@@ -151,7 +151,7 @@ namespace RATools.Parser
 
                 switch (tokenizer.NextChar)
                 {
-                    default: 
+                    default:
                         return;
 
                     case '_': // &&
@@ -163,7 +163,7 @@ namespace RATools.Parser
                         if (ReferenceEquals(current, _core) || current.Count != 0)
                         {
                             current = new List<Requirement>();
-                            _alts.Add(current);                            
+                            _alts.Add(current);
                         }
                         continue;
                 }
@@ -548,6 +548,31 @@ namespace RATools.Parser
             }
         }
 
+        private static bool HasHitCount(IEnumerable<Requirement> requirements)
+        {
+            foreach (var requirement in requirements)
+            {
+                if (requirement.HitCount > 0)
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool HasHitCount()
+        {
+            if (HasHitCount(_core))
+                return true;
+
+            foreach (var alt in _alts)
+            {
+                if (HasHitCount(alt))
+                    return true;
+            }
+
+            return false;
+        }
+
         private void NormalizeNonHitCountResetAndPauseIfs()
         {
             // if this is a dumped achievement, don't convert these, it just makes the diff hard to read.
@@ -559,25 +584,13 @@ namespace RATools.Parser
             // use ResetIf conditions to keep the HitCount counter at 0 until the achievement is activated. This is 
             // a bad practice, as it makes the achievement harder to read, and it normally adds an additional 
             // condition to be evaluated every frame.
-            foreach (var requirement in _core)
+            // if no hit counts are found, then invert any PauseIfs or ResetIfs.
+            if (!HasHitCount())
             {
-                if (requirement.HitCount > 0)
-                    return;
+                NormalizeNonHitCountResetAndPauseIfs(_core);
+                foreach (var alt in _alts)
+                    NormalizeNonHitCountResetAndPauseIfs(alt);
             }
-
-            foreach (var alt in _alts)
-            {
-                foreach (var requirement in alt)
-                {
-                    if (requirement.HitCount > 0)
-                        return;
-                }
-            }
-
-            // no hit counts found. invert any PauseIfs or ResetIfs
-            NormalizeNonHitCountResetAndPauseIfs(_core);
-            foreach (var alt in _alts)
-                NormalizeNonHitCountResetAndPauseIfs(alt);
         }
 
         private static void NormalizeNonHitCountResetAndPauseIfs(ICollection<Requirement> requirements)
@@ -587,15 +600,7 @@ namespace RATools.Parser
                 if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
                 {
                     requirement.Type = RequirementType.None;
-                    switch (requirement.Operator)
-                    {
-                        case RequirementOperator.Equal: requirement.Operator = RequirementOperator.NotEqual; break;
-                        case RequirementOperator.NotEqual: requirement.Operator = RequirementOperator.Equal; break;
-                        case RequirementOperator.LessThan: requirement.Operator = RequirementOperator.GreaterThanOrEqual; break;
-                        case RequirementOperator.LessThanOrEqual: requirement.Operator = RequirementOperator.GreaterThan; break;
-                        case RequirementOperator.GreaterThan: requirement.Operator = RequirementOperator.LessThanOrEqual; break;
-                        case RequirementOperator.GreaterThanOrEqual: requirement.Operator = RequirementOperator.LessThan; break;
-                    }
+                    requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
                 }
             }
         }
@@ -1002,29 +1007,65 @@ namespace RATools.Parser
             }
         }
 
-        private static void RemoveRedundancies(IList<Requirement> requirements)
+        private void RemoveRedundancies(IList<Requirement> requirements)
         {
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
                 var requirement = requirements[i];
-                if (requirement.Right.Type != FieldType.Value)
-                    continue;
 
-                for (int j = 0; j < i; j++)
+                // if one requirement is "X == N" and another is "ResetIf X != N", they can be merged.
+                if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.None)
                 {
-                    Requirement merged;
-                    if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
+                    bool merged = false;
+                    for (int j = 0; j < i; j++)
                     {
-                        if (merged == null)
-                        {
-                            // conflicting requirements, void out the entire requirement set
-                            requirements.Clear();
-                            return;
-                        }
+                        Requirement compareRequirement = requirements[j];
+                        if (requirement.Type == compareRequirement.Type)
+                            continue;
+                        if (compareRequirement.Type != RequirementType.ResetIf && compareRequirement.Type != RequirementType.None)
+                            continue;
 
-                        requirements[j] = merged;
-                        requirements.RemoveAt(i);
-                        break;
+                        if (requirement.Left != compareRequirement.Left || requirement.Right != compareRequirement.Right)
+                            continue;
+
+                        var opposingOperator = Requirement.GetOpposingOperator(requirement.Operator);
+                        if (compareRequirement.Operator == opposingOperator)
+                        {
+                            // if a HitCount exists, keep the ResetIf, otherwise keep the non-ResetIf
+                            bool hasHitCount = HasHitCount();
+                            bool isResetIf = (requirement.Type == RequirementType.ResetIf);
+                            if (hasHitCount == isResetIf)
+                                requirements[j] = requirement;
+
+                            requirements.RemoveAt(i);
+                            merged = true;
+                            break;
+                        }
+                    }
+
+                    if (merged)
+                        continue;
+                }
+
+                // merge overlapping comparisons (a > 3 && a > 4 => a > 4)
+                if (requirement.Right.Type == FieldType.Value)
+                {
+                    for (int j = 0; j < i; j++)
+                    {
+                        Requirement merged;
+                        if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
+                        {
+                            if (merged == null)
+                            {
+                                // conflicting requirements, void out the entire requirement set
+                                requirements.Clear();
+                                return;
+                            }
+
+                            requirements[j] = merged;
+                            requirements.RemoveAt(i);
+                            break;
+                        }
                     }
                 }
             }
