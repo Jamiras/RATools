@@ -49,10 +49,31 @@ namespace RATools.Parser.Internal
                 case MathematicOperation.Divide:
                     builder.Append('/');
                     break;
+                case MathematicOperation.Modulus:
+                    builder.Append('%');
+                    break;
             }
 
             builder.Append(' ');
             Right.AppendString(builder);
+        }
+
+        internal static MathematicPriority GetPriority(MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add:
+                case MathematicOperation.Subtract:
+                    return MathematicPriority.Add;
+
+                case MathematicOperation.Multiply:
+                case MathematicOperation.Divide:
+                case MathematicOperation.Modulus:
+                    return MathematicPriority.Multiply;
+
+                default:
+                    return MathematicPriority.None;
+            }
         }
 
         /// <summary>
@@ -65,13 +86,10 @@ namespace RATools.Parser.Internal
                 var mathematicRight = Right as MathematicExpression;
                 if (mathematicRight != null)
                 {
-                    if (Operation == MathematicOperation.Multiply || Operation == MathematicOperation.Divide)
+                    if (GetPriority(Operation) > GetPriority(mathematicRight.Operation))
                     {
-                        if (mathematicRight.Operation == MathematicOperation.Add || mathematicRight.Operation == MathematicOperation.Subtract)
-                        {
-                            var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
-                            return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
-                        }
+                        var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
+                        return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
                     }
                 }
 
@@ -180,6 +198,14 @@ namespace RATools.Parser.Internal
                         return true;
                     }
                     break;
+
+                case MathematicOperation.Modulus:
+                    if (integerLeft != null && integerRight != null)
+                    {
+                        result = new IntegerConstantExpression(integerLeft.Value % integerRight.Value);
+                        return true;
+                    }
+                    break;
             }
 
             var mathematic = new MathematicExpression(left, Operation, right);
@@ -206,7 +232,7 @@ namespace RATools.Parser.Internal
     /// <summary>
     /// Specifies how the two sides of the <see cref="MathematicExpression"/> should be combined.
     /// </summary>
-    public enum MathematicOperation
+    internal enum MathematicOperation
     {
         /// <summary>
         /// Unspecified
@@ -232,5 +258,31 @@ namespace RATools.Parser.Internal
         /// Divide the first value by the second.
         /// </summary>
         Divide,
+
+        /// <summary>
+        /// Get the remainder from dividing the first value by the second.
+        /// </summary>
+        Modulus,
+    }
+
+    /// <summary>
+    /// Gets the priority of a mathematic operation
+    /// </summary>
+    internal enum MathematicPriority
+    {
+        /// <summary>
+        /// Unspecified
+        /// </summary>
+        None = 0,
+
+        /// <summary>
+        /// Add/Subtract
+        /// </summary>
+        Add,
+
+        /// <summary>
+        /// Multiply/Divide/Modulus
+        /// </summary>
+        Multiply,
     }
 }

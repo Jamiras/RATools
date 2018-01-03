@@ -104,6 +104,11 @@ namespace RATools.Parser.Internal
                     clause = ParseMathematic(tokenizer, clause, MathematicOperation.Divide);
                     break;
 
+                case '%':
+                    tokenizer.Advance();
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Modulus);
+                    break;
+
                 case '=':
                     tokenizer.Advance();
                     if (tokenizer.NextChar == '=')

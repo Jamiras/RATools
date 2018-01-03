@@ -42,18 +42,27 @@ namespace RATools.Test.Parser.Internal
         [TestCase(MathematicOperation.Add, MathematicOperation.Subtract, false)]
         [TestCase(MathematicOperation.Add, MathematicOperation.Multiply, false)]
         [TestCase(MathematicOperation.Add, MathematicOperation.Divide, false)]
+        [TestCase(MathematicOperation.Add, MathematicOperation.Modulus, false)]
         [TestCase(MathematicOperation.Subtract, MathematicOperation.Add, false)]
         [TestCase(MathematicOperation.Subtract, MathematicOperation.Subtract, false)]
         [TestCase(MathematicOperation.Subtract, MathematicOperation.Multiply, false)]
         [TestCase(MathematicOperation.Subtract, MathematicOperation.Divide, false)]
+        [TestCase(MathematicOperation.Subtract, MathematicOperation.Modulus, false)]
         [TestCase(MathematicOperation.Multiply, MathematicOperation.Add, true)]
         [TestCase(MathematicOperation.Multiply, MathematicOperation.Subtract, true)]
         [TestCase(MathematicOperation.Multiply, MathematicOperation.Multiply, false)]
         [TestCase(MathematicOperation.Multiply, MathematicOperation.Divide, false)]
+        [TestCase(MathematicOperation.Multiply, MathematicOperation.Modulus, false)]
         [TestCase(MathematicOperation.Divide, MathematicOperation.Add, true)]
         [TestCase(MathematicOperation.Divide, MathematicOperation.Subtract, true)]
         [TestCase(MathematicOperation.Divide, MathematicOperation.Multiply, false)]
         [TestCase(MathematicOperation.Divide, MathematicOperation.Divide, false)]
+        [TestCase(MathematicOperation.Divide, MathematicOperation.Modulus, false)]
+        [TestCase(MathematicOperation.Modulus, MathematicOperation.Add, true)]
+        [TestCase(MathematicOperation.Modulus, MathematicOperation.Subtract, true)]
+        [TestCase(MathematicOperation.Modulus, MathematicOperation.Multiply, false)]
+        [TestCase(MathematicOperation.Modulus, MathematicOperation.Divide, false)]
+        [TestCase(MathematicOperation.Modulus, MathematicOperation.Modulus, false)]
         public void TestRebalanceMathematic(MathematicOperation op1, MathematicOperation op2, bool rebalanceExpected)
         {
             // if the left operator is a multiple or divide and the right is an add or subtract,
@@ -235,6 +244,20 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(6));
+        }
+
+        [Test]
+        public void TestModulus()
+        {
+            var left = new IntegerConstantExpression(20);
+            var right = new IntegerConstantExpression(3);
+            var expr = new MathematicExpression(left, MathematicOperation.Modulus, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(2));
         }
     }
 }
