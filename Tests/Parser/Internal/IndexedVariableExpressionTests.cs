@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -142,6 +143,33 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(99));
+        }
+
+        [Test]
+        public void TestReplaceVariablesIndexFunctionCall()
+        {
+            var input = "function func(i) => 6";
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            tokenizer.Match("function");
+            var functionDefinition = (FunctionDefinitionExpression)FunctionDefinitionExpression.Parse(tokenizer);
+
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
+            var value = new IntegerConstantExpression(98);
+
+            var variable = new VariableExpression("variable");
+            var dict = new DictionaryExpression();
+            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(6), Value = value });
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, dict);
+            scope.AddFunction(functionDefinition);
+
+            var expr = new IndexedVariableExpression(variable.Name, functionCall);
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(98));
         }
     }
 }

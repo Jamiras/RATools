@@ -64,7 +64,16 @@ namespace RATools.Parser.Internal
         internal DictionaryExpression.DictionaryEntry GetDictionaryEntry(InterpreterScope scope, out ExpressionBase result, bool create)
         {
             ExpressionBase index;
-            if (!Index.ReplaceVariables(scope, out index))
+            if (Index.Type == ExpressionType.FunctionCall)
+            {
+                var expression = (FunctionCallExpression)Index;
+                if (!expression.Evaluate(scope, out index))
+                {
+                    result = index;
+                    return null;
+                }
+            }
+            else if (!Index.ReplaceVariables(scope, out index))
             {
                 result = index;
                 return null;
