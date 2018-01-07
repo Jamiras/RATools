@@ -353,6 +353,10 @@ namespace RATools.ViewModels
                 {
                     Progress.Current++;
 
+                    var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
+                    if (masteryJson == null) // not able to get - probably not logged in. don't try other users
+                        break;
+
                     var stats = new UserStats { User = user };
                     var index = userStats.BinarySearch(stats, stats);
                     if (index < 0)
@@ -362,10 +366,6 @@ namespace RATools.ViewModels
 
                     if (stats.PointsEarned == 400)
                         continue;
-
-                    var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
-                    if (masteryJson == null) // not able to get - probably not logged in. don't try other users
-                        break;
 
                     var achievements = masteryJson.GetField("achievements").ObjectValue;
                     foreach (var achievement in achievements)
