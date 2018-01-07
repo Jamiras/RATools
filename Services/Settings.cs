@@ -35,6 +35,10 @@ namespace RATools.Services
                 string user;
                 if (values.TryGetValue("User", out user) && user.Length > 0)
                     UserName = user;
+
+                string apiKey;
+                if (values.TryGetValue("ApiKey", out apiKey) && apiKey.Length > 0)
+                    ApiKey = apiKey;
             }
             catch (FileNotFoundException)
             {
@@ -46,6 +50,8 @@ namespace RATools.Services
         public IEnumerable<string> DataDirectories { get; private set; }
 
         public string UserName { get; private set; }
+
+        public string ApiKey { get; private set; }
 
         public bool HexValues
         {

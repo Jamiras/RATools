@@ -139,6 +139,14 @@ namespace RATools.ViewModels
             private set { SetValue(HardcoreMasteredUserCountProperty, value); }
         }
 
+        public static readonly ModelProperty HardcoreMasteredUserCountEstimatedProperty = ModelProperty.Register(typeof(GameStatsViewModel), "HardcoreMasteredUserCountEstimated", typeof(bool), false);
+
+        public bool HardcoreMasteredUserCountEstimated
+        {
+            get { return (bool)GetValue(HardcoreMasteredUserCountEstimatedProperty); }
+            private set { SetValue(HardcoreMasteredUserCountEstimatedProperty, value); }
+        }
+
         public static readonly ModelProperty MedianTimeToMasterProperty = ModelProperty.Register(typeof(GameStatsViewModel), "MedianTimeToMaster", typeof(string), "n/a");
 
         public string MedianTimeToMaster
@@ -169,6 +177,9 @@ namespace RATools.ViewModels
                 title = title.SubToken(24);
                 DialogTitle = "Game Stats - " +title.ToString();
             }
+
+            AchievementStats mostWon = null;
+            AchievementStats leastWon = null;
 
             var allStats = new List<AchievementStats>();
             do
@@ -213,6 +224,49 @@ namespace RATools.ViewModels
                 }
 
                 allStats.Add(stats);
+
+                if (mostWon == null)
+                {
+                    mostWon = leastWon = stats;
+                }
+                else
+                {
+                    if (stats.EarnedHardcoreBy > mostWon.EarnedHardcoreBy)
+                        mostWon = stats;
+                    else if (stats.EarnedHardcoreBy == mostWon.EarnedHardcoreBy && stats.EarnedBy > mostWon.EarnedBy)
+                        mostWon = stats;
+
+                    if (stats.EarnedHardcoreBy < leastWon.EarnedHardcoreBy)
+                        leastWon = stats;
+                    else if (stats.EarnedHardcoreBy == leastWon.EarnedHardcoreBy && stats.EarnedBy < leastWon.EarnedBy)
+                        leastWon = stats;
+                }
+            } while (true);
+
+            var masters = new List<string>();
+            tokenizer = Tokenizer.CreateTokenizer(gamePage);
+            tokenizer.ReadTo("<h3>High Scores</h3>");
+            do
+            {
+                tokenizer.ReadTo("<td class='user'>");
+                if (tokenizer.NextChar == '\0')
+                    break;
+
+                tokenizer.ReadTo("<a href='");
+                tokenizer.ReadTo('>');
+                tokenizer.Advance();
+
+                var userName = tokenizer.ReadTo('<');
+
+                tokenizer.ReadTo("<span");
+                tokenizer.ReadTo('>');
+                tokenizer.Advance();
+
+                var points = tokenizer.ReadTo('<');
+                if (points != "800")
+                    break;
+
+                masters.Add(userName.ToString());
             } while (true);
 
             Progress.Label = "Fetching user stats";
@@ -239,6 +293,7 @@ namespace RATools.ViewModels
                     tokenizer = Tokenizer.CreateTokenizer(achievementPage);
                     tokenizer.ReadTo("<h3>Winners</h3>");
 
+                    // NOTE: this only lists the ~50 most recent unlocks! For games with more than 50 users who have mastered it, the oldest may be missed!
                     do
                     {
                         tokenizer.ReadTo("<a href='/User/");
@@ -268,6 +323,12 @@ namespace RATools.ViewModels
 
                             stats.Achievements[achievement.Id] = date;
                             stats.PointsEarned += achievement.Points;
+
+                            if (ReferenceEquals(achievement, leastWon))
+                            {
+                                if (!masters.Contains(stats.User))
+                                    masters.Add(stats.User);
+                            }
                         }
                         else
                         {
@@ -279,6 +340,57 @@ namespace RATools.ViewModels
                 }
 
                 Progress.Current++;
+            }
+
+            // if more than 50 people have earned achievements, people who mastered the game early may no longer display 
+            // in the individual pages. fetch mastery data by user
+            if (mostWon.EarnedBy > 50)
+            {
+                HardcoreMasteredUserCountEstimated = (leastWon.EarnedBy > 50);
+
+                Progress.Reset(masters.Count);
+                foreach (var user in masters)
+                {
+                    Progress.Current++;
+
+                    var stats = new UserStats { User = user };
+                    var index = userStats.BinarySearch(stats, stats);
+                    if (index < 0)
+                        userStats.Insert(~index, stats);
+                    else
+                        stats = userStats[index];
+
+                    if (stats.PointsEarned == 400)
+                        continue;
+
+                    var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
+                    if (masteryJson == null) // not able to get - probably not logged in. don't try other users
+                        break;
+
+                    var achievements = masteryJson.GetField("achievements").ObjectValue;
+                    foreach (var achievement in achievements)
+                    {
+                        var id = Int32.Parse(achievement.FieldName);
+                        if (!stats.Achievements.ContainsKey(id))
+                        {
+                            var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
+                            if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
+                                dateField = achievement.ObjectValue.GetField("DateEarned");
+
+                            if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
+                            {
+                                var date = DateTime.Parse(dateField.StringValue);
+                                date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                                stats.Achievements[id] = date;
+                                stats.PointsEarned += Int32.Parse(achievement.ObjectValue.GetField("Points").StringValue);
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                HardcoreMasteredUserCountEstimated = false;
             }
 
             Progress.Label = "Analyzing data";

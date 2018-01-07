@@ -31,19 +31,33 @@
         </Grid.ColumnDefinitions>
 
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Non-Hardcore Users:" />
-        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding NonHardcoreUserCount}" Margin="4,0,4,0" />
+        <TextBlock Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding NonHardcoreUserCount}" Margin="12,0,4,0" />
 
         <TextBlock Grid.Row="1" Grid.Column="0" Text="Hardcore Users:" />
-        <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreUserCount}" Margin="4,0,4,0" />
+        <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreUserCount}" Margin="12,0,4,0" />
 
         <TextBlock Grid.Row="2" Grid.Column="0" Text="Median Hardcore User Score:" />
-        <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianHardcoreUserScore}" Margin="4,0,4,0" />
+        <TextBlock Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianHardcoreUserScore}" Margin="12,0,4,0" />
 
         <TextBlock Grid.Row="3" Grid.Column="0" Text="Times Mastered (Hardcore):" />
-        <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreMasteredUserCount}" Margin="4,0,4,0" />
+        <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreMasteredUserCount}" Margin="12,0,4,0" />
+        <TextBlock Grid.Row="3" Grid.Column="2" Text="*" ToolTip="Possibly more - pages only display first 10 and last 50">
+            <TextBlock.Style>
+                <Style TargetType="{x:Type TextBlock}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding HardcoreMasteredUserCountEstimated}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding HardcoreMasteredUserCount}" Value="0">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
 
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Median Time to Master (Hardcore):" />
-        <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianTimeToMaster}" Margin="4,0,4,0" />
+        <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianTimeToMaster}" Margin="12,0,4,0" />
 
         <StackPanel Grid.Column="2" Grid.RowSpan="5" Width="150" HorizontalAlignment="Right">
             <TextBlock Text="Game ID" />

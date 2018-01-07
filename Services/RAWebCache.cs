@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using Jamiras.IO.Serialization;
 using Jamiras.Services;
 using System;
 using System.Diagnostics;
@@ -11,11 +12,13 @@ namespace RATools.Services
         private RAWebCache()
         {
             _fileSystemService = ServiceRepository.Instance.FindService<IFileSystemService>();
-            _httpRequestService = ServiceRepository.Instance.FindService<IHttpRequestService>();                   
+            _httpRequestService = ServiceRepository.Instance.FindService<IHttpRequestService>();
+            _settings = ServiceRepository.Instance.FindService<ISettings>();
         }
 
         private readonly IFileSystemService _fileSystemService;
         private readonly IHttpRequestService _httpRequestService;
+        private readonly ISettings _settings;
  
         public static RAWebCache Instance
         {
@@ -91,6 +94,19 @@ namespace RATools.Services
             {
                 return stream.ReadToEnd();
             }
+        }
+
+        public JsonObject GetUserGameMasteryJson(string user, int gameId)
+        {
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Game{1}.html", user, gameId));
+            var url = String.Format("http://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z={0}&y={1}&u={2}&g={3}", apiUser, apiKey, user, gameId);
+            var page = GetPage(filename, url);
+            return new JsonObject(page);
         }
     }
 }
