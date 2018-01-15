@@ -289,6 +289,39 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestAddSource()
+        {
+            var parser = Parse("function f() => byte(0x1234) + byte(0x1235)" +
+                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) + byte(0x001235) == 1"));
+        }
+
+        [Test]
+        public void TestAddSourceMultiple()
+        {
+            var parser = Parse("function f() => byte(0x1234) + byte(0x1235) + byte(0x1236) + byte(0x1237)" +
+                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) + byte(0x001235) + byte(0x001236) + byte(0x001237) == 1"));
+        }
+
+        [Test]
+        public void TestSubSource()
+        {
+            var parser = Parse("function f() => byte(0x1234) - byte(0x1235)" +
+                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) - byte(0x001235) == 1"));
+        }
+
+        [Test]
         public void TestRichPresenceDisplay()
         {
             var parser = Parse("rich_presence_display(\"simple string\")");

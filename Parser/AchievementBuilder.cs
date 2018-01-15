@@ -129,10 +129,12 @@ namespace RATools.Parser
                         requirement.Operator = RequirementOperator.None;
                         requirement.Right = new Field();
                         break;
-                }
 
-                if (requirement.Right.Size == FieldSize.None)
-                    requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
+                    default:
+                        if (requirement.Right.Size == FieldSize.None)
+                            requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
+                        break;
+                }
 
                 current.Add(requirement);
 
@@ -314,6 +316,19 @@ namespace RATools.Parser
             }
         }
 
+        static void AppendDebugStringCombiner(StringBuilder builder, Requirement requirement)
+        {
+            switch (requirement.Type)
+            {
+                case RequirementType.AddSource:
+                case RequirementType.SubSource:
+                    break;
+                default:
+                    builder.Append(" && ");
+                    break;
+            }
+        }
+
         /// <summary>
         /// Gets the requirements formatted as a human-readable string.
         /// </summary>
@@ -325,7 +340,7 @@ namespace RATools.Parser
                 foreach (var requirement in CoreRequirements)
                 {
                     builder.Append(requirement);
-                    builder.Append(" && ");
+                    AppendDebugStringCombiner(builder, requirement);
                 }
 
                 if (AlternateRequirements.Count > 0)
@@ -341,7 +356,7 @@ namespace RATools.Parser
                         foreach (var requirement in altGroup)
                         {
                             builder.Append(requirement);
-                            builder.Append(" && ");
+                            AppendDebugStringCombiner(builder, requirement);
                         }
                         builder.Length -= 4;
 

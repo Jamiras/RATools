@@ -437,7 +437,28 @@ namespace RATools.Parser
                 return false;
             var integerOperand = operand as IntegerConstantExpression;
             if (integerOperand == null)
+            {
+                if (operand is FunctionCallExpression || operand is MathematicExpression)
+                {
+                    switch (mathematic.Operation)
+                    {
+                        case MathematicOperation.Add:
+                            achievement.LastRequirement.Type = RequirementType.AddSource;
+                            break;
+                        case MathematicOperation.Subtract:
+                            achievement.LastRequirement.Type = RequirementType.SubSource;
+                            break;
+                        default:
+                            return EvaluationError(mathematic, "expression cannot be converted to an achievement");
+                    }
+
+                    achievement.LastRequirement.Operator = RequirementOperator.None;
+                    achievement.LastRequirement.Right = new Field();
+                    return ExecuteAchievementExpression(achievement, operand, scope);
+                }
+
                 return EvaluationError(mathematic.Right, "expression does not evaluate to a constant");
+            }
 
             switch (mathematic.Operation)
             {
@@ -448,9 +469,10 @@ namespace RATools.Parser
                 case MathematicOperation.Subtract:
                     achievement.EqualityModifier += integerOperand.Value;
                     return true;
-            }
 
-            return false;
+                default:
+                    return EvaluationError(mathematic, "only add and subtract operations applicable to achievement trigger");
+            }
         }
 
         private bool ExecuteAchievementConditional(ScriptInterpreterAchievementBuilder achievement, ConditionalExpression condition, InterpreterScope scope)

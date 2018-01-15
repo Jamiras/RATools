@@ -1,3 +1,8 @@
+v1.3.0 - 15 Jan 2017
+* support for AddSource/SubSource
+* add session counts to game stats dialog
+* prevent exception if incorrect number of parameters passed to rich_presence_value or rich_presence_lookup
+
 v1.2.0 - 7 Jan 2017
 * added "Update Local" dialog for updating multiple items at a time
 * support indexing dictionary using function call result

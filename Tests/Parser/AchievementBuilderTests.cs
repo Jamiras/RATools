@@ -184,6 +184,18 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestParseRequirementsAddSourceUninitializedRight()
+        {
+            // ensures requirement.Right is uninitialized for AddSource
+            var builder = new AchievementBuilder();
+            builder.ParseRequirements(Tokenizer.CreateTokenizer("A:0xN20770f=0"));
+            var requirement = builder.CoreRequirements.First();
+            Assert.That(requirement.Right.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(requirement.Right.Type, Is.EqualTo(FieldType.None));
+            Assert.That(requirement.Right.Value, Is.EqualTo(0));
+        }
+
+        [Test]
         [TestCase("bit6(0x00627E) == 1", "0xS00627e=1")]
         [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
         [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
