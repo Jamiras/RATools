@@ -340,6 +340,14 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestRichPresenceLookupNoDict()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:25 required parameter 'lookup' not provided"));
+        }
+
+        [Test]
         public void TestRichPresenceInvalidIndex()
         {
             var parser = Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);

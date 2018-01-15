@@ -724,6 +724,9 @@ namespace RATools.Parser
             }
         }
 
+        private static FunctionDefinitionExpression _richPresenceValueFunction;
+        private static FunctionDefinitionExpression _richPresenceLookupFunction;
+
         private bool ExecuteRichPresenceDisplay(FunctionCallExpression expression, InterpreterScope scope)
         {
             var displayString = expression.Parameters.ElementAt(0) as StringConstantExpression;
@@ -755,42 +758,76 @@ namespace RATools.Parser
                 var parameter = expression.Parameters.ElementAt(parameterIndex) as FunctionCallExpression;
                 if (parameter == null)
                     return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
-                if (parameter.Parameters.Count() < 2)
-                    return EvaluationError(parameter, "parameter must be a rich_presence_ function");
 
-                var variableName = ((StringConstantExpression)parameter.Parameters.ElementAt(0)).Value;
+                FunctionDefinitionExpression function;
+                if (parameter.FunctionName == "rich_presence_lookup")
+                {
+                    if (_richPresenceLookupFunction == null)
+                    {
+                        _richPresenceLookupFunction = new FunctionDefinitionExpression("rich_presence_lookup");
+                        _richPresenceLookupFunction.Parameters.Add("name");
+                        _richPresenceLookupFunction.Parameters.Add("memory");
+                        _richPresenceLookupFunction.Parameters.Add("lookup");
+                    }
+
+                    function = _richPresenceLookupFunction;
+                }
+                else if (parameter.FunctionName == "rich_presence_value")
+                {
+                    if (_richPresenceValueFunction == null)
+                    {
+                        _richPresenceValueFunction = new FunctionDefinitionExpression("rich_presence_value");
+                        _richPresenceValueFunction.Parameters.Add("name");
+                        _richPresenceValueFunction.Parameters.Add("memory");
+                    }
+
+                    function = _richPresenceValueFunction;
+                }
+                else
+                {
+                    return EvaluationError(parameter, "parameter must be a rich_presence_ function");
+                }
+
+                ExpressionBase error;
+                var rpScope = parameter.GetParameters(function, scope, out error);
+                if (rpScope == null)
+                    return EvaluationError(function, error);
+
+                var variableName = rpScope.GetVariable("name") as StringConstantExpression;
+                if (variableName == null)
+                    return EvaluationError(variableName, "name must be a string");
+
+                var memory = rpScope.GetVariable("memory");
 
                 ExpressionBase addressExpression;
-                if (!parameter.Parameters.ElementAt(1).ReplaceVariables(scope, out addressExpression))
-                    return EvaluationError(parameter.Parameters.ElementAt(1), addressExpression);
+                if (!memory.ReplaceVariables(scope, out addressExpression))
+                    return EvaluationError(memory, addressExpression);
 
                 string address;
                 if (!EvaluateAddress(addressExpression, scope, out address))
                     return false;
  
-                if (parameter.FunctionName == "rich_presence_lookup")
+                if (ReferenceEquals(function, _richPresenceLookupFunction))
                 {
+                    var lookup = rpScope.GetVariable("lookup");
+
                     ExpressionBase value;
-                    if (!parameter.Parameters.ElementAt(2).ReplaceVariables(scope, out value))
-                        return EvaluationError(parameter.Parameters.ElementAt(2), value);
+                    if (!lookup.ReplaceVariables(scope, out value))
+                        return EvaluationError(lookup, value);
 
                     var dict = value as DictionaryExpression;
                     if (dict == null)
                         return EvaluationError(parameter.Parameters.ElementAt(2), "parameter does not evaluate to a dictionary");
 
-                    lookupFields[variableName] = dict;
-                }
-                else if (parameter.FunctionName == "rich_presence_value")
-                {
-                    valueFields.Add(variableName);
+                    lookupFields[variableName.Value] = dict;
                 }
                 else
                 {
-                    return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
+                    valueFields.Add(variableName.Value);
                 }
 
                 builder.Append('@');
-                builder.Append(variableName);
+                builder.Append(variableName.Value);
                 builder.Append('(');
                 builder.Append(address);
                 builder.Append(')');
