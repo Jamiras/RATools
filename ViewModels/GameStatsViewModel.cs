@@ -78,6 +78,7 @@ namespace RATools.ViewModels
             public int PointsEarned { get; set; }
             public TimeSpan RealTime { get; set; }
             public TimeSpan GameTime { get; set; }
+            public int Sessions { get; set; }
             public TinyDictionary<int, DateTime> Achievements { get; private set; }
 
             public string Summary
@@ -86,6 +87,8 @@ namespace RATools.ViewModels
                 {
                     var builder = new StringBuilder();
                     builder.AppendFormat("{0}h{1:D2}m", (int)GameTime.TotalHours, GameTime.Minutes);
+                    if (Sessions > 1)
+                        builder.AppendFormat(" in {0} sessions", Sessions);
                     if (RealTime.TotalDays > 1.0)
                         builder.AppendFormat(" over {0} days", (int)Math.Ceiling(RealTime.TotalDays));
 
@@ -153,6 +156,22 @@ namespace RATools.ViewModels
         {
             get { return (string)GetValue(MedianTimeToMasterProperty); }
             private set { SetValue(MedianTimeToMasterProperty, value); }
+        }
+
+        public static readonly ModelProperty MedianSessionsToMasterProperty = ModelProperty.Register(typeof(GameStatsViewModel), "MedianSessionsToMaster", typeof(string), "n/a");
+
+        public string MedianSessionsToMaster
+        {
+            get { return (string)GetValue(MedianSessionsToMasterProperty); }
+            private set { SetValue(MedianSessionsToMasterProperty, value); }
+        }
+
+        public static readonly ModelProperty MedianDaysToMasterProperty = ModelProperty.Register(typeof(GameStatsViewModel), "MedianDaysToMaster", typeof(string), "n/a");
+
+        public string MedianDaysToMaster
+        {
+            get { return (string)GetValue(MedianDaysToMasterProperty); }
+            private set { SetValue(MedianDaysToMasterProperty, value); }
         }
 
         public static readonly ModelProperty TopUsersProperty = ModelProperty.Register(typeof(GameStatsViewModel), "TopUsers", typeof(IEnumerable<UserStats>), new UserStats[0]);
@@ -395,6 +414,8 @@ namespace RATools.ViewModels
 
             Progress.Label = "Analyzing data";
 
+            var sessions = new List<int>(userStats.Count);
+            var days = new List<int>(userStats.Count);
             var idleTime = TimeSpan.FromHours(4);
             foreach (var user in userStats)
             {
@@ -411,11 +432,25 @@ namespace RATools.ViewModels
                 {
                     if (end + 1 == times.Count || (times[end + 1] - times[end]) >= idleTime)
                     {
+                        user.Sessions++;
                         user.GameTime += times[end] - times[start];
                         start = end + 1;
                     }
 
                     end++;
+                }
+
+                // assume every achievement took roughly the same amount of time to earn. divide the user's total known playtime
+                // by the number of achievements they've earned to get the approximate time per achievement earned. add this value
+                // to each session to account for time played before getting the first achievement of the session and time played
+                // after gettin the last achievement of the session.
+                double perSessionAdjustment = user.GameTime.TotalSeconds / user.Achievements.Count;
+                user.GameTime += TimeSpan.FromSeconds(user.Sessions * perSessionAdjustment);
+
+                if (user.PointsEarned == 400)
+                {
+                    sessions.Add(user.Sessions);
+                    days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
                 }
             }
 
@@ -432,15 +467,22 @@ namespace RATools.ViewModels
             NonHardcoreUserCount = nonHardcoreUsers.Count;
             MedianHardcoreUserScore = userStats.Count > 0 ? userStats[userStats.Count / 2].PointsEarned : 0;
 
-            int masteredCount = 0;
-            while (masteredCount < userStats.Count && userStats[masteredCount].PointsEarned == 400)
-                ++masteredCount;
-            HardcoreMasteredUserCount = masteredCount;
-            var timeToMaster = masteredCount > 0 ? userStats[masteredCount / 2].Summary : "n/a";
-            var space = timeToMaster.IndexOf(' ');
-            if (space > 0)
-                timeToMaster = timeToMaster.Substring(0, space);
-            MedianTimeToMaster = timeToMaster;
+            int masteredCount = sessions.Count;
+            if (masteredCount > 0)
+            {
+                HardcoreMasteredUserCount = masteredCount;
+                var timeToMaster = masteredCount > 0 ? userStats[masteredCount / 2].Summary : "n/a";
+                var space = timeToMaster.IndexOf(' ');
+                if (space > 0)
+                    timeToMaster = timeToMaster.Substring(0, space);
+                MedianTimeToMaster = timeToMaster;
+
+                sessions.Sort();
+                MedianSessionsToMaster = sessions[masteredCount / 2].ToString();
+
+                days.Sort();
+                MedianDaysToMaster = days[masteredCount / 2].ToString();
+            }
 
             if (userStats.Count > 100)
                 userStats.RemoveRange(100, userStats.Count - 100);

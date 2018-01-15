@@ -20,6 +20,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="24" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
@@ -59,14 +61,20 @@
         <TextBlock Grid.Row="4" Grid.Column="0" Text="Median Time to Master (Hardcore):" />
         <TextBlock Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianTimeToMaster}" Margin="12,0,4,0" />
 
-        <StackPanel Grid.Column="2" Grid.RowSpan="5" Width="150" HorizontalAlignment="Right">
+        <TextBlock Grid.Row="5" Grid.Column="0" Text="Median Sessions to Master (Hardcore):" />
+        <TextBlock Grid.Row="5" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianSessionsToMaster}" Margin="12,0,4,0" />
+
+        <TextBlock Grid.Row="6" Grid.Column="0" Text="Median Days to Master (Hardcore):" />
+        <TextBlock Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding MedianDaysToMaster}" Margin="12,0,4,0" />
+
+        <StackPanel Grid.Column="2" Grid.RowSpan="7" Width="150" HorizontalAlignment="Right">
             <TextBlock Text="Game ID" />
             <TextBox Text="{Binding GameId}" />
             <Button Command="{Binding SearchCommand}" Content="Search" Margin="64,4,0,4" />
         </StackPanel>
         
-        <TextBlock Grid.Row="5" VerticalAlignment="Bottom" Text="Top Hardcore Users" />
-        <ListView Grid.Row="6" Grid.ColumnSpan="3" ItemsSource="{Binding TopUsers}">
+        <TextBlock Grid.Row="7" VerticalAlignment="Bottom" Text="Top Hardcore Users" />
+        <ListView Grid.Row="8" Grid.ColumnSpan="3" ItemsSource="{Binding TopUsers}">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
@@ -83,6 +91,6 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <ContentPresenter Grid.ColumnSpan="3" Grid.RowSpan="7" Margin="-4" Content="{Binding Progress}" />
+        <ContentPresenter Grid.ColumnSpan="3" Grid.RowSpan="9" Margin="-4" Content="{Binding Progress}" />
     </Grid>
 </UserControl>
