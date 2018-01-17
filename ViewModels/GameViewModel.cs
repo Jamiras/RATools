@@ -14,17 +14,40 @@ using System.Linq;
 
 namespace RATools.ViewModels
 {
-    [DebuggerDisplay("GameTitle")]
+    [DebuggerDisplay("{Title}")]
     public class GameViewModel : ViewModelBase
     {
         public GameViewModel(AchievementScriptInterpreter parser, string raCacheDirectory)
+            : this(parser.GameId, parser.GameTitle, raCacheDirectory, parser.Achievements)
         {
-            GameId = parser.GameId;
-            Title = parser.GameTitle;
+            if (!String.IsNullOrEmpty(parser.RichPresence) && parser.RichPresence.Length > 8)
+                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new RichPresenceViewModel(this, parser.RichPresence));
+
+            foreach (var leaderboard in parser.Leaderboards)
+                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new LeaderboardViewModel(this, leaderboard));
+        }
+
+        public GameViewModel(int gameId, string title)
+        {
+            GameId = gameId;
+            Title = title;
+
+            _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
+        }
+
+        public GameViewModel(int gameId, string title, string raCacheDirectory)
+            : this(gameId, title, raCacheDirectory, new Achievement[0])
+        {
+
+        }
+
+        private GameViewModel(int gameId, string title, string raCacheDirectory, IEnumerable<Achievement> achievements)
+            : this(gameId, title)
+        {
             RACacheDirectory = raCacheDirectory;
 
             Notes = new TinyDictionary<int, string>();
-            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, parser.GameId + "-Notes2.txt")))
+            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, GameId + "-Notes2.txt")))
             {
                 var reader = new StreamReader(notesStream);
                 var firstChar = reader.Peek();
@@ -40,7 +63,8 @@ namespace RATools.ViewModels
                     {
                         var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
                         var text = note.GetField("Note").StringValue;
-                        Notes[address] = text;
+                        if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
+                            Notes[address] = text;
                     }
                 }
                 else
@@ -71,39 +95,26 @@ namespace RATools.ViewModels
                 }
             }
 
-            _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             _logger.WriteVerbose("Read " + Notes.Count + " code notes");
 
-            var achievements = new List<GeneratedItemViewModelBase>(parser.Achievements.Count());
-            foreach (var achievement in parser.Achievements)
+            var achievementViewModels = new List<GeneratedItemViewModelBase>(achievements.Count());
+            foreach (var achievement in achievements)
             {
                 var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
-                achievements.Add(achievementViewModel);
+                achievementViewModels.Add(achievementViewModel);
             }
 
             if (_isN64)
-                MergePublishedN64(parser.GameId, achievements);
+                MergePublishedN64(GameId, achievementViewModels);
             else
-                MergePublished(parser.GameId, achievements);
+                MergePublished(GameId, achievementViewModels);
 
-            MergeLocal(parser.GameId, achievements);
+            MergeLocal(GameId, achievementViewModels);
 
-            if (!String.IsNullOrEmpty(parser.RichPresence) && parser.RichPresence.Length > 8)
-                achievements.Add(new RichPresenceViewModel(this, parser.RichPresence));
-
-            foreach (var leaderboard in parser.Leaderboards)
-                achievements.Add(new LeaderboardViewModel(this, leaderboard));
-
-            foreach (var achievement in achievements.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in achievementViewModels.OfType<GeneratedAchievementViewModel>())
                 achievement.UpdateCommonProperties(this);
 
-            Achievements = achievements;
-        }
-
-        public GameViewModel(int gameId, string title)
-        {
-            GameId = gameId;
-            Title = title;
+            Achievements = achievementViewModels;
         }
 
         private LocalAchievements _localAchievements;

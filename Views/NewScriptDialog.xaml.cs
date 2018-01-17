@@ -3,11 +3,11 @@
 namespace RATools.Views
 {
     /// <summary>
-    /// Interaction logic for DumpPublishedDialog.xaml
+    /// Interaction logic for NewScriptDialog.xaml
     /// </summary>
-    public partial class DumpPublishedDialog : UserControl
+    public partial class NewScriptDialog : UserControl
     {
-        public DumpPublishedDialog()
+        public NewScriptDialog()
         {
             InitializeComponent();
         }

@@ -61,13 +61,13 @@
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
-    <Compile Include="ViewModels\DumpPublishedDialogViewModel.cs" />
+    <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
     <Compile Include="Views\UpdateLocalDialog.xaml.cs">
       <DependentUpon>UpdateLocalDialog.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\DumpPublishedDialog.xaml.cs">
-      <DependentUpon>DumpPublishedDialog.xaml</DependentUpon>
+    <Compile Include="Views\NewScriptDialog.xaml.cs">
+      <DependentUpon>NewScriptDialog.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\AboutDialog.xaml.cs">
       <DependentUpon>AboutDialog.xaml</DependentUpon>
@@ -115,7 +115,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\DumpPublishedDialog.xaml">
+    <Page Include="Views\NewScriptDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

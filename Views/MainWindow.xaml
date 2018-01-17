@@ -13,6 +13,7 @@
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem Header="Compile _Achievements" Command="{Binding CompileAchievementsCommand}" />
+                <MenuItem Header="_New Script" Command="{Binding NewScriptCommand}" />
                 <Separator />
                 <MenuItem Header="Refresh _Current" Command="{Binding RefreshCurrentCommand}" InputGestureText="F5">
                     <MenuItem.Style>
@@ -26,17 +27,6 @@
                     </MenuItem.Style>
                 </MenuItem>
                 <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}">
-                    <MenuItem.Style>
-                        <Style TargetType="{x:Type MenuItem}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CurrentFile}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </MenuItem.Style>
-                </MenuItem>
-                <MenuItem Header="_Dump Published" Command="{Binding DumpPublishedCommand}">
                     <MenuItem.Style>
                         <Style TargetType="{x:Type MenuItem}">
                             <Style.Triggers>

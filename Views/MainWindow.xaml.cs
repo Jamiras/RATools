@@ -24,7 +24,7 @@ namespace RATools.Views
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
 
-            dialogService.RegisterDialogHandler(typeof(DumpPublishedDialogViewModel), vm => new DumpPublishedDialog());
+            dialogService.RegisterDialogHandler(typeof(NewScriptDialogViewModel), vm => new NewScriptDialog());
             dialogService.RegisterDialogHandler(typeof(UpdateLocalViewModel), vm => new OkCancelView(new UpdateLocalDialog()));
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new GameStatsDialog());
             dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());

@@ -5,11 +5,13 @@ using Jamiras.DataModels.Metadata;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Converters;
+using Jamiras.ViewModels.Fields;
 using Jamiras.ViewModels.Grid;
 using RATools.Data;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -17,25 +19,69 @@ using System.Linq;
 
 namespace RATools.ViewModels
 {
-    public class DumpPublishedDialogViewModel : DialogViewModelBase
+    public class NewScriptDialogViewModel : DialogViewModelBase
     {
-        public DumpPublishedDialogViewModel(GameViewModel game)
+        public NewScriptDialogViewModel()
         {
-            DialogTitle = game.Title + " - Dump Published";
-            OkButtonText = "_Dump";
-            CancelButtonText = "_Close";
+            DialogTitle = "New Script";
             CanClose = true;
 
+            SearchCommand = new DelegateCommand(Search);
             CheckAllCommand = new DelegateCommand(CheckAll);
             UncheckAllCommand = new DelegateCommand(UncheckAll);
             CheckWithTicketsCommand = new DelegateCommand(CheckWithTickets);
 
-            _game = game;
-            _achievements = new List<DumpAchievementItem>();
+            GameId = new IntegerFieldViewModel("Game _ID", 1, 999999);
+
+            _achievements = new ObservableCollection<DumpAchievementItem>();
             _memoryItems = new List<MemoryItem>();
             _ticketNotes = new TinyDictionary<int, string>();
 
-            foreach (var achievement in game.Achievements.OfType<GeneratedAchievementViewModel>())
+            MemoryAddresses = new GridViewModel();
+            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
+            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
+            MemoryAddresses.Columns.Add(new TextColumnDefinition("Function Name", MemoryItem.FunctionNameProperty, new StringFieldMetadata("Function Name", 40, StringFieldAttributes.Required)) { Width = 120 });
+            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Notes", MemoryItem.NotesProperty));
+        }
+
+        public IntegerFieldViewModel GameId { get; private set; }
+
+        public static readonly ModelProperty IsGameLoadedProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "IsGameLoaded", typeof(bool), false);
+        public bool IsGameLoaded
+        {
+            get { return (bool)GetValue(IsGameLoadedProperty); }
+            private set { SetValue(IsGameLoadedProperty, value); }
+        }
+
+        public CommandBase SearchCommand { get; private set; }
+        private void Search()
+        {
+            int gameId = GameId.Value.GetValueOrDefault();
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            {
+                var notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                if (File.Exists(notesFile))
+                {
+                    LoadGame(gameId, directory);
+                    return;
+                }
+            }
+
+            MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+            return;
+        }
+
+        private void LoadGame(int gameId, string raCacheDirectory)
+        {
+            _game = new GameViewModel(GameId.Value.GetValueOrDefault(), "", raCacheDirectory);
+            DialogTitle = "New Script - " + _game.Title;
+
+            _achievements.Clear();
+            _ticketNotes.Clear();
+            _memoryItems.Clear();
+            MemoryAddresses.Rows.Clear();
+            
+            foreach (var achievement in _game.Achievements.OfType<GeneratedAchievementViewModel>())
             {
                 if (achievement.Core.Achievement == null)
                     continue;
@@ -69,15 +115,32 @@ namespace RATools.ViewModels
                 _achievements.Add(dumpAchievement);
             }
 
-            MemoryAddresses = new GridViewModel();
-            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
-            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
-            MemoryAddresses.Columns.Add(new TextColumnDefinition("Function Name", MemoryItem.FunctionNameProperty, new StringFieldMetadata("Function Name", 40, StringFieldAttributes.Required)) { Width = 120 });
-            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Notes", MemoryItem.NotesProperty));
+            foreach (var kvp in _game.Notes)
+            {
+                FieldSize size = FieldSize.Byte;
+                Token token = new Token(kvp.Value, 0, kvp.Value.Length);
+                if (token.Contains("16-bit", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("16 bit", StringComparison.OrdinalIgnoreCase))
+                {
+                    size = FieldSize.Word;
+                }
+                else if (token.Contains("32-bit", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("32 bit", StringComparison.OrdinalIgnoreCase))
+                {
+                    size = FieldSize.DWord;
+                }
+
+                AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });
+            }
+
 
             UpdateMemoryGrid();
 
-            ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
+            IsGameLoaded = true;
+            GameId.IsEnabled = false;
+
+            if (_achievements.Count > 0)
+                ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
         private void MergeOpenTickets()
@@ -136,7 +199,7 @@ namespace RATools.ViewModels
             return item;
         }
 
-        private readonly GameViewModel _game;
+        private GameViewModel _game;
         private readonly TinyDictionary<int, string> _ticketNotes;
         
         public class DumpAchievementItem : LookupItem
@@ -166,7 +229,7 @@ namespace RATools.ViewModels
         {
             get { return _achievements; }
         }
-        private readonly List<DumpAchievementItem> _achievements;
+        private readonly ObservableCollection<DumpAchievementItem> _achievements;
         
         private void DumpAchievement_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -195,6 +258,13 @@ namespace RATools.ViewModels
                 achievment.IsSelected = (achievment.OpenTicketCount > 0);
         }
 
+        public static readonly ModelProperty MemoryAddressesLabelProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "MemoryAddressesLabel", typeof(string), "Referenced memory addresses");
+        public string MemoryAddressesLabel
+        {
+            get { return (string)GetValue(MemoryAddressesLabelProperty); }
+            private set { SetValue(MemoryAddressesLabelProperty, value); }
+        }
+
         public GridViewModel MemoryAddresses { get; private set; }
 
         private void UpdateMemoryGrid()
@@ -221,6 +291,17 @@ namespace RATools.ViewModels
             }
             foreach (var memoryItem in rowsToRemove)
                 MemoryAddresses.RemoveRow(memoryItem);
+
+            if (visibleAddresses.Count > 0 || MemoryAddresses.Rows.Count > 0)
+            {
+                MemoryAddressesLabel = (string)MemoryAddressesLabelProperty.DefaultValue;
+            }
+            else
+            {
+                MemoryAddressesLabel = "All known memory addresses";
+                foreach (var memoryItem in _memoryItems)
+                    visibleAddresses.Add(memoryItem);
+            }
 
             visibleAddresses.Sort((l,r) =>
             {
@@ -304,7 +385,7 @@ namespace RATools.ViewModels
             }
 
             var vm = new FileDialogViewModel();
-            vm.DialogTitle = "Select dump file";
+            vm.DialogTitle = "Create Script File";
             vm.Filters["Script file"] = "*.txt";
 
             var cleansed = _game.Title;
@@ -339,6 +420,21 @@ namespace RATools.ViewModels
                 {
                     if (!String.IsNullOrEmpty(memoryItem.FunctionName))
                     {
+                        string notes;
+                        if (_game.Notes.TryGetValue((int)memoryItem.Address, out notes))
+                        {
+                            notes = notes.Trim();
+                            if (notes.Length > 0)
+                            {
+                                stream.WriteLine();
+                                foreach (var line in notes.Split('\n'))
+                                {
+                                    stream.Write("// ");
+                                    stream.WriteLine(line.Trim());
+                                }
+                            }
+                        }
+
                         stream.Write("function ");
                         stream.Write(memoryItem.FunctionName);
                         stream.Write("() => ");
@@ -421,6 +517,10 @@ namespace RATools.ViewModels
                     stream.WriteLine();
                 }
             }
+
+            var vm = new MessageBoxViewModel(Path.GetFileName(filename) + " created.");
+            vm.DialogTitle = DialogTitle;
+            vm.ShowDialog();
         }
 
         private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, RequirementGroupViewModel requirementGroupViewModel)

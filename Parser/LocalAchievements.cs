@@ -13,7 +13,7 @@ namespace RATools.Parser
     /// <summary>
     /// Class for interacting with the local achievements file for a game.
     /// </summary>
-    [DebuggerDisplay("LocalAchievements: {_title}")]
+    [DebuggerDisplay("LocalAchievements: {Title}")]
     public class LocalAchievements
     {
         /// <summary>

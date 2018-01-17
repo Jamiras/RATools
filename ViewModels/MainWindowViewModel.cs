@@ -22,7 +22,7 @@ namespace RATools.ViewModels
             CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
             RefreshCurrentCommand = new DelegateCommand(RefreshCurrent);
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
-            DumpPublishedCommand = new DelegateCommand(DumpPublished);
+            NewScriptCommand = new DelegateCommand(NewScript);
             UpdateLocalCommand = new DelegateCommand(UpdateLocal);
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
@@ -191,16 +191,10 @@ namespace RATools.ViewModels
             RecentFiles = _recentFiles.ToArray();
         }
 
-        public CommandBase DumpPublishedCommand { get; private set; }
-        private void DumpPublished()
+        public CommandBase NewScriptCommand { get; private set; }
+        private void NewScript()
         {
-            if (Game == null)
-            {
-                MessageBoxViewModel.ShowMessage("No game loaded");
-                return;
-            }
-
-            var dialog = new DumpPublishedDialogViewModel(Game);
+            var dialog = new NewScriptDialogViewModel();
             dialog.ShowDialog();
         }
 
