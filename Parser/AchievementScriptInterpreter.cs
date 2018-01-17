@@ -961,6 +961,17 @@ namespace RATools.Parser
                             return true;
                         }
                         break;
+
+                    case MathematicOperation.Divide:
+                        if (integer != null)
+                        {
+                            builder.Append('*');
+                            var inverted = 1 / (double)integer.Value;
+                            builder.Append(inverted);
+                            address = builder.ToString();
+                            return true;
+                        }
+                        break;
                 }
             }
 
