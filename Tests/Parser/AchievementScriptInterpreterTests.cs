@@ -111,6 +111,29 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        [TestCase("byte(0x1234) - 1 == 4", "byte(0x001234) == 5")]
+        [TestCase("byte(0x1234) + 1 == 4", "byte(0x001234) == 3")]
+        [TestCase("byte(0x1234) * 2 == 4", "byte(0x001234) == 2")]
+        [TestCase("byte(0x1234) / 2 == 4", "byte(0x001234) == 8")]
+        [TestCase("byte(0x1234) * 2 + 1 == byte(0x4321) * 2 + 1", "byte(0x001234) == byte(0x004321)")]
+        [TestCase("byte(0x1234) + 2 - 1 == byte(0x4321) + 1", "byte(0x001234) == byte(0x004321)")]
+        public void TestTransitiveCondition(string trigger, string expectedRequirement)
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + trigger + ")");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo(expectedRequirement));
+        }
+
+        [Test]
+        public void TestTransitiveConditionIncompatible()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) + 1 == byte(0x4321) - 1)", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:40 expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
+        }
+
+        [Test]
         public void TestDictionaryLookup()
         {
             var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +
@@ -354,6 +377,13 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 10 + 1))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234*10_v1) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceValueDivide()
+        {
+            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) / 4))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234*0.25) here\r\n"));
         }
 
         [Test]

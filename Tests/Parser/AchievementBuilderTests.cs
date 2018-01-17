@@ -174,8 +174,8 @@ namespace RATools.Test.Parser
         [TestCase("0xH000440=140(1)", "once(byte(0x000440) == 140)")] // old format
         [TestCase("R:0xH000440=0", "never(byte(0x000440) == 0)")]
         [TestCase("P:0xH000440=0", "unless(byte(0x000440) == 0)")]
-        [TestCase("A:0xN20770f=0", "bit1(0x20770F) + ")]
-        [TestCase("B:0xN20770f=0", "bit1(0x20770F) - ")]
+        [TestCase("A:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) + bit2(0x20770F) == 0")]
+        [TestCase("B:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) - bit2(0x20770F) == 0")]
         public void TestParseRequirements(string input, string expected)
         {
             var builder = new AchievementBuilder();

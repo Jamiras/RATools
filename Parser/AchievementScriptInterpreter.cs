@@ -252,12 +252,13 @@ namespace RATools.Parser
             public ScriptInterpreterAchievementBuilder() : base()
             {
                 Current = CoreRequirements;
+                EqualityModifiers = new Stack<ValueModifier>();
             }
 
             public ICollection<Requirement> Current { get; set; }
 
             public bool IsInNot { get; set; }
-            public int EqualityModifier { get; set; }
+            public Stack<ValueModifier> EqualityModifiers { get; private set; }
 
             /// <summary>
             /// Begins an new alt group.
@@ -427,6 +428,18 @@ namespace RATools.Parser
                 return ExecuteAchievementExpressions(achievement, ifExpression.ElseExpressions, scope);
         }
 
+        private static MathematicOperation GetOppositeMathematicOperation(MathematicOperation op)
+        {
+            switch (op)
+            {
+                case MathematicOperation.Add: return MathematicOperation.Subtract;
+                case MathematicOperation.Subtract: return MathematicOperation.Add;
+                case MathematicOperation.Multiply: return MathematicOperation.Divide;
+                case MathematicOperation.Divide: return MathematicOperation.Multiply;
+                default: return MathematicOperation.None;
+            }
+        }
+
         private bool ExecuteAchievementMathematic(ScriptInterpreterAchievementBuilder achievement, MathematicExpression mathematic, InterpreterScope scope)
         {
             if (!ExecuteAchievementExpression(achievement, mathematic.Left, scope))
@@ -460,19 +473,12 @@ namespace RATools.Parser
                 return EvaluationError(mathematic.Right, "expression does not evaluate to a constant");
             }
 
-            switch (mathematic.Operation)
-            {
-                case MathematicOperation.Add:
-                    achievement.EqualityModifier -= integerOperand.Value;
-                    return true;
+            var oppositeOperation = GetOppositeMathematicOperation(mathematic.Operation);
+            if (oppositeOperation == MathematicOperation.None)
+                return EvaluationError(mathematic, "cannot transpose modification to result");
 
-                case MathematicOperation.Subtract:
-                    achievement.EqualityModifier += integerOperand.Value;
-                    return true;
-
-                default:
-                    return EvaluationError(mathematic, "only add and subtract operations applicable to achievement trigger");
-            }
+            achievement.EqualityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
+            return true;
         }
 
         private bool ExecuteAchievementConditional(ScriptInterpreterAchievementBuilder achievement, ConditionalExpression condition, InterpreterScope scope)
@@ -514,7 +520,7 @@ namespace RATools.Parser
 
         private bool ExecuteAchievementComparison(ScriptInterpreterAchievementBuilder achievement, ComparisonExpression comparison, InterpreterScope scope)
         {
-            achievement.EqualityModifier = 0;
+            achievement.EqualityModifiers.Clear();
 
             ExpressionBase left;
             if (!comparison.Left.ReplaceVariables(scope, out left))
@@ -533,19 +539,44 @@ namespace RATools.Parser
             var integerRight = right as IntegerConstantExpression;
             if (integerRight != null)
             {
+                int newValue = integerRight.Value;
+                while (achievement.EqualityModifiers.Count > 0)
+                {
+                    var modifier = achievement.EqualityModifiers.Pop();
+                    newValue = modifier.Apply(newValue);
+                }
+
                 var requirement = achievement.LastRequirement;
                 requirement.Operator = op;
-                requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = (uint)(integerRight.Value + achievement.EqualityModifier) };
-                achievement.EqualityModifier = 0;
+                requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
             }
             else
             {
-                achievement.EqualityModifier = -achievement.EqualityModifier;
+                var leftModifiers = new Stack<ValueModifier>(achievement.EqualityModifiers.Reverse());
+                achievement.EqualityModifiers.Clear();
+
                 if (!ExecuteAchievementExpression(achievement, right, scope))
                     return false;
 
-                if (achievement.EqualityModifier != 0)
-                    return EvaluationError(right, "expansion of function calls results in non-zero modifier when comparing multiple memory addresses");
+                if (leftModifiers.Count > 0 || achievement.EqualityModifiers.Count > 0)
+                {
+                    var rightValue = 1234567;
+                    var leftValue = rightValue;
+                    while (leftModifiers.Count > 0)
+                    {
+                        var modifier = leftModifiers.Pop();
+                        leftValue = ValueModifier.Apply(leftValue, GetOppositeMathematicOperation(modifier.Operation), modifier.Amount);
+                    }
+
+                    while (achievement.EqualityModifiers.Count > 0)
+                    {
+                        var modifier = achievement.EqualityModifiers.Pop();
+                        rightValue = ValueModifier.Apply(rightValue, GetOppositeMathematicOperation(modifier.Operation), modifier.Amount);
+                    }
+
+                    if (leftValue != rightValue)
+                        return EvaluationError(right, "expansion of function calls results in non-zero modifier when comparing multiple memory addresses");
+                }
 
                 var extraRequirement = achievement.LastRequirement;
                 achievement.Current.Remove(extraRequirement);
@@ -558,7 +589,7 @@ namespace RATools.Parser
             return true;
         }
 
-        private RequirementOperator GetRequirementOperator(ComparisonOperation comparisonOperation)
+        private static RequirementOperator GetRequirementOperator(ComparisonOperation comparisonOperation)
         {
             switch (comparisonOperation)
             {
@@ -572,7 +603,7 @@ namespace RATools.Parser
             }
         }
 
-        private RequirementOperator GetOppositeRequirementOperator(RequirementOperator op)
+        private static RequirementOperator GetOppositeRequirementOperator(RequirementOperator op)
         {
             switch (op)
             {

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -284,5 +285,74 @@ namespace RATools.Parser.Internal
         /// Multiply/Divide/Modulus
         /// </summary>
         Multiply,
+    }
+
+    /// <summary>
+    /// Defines a mathematic modified to apply to a value
+    /// </summary>
+    [DebuggerDisplay("ValueModifier: {Operation} {Amount}")]
+    internal struct ValueModifier
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ValueModifier"/> struct.
+        /// </summary>
+        /// <param name="operation">The operation to apply.</param>
+        /// <param name="amount">The amount to apply.</param>
+        public ValueModifier(MathematicOperation operation, int amount)
+        {
+            Operation = operation;
+            Amount = amount;
+        }
+
+        /// <summary>
+        /// Gets or sets the operation to apply.
+        /// </summary>
+        public MathematicOperation Operation { get; set; }
+
+        /// <summary>
+        /// Gets or sets the amount to apply.
+        /// </summary>
+        public int Amount { get; set; }
+
+        /// <summary>
+        /// Applies the specified operation and amount to the provided <paramref name="value"/>.
+        /// </summary>
+        /// <param name="value">The value to modified.</param>
+        /// <returns>The modified value.</returns>
+        public int Apply(int value)
+        {
+            return Apply(value, Operation, Amount);
+        }
+
+        /// <summary>
+        /// Applies the specified <paramref name="operation"/> and <paramref name="amount"/> to the provided <paramref name="value"/>.
+        /// </summary>
+        /// <param name="value">The value to modified.</param>
+        /// <param name="operation">The operation to apply.</param>
+        /// <param name="amount">The amount to apply.</param>
+        /// <returns>The modified value.</returns>
+        public static int Apply(int value, MathematicOperation operation, int amount)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add:
+                    return value + amount;
+
+                case MathematicOperation.Subtract:
+                    return value - amount;
+
+                case MathematicOperation.Multiply:
+                    return value * amount;
+
+                case MathematicOperation.Divide:
+                    return value / amount;
+
+                case MathematicOperation.Modulus:
+                    return value % amount;
+
+                default:
+                    return 0;
+            }
+        }
     }
 }
