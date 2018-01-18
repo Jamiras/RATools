@@ -1,6 +1,7 @@
-v1.3.0 - 16 Jan 2017
+v1.3.0 - 17 Jan 2017
 * replace "Dump Published" dialog with "New Script" dialog
-* support for AddSource/SubSource
+* added ability to dump unofficial achievements
+* support for generating achievements using AddSource/SubSource
 * add session counts to game stats dialog
 * prevent exception if incorrect number of parameters passed to rich_presence_value or rich_presence_lookup
 

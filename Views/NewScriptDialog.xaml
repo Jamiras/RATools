@@ -56,7 +56,17 @@
                             <ColumnDefinition Width="20" />
                         </Grid.ColumnDefinitions>
                         <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding IsSelected}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Label}">
+                            <TextBlock.Style>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
+                                            <Setter Property="FontStyle" Value="Italic" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,2,0" Text="{Binding OpenTicketCount}">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}">

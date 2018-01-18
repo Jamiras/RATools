@@ -214,10 +214,13 @@ namespace RATools.ViewModels
                 var winners = tokenizer.ReadNumber();
                 stats.EarnedBy = Int32.Parse(winners.ToString());
 
-                tokenizer.ReadTo("(");
-                tokenizer.Advance();
-                var hardcoreWinners = tokenizer.ReadNumber();
-                stats.EarnedHardcoreBy = Int32.Parse(hardcoreWinners.ToString());
+                if (stats.EarnedBy > 0)
+                {
+                    tokenizer.ReadTo("(");
+                    tokenizer.Advance();
+                    var hardcoreWinners = tokenizer.ReadNumber();
+                    stats.EarnedHardcoreBy = Int32.Parse(hardcoreWinners.ToString());
+                }
 
                 tokenizer.ReadTo("<a href='/Achievement/");
                 if (tokenizer.Match("<a href='/Achievement/"))

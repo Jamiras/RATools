@@ -80,14 +80,30 @@ namespace RATools.ViewModels
             _ticketNotes.Clear();
             _memoryItems.Clear();
             MemoryAddresses.Rows.Clear();
-            
+
+            var unofficialAchievements = new List<DumpAchievementItem>();
             foreach (var achievement in _game.Achievements.OfType<GeneratedAchievementViewModel>())
             {
-                if (achievement.Core.Achievement == null)
-                    continue;
+                AchievementViewModel source = achievement.Core;
+                if (source.Achievement == null)
+                {
+                    source = achievement.Unofficial;
+                    if (source.Achievement == null)
+                        continue;
+                }
 
-                var dumpAchievement = new DumpAchievementItem(achievement.Id, achievement.Core.Title.Text);
-                foreach (var group in achievement.Core.RequirementGroups)
+                var dumpAchievement = new DumpAchievementItem(achievement.Id, source.Title.Text);
+                if (achievement.Core.Achievement == null)
+                {
+                    dumpAchievement.IsUnofficial = true;
+                    unofficialAchievements.Add(dumpAchievement);
+                }
+                else
+                {
+                    _achievements.Add(dumpAchievement);
+                }
+
+                foreach (var group in source.RequirementGroups)
                 {
                     foreach (var requirement in group.Requirements)
                     {
@@ -112,8 +128,10 @@ namespace RATools.ViewModels
 
                 dumpAchievement.IsSelected = true;
                 dumpAchievement.PropertyChanged += DumpAchievement_PropertyChanged;
-                _achievements.Add(dumpAchievement);
             }
+
+            foreach (var unofficialAchievement in unofficialAchievements)
+                _achievements.Add(unofficialAchievement);
 
             foreach (var kvp in _game.Notes)
             {
@@ -210,6 +228,8 @@ namespace RATools.ViewModels
                 OpenTickets = new List<int>();
                 MemoryAddresses = new List<MemoryItem>();
             }
+
+            public bool IsUnofficial { get; set; }
 
             public int OpenTicketCount
             {
