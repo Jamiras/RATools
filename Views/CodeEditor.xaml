@@ -1,0 +1,12 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
+                    xmlns:vm="clr-namespace:RATools.ViewModels">
+
+    <DataTemplate DataType="{x:Type vm:EditorViewModel}">
+        <Grid Background="Red">
+            <jamiras:CodeEditorView DataContext="{Binding}" />
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

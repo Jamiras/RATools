@@ -29,6 +29,8 @@ namespace RATools.ViewModels
             AboutCommand = new DelegateCommand(About);
 
             _recentFiles = new RecencyBuffer<string>(8);
+
+            //Editor = new EditorViewModel();
         }
 
         public bool Initialize()
@@ -100,11 +102,11 @@ namespace RATools.ViewModels
                 OpenFile(vm.FileNames[0]);
         }
 
-        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null);
-        public GameViewModel Game
+        public static readonly ModelProperty EditorProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Editor", typeof(ViewModelBase), null);
+        public ViewModelBase Editor
         {
-            get { return (GameViewModel)GetValue(GameProperty); }
-            private set { SetValue(GameProperty, value); }
+            get { return (ViewModelBase)GetValue(EditorProperty); }
+            private set { SetValue(EditorProperty, value); }
         }
 
         public static readonly ModelProperty CurrentFileProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CurrentFile", typeof(string), null);
@@ -136,6 +138,13 @@ namespace RATools.ViewModels
                 return;
             }
 
+            var editor = Editor as EditorViewModel;
+            if (editor != null)
+            {
+                editor.Content = File.ReadAllText(filename);
+                return;
+            }
+
             var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             logger.WriteVerbose("Opening " + filename);
 
@@ -162,7 +171,7 @@ namespace RATools.ViewModels
                         if (File.Exists(notesFile))
                         {
                             logger.WriteVerbose("Found code notes in " + directory);
-                            Game = new GameViewModel(parser, directory.ToString());
+                            Editor = new GameViewModel(parser, directory.ToString());
                             return;
                         }
                     }
@@ -177,9 +186,9 @@ namespace RATools.ViewModels
                     CurrentFile = filename;
 
                     if (!String.IsNullOrEmpty(parser.GameTitle))
-                        Game = new GameViewModel(parser.GameId, parser.GameTitle);
+                        Editor = new GameViewModel(parser.GameId, parser.GameTitle);
                     else
-                        Game = null;
+                        Editor = null;
                 }
             }
 
@@ -219,13 +228,14 @@ namespace RATools.ViewModels
         public CommandBase UpdateLocalCommand { get; private set; }
         private void UpdateLocal()
         {
-            if (Game == null)
+            var game = Editor as GameViewModel;
+            if (game == null)
             {
                 MessageBoxViewModel.ShowMessage("No game loaded");
                 return;
             }
 
-            var dialog = new UpdateLocalViewModel(Game);
+            var dialog = new UpdateLocalViewModel(game);
             dialog.ShowDialog();
         }
 
@@ -240,9 +250,10 @@ namespace RATools.ViewModels
         {
             ServiceRepository.Instance.FindService<ISettings>().HexValues = (bool)e.NewValue;
             var vm = (MainWindowViewModel)sender;
-            if (vm.Game != null)
+            var game = vm.Editor as GameViewModel;
+            if (game != null)
             {
-                foreach (var achievement in vm.Game.Achievements)
+                foreach (var achievement in game.Achievements)
                     achievement.OnShowHexValuesChanged(e);
             }
         }
