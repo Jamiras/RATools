@@ -1,3 +1,6 @@
+v1.3.1 - 21 Jan 2017
+* prevent exception dumping unofficial achievements
+
 v1.3.0 - 17 Jan 2017
 * replace "Dump Published" dialog with "New Script" dialog
 * added ability to dump unofficial achievements

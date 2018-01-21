@@ -488,25 +488,28 @@ namespace RATools.ViewModels
 
                     stream.WriteLine("achievement(");
 
+                    var achievementViewModel = (achievement.Core.Achievement != null) ? achievement.Core : achievement.Unofficial;
+                    var achievementData = achievementViewModel.Achievement;
+
                     stream.Write("    title = \"");
-                    stream.Write(achievement.Core.Title.Text);
+                    stream.Write(achievementData.Title);
                     stream.Write("\", description = \"");
-                    stream.Write(achievement.Core.Description.Text);
+                    stream.Write(achievementData.Description);
                     stream.Write("\", points = ");
-                    stream.Write(achievement.Core.Points.Value);
+                    stream.Write(achievementData.Points);
                     stream.WriteLine(",");
 
                     stream.Write("    id = ");
-                    stream.Write(achievement.Core.Achievement.Id);
+                    stream.Write(achievementData.Id);
                     stream.Write(", badge = \"");
-                    stream.Write(achievement.Core.Achievement.BadgeName);
+                    stream.Write(achievementData.BadgeName);
                     stream.Write("\", published = \"");
-                    stream.Write(achievement.Core.Achievement.Published);
+                    stream.Write(achievementData.Published);
                     stream.Write("\", modified = \"");
-                    stream.Write(achievement.Core.Achievement.LastModified);
+                    stream.Write(achievementData.LastModified);
                     stream.WriteLine("\",");
 
-                    var groupEnumerator = achievement.Core.RequirementGroups.GetEnumerator();
+                    var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
                     DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current);

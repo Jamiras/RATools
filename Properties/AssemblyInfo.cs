@@ -11,7 +11,7 @@ using System.Windows;
 [assembly: AssemblyDescription("Collection of tools for developers contributing to retroachievements.org")]
 [assembly: AssemblyCompany("Jamiras")]
 [assembly: AssemblyProduct("https://github.com/Jamiras/RATools")]
-[assembly: AssemblyCopyright("Copyright © 2017 Brian Weiss")]
+[assembly: AssemblyCopyright("Copyright © 2018 Brian Weiss")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -50,8 +50,8 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
-[assembly: AssemblyInformationalVersion("17 Jan 2018")]
+[assembly: AssemblyVersion("1.3.1.0")]
+[assembly: AssemblyFileVersion("1.3.1.0")]
+[assembly: AssemblyInformationalVersion("21 Jan 2018")]
 
 [assembly: InternalsVisibleTo("RATools.Test")]
