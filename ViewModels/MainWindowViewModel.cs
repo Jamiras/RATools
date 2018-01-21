@@ -48,14 +48,32 @@ namespace RATools.ViewModels
             }
 
             var logService = ServiceRepository.Instance.FindService<ILogService>();
-            var logger = new FileLogger("RATools.log");
-            logService.Loggers.Add(logger);
+            FileLogger logger = null;
+            for (int i = 1; i < 10; i++)
+            {
+                var fileName = (i == 1) ? "RATools.log" : "RATools" + i + ".log";
+                try
+                {
+                    logger = new FileLogger(fileName);
+                }
+                catch (IOException)
+                {
+                    // assume "file in use" and create a new one
+                    continue;
+                }
+
+                logService.Loggers.Add(logger);
+                break;
+            }
             logService.IsTimestampLogged = true;
 
-            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
-            if (version.EndsWith(".0"))
-                version = version.Substring(0, version.Length - 2);
-            logger.Write("RATools v" + version);
+            if (logger != null)
+            {
+                var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                if (version.EndsWith(".0"))
+                    version = version.Substring(0, version.Length - 2);
+                logger.Write("RATools v" + version);
+            }
 
             return true;
         }
