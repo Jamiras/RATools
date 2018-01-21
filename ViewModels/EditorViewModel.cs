@@ -18,6 +18,12 @@ namespace RATools.ViewModels
             Style.SetCustomColor((int)ExpressionType.StringConstant, Colors.DarkSeaGreen);
             Style.SetCustomColor((int)ExpressionType.Keyword, Colors.DarkGoldenrod);
             Style.SetCustomColor((int)ExpressionType.ParseError, Colors.Red);
+
+            Content = "// Super Mario Bros\n" +
+                      "// #ID = 1446\n" +
+                      "\n" +
+                      "// Event music buffer\n" +
+                      "function current_music() => byte(0x0000F0)\n";
         }
 
         protected override void OnContentChanged(string newValue)
@@ -31,13 +37,19 @@ namespace RATools.ViewModels
 
         protected override void OnLineChanged(LineChangedEventArgs e)
         {
-            base.OnLineChanged(e);
-
             var expressions = new List<ExpressionBase>();
             if (_expressionGroup.GetExpressionsForLine(expressions, e.Line.Line))
             {
                 foreach (var expression in expressions)
-                    e.SetColor(expression.Column, expression.EndColumn - expression.Column + 1, (int)expression.Type);
+                {
+                    var expressionStart = (expression.Line == e.Line.Line) ? expression.Column : 1;
+                    var expressionEnd = (expression.EndLine == e.Line.Line) ? expression.EndColumn : e.Line.LineLength + 1;
+
+                    if (expression is ParseErrorExpression)
+                        e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);
+                    else
+                        e.SetColor(expressionStart, expressionEnd - expressionStart + 1, (int)expression.Type);
+                }
             }
 
             base.OnLineChanged(e);

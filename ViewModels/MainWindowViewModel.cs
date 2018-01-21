@@ -30,7 +30,7 @@ namespace RATools.ViewModels
 
             _recentFiles = new RecencyBuffer<string>(8);
 
-            //Editor = new EditorViewModel();
+            Editor = new EditorViewModel();
         }
 
         public bool Initialize()
