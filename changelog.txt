@@ -1,3 +1,6 @@
+v1.3.2 - 23 Jan 2017
+* changed the default file extension to '.rascript'
+
 v1.3.1 - 21 Jan 2017
 * prevent exception dumping unofficial achievements
 

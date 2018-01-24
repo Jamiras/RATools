@@ -93,7 +93,7 @@ namespace RATools.ViewModels
         {
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Select achievements script";
-            vm.Filters["Script file"] = "*.txt";
+            vm.Filters["Script file"] = "*.rascript;*.txt";
             vm.CheckFileExists = true;
 
             if (vm.ShowOpenFileDialog() == DialogResult.Ok)

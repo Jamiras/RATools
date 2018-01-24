@@ -406,14 +406,14 @@ namespace RATools.ViewModels
 
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Create Script File";
-            vm.Filters["Script file"] = "*.txt";
+            vm.Filters["Script file"] = "*.rascript";
 
             var cleansed = _game.Title;
             foreach (var c in Path.GetInvalidFileNameChars())
                 cleansed = cleansed.Replace(c.ToString(), "");
             if (String.IsNullOrEmpty(cleansed))
                 cleansed = _game.GameId.ToString();
-            vm.FileNames = new[] { cleansed + ".txt" };
+            vm.FileNames = new[] { cleansed + ".rascript" };
 
             if (vm.ShowSaveFileDialog() != DialogResult.Ok)
                 return;
