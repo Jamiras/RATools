@@ -100,7 +100,7 @@ namespace RATools.ViewModels
 
             if (isModified || genIndex != genLines.Length || localIndex != localLines.Length)
             {
-                IsModified = true;
+                ModificationMessage = "Local value differs from generated value";
 
                 while (genIndex < genLines.Length)
                     lines.Add(new RichPresenceLine("", genLines[genIndex++]));
@@ -111,6 +111,8 @@ namespace RATools.ViewModels
             }
             else
             {
+                ModificationMessage = null;
+
                 lines.Clear();
                 foreach (var line in genLines)
                     lines.Add(new RichPresenceLine(line));
@@ -172,13 +174,6 @@ namespace RATools.ViewModels
 
         public IEnumerable<RichPresenceLine> Lines { get; private set; }
 
-        public static readonly ModelProperty IsModifiedProperty = ModelProperty.Register(typeof(RichPresenceViewModel), "IsModified", typeof(bool), false);
-        public bool IsModified
-        {
-            get { return (bool)GetValue(IsModifiedProperty); }
-            private set { SetValue(IsModifiedProperty, value); }
-        }
-
         public DelegateCommand CopyToClipboardCommand { get; private set; }
 
         private void UpdateLocal()
@@ -191,7 +186,7 @@ namespace RATools.ViewModels
                 lines.Add(new RichPresenceLine(line));
             Lines = lines;
 
-            IsModified = false;
+            ModificationMessage = null;
             OnPropertyChanged(() => Lines);
             OnPropertyChanged(() => LocalModified);
         }

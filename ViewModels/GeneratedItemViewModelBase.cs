@@ -42,6 +42,24 @@ namespace RATools.ViewModels
         public virtual ModifiedState LocalModified { get { return ModifiedState.None; } }
         public virtual bool IsGenerated { get { return false; } }
 
+        public static readonly ModelProperty ModificationMessageProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "ModificationMessage", typeof(string), null);
+        public string ModificationMessage
+        {
+            get { return (string)GetValue(ModificationMessageProperty); }
+            protected set
+            {
+                SetValue(ModificationMessageProperty, value);
+                IsModified = !String.IsNullOrEmpty(value);
+            }
+        }
+
+        public static readonly ModelProperty IsModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsModified", typeof(bool), false);
+        public bool IsModified
+        {
+            get { return (bool)GetValue(IsModifiedProperty); }
+            private set { SetValue(IsModifiedProperty, value); }
+        }
+
         public CommandBase UpdateLocalCommand { get; protected set; }
 
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e) { }

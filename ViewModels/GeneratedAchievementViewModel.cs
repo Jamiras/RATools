@@ -95,6 +95,22 @@ namespace RATools.ViewModels
                 Id = Core.Id;
             else if (Unofficial.Achievement != null)
                 Id = Unofficial.Id;
+
+            UpdateModificationMessage();
+        }
+
+        private void UpdateModificationMessage()
+        { 
+            if (!IsGenerated)
+                ModificationMessage = null;
+            else if (Local.Modified == ModifiedState.Modified)
+                ModificationMessage = "Local achievement differs from generated achievement";
+            else if (Core.Modified == ModifiedState.Modified)
+                ModificationMessage = "Core achievement differs from generated achievement";
+            else if (Unofficial.Modified == ModifiedState.Modified)
+                ModificationMessage = "Unofficial achievement differs from generated achievement";
+            else if (Local.Modified == ModifiedState.None)
+                ModificationMessage = "Local achievement does not exist";
         }
 
         public override ModifiedState CoreModified
@@ -146,6 +162,8 @@ namespace RATools.ViewModels
 
             OnPropertyChanged(() => Local);
             OnPropertyChanged(() => LocalModified);
+
+            UpdateModificationMessage();
         }
 
         public CommandBase DeleteLocalCommand { get; protected set; }
@@ -157,6 +175,8 @@ namespace RATools.ViewModels
 
             OnPropertyChanged(() => Local);
             OnPropertyChanged(() => LocalModified);
+
+            UpdateModificationMessage();
         }
 
         internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)

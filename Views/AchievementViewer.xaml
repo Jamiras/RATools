@@ -9,8 +9,10 @@
     <SolidColorBrush x:Key="newValueColor" Color="#00D040" />
     <SolidColorBrush x:Key="oldValueColor" Color="#E04040" />
 
+    <BooleanToVisibilityConverter x:Key="boolToVisConverter" />
+
     <DataTemplate x:Key="achievementRowTemplate">
-        <Grid>
+        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}">
             <Grid.Resources>
                 <ContextMenu x:Key="updateLocalContextMenu" DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
                     <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
@@ -23,92 +25,54 @@
                         <DataTrigger Binding="{Binding LocalModified}" Value="Unmodified">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
                         </DataTrigger>
+                        <DataTrigger Binding="{Binding UpdateLocalCommand}" Value="{x:Null}">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
                         <DataTrigger Binding="{Binding IsGenerated}" Value="False">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
+                            <Setter Property="Opacity" Value="0.6" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="40" />
-                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="30" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="16" />
-                <ColumnDefinition Width="16" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="{Binding Id}" Margin="2,0,2,0" Foreground="DarkGray" HorizontalAlignment="Right" />
-            <TextBlock Grid.Column="1" Text="{Binding Title}" Margin="2,0,2,0" />
-            <TextBlock Grid.Column="2" Text="{Binding Points}" Margin="2,0,8,0" HorizontalAlignment="Right" />
+            <!-- Modified -->
+            <TextBlock Text="&#x23FA;" FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
+                       Visibility="{Binding IsModified, Converter={StaticResource boolToVisConverter}}"
+                       ToolTip="{Binding ModificationMessage}" />
 
-            <TextBlock Grid.Column="3" Margin="2,0,2,0" HorizontalAlignment="Center">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Setter Property="Opacity" Value="0.3" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsGenerated}" Value="True">
-                                <Setter Property="Text" Value="G" />
-                            </DataTrigger>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding LocalModified}" Value="None" />
-                                    <Condition Binding="{Binding UnofficialModified}" Value="None" />
-                                    <Condition Binding="{Binding CoreModified}" Value="None" />
-                                </MultiDataTrigger.Conditions>
-                                <MultiDataTrigger.Setters>
-                                    <Setter Property="Opacity" Value="1.0" />
-                                </MultiDataTrigger.Setters>
-                            </MultiDataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
+            <!-- Image -->
+            <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentPresenter.Resources>
+                    <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
+                        <Image Width="12" Height="12" Source="/RATools;component/Resources/achievement.png" ToolTip="Achievement" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:LeaderboardViewModel}">
+                        <Image Width="14" Height="14" Source="/RATools;component/Resources/leaderboard.png" ToolTip="Leaderboard" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
+                        <Image Width="14" Height="14" Source="/RATools;component/Resources/rich_presence.png" ToolTip="Rich Presence" />
+                    </DataTemplate>
+                </ContentPresenter.Resources>
+            </ContentPresenter>
 
-            <TextBlock Grid.Column="4" Margin="2,0,2,0" HorizontalAlignment="Center">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Setter Property="Opacity" Value="0.3" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding LocalModified}" Value="Modified">
-                                <Setter Property="Opacity" Value="1.0" />
-                                <Setter Property="Text" Value="L*" />
-                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding LocalModified}" Value="Unmodified">
-                                <Setter Property="Text" Value="L" />
-                            </DataTrigger>
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding UnofficialModified}" Value="None" />
-                                    <Condition Binding="{Binding CoreModified}" Value="None" />
-                                </MultiDataTrigger.Conditions>
-                                <MultiDataTrigger.Setters>
-                                    <Setter Property="Opacity" Value="1.0" />
-                                </MultiDataTrigger.Setters>
-                            </MultiDataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-
-            <TextBlock Grid.Column="5" Margin="2,0,2,0" HorizontalAlignment="Center">
+            <!-- Name -->
+            <TextBlock Grid.Column="2" Margin="2,0,2,0" HorizontalAlignment="Stretch"
+                       Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+            
+            <!-- Points -->
+            <TextBlock Grid.Column="3" Text="{Binding Points}" Margin="2,0,2,0" HorizontalAlignment="Right">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Modified">
-                                <Setter Property="Text" Value="U*" />
-                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Unmodified">
-                                <Setter Property="Text" Value="U" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CoreModified}" Value="Modified">
-                                <Setter Property="Text" Value="C*" />
-                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CoreModified}" Value="Unmodified">
-                                <Setter Property="Text" Value="C" />
+                            <DataTrigger Binding="{Binding Points}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -131,12 +95,25 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" />
+            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" VerticalAlignment="Top" />
             <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" />
             <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" VerticalAlignment="Top" />
             <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
                 <TextBlock Text="{Binding Points.Value}" />
                 <Run Text="points" />
+            </TextBlock>
+            <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Id}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+                <Run Text="ID:" />
+                <TextBlock Text="{Binding Id}" />
             </TextBlock>
 
             <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
@@ -182,7 +159,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" />
+            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" VerticalAlignment="Top" />
             <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
@@ -221,6 +198,19 @@
                     </TextBlock.Style>
                 </TextBlock>                
                 <Run Text="points" />
+            </TextBlock>
+            <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Id}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+                <Run Text="ID:" />
+                <TextBlock Text="{Binding Id}" />
             </TextBlock>
 
             <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
@@ -333,19 +323,23 @@
             <Grid Background="White">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                
+                <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
+                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,2">
+                    <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
+                        <TextBlock Text="Copy to Clipboard" />
+                    </Hyperlink>
+                </TextBlock>
 
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
-                    <TextBlock FontSize="10" VerticalAlignment="Bottom" Margin="8,0,0,2">
-                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
-                            <TextBlock Text="Copy to Clipboard" />
-                        </Hyperlink>
-                    </TextBlock>
-                </StackPanel>
-
-                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="2" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Lines}" Grid.IsSharedSizeScope="True">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -393,11 +387,17 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-                <TextBlock FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" />
-                <TextBlock Grid.Row="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
+                <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/leaderboard.png" Margin="4,2,2,2" />
 
-                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" Margin="2,0,0,0" />
+                <TextBlock Grid.Column="1" Grid.Row="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
+
+                <ScrollViewer Grid.Row="2" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Groups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -436,13 +436,48 @@
     <DataTemplate DataType="{x:Type vm:GameViewModel}">
         <Grid Background="#F0F0F0">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="344" />
-                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="238" MinWidth="128" MaxWidth="400" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" MinWidth="480" />
             </Grid.ColumnDefinitions>
-            <ListBox ItemsSource="{Binding Achievements}" SelectedItem="{Binding SelectedAchievement}"
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid IsEnabled="False">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Margin="4" Background="Red" x:Name="maxAchievementRowWidth" Height="10" />
+                <ScrollBar Grid.Column="2" Orientation="Vertical" />
+            </Grid>
+
+            <ListBox ItemsSource="{Binding Achievements}" SelectedItem="{Binding SelectedAchievement}" HorizontalContentAlignment="Stretch"
                     ItemTemplate="{StaticResource achievementRowTemplate}" x:Name="achievementsGrid" />
 
-            <ContentPresenter Grid.Column="1" Content="{Binding SelectedAchievement}" />
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" ResizeDirection="Columns" />
+
+            <ContentPresenter Grid.Column="2" Content="{Binding SelectedAchievement}" />
+
+            <Border Grid.Row="1" Grid.ColumnSpan="3" Height="20" Background="#C0C0C0" BorderBrush="DarkGray" BorderThickness="0,1,0,0">
+                <Grid>
+                    <TextBlock Margin="6,0,6,0">
+                    <TextBlock Text="{Binding PublishedAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
+                        <Run Text=" published achievements (" />
+                        <TextBlock Text="{Binding PublishedAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text=" points)" />
+                    </TextBlock>
+                    <TextBlock Margin="6,0,6,0" HorizontalAlignment="Right">
+                        <TextBlock Text="{Binding LocalAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
+                        <Run Text=" local achievements (" />
+                        <TextBlock Text="{Binding LocalAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text=" points)" />
+                    </TextBlock>
+                </Grid>
+            </Border>
         </Grid>
     </DataTemplate>
 

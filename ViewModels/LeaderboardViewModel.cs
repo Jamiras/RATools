@@ -16,7 +16,7 @@ namespace RATools.ViewModels
             _clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
 
             _leaderboard = leaderboard;
-            Title = "Leaderboard: " + leaderboard.Title;
+            Title = leaderboard.Title;
             Description = leaderboard.Description;
 
             var groups = new List<LeaderboardGroupViewModel>();
@@ -48,10 +48,17 @@ namespace RATools.ViewModels
             });
 
             Groups = groups;
+
+            UpdateLocalCommand = null;
         }
 
         private readonly IClipboardService _clipboard;
         private readonly Leaderboard _leaderboard;
+
+        public override bool IsGenerated
+        {
+            get { return true; }
+        }
 
         public class LeaderboardGroupViewModel
         {
