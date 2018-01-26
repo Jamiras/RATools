@@ -1,11 +1,14 @@
 ﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
 using RATools.Data;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows.Media;
 
 namespace RATools.ViewModels
@@ -15,17 +18,21 @@ namespace RATools.ViewModels
     {
         public GeneratedAchievementViewModel(GameViewModel owner, Achievement generatedAchievement)
         {
-            Generated = new AchievementViewModel(owner);
+            _owner = owner;
+
+            Generated = new AchievementViewModel(owner, "Generated");
             if (generatedAchievement != null)
                 Generated.LoadAchievement(generatedAchievement);
 
-            Local = new AchievementComparisonViewModel(owner, generatedAchievement);
-            Unofficial = new AchievementComparisonViewModel(owner, generatedAchievement);
-            Core = new AchievementComparisonViewModel(owner, generatedAchievement);
+            Local = new AchievementViewModel(owner, "Local");
+            Unofficial = new AchievementViewModel(owner, "Unofficial");
+            Core = new AchievementViewModel(owner, "Core");
 
             UpdateLocalCommand = new DelegateCommand(() => UpdateLocal(owner));
             DeleteLocalCommand = new DelegateCommand(() => DeleteLocal(owner));
         }
+
+        private readonly GameViewModel _owner;
 
         public static readonly ModelProperty BadgeProperty = ModelProperty.RegisterDependant(typeof(GeneratedAchievementViewModel), "Badge", typeof(ImageSource), new ModelProperty[0], GetBadge);
         public ImageSource Badge
@@ -50,21 +57,21 @@ namespace RATools.ViewModels
             if (Local.Modified == ModifiedState.Unmodified)
             {
                 var localAchievement = Local.Achievement;
-                Local = new AchievementViewModel(owner);
+                Local = new AchievementViewModel(owner, "Local");
                 Local.LoadAchievement(localAchievement);
             }
 
             if (Unofficial.Modified == ModifiedState.Unmodified)
             {
                 var unofficialAchievement = Unofficial.Achievement;
-                Unofficial = new AchievementViewModel(owner);
+                Unofficial = new AchievementViewModel(owner, "Unofficial");
                 Unofficial.LoadAchievement(unofficialAchievement);
             }
 
             if (Core.Modified == ModifiedState.Unmodified)
             {
                 var coreAchievement = Core.Achievement;
-                Core = new AchievementViewModel(owner);
+                Core = new AchievementViewModel(owner, "Core");
                 Core.LoadAchievement(coreAchievement);
             }
 
@@ -78,16 +85,19 @@ namespace RATools.ViewModels
             else if (Core.Achievement != null)
             {
                 Title = Core.Title.Text;
+                Description = Core.Description.Text;
                 Points = Core.Points.Value.GetValueOrDefault();
             }
             else if (Unofficial.Achievement != null)
             {
                 Title = Unofficial.Title.Text;
+                Description = Unofficial.Description.Text;
                 Points = Unofficial.Points.Value.GetValueOrDefault();
             }
             else if (Local.Achievement != null)
             {
                 Title = Local.Title.Text;
+                Description = Local.Description.Text;
                 Points = Local.Points.Value.GetValueOrDefault();
             }
 
@@ -96,36 +106,7 @@ namespace RATools.ViewModels
             else if (Unofficial.Achievement != null)
                 Id = Unofficial.Id;
 
-            UpdateModificationMessage();
-        }
-
-        private void UpdateModificationMessage()
-        { 
-            if (!IsGenerated)
-                ModificationMessage = null;
-            else if (Local.Modified == ModifiedState.Modified)
-                ModificationMessage = "Local achievement differs from generated achievement";
-            else if (Core.Modified == ModifiedState.Modified)
-                ModificationMessage = "Core achievement differs from generated achievement";
-            else if (Unofficial.Modified == ModifiedState.Modified)
-                ModificationMessage = "Unofficial achievement differs from generated achievement";
-            else if (Local.Modified == ModifiedState.None)
-                ModificationMessage = "Local achievement does not exist";
-        }
-
-        public override ModifiedState CoreModified
-        {
-            get { return Core.Modified; }
-        }
-
-        public override ModifiedState UnofficialModified
-        {
-            get { return Unofficial.Modified; }
-        }
-
-        public override ModifiedState LocalModified
-        {
-            get { return Local.Modified; }
+            UpdateModified();
         }
 
         public override bool IsGenerated
@@ -137,6 +118,142 @@ namespace RATools.ViewModels
         public AchievementViewModel Local { get; private set; }
         public AchievementViewModel Unofficial { get; private set; }
         public AchievementViewModel Core { get; private set; }
+        public AchievementViewModel Other { get; private set; }
+
+        public static readonly ModelProperty RequirementGroupsProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), 
+            "RequirementGroups", typeof(IEnumerable<RequirementGroupViewModel>), new RequirementGroupViewModel[0]);
+
+        public IEnumerable<RequirementGroupViewModel> RequirementGroups
+        {
+            get { return (IEnumerable<RequirementGroupViewModel>)GetValue(RequirementGroupsProperty); }
+            private set { SetValue(RequirementGroupsProperty, value); }
+        }
+
+        private bool GetRequirementGroups(List<RequirementGroupViewModel> groups, Achievement achievement, Achievement compareAchievement)
+        {
+            var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+            groups.Add(new RequirementGroupViewModel("Core", achievement.CoreRequirements, compareAchievement.CoreRequirements, numberFormat, _owner.Notes));
+
+            int i = 0;
+            var altCompareEnumerator = compareAchievement.AlternateRequirements.GetEnumerator();
+
+            var altEnumerator = achievement.AlternateRequirements.GetEnumerator();
+            while (altEnumerator.MoveNext())
+            {
+                i++;
+
+                IEnumerable<Requirement> altCompareRequirements = altCompareEnumerator.MoveNext() ? altCompareEnumerator.Current : new Requirement[0];
+                groups.Add(new RequirementGroupViewModel("Alt " + i, altEnumerator.Current, altCompareRequirements, numberFormat, _owner.Notes));
+            }
+
+            while (altCompareEnumerator.MoveNext())
+            {
+                i++;
+                groups.Add(new RequirementGroupViewModel("Alt " + i, new Requirement[0], altCompareEnumerator.Current, numberFormat, _owner.Notes));
+            }
+
+            foreach (var group in groups)
+            {
+                foreach (var requirement in group.Requirements.OfType<RequirementComparisonViewModel>())
+                {
+                    if (requirement.IsModified)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsAchievementModified(AchievementViewModel achievement)
+        {
+            if (achievement.Achievement == null)
+                return false;
+
+            bool isModified = false;
+            if (achievement.Title.Text != Generated.Title.Text)
+                IsTitleModified = isModified = true;
+            if (achievement.Description.Text != Generated.Description.Text)
+                IsDescriptionModified = isModified = true;
+            if (achievement.Points.Value != Generated.Points.Value)
+                IsPointsModified = isModified = true;
+
+            var groups = new List<RequirementGroupViewModel>();
+            if (GetRequirementGroups(groups, Generated.Achievement, achievement.Achievement))
+            {
+                RequirementGroups = groups;
+                return true;
+            }
+
+            if (isModified)
+            {
+                RequirementGroups = Generated.RequirementGroups;
+                return true;
+            }
+
+            return false;
+        }
+
+        protected void UpdateModified()
+        {
+            if (!IsGenerated)
+            {
+                ModificationMessage = null;
+
+                Other = null;
+                IsTitleModified = false;
+                IsDescriptionModified = false;
+                IsPointsModified = false;
+
+                RequirementGroups = (Core.Achievement != null) ? Core.RequirementGroups : Unofficial.RequirementGroups;
+            }
+            else if (IsAchievementModified(Local))
+            {
+                Other = Local;
+                ModificationMessage = "Local achievement differs from generated achievement";
+            }
+            else if (IsAchievementModified(Core))
+            {
+                Other = Core;
+                ModificationMessage = "Core achievement differs from generated achievement";
+            }
+            else if (IsAchievementModified(Unofficial))
+            {
+                Other = Unofficial;
+                ModificationMessage = "Unofficial achievement differs from generated achievement";
+            }
+            else 
+            {
+                ModificationMessage = (Local.Achievement == null) ? "Local achievement does not exist" : null;
+
+                Other = null;
+                IsTitleModified = false;
+                IsDescriptionModified = false;
+                IsPointsModified = false;
+
+                RequirementGroups = Generated.RequirementGroups;
+            }
+        }
+
+        public static readonly ModelProperty IsTitleModifiedProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), "IsTitleModified", typeof(bool), false);
+        public bool IsTitleModified
+        {
+            get { return (bool)GetValue(IsTitleModifiedProperty); }
+            private set { SetValue(IsTitleModifiedProperty, value); }
+        }
+
+        public static readonly ModelProperty IsDescriptionModifiedProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), "IsDescriptionModified", typeof(bool), false);
+        public bool IsDescriptionModified
+        {
+            get { return (bool)GetValue(IsDescriptionModifiedProperty); }
+            private set { SetValue(IsDescriptionModifiedProperty, value); }
+        }
+
+        public static readonly ModelProperty IsPointsModifiedProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), "IsPointsModified", typeof(bool), false);
+        public bool IsPointsModified
+        {
+            get { return (bool)GetValue(IsPointsModifiedProperty); }
+            private set { SetValue(IsPointsModifiedProperty, value); }
+        }
 
         IEnumerable<ViewModelBase> ICompositeViewModel.GetChildren()
         {
@@ -157,13 +274,11 @@ namespace RATools.ViewModels
 
             owner.UpdateLocal(achievement, Local.Achievement);
 
-            Local = new AchievementViewModel(owner);
+            Local = new AchievementViewModel(owner, "Local");
             Local.LoadAchievement(achievement);
 
             OnPropertyChanged(() => Local);
-            OnPropertyChanged(() => LocalModified);
-
-            UpdateModificationMessage();
+            UpdateModified();
         }
 
         public CommandBase DeleteLocalCommand { get; protected set; }
@@ -171,12 +286,11 @@ namespace RATools.ViewModels
         {
             owner.UpdateLocal(null, Local.Achievement);
 
-            Local = new AchievementComparisonViewModel(owner, Generated.Achievement);
+            Local = new AchievementViewModel(owner, "Local");
+            Local.LoadAchievement(Generated.Achievement);
 
             OnPropertyChanged(() => Local);
-            OnPropertyChanged(() => LocalModified);
-
-            UpdateModificationMessage();
+            UpdateModified();
         }
 
         internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)

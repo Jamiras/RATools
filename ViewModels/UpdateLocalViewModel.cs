@@ -59,7 +59,7 @@ namespace RATools.ViewModels
             {
                 Achievement = achievement;
 
-                if (!achievement.IsGenerated || Achievement.LocalModified == ModifiedState.Unmodified)
+                if (!achievement.IsGenerated || !achievement.IsModified)
                     IsUpdated = false;
             }
 
@@ -72,7 +72,7 @@ namespace RATools.ViewModels
 
             public bool CanUpdate
             {
-                get { return Achievement.IsGenerated && Achievement.LocalModified != ModifiedState.Unmodified; }
+                get { return Achievement.IsGenerated && Achievement.IsModified; }
             }
 
             public bool CanDelete

@@ -22,7 +22,7 @@
                 <Style TargetType="{x:Type Grid}">
                     <Setter Property="ContextMenu" Value="{StaticResource updateLocalContextMenu}" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding LocalModified}" Value="Unmodified">
+                        <DataTrigger Binding="{Binding IsModified}" Value="False">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding UpdateLocalCommand}" Value="{x:Null}">
@@ -82,240 +82,282 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:AchievementViewModel}">
-        <Grid VerticalAlignment="Stretch">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+        <Border Background="White" BorderBrush="Black" BorderThickness="1">
+            <Grid VerticalAlignment="Stretch">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
 
-            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" VerticalAlignment="Top" />
-            <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" />
-            <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" VerticalAlignment="Top" />
-            <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                <TextBlock Text="{Binding Points.Value}" />
-                <Run Text="points" />
-            </TextBlock>
-            <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Id}" Value="0">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-                <Run Text="ID:" />
-                <TextBlock Text="{Binding Id}" />
-            </TextBlock>
-
-            <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding RequirementGroups}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
-
-                                <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4" Grid.IsSharedSizeScope="True">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,2,0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
-                                                <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
-    </DataTemplate>
-
-    <DataTemplate DataType="{x:Type vm:AchievementComparisonViewModel}">
-        <Grid VerticalAlignment="Stretch">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
-
-            <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" VerticalAlignment="Top" />
-            <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
-                                <Setter Property="ToolTip" Value="{Binding Other.Title}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-            <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" VerticalAlignment="Top">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
-                                <Setter Property="ToolTip" Value="{Binding Other.Description}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-            <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                <TextBlock Text="{Binding Points.Value}">
+                <Border Grid.RowSpan="4" BorderThickness="1" BorderBrush="Gray" Margin="4" VerticalAlignment="Top">
+                    <Grid>
+                        <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" Margin="4" VerticalAlignment="Top" />
+                        <Image Width="64" Height="64" Source="/RATools;component/Resources/achievement.png">
+                            <Image.Style>
+                                <Style TargetType="{x:Type Image}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Badge}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                    </Grid>
+                </Border>
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" VerticalAlignment="Top" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding Points.Value}" />
+                    <Run Text="points" />
+                </TextBlock>
+                <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
                     <TextBlock.Style>
                         <Style TargetType="{x:Type TextBlock}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
-                                    <Setter Property="ToolTip" Value="{Binding Other.Points}" />
+                                <DataTrigger Binding="{Binding Id}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
-                </TextBlock>                
-                <Run Text="points" />
-            </TextBlock>
-            <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                <TextBlock.Style>
-                    <Style TargetType="{x:Type TextBlock}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Id}" Value="0">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-                <Run Text="ID:" />
-                <TextBlock Text="{Binding Id}" />
-            </TextBlock>
+                    <Run Text="ID:" />
+                    <TextBlock Text="{Binding Id}" />
+                </TextBlock>
 
-            <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding RequirementGroups}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Vertical">
-                                <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RequirementGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
 
-                                <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4" Grid.IsSharedSizeScope="True">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,2,0,2">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
-                                                    <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="otherDefinition" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Text="{Binding Definition}" Margin="0,0,8,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="{x:Type TextBlock}">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Grid.Column="1"  Text="{Binding OtherDefinition}" Margin="0,0,8,0">
-                                                    <TextBlock.Style>
-                                                        <Style TargetType="{x:Type TextBlock}">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </TextBlock.Style>
-                                                </TextBlock>
-                                                <TextBlock Grid.Column="2" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-        </Grid>
+                                    <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4" Grid.IsSharedSizeScope="True">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,2,0,2">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
-        <TabControl>
-            <TabItem>
-                <TabItem.Style>
-                    <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Header" Value="Core" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Unmodified">
-                                <Setter Property="Content" Value="{Binding Unofficial}" />
-                                <Setter Property="Header" Value="Unofficial" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding UnofficialModified}" Value="Modified">
-                                <Setter Property="Content" Value="{Binding Unofficial}" />
-                                <Setter Property="Header" Value="Unofficial" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CoreModified}" Value="Unmodified">
-                                <Setter Property="Content" Value="{Binding Core}" />
-                                <Setter Property="Header" Value="Core" />
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CoreModified}" Value="Modified">
-                                <Setter Property="Content" Value="{Binding Core}" />
-                                <Setter Property="Header" Value="Core" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TabItem.Style>
-            </TabItem>
-            <TabItem Header="Local">
-                <TabItem.Style>
-                    <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Content" Value="{Binding Local}" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Local.Modified}" Value="None">
-                                <Setter Property="Content" Value="{x:Null}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TabItem.Style>
-            </TabItem>
-            <TabItem Header="Generated">
-                <TabItem.Style>
-                    <Style TargetType="{x:Type TabItem}">
-                        <Setter Property="Content" Value="{Binding Generated}" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding Generated.Modified}" Value="None">
-                                <Setter Property="Content" Value="{x:Null}" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TabItem.Style>
-            </TabItem>
-        </TabControl>
+        <Border Background="White" BorderBrush="#808080" BorderThickness="1">
+            <Grid VerticalAlignment="Stretch">
+                <Grid.Resources>
+                    <TextBlock x:Key="modifiedTitleToolTip">
+                        <TextBlock Text="{Binding Other.Source}" />
+                        <TextBlock Text=": " />
+                        <TextBlock Text="{Binding Other.Title.Text}" />
+                    </TextBlock>
+
+                    <TextBlock x:Key="modifiedDescriptionToolTip">
+                        <TextBlock Text="{Binding Other.Source}" />
+                        <TextBlock Text=": " />
+                        <TextBlock Text="{Binding Other.Description.Text}" />
+                    </TextBlock>
+
+                    <TextBlock x:Key="modifiedPointsToolTip">
+                        <TextBlock Text="{Binding Other.Source}" />
+                        <TextBlock Text=": " />
+                        <TextBlock Text="{Binding Other.Points.Value}" />
+                    </TextBlock>
+
+                    <DataTemplate DataType="{x:Type vm:RequirementComparisonViewModel}">
+                        <Grid Margin="0,2,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
+                                <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="otherDefinition" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Definition}" Margin="0,0,8,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Grid.Column="1"  Text="{Binding OtherDefinition}" Margin="0,0,8,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="{x:Type TextBlock}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <TextBlock Grid.Column="2" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                        </Grid>
+                    </DataTemplate>
+
+                    <DataTemplate DataType="{x:Type vm:RequirementViewModel}">
+                        <Grid Margin="0,2,0,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
+                            <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                        </Grid>
+                    </DataTemplate>
+                   
+                </Grid.Resources>
+                
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.RowSpan="5" BorderThickness="1" BorderBrush="Gray" Margin="4" VerticalAlignment="Top">
+                    <Grid>
+                        <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" />
+                        <Image Width="56" Height="56" Source="/RATools;component/Resources/achievement.png">
+                            <Image.Style>
+                                <Style TargetType="{x:Type Image}">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Badge}" Value="{x:Null}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                    </Grid>
+                </Border>
+                
+                <!-- Name -->
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="ToolTip" Value="{StaticResource modifiedTitleToolTip}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <!-- Description -->
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="ToolTip" Value="{StaticResource modifiedDescriptionToolTip}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <!-- Points -->
+                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding Points}">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
+                                        <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                        <Setter Property="ToolTip" Value="{StaticResource modifiedPointsToolTip}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>                
+                    <Run Text="points" />
+                </TextBlock>
+                <!-- ID -->
+                <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Id}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                    <Run Text="ID:" />
+                    <TextBlock Text="{Binding Id}" />
+                    <TextBlock Text="(Unofficial)">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Unofficial.Modified}" Value="None">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </TextBlock>
+
+                <!-- Requirements -->
+                <ScrollViewer Grid.Row="5" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RequirementGroups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Grid.IsSharedSizeScope="True">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
+                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="otherDefinition" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                    <TextBlock Grid.Column="1" Margin="4,4,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom"
+                                               Text="{Binding DataContext.Other.Source, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ItemsControl}}}" />
+
+                                    <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" ItemsSource="{Binding Requirements}" Margin="6,0,0,4" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+        </Border>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
@@ -456,7 +498,7 @@
             </Grid>
 
             <ListBox ItemsSource="{Binding Achievements}" SelectedItem="{Binding SelectedAchievement}" HorizontalContentAlignment="Stretch"
-                    ItemTemplate="{StaticResource achievementRowTemplate}" x:Name="achievementsGrid" />
+                    ItemTemplate="{StaticResource achievementRowTemplate}" x:Name="achievementsGrid" BorderBrush="#808080" />
 
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" ResizeDirection="Columns" />
 

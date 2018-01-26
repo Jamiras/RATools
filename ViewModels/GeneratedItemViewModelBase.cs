@@ -37,9 +37,6 @@ namespace RATools.ViewModels
             protected set { SetValue(PointsProperty, value); }
         }
 
-        public virtual ModifiedState CoreModified { get { return ModifiedState.None; } }
-        public virtual ModifiedState UnofficialModified { get { return ModifiedState.None; } }
-        public virtual ModifiedState LocalModified { get { return ModifiedState.None; } }
         public virtual bool IsGenerated { get { return false; } }
 
         public static readonly ModelProperty ModificationMessageProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "ModificationMessage", typeof(string), null);

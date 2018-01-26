@@ -142,17 +142,6 @@ namespace RATools.ViewModels
             get { return _hasGenerated; }
         }
 
-        public override ModifiedState LocalModified
-        {
-            get
-            {
-                if (!_hasLocal)
-                    return ModifiedState.None;
-
-                return IsModified ? ModifiedState.Modified : ModifiedState.Unmodified;
-            }
-        }
-
         public class RichPresenceLine
         {
             public RichPresenceLine(string current, string generated)
@@ -188,7 +177,6 @@ namespace RATools.ViewModels
 
             ModificationMessage = null;
             OnPropertyChanged(() => Lines);
-            OnPropertyChanged(() => LocalModified);
         }
     }
 }

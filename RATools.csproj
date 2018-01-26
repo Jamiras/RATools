@@ -98,7 +98,6 @@
     <Compile Include="Parser\Internal\ExpressionBase.cs" />
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="Parser\LocalAchievements.cs" />
-    <Compile Include="ViewModels\AchievementComparisonViewModel.cs" />
     <Compile Include="ViewModels\GeneratedItemViewModelBase.cs" />
     <Compile Include="ViewModels\RequirementComparisonViewModel.cs" />
     <Compile Include="ViewModels\GeneratedAchievementViewModel.cs" />

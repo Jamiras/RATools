@@ -16,9 +16,10 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Title.Text} ({Points.Text} points)")]
     public class AchievementViewModel : ViewModelBase, ICompositeViewModel
     {
-        public AchievementViewModel(GameViewModel owner)
+        public AchievementViewModel(GameViewModel owner, string source)
         {
             _owner = owner;
+            Source = source;
 
             Title = new TextFieldViewModel("Title", 240);
             Description = new TextFieldViewModel("Description", 240);
@@ -60,6 +61,7 @@ namespace RATools.ViewModels
             internal set { SetValue(IdProperty, value); }
         }
 
+        public string Source { get; private set; }
         public TextFieldViewModel Title { get; private set; }
         public TextFieldViewModel Description { get; private set; }
         public IntegerFieldViewModel Points { get; private set; }
@@ -80,11 +82,15 @@ namespace RATools.ViewModels
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (AchievementViewModel)model;
-            if (!String.IsNullOrEmpty(vm.BadgeName))
+            if (!String.IsNullOrEmpty(vm.BadgeName) && vm.BadgeName != "0")
             {
                 var path = Path.Combine(Path.Combine(vm._owner.RACacheDirectory, "../Badge"), vm.BadgeName + ".png");
                 if (File.Exists(path))
-                    return new BitmapImage(new Uri(path));
+                {
+                    var image = new BitmapImage(new Uri(path));
+                    image.Freeze();
+                    return image;
+                }
             }
 
             return null;
@@ -101,12 +107,15 @@ namespace RATools.ViewModels
             var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
             var groups = new List<RequirementGroupViewModel>();
-            groups.Add(new RequirementGroupViewModel("Core", Achievement.CoreRequirements, numberFormat, _owner.Notes));
-            int i = 0;
-            foreach (var alt in Achievement.AlternateRequirements)
+            if (Achievement != null)
             {
-                i++;
-                groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, _owner.Notes));
+                groups.Add(new RequirementGroupViewModel("Core", Achievement.CoreRequirements, numberFormat, _owner.Notes));
+                int i = 0;
+                foreach (var alt in Achievement.AlternateRequirements)
+                {
+                    i++;
+                    groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, _owner.Notes));
+                }
             }
 
             return groups;
