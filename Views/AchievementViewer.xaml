@@ -9,8 +9,6 @@
     <SolidColorBrush x:Key="newValueColor" Color="#00D040" />
     <SolidColorBrush x:Key="oldValueColor" Color="#E04040" />
 
-    <BooleanToVisibilityConverter x:Key="boolToVisConverter" />
-
     <DataTemplate x:Key="achievementRowTemplate">
         <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}">
             <Grid.Resources>
@@ -43,9 +41,22 @@
             </Grid.ColumnDefinitions>
 
             <!-- Modified -->
-            <TextBlock Text="&#x23FA;" FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
-                       Visibility="{Binding IsModified, Converter={StaticResource boolToVisConverter}}"
-                       ToolTip="{Binding ModificationMessage}" />
+            <TextBlock FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
+                       ToolTip="{Binding ModificationMessage}">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Setter Property="Text" Value="&#x25CB;" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                <Setter Property="Text" Value="&#x23FA;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CanUpdate}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <!-- Image -->
             <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center">

@@ -198,6 +198,7 @@ namespace RATools.ViewModels
             if (!IsGenerated)
             {
                 ModificationMessage = null;
+                CanUpdate = false;
 
                 Other = null;
                 IsTitleModified = false;
@@ -210,20 +211,33 @@ namespace RATools.ViewModels
             {
                 Other = Local;
                 ModificationMessage = "Local achievement differs from generated achievement";
+                CanUpdate = true;
             }
             else if (IsAchievementModified(Core))
             {
                 Other = Core;
                 ModificationMessage = "Core achievement differs from generated achievement";
+                CanUpdate = true;
             }
             else if (IsAchievementModified(Unofficial))
             {
                 Other = Unofficial;
                 ModificationMessage = "Unofficial achievement differs from generated achievement";
+                CanUpdate = true;
             }
             else 
             {
-                ModificationMessage = (Local.Achievement == null) ? "Local achievement does not exist" : null;
+                if (Local.Achievement == null && IsGenerated)
+                {
+                    ModificationMessage = "Local achievement does not exist";
+                    SetValue(IsModifiedProperty, false);
+                    CanUpdate = true;
+                }
+                else
+                {
+                    ModificationMessage = null;
+                    CanUpdate = false;
+                }
 
                 Other = null;
                 IsTitleModified = false;

@@ -57,6 +57,13 @@ namespace RATools.ViewModels
             private set { SetValue(IsModifiedProperty, value); }
         }
 
+        public static readonly ModelProperty CanUpdateProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "CanUpdate", typeof(bool), false);
+        public bool CanUpdate
+        {
+            get { return (bool)GetValue(CanUpdateProperty); }
+            protected set { SetValue(CanUpdateProperty, value); }
+        }
+
         public CommandBase UpdateLocalCommand { get; protected set; }
 
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e) { }

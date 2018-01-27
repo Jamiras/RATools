@@ -20,8 +20,9 @@ namespace RATools.ViewModels
         public GameViewModel(AchievementScriptInterpreter parser, string raCacheDirectory)
             : this(parser.GameId, parser.GameTitle, raCacheDirectory, parser.Achievements)
         {
-            if (!String.IsNullOrEmpty(parser.RichPresence) && parser.RichPresence.Length > 8)
-                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new RichPresenceViewModel(this, parser.RichPresence));
+            var richPresenceViewModel = new RichPresenceViewModel(this, parser.RichPresence);
+            if (richPresenceViewModel.Lines.Any())
+                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(richPresenceViewModel);
 
             foreach (var leaderboard in parser.Leaderboards)
                 ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new LeaderboardViewModel(this, leaderboard));

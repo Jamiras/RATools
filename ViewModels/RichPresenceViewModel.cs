@@ -1,11 +1,9 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
-using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using System.Collections.Generic;
 using System.IO;
-using System.Windows;
 
 namespace RATools.ViewModels
 {
@@ -15,8 +13,8 @@ namespace RATools.ViewModels
         {
             Title = "Rich Presence";
 
-            _richPresence = richPresence;
-            var genLines = richPresence.Replace("\r\n", "\n").Split('\n');
+            _richPresence = richPresence ?? string.Empty;
+            var genLines = _richPresence.Trim().Length > 0 ? _richPresence.Replace("\r\n", "\n").Split('\n') : new string[0];
             string[] localLines = new string[0];
             
             _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
@@ -98,20 +96,29 @@ namespace RATools.ViewModels
                     lines.Add(new RichPresenceLine(localLines[localIndex++], genLines[genIndex++]));
             }
 
-            if (isModified || genIndex != genLines.Length || localIndex != localLines.Length)
+            if (!_hasGenerated)
             {
-                ModificationMessage = "Local value differs from generated value";
+                foreach (var line in localLines)
+                    lines.Add(new RichPresenceLine(line));
 
+                ModificationMessage = null;
+                CanUpdate = false;
+            }
+            else if (isModified || genIndex != genLines.Length || localIndex != localLines.Length)
+            {
                 while (genIndex < genLines.Length)
                     lines.Add(new RichPresenceLine("", genLines[genIndex++]));
                 while (localIndex < localLines.Length)
                     lines.Add(new RichPresenceLine(localLines[localIndex++], ""));
 
+                ModificationMessage = "Local value differs from generated value";
                 UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+                CanUpdate = true;
             }
             else
             {
                 ModificationMessage = null;
+                CanUpdate = false;
 
                 lines.Clear();
                 foreach (var line in genLines)
@@ -176,6 +183,7 @@ namespace RATools.ViewModels
             Lines = lines;
 
             ModificationMessage = null;
+            CanUpdate = false;
             OnPropertyChanged(() => Lines);
         }
     }

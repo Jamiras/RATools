@@ -50,6 +50,7 @@ namespace RATools.ViewModels
             Groups = groups;
 
             UpdateLocalCommand = null;
+            CanUpdate = false;
         }
 
         private readonly IClipboardService _clipboard;
