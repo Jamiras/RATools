@@ -1,5 +1,7 @@
-v1.4.0 - 25 Jan 2017
+v1.4.0 - 28 Jan 2017
 * replaced achievements grid with list, added icons
+* removed tabs from achievement viewer - if achievement is generated, will be shown with diff to local or core,
+  otherwise local or core achievement will be shown
 * changed the default file extension to '.rascript'
 
 v1.3.1 - 21 Jan 2017

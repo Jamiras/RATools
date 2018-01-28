@@ -343,29 +343,37 @@
 
                 <!-- Requirements -->
                 <ScrollViewer Grid.Row="5" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding RequirementGroups}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Grid.IsSharedSizeScope="True">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto" />
-                                        <RowDefinition Height="*" />
-                                    </Grid.RowDefinitions>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
-                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="otherDefinition" />
-                                        <ColumnDefinition Width="*" />
-                                    </Grid.ColumnDefinitions>
+                    <Grid Grid.IsSharedSizeScope="True">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="definition" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="otherDefinition" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
-                                    <TextBlock Grid.Column="1" Margin="4,4,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom"
-                                               Text="{Binding DataContext.Other.Source, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ItemsControl}}}" />
+                        <TextBlock Grid.Column="0" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding RequirementSource}" />
+                        <TextBlock Grid.Column="1" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding Other.Source}" />
+                        <TextBlock Grid.Column="2" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="Code Notes" />
 
-                                    <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" ItemsSource="{Binding Requirements}" Margin="6,0,0,4" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                        <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" ItemsSource="{Binding RequirementGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="*" />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                        <ItemsControl Grid.Row="1" ItemsSource="{Binding Requirements}" Margin="6,0,0,4" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
         </Border>

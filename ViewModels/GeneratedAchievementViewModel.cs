@@ -120,6 +120,14 @@ namespace RATools.ViewModels
         public AchievementViewModel Core { get; private set; }
         public AchievementViewModel Other { get; private set; }
 
+        public static readonly ModelProperty RequirementSourceProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), "RequirementSource", typeof(string), "Generated");
+
+        public string RequirementSource
+        {
+            get { return (string)GetValue(RequirementSourceProperty); }
+            private set { SetValue(RequirementSourceProperty, value); }
+        }
+
         public static readonly ModelProperty RequirementGroupsProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), 
             "RequirementGroups", typeof(IEnumerable<RequirementGroupViewModel>), new RequirementGroupViewModel[0]);
 
@@ -205,22 +213,34 @@ namespace RATools.ViewModels
                 IsDescriptionModified = false;
                 IsPointsModified = false;
 
-                RequirementGroups = (Core.Achievement != null) ? Core.RequirementGroups : Unofficial.RequirementGroups;
+                if (Core.Achievement != null)
+                {
+                    RequirementGroups = Core.RequirementGroups;
+                    RequirementSource = "Core";
+                }
+                else
+                {
+                    RequirementGroups = Unofficial.RequirementGroups;
+                    RequirementSource = "Unofficial";
+                }
             }
             else if (IsAchievementModified(Local))
             {
+                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Local;
                 ModificationMessage = "Local achievement differs from generated achievement";
                 CanUpdate = true;
             }
             else if (IsAchievementModified(Core))
             {
+                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Core;
                 ModificationMessage = "Core achievement differs from generated achievement";
                 CanUpdate = true;
             }
             else if (IsAchievementModified(Unofficial))
             {
+                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Unofficial;
                 ModificationMessage = "Unofficial achievement differs from generated achievement";
                 CanUpdate = true;
@@ -229,17 +249,38 @@ namespace RATools.ViewModels
             {
                 if (Local.Achievement == null && IsGenerated)
                 {
+                    if (Core.Achievement != null)
+                        RequirementSource = "Generated (Same as Core)";
+                    else
+                        RequirementSource = "Generated (Same as Unofficial)";
+
                     ModificationMessage = "Local achievement does not exist";
                     SetValue(IsModifiedProperty, false);
                     CanUpdate = true;
+                    Other = null;
                 }
                 else
                 {
                     ModificationMessage = null;
                     CanUpdate = false;
+
+                    if (Core.Achievement != null)
+                    {
+                        RequirementSource = "Core";
+                        Other = Core;
+                    }
+                    else if (Unofficial.Achievement != null)
+                    {
+                        RequirementSource = "Unofficial";
+                        Other = Unofficial;
+                    }
+                    else
+                    {
+                        RequirementSource = "???";
+                        Other = null;
+                    }
                 }
 
-                Other = null;
                 IsTitleModified = false;
                 IsDescriptionModified = false;
                 IsPointsModified = false;
