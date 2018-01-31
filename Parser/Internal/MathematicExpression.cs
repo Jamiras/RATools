@@ -3,30 +3,18 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class MathematicExpression : ExpressionBase
+    internal class MathematicExpression : LeftRightExpressionBase
     {
         public MathematicExpression(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
-            : base(ExpressionType.Mathematic)
+            : base(left, right, ExpressionType.Mathematic)
         {
-            Left = left;
             Operation = operation;
-            Right = right;
         }
-
-        /// <summary>
-        /// Gets the left side of the equation.
-        /// </summary>
-        public ExpressionBase Left { get; private set; }
 
         /// <summary>
         /// Gets the mathematic operation.
         /// </summary>
         public MathematicOperation Operation { get; private set; }
-
-        /// <summary>
-        /// Gets the right side of the equation.
-        /// </summary>
-        public ExpressionBase Right { get; private set; }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -36,27 +24,23 @@ namespace RATools.Parser.Internal
             Left.AppendString(builder);
             builder.Append(' ');
 
-            switch (Operation)
-            {
-                case MathematicOperation.Add:
-                    builder.Append('+');
-                    break;                
-                case MathematicOperation.Subtract:
-                    builder.Append('-');
-                    break;                
-                case MathematicOperation.Multiply:
-                    builder.Append('*');
-                    break;
-                case MathematicOperation.Divide:
-                    builder.Append('/');
-                    break;
-                case MathematicOperation.Modulus:
-                    builder.Append('%');
-                    break;
-            }
+            builder.Append(GetOperatorCharacter(Operation));
 
             builder.Append(' ');
             Right.AppendString(builder);
+        }
+
+        internal static char GetOperatorCharacter(MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add: return '+';
+                case MathematicOperation.Subtract: return '-';
+                case MathematicOperation.Multiply: return '*';
+                case MathematicOperation.Divide: return '/';
+                case MathematicOperation.Modulus: return '%';
+                default: return '?';
+            }
         }
 
         internal static MathematicPriority GetPriority(MathematicOperation operation)
@@ -96,19 +80,11 @@ namespace RATools.Parser.Internal
 
                 var comparisonRight = Right as ComparisonExpression;
                 if (comparisonRight != null)
-                {
-                    Right = comparisonRight.Left;
-                    comparisonRight.Left = this.Rebalance();
-                    return comparisonRight;
-                }
+                    return Rebalance(comparisonRight);
 
                 var conditionalRight = Right as ConditionalExpression;
                 if (conditionalRight != null)
-                {
-                    Right = conditionalRight.Left;
-                    conditionalRight.Left = this.Rebalance();
-                    return conditionalRight;
-                }
+                    return Rebalance(conditionalRight);
             }
 
             return base.Rebalance();

@@ -5,19 +5,27 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class FunctionCallExpression : ExpressionBase
+    internal class FunctionCallExpression : ExpressionBase, INestedExpressions
     {
         public FunctionCallExpression(string functionName, ICollection<ExpressionBase> parameters)
+            : this(new VariableExpression(functionName), parameters)
+        {
+        }
+
+        public FunctionCallExpression(VariableExpression functionName, ICollection<ExpressionBase> parameters)
             : base(ExpressionType.FunctionCall)
         {
             FunctionName = functionName;
             Parameters = parameters;
+
+            Line = functionName.Line;
+            Column = functionName.Column;            
         }
 
         /// <summary>
         /// Gets the name of the function to call.
         /// </summary>
-        public string FunctionName { get; private set; }
+        public VariableExpression FunctionName { get; private set; }
 
         /// <summary>
         /// Gets the parameters to pass to the function.
@@ -29,7 +37,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            builder.Append(FunctionName);
+            FunctionName.AppendString(builder);
             builder.Append('(');
 
             if (Parameters.Count > 0)
@@ -85,10 +93,10 @@ namespace RATools.Parser.Internal
         /// </returns>
         public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var function = scope.GetFunction(FunctionName);
+            var function = scope.GetFunction(FunctionName.Name);
             if (function == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName, this);
+                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, this);
                 return false;
             }
 
@@ -105,7 +113,7 @@ namespace RATools.Parser.Internal
 
             if (functionScope.ReturnValue == null)
             {
-                result = new ParseErrorExpression(FunctionName + " did not return a value", this);
+                result = new ParseErrorExpression(FunctionName.Name + " did not return a value", this);
                 return false;
             }
 
@@ -124,7 +132,9 @@ namespace RATools.Parser.Internal
         {
             var innerScope = new InterpreterScope(scope);
 
-            var providedParameters = new List<string>(function.Parameters);
+            var providedParameters = new List<string>(function.Parameters.Count);
+            foreach (var parameter in function.Parameters)
+                providedParameters.Add(parameter.Name);
 
             int index = 0;
             bool namedParameters = false;
@@ -135,9 +145,9 @@ namespace RATools.Parser.Internal
                 {
                     if (!providedParameters.Remove(assignedParameter.Variable.Name))
                     {
-                        if (!function.Parameters.Contains(assignedParameter.Variable.Name))
+                        if (!function.Parameters.Any(p => p.Name == assignedParameter.Variable.Name))
                         {
-                            error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name, assignedParameter.Variable.Name), parameter);
+                            error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), parameter);
                             return null;
                         }
 
@@ -176,7 +186,7 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    var variableName = function.Parameters.ElementAt(index);
+                    var variableName = function.Parameters.ElementAt(index).Name;
                     providedParameters.Remove(variableName);
                     innerScope.DefineVariable(new VariableExpression(variableName), value);
                 }
@@ -217,6 +227,14 @@ namespace RATools.Parser.Internal
         {
             var that = (FunctionCallExpression)obj;
             return FunctionName == that.FunctionName && Parameters == that.Parameters;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (FunctionName.Line == line)
+                expressions.Add(new FunctionCallExpression(FunctionName, Parameters) { EndLine = FunctionName.Line, EndColumn = FunctionName.EndColumn });
+
+            return ExpressionGroup.GetExpressionsForLine(expressions, Parameters, line);
         }
     }
 }

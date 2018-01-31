@@ -3,30 +3,18 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ComparisonExpression : ExpressionBase
+    internal class ComparisonExpression : LeftRightExpressionBase
     {
         public ComparisonExpression(ExpressionBase left, ComparisonOperation operation, ExpressionBase right)
-            : base(ExpressionType.Comparison)
+            : base(left, right, ExpressionType.Comparison)
         {
-            Left = left;
             Operation = operation;
-            Right = right;
         }
-
-        /// <summary>
-        /// Gets the left side of the comparison.
-        /// </summary>
-        public ExpressionBase Left { get; internal set; }
 
         /// <summary>
         /// Gets the comparison operation.
         /// </summary>
         public ComparisonOperation Operation { get; private set; }
-
-        /// <summary>
-        /// Gets the right side of the comparison.
-        /// </summary>
-        public ExpressionBase Right { get; private set; }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -36,30 +24,24 @@ namespace RATools.Parser.Internal
             Left.AppendString(builder);
             builder.Append(' ');
 
-            switch (Operation)
-            {
-                case ComparisonOperation.Equal:
-                    builder.Append("==");
-                    break;
-                case ComparisonOperation.NotEqual:
-                    builder.Append("!=");
-                    break;
-                case ComparisonOperation.LessThan:
-                    builder.Append('<');
-                    break;
-                case ComparisonOperation.LessThanOrEqual:
-                    builder.Append("<=");
-                    break;
-                case ComparisonOperation.GreaterThan:
-                    builder.Append('>');
-                    break;
-                case ComparisonOperation.GreaterThanOrEqual:
-                    builder.Append(">=");
-                    break;
-            }
+            builder.Append(GetOperatorString(Operation));
 
             builder.Append(' ');
             Right.AppendString(builder);
+        }
+
+        internal static string GetOperatorString(ComparisonOperation operation)
+        {
+            switch (operation)
+            {
+                case ComparisonOperation.Equal: return "==";
+                case ComparisonOperation.NotEqual: return "!=";
+                case ComparisonOperation.LessThan: return "<";
+                case ComparisonOperation.LessThanOrEqual: return "<=";
+                case ComparisonOperation.GreaterThan: return ">";
+                case ComparisonOperation.GreaterThanOrEqual: return ">=";
+                default: return null;
+            }
         }
 
         /// <summary>
@@ -105,11 +87,7 @@ namespace RATools.Parser.Internal
             {
                 var conditionalRight = Right as ConditionalExpression;
                 if (conditionalRight != null)
-                {
-                    Right = conditionalRight.Left;
-                    conditionalRight.Left = this.Rebalance();
-                    return conditionalRight;
-                }
+                    return Rebalance(conditionalRight);
             }
 
             return base.Rebalance();

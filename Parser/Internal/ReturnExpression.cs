@@ -1,14 +1,30 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ReturnExpression : ExpressionBase
+    internal class ReturnExpression : ExpressionBase, INestedExpressions
     {
         public ReturnExpression(ExpressionBase value)
             : base(ExpressionType.Return)
         {
             Value = value;
+
+            Line = value.Line;
+            Column = value.Column;
+            EndLine = value.EndLine;
+            EndColumn = value.EndColumn;
         }
+
+        public ReturnExpression(KeywordExpression keyword, ExpressionBase value)
+            : this(value)
+        {
+            _keyword = keyword;
+            Line = keyword.Line;
+            Column = keyword.Column;
+        }
+
+        private readonly KeywordExpression _keyword;
 
         /// <summary>
         /// Gets the value to be returned.
@@ -56,6 +72,14 @@ namespace RATools.Parser.Internal
         {
             var that = (ReturnExpression)obj;
             return Value == that.Value;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (_keyword != null && _keyword.Line == line)
+                expressions.Add(_keyword);
+
+            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Value }, line);
         }
     }
 }

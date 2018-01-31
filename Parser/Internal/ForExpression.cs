@@ -4,9 +4,9 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ForExpression : ExpressionBase
+    internal class ForExpression : ExpressionBase, INestedExpressions
     {
-        public ForExpression(string iteratorName, ExpressionBase range)
+        public ForExpression(VariableExpression iteratorName, ExpressionBase range)
             : base(ExpressionType.For)
         {
             IteratorName = iteratorName;
@@ -14,10 +14,12 @@ namespace RATools.Parser.Internal
             Expressions = new List<ExpressionBase>();
         }
 
+        private KeywordExpression _keywordFor, _keywordIn;
+
         /// <summary>
         /// Gets the name of the iterator variable.
         /// </summary>
-        public string IteratorName { get; private set; }
+        public VariableExpression IteratorName { get; private set; }
 
         /// <summary>
         /// Gets the expression that defines the values for each iteration.
@@ -35,7 +37,7 @@ namespace RATools.Parser.Internal
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append("for ");
-            builder.Append(IteratorName);
+            IteratorName.AppendString(builder);
             builder.Append(" in ");
             Range.AppendString(builder);
         }
@@ -46,27 +48,42 @@ namespace RATools.Parser.Internal
         /// <remarks>
         /// Assumes the 'for' keyword has already been consumed.
         /// </remarks>
-        internal new static ExpressionBase Parse(PositionalTokenizer tokenizer)
+        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
         {
             ExpressionBase.SkipWhitespace(tokenizer);
+            var keywordFor = new KeywordExpression("for", line, column);
 
+            line = tokenizer.Line;
+            column = tokenizer.Column;
             var iteratorName = tokenizer.ReadIdentifier();
             if (iteratorName.IsEmpty)
-                return new ParseErrorExpression("Invalid function name");
+                return ParseError(tokenizer, "Invalid function name", line, column);
+            var iterator = new VariableExpression(iteratorName.ToString(), line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
+
+            line = tokenizer.Line;
+            column = tokenizer.Column;
             if (!tokenizer.Match("in"))
-                return new ParseErrorExpression("Expected 'in' after loop variable", tokenizer.Line, tokenizer.Column);
+                return ParseError(tokenizer, "Expected 'in' after loop variable");
+            var keywordIn = new KeywordExpression("in", line, column);
 
             var range = ExpressionBase.Parse(tokenizer);
             if (range.Type == ExpressionType.ParseError)
                 return range;
 
-            var loop = new ForExpression(iteratorName.ToString(), range);
+            var loop = new ForExpression(iterator, range);
 
             var error = ExpressionBase.ParseStatementBlock(tokenizer, loop.Expressions);
             if (error != null)
                 return error;
+
+            loop._keywordFor = keywordFor;
+            loop._keywordIn = keywordIn;
+            loop.Line = keywordFor.Line;
+            loop.Column = keywordFor.Column;
+            loop.EndLine = tokenizer.Line;
+            loop.EndColumn = tokenizer.Column;
 
             return loop;
         }
@@ -82,6 +99,20 @@ namespace RATools.Parser.Internal
         {
             var that = (ForExpression)obj;
             return IteratorName == that.IteratorName && Range == that.Range && Expressions == that.Expressions;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (_keywordFor != null && _keywordFor.Line == line)
+                expressions.Add(_keywordFor);
+            if (IteratorName.Line == line)
+                expressions.Add(IteratorName);
+            if (_keywordIn != null && _keywordIn.Line == line)
+                expressions.Add(_keywordIn);
+            if (Range.Line == line)
+                expressions.Add(Range);
+
+            return ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
         }
     }
 }

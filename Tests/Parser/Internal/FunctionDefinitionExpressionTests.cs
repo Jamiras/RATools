@@ -13,8 +13,8 @@ namespace RATools.Test.Parser.Internal
         public void TestAppendString()
         {
             var expr = new FunctionDefinitionExpression("func");
-            expr.Parameters.Add("p1");
-            expr.Parameters.Add("p2");
+            expr.Parameters.Add(new VariableExpression("p1"));
+            expr.Parameters.Add(new VariableExpression("p2"));
 
             var builder = new StringBuilder();
             expr.AppendString(builder);
@@ -46,7 +46,7 @@ namespace RATools.Test.Parser.Internal
         public void TestParseNoParameters()
         {
             var expr = Parse("function func() { j = i }");
-            Assert.That(expr.Name, Is.EqualTo("func"));
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
             Assert.That(expr.Parameters.Count, Is.EqualTo(0));
             Assert.That(expr.Expressions.Count, Is.EqualTo(1));
 
@@ -59,9 +59,9 @@ namespace RATools.Test.Parser.Internal
         public void TestParseParameters()
         {
             var expr = Parse("function func(i) { j = i }");
-            Assert.That(expr.Name, Is.EqualTo("func"));
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
             Assert.That(expr.Parameters.Count, Is.EqualTo(1));
-            Assert.That(expr.Parameters.First(), Is.EqualTo("i"));
+            Assert.That(expr.Parameters.First().Name, Is.EqualTo("i"));
             Assert.That(expr.Expressions.Count, Is.EqualTo(1));
 
             var builder = new StringBuilder();
@@ -73,9 +73,9 @@ namespace RATools.Test.Parser.Internal
         public void TestParseShorthand()
         {
             var expr = Parse("function func(i) => i");
-            Assert.That(expr.Name, Is.EqualTo("func"));
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
             Assert.That(expr.Parameters.Count, Is.EqualTo(1));
-            Assert.That(expr.Parameters.First(), Is.EqualTo("i"));
+            Assert.That(expr.Parameters.First().Name, Is.EqualTo("i"));
             Assert.That(expr.Expressions.Count, Is.EqualTo(1));
 
             var builder = new StringBuilder();

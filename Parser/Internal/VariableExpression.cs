@@ -10,6 +10,15 @@ namespace RATools.Parser.Internal
             Name = name;
         }
 
+        internal VariableExpression(string name, int line, int column)
+            : this(name)
+        {
+            Line = line;
+            EndLine = line;
+            Column = column;
+            EndColumn = column + name.Length - 1;
+        }
+
         /// <summary>
         /// Gets the name of the variable.
         /// </summary>

@@ -110,7 +110,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<FunctionDefinitionExpression>());
             var func = (FunctionDefinitionExpression)expression;
-            Assert.That(func.Name, Is.EqualTo("test"));
+            Assert.That(func.Name.Name, Is.EqualTo("test"));
             Assert.That(func.Parameters.Count, Is.EqualTo(0));
             Assert.That(func.Expressions.Count, Is.EqualTo(1));
             Assert.That(func.Expressions.First(), Is.InstanceOf<ReturnExpression>());
@@ -207,7 +207,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var call = (FunctionCallExpression)expression;
-            Assert.That(call.FunctionName, Is.EqualTo("func"));
+            Assert.That(call.FunctionName.Name, Is.EqualTo("func"));
             Assert.That(call.Parameters.Count, Is.EqualTo(0));
         }
 
@@ -228,7 +228,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var call = (FunctionCallExpression)expression;
-            Assert.That(call.FunctionName, Is.EqualTo("func"));
+            Assert.That(call.FunctionName.Name, Is.EqualTo("func"));
             Assert.That(call.Parameters.Count, Is.EqualTo(1));
             Assert.That(call.Parameters.First(), Is.InstanceOf<VariableExpression>());
         }
@@ -240,7 +240,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var call = (FunctionCallExpression)expression;
-            Assert.That(call.FunctionName, Is.EqualTo("func"));
+            Assert.That(call.FunctionName.Name, Is.EqualTo("func"));
             Assert.That(call.Parameters.Count, Is.EqualTo(1));
             Assert.That(call.Parameters.First(), Is.InstanceOf<AssignmentExpression>());
         }
@@ -274,7 +274,8 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<IndexedVariableExpression>());
             var variable = (IndexedVariableExpression)expression;
-            Assert.That(variable.Name, Is.EqualTo("dict"));
+            Assert.That(variable.Variable, Is.InstanceOf<VariableExpression>());
+            Assert.That(((VariableExpression)variable.Variable).Name, Is.EqualTo("dict"));
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
         }
 
@@ -289,7 +290,8 @@ namespace RATools.Test.Parser.Internal
             Assert.That(variable.Variable, Is.InstanceOf<IndexedVariableExpression>());
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
             variable = (IndexedVariableExpression)variable.Variable;
-            Assert.That(variable.Name, Is.EqualTo("dict"));
+            Assert.That(variable.Variable, Is.InstanceOf<VariableExpression>());
+            Assert.That(((VariableExpression)variable.Variable).Name, Is.EqualTo("dict"));
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
         }
 
@@ -300,7 +302,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ForExpression>());
             var loop = (ForExpression)expression;
-            Assert.That(loop.IteratorName, Is.EqualTo("i"));
+            Assert.That(loop.IteratorName.Name, Is.EqualTo("i"));
             Assert.That(loop.Range, Is.InstanceOf<VariableExpression>());
             Assert.That(loop.Expressions.Count, Is.EqualTo(1));
         }
@@ -333,38 +335,48 @@ namespace RATools.Test.Parser.Internal
         public void TestParseLineColumnValues()
         {
             var tokenizer = CreateTokenizer(
-                "// this is a test\n" +
-                "// of multiple lines and token positions\n" +
-                "\n" +
-                "a = 3\n" +
-                "  b = a + 1\n" +
-                "\n" +
-                "return b\n"
+                "// this is a test\n" +                             // 1
+                "// of multiple lines and token positions\n" +      // 2
+                "\n" +                                              // 3
+                "a = 3\n" +                                         // 4
+                "  b = a + 1\n" +                                   // 5
+                "\n" +                                              // 6
+                "return b\n"                                        // 7
                 );
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<AssignmentExpression>());
             Assert.That(expression.Line, Is.EqualTo(4));
             Assert.That(expression.Column, Is.EqualTo(1));
+            Assert.That(expression.EndLine, Is.EqualTo(4));
+            Assert.That(expression.EndColumn, Is.EqualTo(5));
 
             expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<AssignmentExpression>());
             Assert.That(expression.Line, Is.EqualTo(5));
             Assert.That(expression.Column, Is.EqualTo(3));
+            Assert.That(expression.EndLine, Is.EqualTo(5));
+            Assert.That(expression.EndColumn, Is.EqualTo(11));
 
             expression = ((AssignmentExpression)expression).Value;
             Assert.That(expression, Is.InstanceOf<MathematicExpression>());
             Assert.That(expression.Line, Is.EqualTo(5));
             Assert.That(expression.Column, Is.EqualTo(7));
+            Assert.That(expression.EndLine, Is.EqualTo(5));
+            Assert.That(expression.EndColumn, Is.EqualTo(11));
 
             expression = ((MathematicExpression)expression).Right;
             Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(expression.Line, Is.EqualTo(5));
             Assert.That(expression.Column, Is.EqualTo(11));
+            Assert.That(expression.EndLine, Is.EqualTo(5));
+            Assert.That(expression.EndColumn, Is.EqualTo(11));
 
             expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ReturnExpression>());
             Assert.That(expression.Line, Is.EqualTo(7));
             Assert.That(expression.Column, Is.EqualTo(1));
+            Assert.That(expression.EndLine, Is.EqualTo(7));
+            Assert.That(expression.EndColumn, Is.EqualTo(8));
         }
     }
 }

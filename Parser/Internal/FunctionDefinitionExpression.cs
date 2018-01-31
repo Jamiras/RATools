@@ -4,18 +4,18 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class FunctionDefinitionExpression : ExpressionBase
+    internal class FunctionDefinitionExpression : ExpressionBase, INestedExpressions
     {
         public FunctionDefinitionExpression(string name)
             : this()
         {
-            Name = name;
+            Name = new VariableExpression(name);
         }
 
         private FunctionDefinitionExpression()
             : base(ExpressionType.FunctionDefinition)
         {
-            Parameters = new List<string>();
+            Parameters = new List<VariableExpression>();
             Expressions = new List<ExpressionBase>();
             DefaultParameters = new TinyDictionary<string, ExpressionBase>();
         }
@@ -23,12 +23,14 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the name of the function.
         /// </summary>
-        public string Name { get; private set; }
+        public VariableExpression Name { get; private set; }
+
+        private KeywordExpression _keyword;
 
         /// <summary>
         /// Gets the names of the parameters.
         /// </summary>
-        public ICollection<string> Parameters { get; private set; }
+        public ICollection<VariableExpression> Parameters { get; private set; }
 
         /// <summary>
         /// Gets default values for the parameters.
@@ -56,14 +58,14 @@ namespace RATools.Parser.Internal
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append("function ");
-            builder.Append(Name);
+            Name.AppendString(builder);
             builder.Append('(');
 
             if (Parameters.Count > 0)
             {
                 foreach (var parameter in Parameters)
                 {
-                    builder.Append(parameter);
+                    parameter.AppendString(builder);
                     builder.Append(", ");
                 }
                 builder.Length -= 2;
@@ -78,23 +80,31 @@ namespace RATools.Parser.Internal
         /// <remarks>
         /// Assumes the 'function' keyword has already been consumed.
         /// </remarks>
-        internal new static ExpressionBase Parse(PositionalTokenizer tokenizer)
+        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
         {
             var function = new FunctionDefinitionExpression();
+            function._keyword = new KeywordExpression("function", line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
+
+            line = tokenizer.Line;
+            column = tokenizer.Column;
 
             var functionName = tokenizer.ReadIdentifier();
             if (functionName.IsEmpty)
-                return new ParseErrorExpression("Invalid function name");
-            function.Name = functionName.ToString();
+            {
+                ExpressionBase.ParseError(tokenizer, "Invalid function name");
+                return function;
+            }
+            function.Name = new VariableExpression(functionName.ToString(), line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != '(')
-                return new ParseErrorExpression("Expected '(' after function name", tokenizer.Line, tokenizer.Column);
+            {
+                ExpressionBase.ParseError(tokenizer, "Expected '(' after function name", function.Name);
+                return function;
+            }
             tokenizer.Advance();
-
-            int line, column;
 
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != ')')
@@ -106,16 +116,22 @@ namespace RATools.Parser.Internal
 
                     var parameter = tokenizer.ReadIdentifier();
                     if (parameter.IsEmpty)
-                        return new ParseErrorExpression("Invalid parameter name", line, column);
+                    {
+                        ExpressionBase.ParseError(tokenizer, "Invalid parameter name", line, column);
+                        return function;
+                    }
 
-                    function.Parameters.Add(parameter.ToString());
+                    function.Parameters.Add(new VariableExpression(parameter.ToString(), line, column));
 
                     ExpressionBase.SkipWhitespace(tokenizer);
                     if (tokenizer.NextChar == ')')
                         break;
 
                     if (tokenizer.NextChar != ',')
-                        return new ParseErrorExpression("Invalid parameter name", line, column);
+                    {
+                        ExpressionBase.ParseError(tokenizer, "Expected ',' or ')' after parameter name, found: " + tokenizer.NextChar);
+                        return function;
+                    }
 
                     tokenizer.Advance();
                     ExpressionBase.SkipWhitespace(tokenizer);
@@ -141,7 +157,10 @@ namespace RATools.Parser.Internal
             }
 
             if (tokenizer.NextChar != '{')
-                return new ParseErrorExpression("Opening brace expected after function declaration", tokenizer.Line, tokenizer.Column);
+            {
+                ExpressionBase.ParseError(tokenizer, "Expected '{' after function declaration", function.Name);
+                return function;
+            }
 
             line = tokenizer.Line;
             column = tokenizer.Column;
@@ -153,15 +172,12 @@ namespace RATools.Parser.Internal
             {
                 expression = ExpressionBase.Parse(tokenizer);
                 if (expression.Type == ExpressionType.ParseError)
-                    return expression;
-
-                if (tokenizer.NextChar == '\0')
-                    return new ParseErrorExpression("No matching closing brace found", line, column);
+                    return function;
 
                 if (expression.Type == ExpressionType.Return)
                     seenReturn = true;
                 else if (seenReturn)
-                    return new ParseErrorExpression("Expression after return statement", expression.Line, expression.Column);
+                    ExpressionBase.ParseError(tokenizer, "Expression after return statement", expression);
 
                 function.Expressions.Add(expression);
 
@@ -183,6 +199,24 @@ namespace RATools.Parser.Internal
         {
             var that = (FunctionDefinitionExpression)obj;
             return Name == that.Name && Parameters == that.Parameters && Expressions == that.Expressions;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (_keyword != null && _keyword.Line == line)
+                expressions.Add(_keyword);
+            if (Name.Line == line)
+                expressions.Add(Name);
+
+            foreach (var parameter in Parameters)
+            {
+                if (parameter.Line == line)
+                    expressions.Add(parameter);
+            }
+
+            ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
+
+            return true;
         }
     }
 }

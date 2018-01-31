@@ -57,6 +57,12 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="Parser\Internal\AchievementScriptParser.cs" />
+    <Compile Include="Parser\Internal\CommentExpression.cs" />
+    <Compile Include="Parser\Internal\ExpressionGroup.cs" />
+    <Compile Include="Parser\Internal\ExpressionTokenizer.cs" />
+    <Compile Include="Parser\Internal\KeywordExpression.cs" />
+    <Compile Include="Parser\Internal\LeftRightExpressionBase.cs" />
     <Compile Include="Services\ISettings.cs" />
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />

@@ -67,44 +67,30 @@ namespace RATools.Parser
         public bool Run(Tokenizer input)
         {
             var scope = new InterpreterScope();
-            var tokenizer = new PositionalTokenizer(input);
-            tokenizer.SkipWhitespace();
+            var expressionGroup = new AchievementScriptParser().Parse(input);
 
-            do
+            if (expressionGroup.Comments.Count > 0)
             {
-                if (tokenizer.Match("//"))
+                GameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
+
+                foreach (var comment in expressionGroup.Comments)
                 {
-                    var line = tokenizer.ReadTo('\n').Trim();
-                    if (line.StartsWith("#ID"))
-                        ExtractGameId(line);
-                    else if (String.IsNullOrEmpty(GameTitle))
-                        GameTitle = line.ToString();
-
-                    tokenizer.SkipWhitespace();
-                    continue;
-                }
-
-                var expression = ExpressionBase.Parse(tokenizer);
-                switch (expression.Type)
-                {
-                    case ExpressionType.ParseError:
-                        return EvaluationError(expression, expression);
-
-                    case ExpressionType.FunctionDefinition:
-                        scope.AddFunction((FunctionDefinitionExpression)expression);
+                    if (comment.Value.Contains("#ID"))
+                    {
+                        ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
                         break;
-
-                    default:
-                        if (!Evaluate(expression, scope))
-                            return false;
-
-                        break;
+                    }
                 }
+            }
 
-                tokenizer.SkipWhitespace();
-            } while (tokenizer.NextChar != '\0');
+            var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
+            if (parseError != null)
+            {
+                ErrorMessage = String.Format("{0}:{1} {2}", parseError.Line, parseError.EndColumn > 0 ? parseError.EndColumn : parseError.Column, parseError.Message);
+                return false;
+            }
 
-            return true;
+            return Evaluate(expressionGroup.Expressions, scope);
         }
 
         private void ExtractGameId(Token line)
@@ -132,7 +118,7 @@ namespace RATools.Parser
             return true;
         }
 
-        internal bool Evaluate(ExpressionBase expression, InterpreterScope scope)
+        private bool Evaluate(ExpressionBase expression, InterpreterScope scope)
         {
             switch (expression.Type)
             {
@@ -157,9 +143,21 @@ namespace RATools.Parser
                 case ExpressionType.Return:
                     return EvaluateReturn((ReturnExpression)expression, scope);
 
+                case ExpressionType.ParseError:
+                    return EvaluationError(expression, expression);
+
+                case ExpressionType.FunctionDefinition:
+                    return EvaluateFunctionDefinition((FunctionDefinitionExpression)expression, scope);
+
                 default:
                     return EvaluationError(expression, "Only assignment statements, function calls and function definitions allowed at outer scope");
             }
+        }
+
+        private bool EvaluateFunctionDefinition(FunctionDefinitionExpression expression, InterpreterScope scope)
+        {
+            scope.AddFunction(expression);
+            return true;
         }
 
         private bool EvaluateReturn(ReturnExpression expression, InterpreterScope scope)
@@ -182,7 +180,7 @@ namespace RATools.Parser
             var dict = range as DictionaryExpression;
             if (dict != null)
             {
-                var iterator = new VariableExpression(forExpression.IteratorName);
+                var iterator = forExpression.IteratorName;
                 foreach (var entry in dict.Entries)
                 {
                     var loopScope = new InterpreterScope(scope);
@@ -223,7 +221,7 @@ namespace RATools.Parser
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
-            var function = scope.GetFunction(expression.FunctionName);
+            var function = scope.GetFunction(expression.FunctionName.Name);
             if (function != null)
             {
                 ExpressionBase error;
@@ -234,16 +232,16 @@ namespace RATools.Parser
                 return Evaluate(function.Expressions, scope);
             }
 
-            if (expression.FunctionName == "achievement")
+            if (expression.FunctionName.Name == "achievement")
                 return ExecuteFunctionAchievement(expression, scope);
 
-            if (expression.FunctionName == "rich_presence_display")
+            if (expression.FunctionName.Name == "rich_presence_display")
                 return ExecuteRichPresenceDisplay(expression, scope);
 
-            if (expression.FunctionName == "leaderboard")
+            if (expression.FunctionName.Name == "leaderboard")
                 return ExecuteLeaderboard(expression, scope);
 
-            return EvaluationError(expression, "Unknown function: " + expression.FunctionName);
+            return EvaluationError(expression, "Unknown function: " + expression.FunctionName.Name);
         }
 
         // internal for unit tests
@@ -304,19 +302,19 @@ namespace RATools.Parser
             {
                 _achievementFunction = new FunctionDefinitionExpression("achievement");
                 // required parameters
-                _achievementFunction.Parameters.Add("title");
-                _achievementFunction.Parameters.Add("description");
-                _achievementFunction.Parameters.Add("points");
-                _achievementFunction.Parameters.Add("trigger");
+                _achievementFunction.Parameters.Add(new VariableExpression("title"));
+                _achievementFunction.Parameters.Add(new VariableExpression("description"));
+                _achievementFunction.Parameters.Add(new VariableExpression("points"));
+                _achievementFunction.Parameters.Add(new VariableExpression("trigger"));
 
                 // additional parameters generated by dumper
-                _achievementFunction.Parameters.Add("id");
+                _achievementFunction.Parameters.Add(new VariableExpression("id"));
                 _achievementFunction.DefaultParameters["id"] = new IntegerConstantExpression(0);
-                _achievementFunction.Parameters.Add("published");
+                _achievementFunction.Parameters.Add(new VariableExpression("published"));
                 _achievementFunction.DefaultParameters["published"] = new StringConstantExpression("");
-                _achievementFunction.Parameters.Add("modified");
+                _achievementFunction.Parameters.Add(new VariableExpression("modified"));
                 _achievementFunction.DefaultParameters["modified"] = new StringConstantExpression("");
-                _achievementFunction.Parameters.Add("badge");
+                _achievementFunction.Parameters.Add(new VariableExpression("badge"));
                 _achievementFunction.DefaultParameters["badge"] = new StringConstantExpression("0");
             }
 
@@ -619,7 +617,7 @@ namespace RATools.Parser
 
         private bool ExecuteAchievementFunction(ScriptInterpreterAchievementBuilder achievement, FunctionCallExpression functionCall, InterpreterScope scope)
         {
-            var function = scope.GetFunction(functionCall.FunctionName);
+            var function = scope.GetFunction(functionCall.FunctionName.Name);
             if (function != null)
             {
                 ExpressionBase error;
@@ -630,7 +628,7 @@ namespace RATools.Parser
                 return ExecuteAchievementExpressions(achievement, function.Expressions, innerScope);
             }
 
-            var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName);
+            var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName.Name);
             if (fieldSize != FieldSize.None)
             {
                 ExpressionBase address;
@@ -648,7 +646,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            if (functionCall.FunctionName == "once")
+            if (functionCall.FunctionName.Name == "once")
             {
                 if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.First(), scope))
                     return false;
@@ -658,7 +656,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            if (functionCall.FunctionName == "repeated")
+            if (functionCall.FunctionName.Name == "repeated")
             {
                 if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.ElementAt(1), scope))
                     return false;
@@ -675,7 +673,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            if (functionCall.FunctionName == "never")
+            if (functionCall.FunctionName.Name == "never")
             {
                 var temp = new ScriptInterpreterAchievementBuilder();
                 if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
@@ -709,7 +707,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            if (functionCall.FunctionName == "unless")
+            if (functionCall.FunctionName.Name == "unless")
             {
                 var temp = new ScriptInterpreterAchievementBuilder();
                 if (!ExecuteAchievementExpression(temp, functionCall.Parameters.First(), scope))
@@ -743,7 +741,7 @@ namespace RATools.Parser
                 return true;
             }
 
-            if (functionCall.FunctionName == "prev")
+            if (functionCall.FunctionName.Name == "prev")
             {
                 if (!ExecuteAchievementExpression(achievement, functionCall.Parameters.First(), scope))
                     return false;
@@ -813,25 +811,25 @@ namespace RATools.Parser
                     return EvaluationError(expression.Parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");
 
                 FunctionDefinitionExpression function;
-                if (parameter.FunctionName == "rich_presence_lookup")
+                if (parameter.FunctionName.Name == "rich_presence_lookup")
                 {
                     if (_richPresenceLookupFunction == null)
                     {
                         _richPresenceLookupFunction = new FunctionDefinitionExpression("rich_presence_lookup");
-                        _richPresenceLookupFunction.Parameters.Add("name");
-                        _richPresenceLookupFunction.Parameters.Add("memory");
-                        _richPresenceLookupFunction.Parameters.Add("lookup");
+                        _richPresenceLookupFunction.Parameters.Add(new VariableExpression("name"));
+                        _richPresenceLookupFunction.Parameters.Add(new VariableExpression("memory"));
+                        _richPresenceLookupFunction.Parameters.Add(new VariableExpression("lookup"));
                     }
 
                     function = _richPresenceLookupFunction;
                 }
-                else if (parameter.FunctionName == "rich_presence_value")
+                else if (parameter.FunctionName.Name == "rich_presence_value")
                 {
                     if (_richPresenceValueFunction == null)
                     {
                         _richPresenceValueFunction = new FunctionDefinitionExpression("rich_presence_value");
-                        _richPresenceValueFunction.Parameters.Add("name");
-                        _richPresenceValueFunction.Parameters.Add("memory");
+                        _richPresenceValueFunction.Parameters.Add(new VariableExpression("name"));
+                        _richPresenceValueFunction.Parameters.Add(new VariableExpression("memory"));
                     }
 
                     function = _richPresenceValueFunction;
@@ -1009,11 +1007,11 @@ namespace RATools.Parser
             var functionCall = expression as FunctionCallExpression;
             if (functionCall != null)
             {
-                var function = scope.GetFunction(functionCall.FunctionName);
+                var function = scope.GetFunction(functionCall.FunctionName.Name);
                 if (function == null)
                 {
                     address = String.Empty;
-                    return EvaluationError(expression, "Unknown function: " + functionCall.FunctionName);
+                    return EvaluationError(expression, "Unknown function: " + functionCall.FunctionName.Name);
                 }
 
                 if (function.Expressions.Count != 1)
@@ -1056,7 +1054,7 @@ namespace RATools.Parser
 
                 case ExpressionType.FunctionCall:
                     var functionCall = (FunctionCallExpression)expression;
-                    var function = scope.GetFunction(functionCall.FunctionName);
+                    var function = scope.GetFunction(functionCall.FunctionName.Name);
                     if (function != null)
                     {
                         if (function.Expressions.Count != 1)
@@ -1070,7 +1068,7 @@ namespace RATools.Parser
                         return EvaluateAddress(function.Expressions.First(), innerScope, out addressField);
                     }
 
-                    var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName);
+                    var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName.Name);
                     if (fieldSize == FieldSize.None)
                         return EvaluationError(expression, "parameter does not evaluate to a memory address");
 
@@ -1095,12 +1093,12 @@ namespace RATools.Parser
             if (_leaderboardFunction == null)
             {
                 _leaderboardFunction = new FunctionDefinitionExpression("leaderboard");
-                _leaderboardFunction.Parameters.Add("title");
-                _leaderboardFunction.Parameters.Add("description");
-                _leaderboardFunction.Parameters.Add("start");
-                _leaderboardFunction.Parameters.Add("cancel");
-                _leaderboardFunction.Parameters.Add("submit");
-                _leaderboardFunction.Parameters.Add("value");
+                _leaderboardFunction.Parameters.Add(new VariableExpression("title"));
+                _leaderboardFunction.Parameters.Add(new VariableExpression("description"));
+                _leaderboardFunction.Parameters.Add(new VariableExpression("start"));
+                _leaderboardFunction.Parameters.Add(new VariableExpression("cancel"));
+                _leaderboardFunction.Parameters.Add(new VariableExpression("submit"));
+                _leaderboardFunction.Parameters.Add(new VariableExpression("value"));
             }
 
             ExpressionBase error;

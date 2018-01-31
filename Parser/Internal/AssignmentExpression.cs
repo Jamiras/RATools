@@ -1,11 +1,12 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
     /// <summary>
     /// Represents an assignment within an expression tree.
     /// </summary>
-    internal class AssignmentExpression : ExpressionBase
+    internal class AssignmentExpression : ExpressionBase, INestedExpressions
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AssignmentExpression"/> class.
@@ -15,6 +16,11 @@ namespace RATools.Parser.Internal
         {
             Variable = variable;
             Value = value;
+
+            Line = Variable.Line;
+            Column = Variable.Column;
+            EndLine = value.EndLine;
+            EndColumn = value.EndColumn;
         }
 
         /// <summary>
@@ -69,6 +75,25 @@ namespace RATools.Parser.Internal
         {
             var that = (AssignmentExpression)obj;
             return Variable == that.Variable && Value == that.Value;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (Variable.Line == line)
+            {
+                var indexedVariable = Variable as IndexedVariableExpression;
+                if (indexedVariable != null)
+                {
+                    if (!ExpressionGroup.GetExpressionsForLine(expressions, new[] { indexedVariable }, line))
+                        return false;
+                }
+                else
+                {
+                    expressions.Add(Variable);
+                }
+            }
+
+            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Value }, line);
         }
     }
 }

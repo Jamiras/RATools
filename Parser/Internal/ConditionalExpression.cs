@@ -2,30 +2,18 @@
 
 namespace RATools.Parser.Internal
 {
-    internal class ConditionalExpression : ExpressionBase
+    internal class ConditionalExpression : LeftRightExpressionBase
     {
         public ConditionalExpression(ExpressionBase left, ConditionalOperation operation, ExpressionBase right)
-            : base(ExpressionType.Conditional)
+            : base(left, right, ExpressionType.Conditional)
         {
-            Left = left;
             Operation = operation;
-            Right = right;
         }
-
-        /// <summary>
-        /// Gets the left side of the condition.
-        /// </summary>
-        public ExpressionBase Left { get; internal set; }
 
         /// <summary>
         /// Gets the conditional operation.
         /// </summary>
         public ConditionalOperation Operation { get; private set; }
-
-        /// <summary>
-        /// Gets the right side of the condition.
-        /// </summary>
-        public ExpressionBase Right { get; private set; }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -42,18 +30,21 @@ namespace RATools.Parser.Internal
             Left.AppendString(builder);
             builder.Append(' ');
 
-            switch (Operation)
-            {
-                case ConditionalOperation.And:
-                    builder.Append("&&");
-                    break;
-                case ConditionalOperation.Or:
-                    builder.Append("||");
-                    break;
-            }
+            builder.Append(GetOperatorString(Operation));
 
             builder.Append(' ');
             Right.AppendString(builder);
+        }
+
+        internal static string GetOperatorString(ConditionalOperation operation)
+        {
+            switch (operation)
+            {
+                case ConditionalOperation.Not: return "!";
+                case ConditionalOperation.And: return "&&";
+                case ConditionalOperation.Or: return "||";
+                default: return null;
+            }
         }
 
         /// <summary>
@@ -103,9 +94,7 @@ namespace RATools.Parser.Internal
                     if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
                     {
                         // A && B || C => (A && B) || C
-                        Right = conditionalRight.Left;
-                        conditionalRight.Left = this.Rebalance();
-                        return conditionalRight;
+                        return Rebalance(conditionalRight);
                     }
                 }
             }

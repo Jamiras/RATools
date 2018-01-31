@@ -130,7 +130,7 @@ namespace RATools.Test.Parser
         public void TestTransitiveConditionIncompatible()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) + 1 == byte(0x4321) - 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:40 expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:46 expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
         }
 
         [Test]
@@ -308,7 +308,7 @@ namespace RATools.Test.Parser
             var parser = Parse("function test() { p = 6 }\n" +
                                "test()\n" +
                                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("3:17 Unknown variable: p"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("3:23 Unknown variable: p"));
         }
 
         [Test]
@@ -407,7 +407,7 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("2:25 required parameter 'lookup' not provided"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 required parameter 'lookup' not provided"));
         }
 
         [Test]

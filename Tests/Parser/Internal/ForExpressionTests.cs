@@ -12,7 +12,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestAppendString()
         {
-            var expr = new ForExpression("i", new VariableExpression("dict"));
+            var expr = new ForExpression(new VariableExpression("i"), new VariableExpression("dict"));
 
             var builder = new StringBuilder();
             expr.AppendString(builder);
@@ -33,7 +33,7 @@ namespace RATools.Test.Parser.Internal
         public void TestParse()
         {
             var expr = Parse("for i in dict { j = i }");
-            Assert.That(expr.IteratorName, Is.EqualTo("i"));
+            Assert.That(expr.IteratorName.Name, Is.EqualTo("i"));
             Assert.That(expr.Range, Is.EqualTo(new VariableExpression("dict")));
             Assert.That(expr.Expressions.Count, Is.EqualTo(1));
 

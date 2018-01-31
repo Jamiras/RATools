@@ -11,7 +11,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestAppendString()
         {
-            var expr = new IndexedVariableExpression("test", new IntegerConstantExpression(1));
+            var expr = new IndexedVariableExpression(new VariableExpression("test"), new IntegerConstantExpression(1));
 
             var builder = new StringBuilder();
             expr.AppendString(builder);
@@ -21,7 +21,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestAppendStringTwoDimensional()
         {
-            var second = new IndexedVariableExpression("test", new IntegerConstantExpression(2));
+            var second = new IndexedVariableExpression(new VariableExpression("test"), new IntegerConstantExpression(2));
             var expr = new IndexedVariableExpression(second, new IntegerConstantExpression(1));
 
             var builder = new StringBuilder();
@@ -37,7 +37,7 @@ namespace RATools.Test.Parser.Internal
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
             dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
-            var expr = new IndexedVariableExpression(variable.Name, key);
+            var expr = new IndexedVariableExpression(variable, key);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);
@@ -58,7 +58,7 @@ namespace RATools.Test.Parser.Internal
             dict2.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
             var dict1 = new DictionaryExpression();
             dict1.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = dict2 });
-            var expr2 = new IndexedVariableExpression(variable.Name, key);
+            var expr2 = new IndexedVariableExpression(variable, key);
             var expr = new IndexedVariableExpression(expr2, key);
 
             var scope = new InterpreterScope();
@@ -79,7 +79,7 @@ namespace RATools.Test.Parser.Internal
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
             dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
-            var expr = new IndexedVariableExpression(variable.Name, index);
+            var expr = new IndexedVariableExpression(variable, index);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);
@@ -97,7 +97,7 @@ namespace RATools.Test.Parser.Internal
             var variable = new VariableExpression("variable");
             var key = new StringConstantExpression("key");
             var dict = new DictionaryExpression();
-            var expr = new IndexedVariableExpression(variable.Name, key);
+            var expr = new IndexedVariableExpression(variable, key);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);
@@ -114,7 +114,7 @@ namespace RATools.Test.Parser.Internal
             var variable = new VariableExpression("variable");
             var key = new StringConstantExpression("key");
             var value = new IntegerConstantExpression(99);
-            var expr = new IndexedVariableExpression(variable.Name, key);
+            var expr = new IndexedVariableExpression(variable, key);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, value);
@@ -134,7 +134,7 @@ namespace RATools.Test.Parser.Internal
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
             dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
-            var expr = new IndexedVariableExpression(variable.Name, index);
+            var expr = new IndexedVariableExpression(variable, index);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);
@@ -164,7 +164,7 @@ namespace RATools.Test.Parser.Internal
             scope.AssignVariable(variable, dict);
             scope.AddFunction(functionDefinition);
 
-            var expr = new IndexedVariableExpression(variable.Name, functionCall);
+            var expr = new IndexedVariableExpression(variable, functionCall);
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);

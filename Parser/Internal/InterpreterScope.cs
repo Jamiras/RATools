@@ -47,7 +47,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         public void AddFunction(FunctionDefinitionExpression function)
         {
-            _functions[function.Name] = function;
+            _functions[function.Name.Name] = function;
         }
 
         /// <summary>

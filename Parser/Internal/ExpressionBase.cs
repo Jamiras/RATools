@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace RATools.Parser.Internal
@@ -31,6 +32,16 @@ namespace RATools.Parser.Internal
         public int Column { get; protected set; }
 
         /// <summary>
+        /// Gets the line where this expression ended.
+        /// </summary>
+        public int EndLine { get; protected set; }
+
+        /// <summary>
+        /// Gets the column where this expression ended.
+        /// </summary>
+        public int EndColumn { get; protected set; }
+
+        /// <summary>
         /// Gets or sets whether this is a logical unit.
         /// </summary>
         /// <remarks>
@@ -49,64 +60,107 @@ namespace RATools.Parser.Internal
 
         internal static void SkipWhitespace(PositionalTokenizer tokenizer)
         {
-            do
+            tokenizer.SkipWhitespace();
+            while (tokenizer.Match("//"))
             {
-                tokenizer.SkipWhitespace();
-                if (!tokenizer.Match("//"))
-                    break;
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer != null)
+                {
+                    int line = tokenizer.Line;
+                    int column = tokenizer.Column - 2;
 
-                tokenizer.ReadTo('\n');
-                tokenizer.Advance();
-            } while (true);
+                    var comment = tokenizer.ReadTo('\n');
+                    if (comment.Length > 0 && comment[comment.Length - 1] == '\r')
+                        comment = comment.SubToken(0, comment.Length - 1);
+
+                    expressionTokenizer.AddComment(new CommentExpression("//" + comment.ToString()) { Line = line, Column = column, EndLine = line, EndColumn = column + comment.Length + 1 });
+                }
+                else
+                {
+                    tokenizer.ReadTo('\n');
+                }
+
+                tokenizer.SkipWhitespace();
+            }
+        }
+
+        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        {
+            var error = new ParseErrorExpression(message, line, column) { EndLine = tokenizer.Line, EndColumn = tokenizer.Column };
+
+            var expressionTokenizer = tokenizer as ExpressionTokenizer;
+            if (expressionTokenizer != null)
+                expressionTokenizer.AddError(error);
+
+            return error;
+        }
+
+        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message)
+        {
+            return ParseError(tokenizer, message, tokenizer.Line, tokenizer.Column);
+        }
+
+        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
+        {
+            var error = ParseError(tokenizer, message);
+            error.Line = expression.Line;
+            error.Column = expression.Column;
+            error.EndLine = expression.EndLine;
+            error.EndColumn = expression.EndColumn;
+            return error;
         }
 
         /// <summary>
         /// Gets the next expression from the input.
         /// </summary>
+        /// <returns>The next expression, <c>null</c> if at end of file.</returns>
         public static ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
             SkipWhitespace(tokenizer);
+
+            if (tokenizer.NextChar == '\0')
+                return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column);
 
             var line = tokenizer.Line;
             var column = tokenizer.Column;
 
             var clause = ExpressionBase.ParseClause(tokenizer);
-            if (clause.Line == 0)
-            {
-                clause.Line = line;
-                clause.Column = column;
-            }
-
-            if (clause.Type == ExpressionType.ParseError)
+            if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
                 return clause;
 
+            var clauseEndLine = tokenizer.Line;
+            var clauseEndColumn = tokenizer.Column;
+
             SkipWhitespace(tokenizer);
+
+            var joinerLine = tokenizer.Line;
+            var joinerColumn = tokenizer.Column;
 
             switch (tokenizer.NextChar)
             {
                 case '+':
                     tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Add);
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Add, joinerLine, joinerColumn);
                     break;
 
                 case '-':
                     tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Subtract);
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Subtract, joinerLine, joinerColumn);
                     break;
 
                 case '*':
                     tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Multiply);
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Multiply, joinerLine, joinerColumn);
                     break;
 
                 case '/':
                     tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Divide);
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Divide, joinerLine, joinerColumn);
                     break;
 
                 case '%':
                     tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Modulus);
+                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Modulus, joinerLine, joinerColumn);
                     break;
 
                 case '=':
@@ -114,11 +168,11 @@ namespace RATools.Parser.Internal
                     if (tokenizer.NextChar == '=')
                     {
                         tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.Equal);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.Equal, joinerLine, joinerColumn);
                     }
                     else
                     {
-                        clause = ParseAssignment(tokenizer, clause);
+                        clause = ParseAssignment(tokenizer, clause, joinerLine, joinerColumn);
                     }
                     break;
 
@@ -126,12 +180,12 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '=')
                     {
-                        clause = new ParseErrorExpression("= expected following !");
+                        clause = ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
                     }
                     else
                     {
                         tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.NotEqual);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.NotEqual, joinerLine, joinerColumn);
                     }
                     break;
 
@@ -140,11 +194,11 @@ namespace RATools.Parser.Internal
                     if (tokenizer.NextChar == '=')
                     {
                         tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThanOrEqual);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThanOrEqual, joinerLine, joinerColumn);
                     }
                     else
                     {
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThan);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThan, joinerLine, joinerColumn);
                     }
                     break;
 
@@ -153,11 +207,11 @@ namespace RATools.Parser.Internal
                     if (tokenizer.NextChar == '=')
                     {
                         tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThanOrEqual);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThanOrEqual, joinerLine, joinerColumn);
                     }
                     else
                     {
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThan);
+                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThan, joinerLine, joinerColumn);
                     }
                     break;
 
@@ -165,14 +219,14 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '&')
                     {
-                        clause = new ParseErrorExpression("& expected following &");
+                        clause = ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
                     }
                     else
                     {
                         tokenizer.Advance();
-                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.And);
+                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
                         if (clause.Type == ExpressionType.ParseError)
-                            return new ParseErrorExpression("Invalid expression following &&", clause.Line, clause.Column);
+                            return clause;
                     }
                     break;
 
@@ -180,34 +234,60 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '|')
                     {
-                        clause = new ParseErrorExpression("| expected following |");
+                        clause = ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
                     }
                     else
                     {
                         tokenizer.Advance();
-                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or);
+                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
                         if (clause.Type == ExpressionType.ParseError)
-                            return new ParseErrorExpression("Invalid expression following ||", clause.Line, clause.Column);
+                            return clause;
                     }
                     break;
 
                 default:
-                    break;
+                    if (clause.EndColumn == 0)
+                    {
+                        clause.EndLine = clauseEndLine;
+                        clause.EndColumn = clauseEndColumn;
+                    }
+                    return clause;
             }
 
             clause = clause.Rebalance();
 
-            if (clause.Line == 0)
-            {
-                clause.Line = line;
-                clause.Column = column;
-            }
+            Debug.Assert(clause.Line != 0);
+            Debug.Assert(clause.Column != 0);
+            Debug.Assert(clause.EndLine != 0);
+            Debug.Assert(clause.EndColumn != 0);
 
             return clause;
         }
 
         private static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
+            var line = tokenizer.Line;
+            var column = tokenizer.Column;
+
+            var clause = ParseClauseCore(tokenizer);
+
+            if (clause.Column == 0)
+            {
+                clause.Line = line;
+                clause.Column = column;
+            }
+
+            if (clause.EndColumn == 0)
+            {
+                clause.EndLine = tokenizer.Line;
+                clause.EndColumn = (tokenizer.Column > 1) ? tokenizer.Column - 1 : 1;
+            }
+
+            return clause;
+        }
+
+        private static ExpressionBase ParseClauseCore(PositionalTokenizer tokenizer)
+        { 
             ExpressionBase clause;
 
             switch (tokenizer.NextChar)
@@ -229,9 +309,9 @@ namespace RATools.Parser.Internal
                     if (tokenizer.NextChar != ')')
                     {
                         if (tokenizer.NextChar == '\0')
-                            return new ParseErrorExpression("No closing parenthesis found");
+                            return ParseError(tokenizer, "No closing parenthesis found");
 
-                        return new ParseErrorExpression("Expected closing parenthesis, found " + tokenizer.NextChar);
+                        return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
                     }
 
                     clause.IsLogicalUnit = true;
@@ -246,7 +326,7 @@ namespace RATools.Parser.Internal
                     }
                     catch (InvalidOperationException ex)
                     {
-                        return new ParseErrorExpression(ex.Message);
+                        return ParseError(tokenizer, ex.Message);
                     }
 
                 case '0':
@@ -290,16 +370,22 @@ namespace RATools.Parser.Internal
                         Int32.TryParse(number.ToString(), out value);
                         return new IntegerConstantExpression(-value);
                     }
-                    return new ParseErrorExpression("No identifier found");
+                    return ParseError(tokenizer, "Minus without value");
 
                 case '{':
                     tokenizer.Advance();
                     return ParseDictionary(tokenizer);
 
                 default:
+                    var line = tokenizer.Line;
+                    var column = tokenizer.Column;
                     var identifier = tokenizer.ReadIdentifier();
                     if (identifier.IsEmpty)
-                        return new ParseErrorExpression("No identifier found");
+                    {
+                        var error = ParseError(tokenizer, "Unexpected character: "+ tokenizer.NextChar);
+                        tokenizer.Advance();
+                        return error;
+                    }
 
                     SkipWhitespace(tokenizer);
 
@@ -309,15 +395,15 @@ namespace RATools.Parser.Internal
                         if (clause.Type == ExpressionType.ParseError)
                             return clause;
 
-                        return new ReturnExpression(clause);
+                        return new ReturnExpression(new KeywordExpression(identifier.ToString(), line, column), clause);
                     }
 
                     if (identifier == "function")
-                        return FunctionDefinitionExpression.Parse(tokenizer);
+                        return FunctionDefinitionExpression.Parse(tokenizer, line, column);
                     if (identifier == "for")
-                        return ForExpression.Parse(tokenizer);
+                        return ForExpression.Parse(tokenizer, line, column);
                     if (identifier == "if")
-                        return IfExpression.Parse(tokenizer);
+                        return IfExpression.Parse(tokenizer, line, column);
 
                     if (tokenizer.NextChar == '(')
                     {
@@ -328,7 +414,7 @@ namespace RATools.Parser.Internal
                         if (parseError != null)
                             return parseError;
 
-                        return new FunctionCallExpression(identifier.ToString(), parameters);
+                        return new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
                     }
 
                     if (tokenizer.NextChar == '[')
@@ -345,21 +431,21 @@ namespace RATools.Parser.Internal
 
                             SkipWhitespace(tokenizer);
                             if (tokenizer.NextChar != ']')
-                                return new ParseErrorExpression("Expecting closing bracket after index");
+                                return ParseError(tokenizer, "Expecting closing bracket after index");
                             tokenizer.Advance();
                             SkipWhitespace(tokenizer);
 
                             if (parent != null)
                                 parent = new IndexedVariableExpression(parent, index);
                             else
-                                parent = new IndexedVariableExpression(identifier.ToString(), index);
+                                parent = new IndexedVariableExpression(new VariableExpression(identifier.ToString(), line, column), index);
 
                         } while (tokenizer.NextChar == '[');
 
                         return parent;
                     }
 
-                    return new VariableExpression(identifier.ToString());
+                    return new VariableExpression(identifier.ToString(), line, column);
             }
         }
 
@@ -396,46 +482,109 @@ namespace RATools.Parser.Internal
             }
 
             if (tokenizer.NextChar == '\0')
-                return new ParseErrorExpression("No closing parenthesis found", line, column);
+                return ParseError(tokenizer, "No closing parenthesis found", line, column);
 
-            return new ParseErrorExpression("Expected closing parenthesis, found " + tokenizer.NextChar, tokenizer.Line, tokenizer.Column);
+            return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
         }
 
-        private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation)
+        private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
         {
             var right = ExpressionBase.Parse(tokenizer);
-            if (right.Type == ExpressionType.ParseError)
-                return right;
+            switch (right.Type)
+            {
+                case ExpressionType.ParseError:
+                    return right;
+
+                case ExpressionType.Comparison:
+                case ExpressionType.Conditional:
+                case ExpressionType.Dictionary:
+                case ExpressionType.FunctionCall:
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.Mathematic:
+                case ExpressionType.StringConstant:
+                case ExpressionType.Variable:
+                    break;
+
+                default:
+                    ParseError(tokenizer, "incompatible mathematical operation", new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn));
+                    break;
+            }
 
             return new MathematicExpression(left, operation, right);
         }
 
-        private static ExpressionBase ParseComparison(PositionalTokenizer tokenizer, ExpressionBase left, ComparisonOperation operation)
+        private static ExpressionBase ParseComparison(PositionalTokenizer tokenizer, ExpressionBase left, ComparisonOperation operation, int joinerLine, int joinerColumn)
         {
             var right = ExpressionBase.Parse(tokenizer);
-            if (right.Type == ExpressionType.ParseError)
-                return right;
+            switch (right.Type)
+            {
+                case ExpressionType.ParseError:
+                    return right;
+
+                case ExpressionType.Conditional: // will be rebalanced
+                case ExpressionType.FunctionCall:
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.Mathematic:
+                case ExpressionType.StringConstant:
+                case ExpressionType.Variable:
+                    break;
+
+                default:
+                    ParseError(tokenizer, "incompatible comparison", new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    break;
+            }
 
             return new ComparisonExpression(left, operation, right);
         }
 
-        private static ExpressionBase ParseConditional(PositionalTokenizer tokenizer, ExpressionBase left, ConditionalOperation operation)
+        private static ExpressionBase ParseConditional(PositionalTokenizer tokenizer, ExpressionBase left, ConditionalOperation operation, int joinerLine, int joinerColumn)
         {
             var right = ExpressionBase.Parse(tokenizer);
-            if (right.Type == ExpressionType.ParseError)
-                return right;
+
+            switch (right.Type)
+            {
+                case ExpressionType.ParseError:
+                    return right;
+
+                case ExpressionType.Comparison:
+                case ExpressionType.Conditional:
+                case ExpressionType.FunctionCall:
+                case ExpressionType.Variable:
+                    break;
+
+                default:
+                    ParseError(tokenizer, "incompatible logical condition", new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    break;
+            }
 
             return new ConditionalExpression(left, operation, right);
         }
 
-        private static ExpressionBase ParseAssignment(PositionalTokenizer tokenizer, ExpressionBase variable)
+        private static ExpressionBase ParseAssignment(PositionalTokenizer tokenizer, ExpressionBase variable, int joinerLine, int joinerColumn)
         {
             if (variable.Type != ExpressionType.Variable)
-                return new ParseErrorExpression("Cannot assign value to non-variable");
+                return ParseError(tokenizer, "Cannot assign value to non-variable", variable);
 
             var value = ExpressionBase.Parse(tokenizer);
-            if (value.Type == ExpressionType.ParseError)
-                return value;
+            switch (value.Type)
+            {
+                case ExpressionType.ParseError:
+                    return value;
+
+                case ExpressionType.Comparison:
+                case ExpressionType.Conditional:
+                case ExpressionType.Dictionary:
+                case ExpressionType.FunctionCall:
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.Mathematic:
+                case ExpressionType.StringConstant:
+                case ExpressionType.Variable:
+                    break;
+
+                default:
+                    ParseError(tokenizer, "incompatible assignment", new KeywordExpression("=", joinerLine, joinerColumn));
+                    break;
+            }
 
             return new AssignmentExpression((VariableExpression)variable, value);
         }
@@ -453,7 +602,7 @@ namespace RATools.Parser.Internal
 
                 SkipWhitespace(tokenizer);
                 if (tokenizer.NextChar != ':')
-                    return new ParseErrorExpression("Expecting colon following key expression");
+                    return ParseError(tokenizer, "Expecting colon following key expression");
                 tokenizer.Advance();
                 SkipWhitespace(tokenizer);
 
@@ -468,7 +617,7 @@ namespace RATools.Parser.Internal
                     break;
 
                 if (tokenizer.NextChar != ',')
-                    return new ParseErrorExpression("Expecting comma between entries");
+                    return ParseError(tokenizer, "Expecting comma between entries");
                 tokenizer.Advance();
                 SkipWhitespace(tokenizer);
             }
@@ -502,7 +651,7 @@ namespace RATools.Parser.Internal
                         break;
 
                     if (tokenizer.NextChar == '\0')
-                        return new ParseErrorExpression("No matching closing brace found", line, column);
+                        return ParseError(tokenizer, "No matching closing brace found", line, column);
 
                     var statement = ExpressionBase.Parse(tokenizer);
                     if (statement.Type == ExpressionType.ParseError)
@@ -703,6 +852,15 @@ namespace RATools.Parser.Internal
         /// </summary>
         If,
 
+        /// <summary>
+        /// A comment.
+        /// </summary>
+        Comment,
+
+        /// <summary>
+        /// A keyword.
+        /// </summary>
+        Keyword,
 
         /// <summary>
         /// A parse error.

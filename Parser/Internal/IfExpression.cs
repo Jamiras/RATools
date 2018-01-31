@@ -4,7 +4,7 @@ using Jamiras.Components;
 
 namespace RATools.Parser.Internal
 {
-    internal class IfExpression : ExpressionBase
+    internal class IfExpression : ExpressionBase, INestedExpressions
     {
         public IfExpression(ExpressionBase condition)
             : base(ExpressionType.If)
@@ -13,6 +13,8 @@ namespace RATools.Parser.Internal
             Expressions = new List<ExpressionBase>();
             ElseExpressions = new List<ExpressionBase>();
         }
+
+        private KeywordExpression _keyword;
 
         /// <summary>
         /// Gets the condition expression.
@@ -35,7 +37,7 @@ namespace RATools.Parser.Internal
         /// <remarks>
         /// Assumes the 'if' keyword has already been consumed.
         /// </remarks>
-        internal new static ExpressionBase Parse(PositionalTokenizer tokenizer)
+        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
         {
             ExpressionBase.SkipWhitespace(tokenizer);
 
@@ -44,9 +46,10 @@ namespace RATools.Parser.Internal
                 return condition;
 
             if (condition.Type != ExpressionType.Conditional && condition.Type != ExpressionType.Comparison)
-                return new ParseErrorExpression("Expected conditional statement following if");
+                return ParseError(tokenizer, "Expected conditional statement following if", condition);
 
             var ifExpression = new IfExpression(condition);
+            ifExpression._keyword = new KeywordExpression("if", line, column);
 
             var error = ExpressionBase.ParseStatementBlock(tokenizer, ifExpression.Expressions);
             if (error != null)
@@ -85,6 +88,20 @@ namespace RATools.Parser.Internal
         {
             var that = (IfExpression)obj;
             return Condition == that.Condition && Expressions == that.Expressions && ElseExpressions == that.ElseExpressions;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            if (_keyword != null && _keyword.Line == line)
+                expressions.Add(_keyword);
+
+            if (!ExpressionGroup.GetExpressionsForLine(expressions, new[] { Condition }, line))
+                return false;
+
+            if (!ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line))
+                return false;
+
+            return ExpressionGroup.GetExpressionsForLine(expressions, ElseExpressions, line);
         }
     }
 }

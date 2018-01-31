@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class DictionaryExpression : ExpressionBase
+    internal class DictionaryExpression : ExpressionBase, INestedExpressions
     {
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)
@@ -109,6 +109,17 @@ namespace RATools.Parser.Internal
         {
             var that = (DictionaryExpression)obj;
             return Entries == that.Entries;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            foreach (var entry in Entries)
+            {
+                if (line >= entry.Key.Line && line <= entry.Value.EndLine)
+                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry.Key, entry.Value }, line);
+            }
+
+            return true;
         }
 
         [DebuggerDisplay("{Key}: {Value}")]

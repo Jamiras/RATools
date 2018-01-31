@@ -20,6 +20,8 @@ namespace RATools.Parser.Internal
         public ParseErrorExpression(string message, ExpressionBase expression)
             : this(message, expression.Line, expression.Column)
         {
+            EndLine = expression.EndLine;
+            EndColumn = expression.EndColumn;
         }
 
         public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
@@ -27,6 +29,8 @@ namespace RATools.Parser.Internal
         {
             Line = expression.Line;
             Column = expression.Column;
+            EndLine = expression.EndLine;
+            EndColumn = expression.EndColumn;
 
             var parseError = error as ParseErrorExpression;
             if (parseError != null)
@@ -37,6 +41,8 @@ namespace RATools.Parser.Internal
                 {
                     Line = parseError.Line;
                     Column = parseError.Column;
+                    EndLine = parseError.EndLine;
+                    EndColumn = parseError.EndColumn;
                 }
             }
             else

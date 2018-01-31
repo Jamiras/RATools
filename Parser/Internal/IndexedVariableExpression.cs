@@ -1,21 +1,17 @@
 ﻿using System;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace RATools.Parser.Internal
 {
-    internal class IndexedVariableExpression : VariableExpression
+    internal class IndexedVariableExpression : VariableExpression, INestedExpressions
     {
-        public IndexedVariableExpression(string name, ExpressionBase index)
-            : base(name)
-        {
-            Index = index;
-        }
-
         public IndexedVariableExpression(ExpressionBase variable, ExpressionBase index)
-            : this(String.Empty, index)
+            : base(String.Empty)
         {
             Variable = variable;
+            Index = index;
         }
 
         /// <summary>
@@ -33,10 +29,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            if (Variable != null)
-                Variable.AppendString(builder);
-            else
-                builder.Append(Name);
+            Variable.AppendString(builder);
 
             builder.Append('[');
             Index.AppendString(builder);
@@ -80,38 +73,31 @@ namespace RATools.Parser.Internal
             }
 
             ExpressionBase value;
-            if (Variable != null)
+            var indexed = Variable as IndexedVariableExpression;
+            if (indexed != null)
             {
-                var indexed = Variable as IndexedVariableExpression;
-                if (indexed != null)
-                {
-                    var entry = indexed.GetDictionaryEntry(scope, out result, create);
-                    if (entry == null)
-                        return null;
+                var entry = indexed.GetDictionaryEntry(scope, out result, create);
+                if (entry == null)
+                    return null;
 
-                    value = entry.Value;
-                }
-                else
-                {
-                    var variable = Variable as VariableExpression;
-                    if (variable != null)
-                    {
-                        value = scope.GetVariable(variable.Name);
-                    }
-                    else if (!Variable.ReplaceVariables(scope, out value))
-                    {
-                        result = value;
-                        return null;
-                    }
-                }
+                value = entry.Value;
             }
             else
             {
-                value = scope.GetVariable(Name);
-
-                if (value == null)
+                var variable = Variable as VariableExpression;
+                if (variable != null)
                 {
-                    result = new ParseErrorExpression("Unknown variable: " + Name, Line, Column);
+                    value = scope.GetVariable(variable.Name);
+
+                    if (value == null)
+                    {
+                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, Line, Column);
+                        return null;
+                    }
+                }
+                else if (!Variable.ReplaceVariables(scope, out value))
+                {
+                    result = value;
                     return null;
                 }
             }
@@ -169,6 +155,11 @@ namespace RATools.Parser.Internal
         {
             var that = (IndexedVariableExpression)obj;
             return Variable == that.Variable && Index == that.Index;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Variable, Index }, line);
         }
     }
 }
