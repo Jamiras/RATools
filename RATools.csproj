@@ -63,6 +63,8 @@
     <Compile Include="Parser\Internal\ExpressionTokenizer.cs" />
     <Compile Include="Parser\Internal\KeywordExpression.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBase.cs" />
+    <Compile Include="Parser\RichPresenceBuilder.cs" />
+    <Compile Include="Parser\ScriptInterpreterAchievementBuilder.cs" />
     <Compile Include="Services\ISettings.cs" />
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />

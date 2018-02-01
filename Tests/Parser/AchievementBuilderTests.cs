@@ -153,7 +153,7 @@ namespace RATools.Test.Parser
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);
 
-            var achievement = new AchievementScriptInterpreter.ScriptInterpreterAchievementBuilder();
+            var achievement = new ScriptInterpreterAchievementBuilder();
             var error = achievement.PopulateFromExpression(expression);
             Assert.That(error, Is.Null.Or.Empty);
 

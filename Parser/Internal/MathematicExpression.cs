@@ -61,6 +61,18 @@ namespace RATools.Parser.Internal
             }
         }
 
+        internal static MathematicOperation GetOppositeOperation(MathematicOperation op)
+        {
+            switch (op)
+            {
+                case MathematicOperation.Add: return MathematicOperation.Subtract;
+                case MathematicOperation.Subtract: return MathematicOperation.Add;
+                case MathematicOperation.Multiply: return MathematicOperation.Divide;
+                case MathematicOperation.Divide: return MathematicOperation.Multiply;
+                default: return MathematicOperation.None;
+            }
+        }
+
         /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>

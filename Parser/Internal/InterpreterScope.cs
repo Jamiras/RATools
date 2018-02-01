@@ -119,5 +119,7 @@ namespace RATools.Parser.Internal
         /// Gets the value to return when leaving the scope.
         /// </summary>
         public ExpressionBase ReturnValue { get; internal set; }
+
+        internal object Context { get; set; }
     }
 }
