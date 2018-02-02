@@ -102,6 +102,7 @@ namespace RATools.ViewModels
                     lines.Add(new RichPresenceLine(line));
 
                 ModificationMessage = null;
+                CompareState = GeneratedCompareState.None;
                 CanUpdate = false;
             }
             else if (isModified || genIndex != genLines.Length || localIndex != localLines.Length)
@@ -112,6 +113,7 @@ namespace RATools.ViewModels
                     lines.Add(new RichPresenceLine(localLines[localIndex++], ""));
 
                 ModificationMessage = "Local value differs from generated value";
+                CompareState = GeneratedCompareState.LocalDiffers;
                 UpdateLocalCommand = new DelegateCommand(UpdateLocal);
                 CanUpdate = true;
             }

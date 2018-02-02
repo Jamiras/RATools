@@ -212,6 +212,7 @@ namespace RATools.ViewModels
                 IsTitleModified = false;
                 IsDescriptionModified = false;
                 IsPointsModified = false;
+                CompareState = GeneratedCompareState.None;
 
                 if (Core.Achievement != null)
                 {
@@ -229,6 +230,7 @@ namespace RATools.ViewModels
                 RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Local;
                 ModificationMessage = "Local achievement differs from generated achievement";
+                CompareState = GeneratedCompareState.LocalDiffers;
                 CanUpdate = true;
             }
             else if (IsAchievementModified(Core))
@@ -236,6 +238,7 @@ namespace RATools.ViewModels
                 RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Core;
                 ModificationMessage = "Core achievement differs from generated achievement";
+                CompareState = GeneratedCompareState.PublishedDiffers;
                 CanUpdate = true;
             }
             else if (IsAchievementModified(Unofficial))
@@ -243,6 +246,7 @@ namespace RATools.ViewModels
                 RequirementSource = (string)RequirementSourceProperty.DefaultValue;
                 Other = Unofficial;
                 ModificationMessage = "Unofficial achievement differs from generated achievement";
+                CompareState = GeneratedCompareState.PublishedDiffers;
                 CanUpdate = true;
             }
             else 
@@ -255,7 +259,7 @@ namespace RATools.ViewModels
                         RequirementSource = "Generated (Same as Unofficial)";
 
                     ModificationMessage = "Local achievement does not exist";
-                    SetValue(IsModifiedProperty, false);
+                    CompareState = GeneratedCompareState.PublishedMatchesNotGenerated;
                     CanUpdate = true;
                     Other = null;
                 }
@@ -263,6 +267,7 @@ namespace RATools.ViewModels
                 {
                     ModificationMessage = null;
                     CanUpdate = false;
+                    CompareState = GeneratedCompareState.Same;
 
                     if (Core.Achievement != null)
                     {

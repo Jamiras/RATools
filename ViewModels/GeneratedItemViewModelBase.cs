@@ -43,18 +43,14 @@ namespace RATools.ViewModels
         public string ModificationMessage
         {
             get { return (string)GetValue(ModificationMessageProperty); }
-            protected set
-            {
-                SetValue(ModificationMessageProperty, value);
-                IsModified = !String.IsNullOrEmpty(value);
-            }
+            protected set { SetValue(ModificationMessageProperty, value); }
         }
 
-        public static readonly ModelProperty IsModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsModified", typeof(bool), false);
-        public bool IsModified
+        public static readonly ModelProperty CompareStateProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "CompareState", typeof(GeneratedCompareState), GeneratedCompareState.None);
+        public GeneratedCompareState CompareState
         {
-            get { return (bool)GetValue(IsModifiedProperty); }
-            private set { SetValue(IsModifiedProperty, value); }
+            get { return (GeneratedCompareState)GetValue(CompareStateProperty); }
+            protected set { SetValue(CompareStateProperty, value); }
         }
 
         public static readonly ModelProperty CanUpdateProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "CanUpdate", typeof(bool), false);
@@ -74,5 +70,33 @@ namespace RATools.ViewModels
         None = 0,
         Modified,
         Unmodified
+    }
+
+    public enum GeneratedCompareState
+    {
+        /// <summary>
+        /// Not generated
+        /// </summary>
+        None = 0,
+
+        /// <summary>
+        /// Same as published and/or local
+        /// </summary>
+        Same,
+
+        /// <summary>
+        /// Differs from local value
+        /// </summary>
+        LocalDiffers,
+
+        /// <summary>
+        /// Differs from published value
+        /// </summary>
+        PublishedDiffers,
+
+        /// <summary>
+        /// Same as published but not in local
+        /// </summary>
+        PublishedMatchesNotGenerated,
     }
 }

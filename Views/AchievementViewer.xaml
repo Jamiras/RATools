@@ -20,7 +20,10 @@
                 <Style TargetType="{x:Type Grid}">
                     <Setter Property="ContextMenu" Value="{StaticResource updateLocalContextMenu}" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding IsModified}" Value="False">
+                        <DataTrigger Binding="{Binding CompareState}" Value="None">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding CompareState}" Value="Same">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding UpdateLocalCommand}" Value="{x:Null}">
@@ -45,13 +48,15 @@
                        ToolTip="{Binding ModificationMessage}">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
-                        <Setter Property="Text" Value="&#x25CB;" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsModified}" Value="True">
+                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedMatchesNotGenerated">
+                                <Setter Property="Text" Value="&#x25CB;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
                                 <Setter Property="Text" Value="&#x23FA;" />
                             </DataTrigger>
-                            <DataTrigger Binding="{Binding CanUpdate}" Value="False">
-                                <Setter Property="Visibility" Value="Collapsed" />
+                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedDiffers">
+                                <Setter Property="Text" Value="&#x25D0;" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -391,7 +396,7 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                
+
                 <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
                 <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
                 <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,2">
@@ -400,10 +405,10 @@
                     </Hyperlink>
                 </TextBlock>
 
-                <ScrollViewer Grid.Row="2" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
-                    <ItemsControl ItemsSource="{Binding Lines}" Grid.IsSharedSizeScope="True">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
+                <ScrollViewer Grid.Row="2" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
+                    <ItemsControl ItemsSource="{Binding Lines}">
+                        <ItemsControl.Resources>
+                            <DataTemplate x:Key="modifiedRichPresenceLine">
                                 <Grid Margin="0,2,0,2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" SharedSizeGroup="definition" />
@@ -433,7 +438,20 @@
                                     </TextBlock>
                                 </Grid>
                             </DataTemplate>
-                        </ItemsControl.ItemTemplate>
+                            <DataTemplate x:Key="unmodifiedRichPresenceLine">
+                                <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                            </DataTemplate>
+                        </ItemsControl.Resources>
+                        <ItemsControl.Style>
+                            <Style TargetType="{x:Type ItemsControl}">
+                                <Setter Property="ItemTemplate" Value="{StaticResource unmodifiedRichPresenceLine}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
+                                        <Setter Property="ItemTemplate" Value="{StaticResource modifiedRichPresenceLine}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ItemsControl.Style>
                     </ItemsControl>
                 </ScrollViewer>
             </Grid>

@@ -96,7 +96,9 @@ namespace RATools.Parser
             if (!Evaluate(expressionGroup.Expressions, scope))
                 return false;
 
-            RichPresence = _richPresence.ToString();
+            if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+                RichPresence = _richPresence.ToString();
+
             return true;
         }
 
