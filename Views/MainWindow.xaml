@@ -33,6 +33,9 @@
                                 <DataTrigger Binding="{Binding CurrentFile}" Value="{x:Null}">
                                     <Setter Property="IsEnabled" Value="False" />
                                 </DataTrigger>
+                                <DataTrigger Binding="{Binding Game.GeneratedAchievementCount}" Value="0">
+                                    <Setter Property="IsEnabled" Value="False" />
+                                </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </MenuItem.Style>

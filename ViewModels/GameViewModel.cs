@@ -32,6 +32,7 @@ namespace RATools.ViewModels
         {
             GameId = gameId;
             Title = title;
+            Achievements = new GeneratedItemViewModelBase[0];
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
@@ -104,6 +105,7 @@ namespace RATools.ViewModels
                 var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
                 achievementViewModels.Add(achievementViewModel);
             }
+            GeneratedAchievementCount = achievementViewModels.Count;
 
             if (_isN64)
                 MergePublishedN64(GameId, achievementViewModels);
@@ -181,6 +183,13 @@ namespace RATools.ViewModels
         {
             get { return (string)GetValue(TitleProperty); }
             private set { SetValue(TitleProperty, value); }
+        }
+
+        public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
+        public int GeneratedAchievementCount
+        {
+            get { return (int)GetValue(GeneratedAchievementCountProperty); }
+            private set { SetValue(GeneratedAchievementCountProperty, value); }
         }
 
         public static readonly ModelProperty PublishedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "PublishedAchievementCount", typeof(int), 0);

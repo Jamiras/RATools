@@ -21,7 +21,7 @@ namespace RATools.Parser
         /// Begins an new alt group.
         /// </summary>
         /// <returns>The requirement collection for the new alt group.</returns>
-        public void BeginAlt()
+        private void BeginAlt()
         {
             if (ReferenceEquals(_current, CoreRequirements) || _current.Count > 0)
             {
@@ -34,7 +34,7 @@ namespace RATools.Parser
         /// <summary>
         /// Gets the last requirement added to the achievement.
         /// </summary>
-        public Requirement LastRequirement
+        private Requirement LastRequirement
         {
             get { return _current.Last(); }
         }
