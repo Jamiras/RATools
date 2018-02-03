@@ -185,6 +185,7 @@ namespace RATools.ViewModels
             Lines = lines;
 
             ModificationMessage = null;
+            CompareState = GeneratedCompareState.None;
             CanUpdate = false;
             OnPropertyChanged(() => Lines);
         }

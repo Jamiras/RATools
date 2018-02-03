@@ -217,12 +217,12 @@ namespace RATools.ViewModels
                 if (Core.Achievement != null)
                 {
                     RequirementGroups = Core.RequirementGroups;
-                    RequirementSource = "Core";
+                    RequirementSource = "Core (Not Generated)";
                 }
                 else
                 {
                     RequirementGroups = Unofficial.RequirementGroups;
-                    RequirementSource = "Unofficial";
+                    RequirementSource = "Unofficial (Not Generated)";
                 }
             }
             else if (IsAchievementModified(Local))
@@ -235,7 +235,11 @@ namespace RATools.ViewModels
             }
             else if (IsAchievementModified(Core))
             {
-                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
+                if (Local.Achievement != null)
+                    RequirementSource = "Generated (Same as Local)";
+                else
+                    RequirementSource = "Generated (Not in Local)";
+
                 Other = Core;
                 ModificationMessage = "Core achievement differs from generated achievement";
                 CompareState = GeneratedCompareState.PublishedDiffers;
@@ -243,7 +247,11 @@ namespace RATools.ViewModels
             }
             else if (IsAchievementModified(Unofficial))
             {
-                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
+                if (Local.Achievement != null)
+                    RequirementSource = "Generated (Same as Local)";
+                else
+                    RequirementSource = "Generated (Not in Local)";
+
                 Other = Unofficial;
                 ModificationMessage = "Unofficial achievement differs from generated achievement";
                 CompareState = GeneratedCompareState.PublishedDiffers;
@@ -254,9 +262,9 @@ namespace RATools.ViewModels
                 if (Local.Achievement == null && IsGenerated)
                 {
                     if (Core.Achievement != null)
-                        RequirementSource = "Generated (Same as Core)";
+                        RequirementSource = "Generated (Same as Core, not in Local)";
                     else
-                        RequirementSource = "Generated (Same as Unofficial)";
+                        RequirementSource = "Generated (Same as Unofficial, not in Local)";
 
                     ModificationMessage = "Local achievement does not exist";
                     CompareState = GeneratedCompareState.PublishedMatchesNotGenerated;
@@ -271,12 +279,12 @@ namespace RATools.ViewModels
 
                     if (Core.Achievement != null)
                     {
-                        RequirementSource = "Core";
+                        RequirementSource = "Generated (Same as Core and Local)";
                         Other = Core;
                     }
                     else if (Unofficial.Achievement != null)
                     {
-                        RequirementSource = "Unofficial";
+                        RequirementSource = "Generated (Same as Unofficial and Local)";
                         Other = Unofficial;
                     }
                     else
