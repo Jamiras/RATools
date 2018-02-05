@@ -69,7 +69,9 @@
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
+    <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
+    <Compile Include="ViewModels\ScriptViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
     <Compile Include="Views\UpdateLocalDialog.xaml.cs">
       <DependentUpon>UpdateLocalDialog.xaml</DependentUpon>

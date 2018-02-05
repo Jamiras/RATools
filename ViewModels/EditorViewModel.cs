@@ -18,27 +18,21 @@ namespace RATools.ViewModels
             Style.SetCustomColor((int)ExpressionType.StringConstant, Colors.DarkSeaGreen);
             Style.SetCustomColor((int)ExpressionType.Keyword, Colors.DarkGoldenrod);
             Style.SetCustomColor((int)ExpressionType.ParseError, Colors.Red);
-
-            Content = "// Super Mario Bros\n" +
-                      "// #ID = 1446\n" +
-                      "\n" +
-                      "// Event music buffer\n" +
-                      "function current_music() => byte(0x0000F0)\n";
         }
 
         protected override void OnContentChanged(string newValue)
         {
             var parser = new AchievementScriptParser();
-            _expressionGroup = parser.Parse(Tokenizer.CreateTokenizer(newValue));
+            ParsedContent = parser.Parse(Tokenizer.CreateTokenizer(newValue));
             base.OnContentChanged(newValue);
         }
 
-        private ExpressionGroup _expressionGroup;
+        internal ExpressionGroup ParsedContent { get; private set; }
 
         protected override void OnLineChanged(LineChangedEventArgs e)
         {
             var expressions = new List<ExpressionBase>();
-            if (_expressionGroup.GetExpressionsForLine(expressions, e.Line.Line))
+            if (ParsedContent.GetExpressionsForLine(expressions, e.Line.Line))
             {
                 foreach (var expression in expressions)
                 {

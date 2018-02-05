@@ -3,7 +3,7 @@ using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
-using RATools.Parser;
+using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -29,8 +29,6 @@ namespace RATools.ViewModels
             AboutCommand = new DelegateCommand(About);
 
             _recentFiles = new RecencyBuffer<string>(8);
-
-            Editor = new EditorViewModel();
         }
 
         public bool Initialize()
@@ -102,18 +100,11 @@ namespace RATools.ViewModels
                 OpenFile(vm.FileNames[0]);
         }
 
-        public static readonly ModelProperty EditorProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Editor", typeof(ViewModelBase), null);
-        public ViewModelBase Editor
+        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null);
+        public GameViewModel Game
         {
-            get { return (ViewModelBase)GetValue(EditorProperty); }
-            private set { SetValue(EditorProperty, value); }
-        }
-
-        public static readonly ModelProperty CurrentFileProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CurrentFile", typeof(string), null);
-        public string CurrentFile
-        {
-            get { return (string)GetValue(CurrentFileProperty); }
-            private set { SetValue(CurrentFileProperty, value); }
+            get { return (GameViewModel)GetValue(GameProperty); }
+            private set { SetValue(GameProperty, value); }
         }
 
         public static readonly ModelProperty RecentFilesProperty = ModelProperty.Register(typeof(MainWindowViewModel), "RecentFiles", typeof(IEnumerable<string>), null);
@@ -126,7 +117,8 @@ namespace RATools.ViewModels
         public CommandBase RefreshCurrentCommand { get; private set; }
         private void RefreshCurrent()
         {
-            OpenFile(CurrentFile);
+            if (Game != null)
+                OpenFile(Game.Script.Filename);
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }
@@ -138,62 +130,56 @@ namespace RATools.ViewModels
                 return;
             }
 
-            var editor = Editor as EditorViewModel;
-            if (editor != null)
-            {
-                editor.Content = File.ReadAllText(filename);
-                return;
-            }
-
             var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             logger.WriteVerbose("Opening " + filename);
 
-            var parser = new AchievementScriptInterpreter();
+            string content = File.ReadAllText(filename);
+            var tokenizer = Tokenizer.CreateTokenizer(content);
+            var expressionGroup = new AchievementScriptParser().Parse(tokenizer);
 
-            using (var stream = File.OpenRead(filename))
+            int gameId = 0;
+            var idComment = expressionGroup.Comments.FirstOrDefault(c => c.Value.Contains("#ID"));
+            if (idComment != null)
             {
-                AddRecentFile(filename);
+                var tokens = idComment.Value.Split('=');
+                if (tokens.Length > 1)
+                    Int32.TryParse(tokens[1].ToString(), out gameId);
+            }
 
-                if (parser.Run(Tokenizer.CreateTokenizer(stream)))
+            if (gameId == 0)
+            {
+                logger.WriteVerbose("Could not find game ID");
+                MessageBoxViewModel.ShowMessage("Could not find game id");
+                return;
+            }
+
+            AddRecentFile(filename);
+            logger.WriteVerbose("Game ID: " + gameId);
+
+            var gameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
+            GameViewModel viewModel = null;
+
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            {
+                var notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                if (File.Exists(notesFile))
                 {
-                    logger.WriteVerbose("Game ID: " + parser.GameId);
-                    logger.WriteVerbose("Generated " + parser.Achievements.Count() + " achievements");
-                    if (!String.IsNullOrEmpty(parser.RichPresence))
-                        logger.WriteVerbose("Generated Rich Presence");
-                    if (parser.Leaderboards.Count() > 0)
-                        logger.WriteVerbose("Generated " + parser.Leaderboards.Count() + " leaderboards");
+                    logger.WriteVerbose("Found code notes in " + directory);
 
-                    CurrentFile = filename;
-
-                    foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
-                    {
-                        var notesFile = Path.Combine(directory, parser.GameId + "-Notes2.txt");
-                        if (File.Exists(notesFile))
-                        {
-                            logger.WriteVerbose("Found code notes in " + directory);
-                            Editor = new GameViewModel(parser, directory.ToString());
-                            return;
-                        }
-                    }
-
-                    logger.WriteVerbose("Could not find code notes");
-                    MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
-                    return;
-                }
-                else if (parser.GameId != 0)
-                {
-                    logger.WriteVerbose("Game ID: " + parser.GameId);
-                    CurrentFile = filename;
-
-                    if (!String.IsNullOrEmpty(parser.GameTitle))
-                        Editor = new GameViewModel(parser.GameId, parser.GameTitle);
-                    else
-                        Editor = null;
+                    viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
                 }
             }
 
-            logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
-            MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
+            if (viewModel == null)
+            {
+                logger.WriteVerbose("Could not find code notes");
+                MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+
+                viewModel = new GameViewModel(gameId, gameTitle);
+            }
+
+            viewModel.Script.Content = content;
+            Game = viewModel;
         }
 
         private void AddRecentFile(string newFile)
@@ -228,7 +214,7 @@ namespace RATools.ViewModels
         public CommandBase UpdateLocalCommand { get; private set; }
         private void UpdateLocal()
         {
-            var game = Editor as GameViewModel;
+            var game = Game;
             if (game == null)
             {
                 MessageBoxViewModel.ShowMessage("No game loaded");
@@ -250,10 +236,10 @@ namespace RATools.ViewModels
         {
             ServiceRepository.Instance.FindService<ISettings>().HexValues = (bool)e.NewValue;
             var vm = (MainWindowViewModel)sender;
-            var game = vm.Editor as GameViewModel;
+            var game = vm.Game;
             if (game != null)
             {
-                foreach (var achievement in game.Achievements)
+                foreach (var achievement in game.Editors)
                     achievement.OnShowHexValuesChanged(e);
             }
         }

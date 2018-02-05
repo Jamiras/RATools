@@ -69,7 +69,6 @@ namespace RATools.Parser
         /// </returns>
         public bool Run(Tokenizer input)
         {
-            var scope = new InterpreterScope();
             var expressionGroup = new AchievementScriptParser().Parse(input);
 
             if (expressionGroup.Comments.Count > 0)
@@ -86,6 +85,11 @@ namespace RATools.Parser
                 }
             }
 
+            return Run(expressionGroup);
+        }
+
+        internal bool Run(ExpressionGroup expressionGroup)
+        { 
             var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
             if (parseError != null)
             {
@@ -93,6 +97,7 @@ namespace RATools.Parser
                 return false;
             }
 
+            var scope = new InterpreterScope();
             if (!Evaluate(expressionGroup.Expressions, scope))
                 return false;
 

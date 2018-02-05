@@ -17,39 +17,22 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Title}")]
     public class GameViewModel : ViewModelBase
     {
-        public GameViewModel(AchievementScriptInterpreter parser, string raCacheDirectory)
-            : this(parser.GameId, parser.GameTitle, raCacheDirectory, parser.Achievements)
-        {
-            var richPresenceViewModel = new RichPresenceViewModel(this, parser.RichPresence);
-            if (richPresenceViewModel.Lines.Any())
-                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(richPresenceViewModel);
-
-            foreach (var leaderboard in parser.Leaderboards)
-                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new LeaderboardViewModel(this, leaderboard));
-        }
-
         public GameViewModel(int gameId, string title)
         {
             GameId = gameId;
             Title = title;
-            Achievements = new GeneratedItemViewModelBase[0];
+            Script = new ScriptViewModel(this);
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
 
         public GameViewModel(int gameId, string title, string raCacheDirectory)
-            : this(gameId, title, raCacheDirectory, new Achievement[0])
-        {
-
-        }
-
-        private GameViewModel(int gameId, string title, string raCacheDirectory, IEnumerable<Achievement> achievements)
             : this(gameId, title)
         {
             RACacheDirectory = raCacheDirectory;
 
             Notes = new TinyDictionary<int, string>();
-            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, GameId + "-Notes2.txt")))
+            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, gameId + "-Notes2.txt")))
             {
                 var reader = new StreamReader(notesStream);
                 var firstChar = reader.Peek();
@@ -98,27 +81,35 @@ namespace RATools.ViewModels
             }
 
             _logger.WriteVerbose("Read " + Notes.Count + " code notes");
+        }
 
-            var achievementViewModels = new List<GeneratedItemViewModelBase>(achievements.Count());
-            foreach (var achievement in achievements)
+        public ScriptViewModel Script { get; private set; }
+
+        internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
+        { 
+            var editors = new List<GeneratedItemViewModelBase>(interpreter.Achievements.Count() + 4);
+            if (Script != null)
+                editors.Add(Script);
+
+            foreach (var achievement in interpreter.Achievements)
             {
                 var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
-                achievementViewModels.Add(achievementViewModel);
+                editors.Add(achievementViewModel);
             }
-            GeneratedAchievementCount = achievementViewModels.Count;
+            GeneratedAchievementCount = interpreter.Achievements.Count();
 
             if (_isN64)
-                MergePublishedN64(GameId, achievementViewModels);
+                MergePublishedN64(GameId, editors);
             else
-                MergePublished(GameId, achievementViewModels);
+                MergePublished(GameId, editors);
 
-            MergeLocal(GameId, achievementViewModels);
+            MergeLocal(GameId, editors);
 
-            foreach (var achievement in achievementViewModels.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
                 achievement.UpdateCommonProperties(this);
 
-            Achievements = achievementViewModels;
-        }
+            Editors = editors;
+        }      
 
         private LocalAchievements _localAchievements;
         private readonly bool _isN64;
@@ -128,18 +119,18 @@ namespace RATools.ViewModels
         internal string RACacheDirectory { get; private set; }
         internal TinyDictionary<int, string> Notes { get; private set; }
         
-        public static readonly ModelProperty AchievementsProperty = ModelProperty.Register(typeof(GameViewModel), "Achievements", typeof(IEnumerable<GeneratedItemViewModelBase>), null);
-        public IEnumerable<GeneratedItemViewModelBase> Achievements
+        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<GeneratedItemViewModelBase>), new GeneratedItemViewModelBase[0]);
+        public IEnumerable<GeneratedItemViewModelBase> Editors
         {
-            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(AchievementsProperty); }
-            private set { SetValue(AchievementsProperty, value); }
+            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(EditorsProperty); }
+            private set { SetValue(EditorsProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedAchievementProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedAchievement", typeof(GeneratedItemViewModelBase), null);
-        public GeneratedItemViewModelBase SelectedAchievement
+        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(GeneratedItemViewModelBase), null);
+        public GeneratedItemViewModelBase SelectedEditor
         {
-            get { return (GeneratedItemViewModelBase)GetValue(SelectedAchievementProperty); }
-            set { SetValue(SelectedAchievementProperty, value); }
+            get { return (GeneratedItemViewModelBase)GetValue(SelectedEditorProperty); }
+            set { SetValue(SelectedEditorProperty, value); }
         }
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement)

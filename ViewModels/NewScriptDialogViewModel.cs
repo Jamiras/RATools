@@ -82,7 +82,7 @@ namespace RATools.ViewModels
             MemoryAddresses.Rows.Clear();
 
             var unofficialAchievements = new List<DumpAchievementItem>();
-            foreach (var achievement in _game.Achievements.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in _game.Editors.OfType<GeneratedAchievementViewModel>())
             {
                 AchievementViewModel source = achievement.Core;
                 if (source.Achievement == null)
@@ -470,7 +470,7 @@ namespace RATools.ViewModels
                     if (!dumpAchievement.IsSelected)
                         continue;
 
-                    var achievement = _game.Achievements.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
+                    var achievement = _game.Editors.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
                     if (achievement == null)
                         continue;
 
