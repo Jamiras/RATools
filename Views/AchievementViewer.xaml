@@ -550,17 +550,66 @@
 
             <Border Grid.Row="1" Grid.ColumnSpan="3" Height="20" Background="#C0C0C0" BorderBrush="DarkGray" BorderThickness="0,1,0,0">
                 <Grid>
-                    <TextBlock Margin="6,0,6,0">
-                    <TextBlock Text="{Binding PublishedAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
-                        <Run Text=" published achievements (" />
-                        <TextBlock Text="{Binding PublishedAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
-                        <Run Text=" points)" />
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CoreAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Core(" />
+                        <TextBlock Text="{Binding CoreAchievementCount}" Margin="-3,0,-3,0" />                        
+                        <Run Text="): " />
+                        <TextBlock Text="{Binding CoreAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text="pts" />
                     </TextBlock>
-                    <TextBlock Margin="6,0,6,0" HorizontalAlignment="Right">
-                        <TextBlock Text="{Binding LocalAchievementCount, FallbackValue=0}" Margin="0,0,-2,0" />
-                        <Run Text=" local achievements (" />
+                    <TextBlock Grid.Column="1" Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding UnofficialAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Unofficial(" />
+                        <TextBlock Text="{Binding UnofficialAchievementCount}" Margin="-3,0,-3,0" />
+                        <Run Text="): " />
+                        <TextBlock Text="{Binding UnofficialAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text="pts" />
+                    </TextBlock>
+                    <TextBlock Grid.Column="2" Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LocalAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Local(" />
+                        <TextBlock Text="{Binding LocalAchievementCount}" Margin="-3,0,-3,0" />
+                        <Run Text="): " />
                         <TextBlock Text="{Binding LocalAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
-                        <Run Text=" points)" />
+                        <Run Text="pts" />
+                    </TextBlock>
+
+                    <TextBlock Grid.Column="3" Margin="4,0,4,0" HorizontalAlignment="Right">
+                        <Run Text="Ln " />
+                        <TextBlock Text="{Binding Script.Editor.CursorLine, FallbackValue=0}" />
+                        <Run Text="   Col " />
+                        <TextBlock Text="{Binding Script.Editor.CursorColumn, FallbackValue=0}" />
                     </TextBlock>
                 </Grid>
             </Border>

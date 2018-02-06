@@ -178,6 +178,7 @@ namespace RATools.ViewModels
                 viewModel = new GameViewModel(gameId, gameTitle);
             }
 
+            viewModel.Script.Filename = filename;
             viewModel.Script.Content = content;
             Game = viewModel;
         }

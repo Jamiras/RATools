@@ -2,6 +2,7 @@
 using Jamiras.ViewModels.CodeEditor;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Media;
 
 namespace RATools.ViewModels
@@ -29,15 +30,16 @@ namespace RATools.ViewModels
 
         internal ExpressionGroup ParsedContent { get; private set; }
 
-        protected override void OnLineChanged(LineChangedEventArgs e)
+        protected override void OnFormatLine(LineFormatEventArgs e)
         {
+            int line = e.Line.Line;
             var expressions = new List<ExpressionBase>();
-            if (ParsedContent.GetExpressionsForLine(expressions, e.Line.Line))
+            if (ParsedContent.GetExpressionsForLine(expressions, line))
             {
                 foreach (var expression in expressions)
                 {
-                    var expressionStart = (expression.Line == e.Line.Line) ? expression.Column : 1;
-                    var expressionEnd = (expression.EndLine == e.Line.Line) ? expression.EndColumn : e.Line.LineLength + 1;
+                    var expressionStart = (expression.Line == line) ? expression.Column : 1;
+                    var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.LineLength + 1;
 
                     if (expression is ParseErrorExpression)
                         e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);
@@ -46,7 +48,7 @@ namespace RATools.ViewModels
                 }
             }
 
-            base.OnLineChanged(e);
+            base.OnFormatLine(e);
         }
     }
 }
