@@ -1,3 +1,6 @@
+v1.4.1 - 10 Feb 2017
+* display rich presence length in editor
+
 v1.4.0 - 3 Feb 2017
 * replaced achievements grid with list, added icons
 * removed tabs from achievement viewer - if achievement is generated, will be shown with diff to local or core,

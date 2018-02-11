@@ -390,6 +390,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -397,15 +398,21 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
+                <Image Width="48" Height="48" Grid.RowSpan="3" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
                 <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
-                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,2">
+                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0">
+                    <TextBlock Text="{Binding RichPresenceLength}" />
+                    <TextBlock Text="/" />
+                    <TextBlock Text="{Binding RichPresenceMaxLength}" />
+                    <TextBlock Text="characters" />
+                </TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="2" FontSize="10" VerticalAlignment="Top" Margin="8,0,0,2">
                     <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
                         <TextBlock Text="Copy to Clipboard" />
                     </Hyperlink>
                 </TextBlock>
 
-                <ScrollViewer Grid.Row="2" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
+                <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
                     <ItemsControl ItemsSource="{Binding Lines}">
                         <ItemsControl.Resources>
                             <DataTemplate x:Key="modifiedRichPresenceLine">
