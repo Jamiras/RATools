@@ -1,7 +1,9 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -21,7 +23,9 @@ namespace RATools.ViewModels
             if (File.Exists(_richFile))
             {
                 var coreRichPresence = File.ReadAllText(_richFile);
-                localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
+                RichPresenceLength = coreRichPresence.Length;
+                if (RichPresenceLength > 0)
+                    localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
             }
 
             var lines = new List<RichPresenceLine>();
@@ -101,6 +105,9 @@ namespace RATools.ViewModels
                 foreach (var line in localLines)
                     lines.Add(new RichPresenceLine(line));
 
+                GeneratedSource = "Local (Not Generated)";
+                CompareSource = String.Empty;
+
                 ModificationMessage = null;
                 CompareState = GeneratedCompareState.None;
                 CanUpdate = false;
@@ -112,13 +119,23 @@ namespace RATools.ViewModels
                 while (localIndex < localLines.Length)
                     lines.Add(new RichPresenceLine(localLines[localIndex++], ""));
 
-                ModificationMessage = "Local value differs from generated value";
+                if (!_hasLocal)
+                {
+                    GeneratedSource = "Generated (Not in Local)";
+                    CompareSource = String.Empty;
+                }
+
+                RichPresenceLength = _richPresence.Length;
+                ModificationMessage = _hasLocal ? "Local value differs from generated value" : "Local value does not exist";
                 CompareState = GeneratedCompareState.LocalDiffers;
                 UpdateLocalCommand = new DelegateCommand(UpdateLocal);
                 CanUpdate = true;
             }
             else
             {
+                GeneratedSource = "Generated (Same as Local)";
+                CompareSource = String.Empty;
+
                 ModificationMessage = null;
                 CanUpdate = false;
 
@@ -151,14 +168,27 @@ namespace RATools.ViewModels
             get { return _hasGenerated; }
         }
 
-        public int RichPresenceLength
-        {
-            get { return _richPresence.Length; }
-        }
+        public int RichPresenceLength { get; private set; }
 
         public int RichPresenceMaxLength
         {
             get { return 2450; }
+        }
+
+        public static readonly ModelProperty GeneratedSourceProperty = ModelProperty.Register(typeof(RichPresenceViewModel), "GeneratedSource", typeof(string), "Generated");
+
+        public string GeneratedSource
+        {
+            get { return (string)GetValue(GeneratedSourceProperty); }
+            private set { SetValue(GeneratedSourceProperty, value); }
+        }
+
+        public static readonly ModelProperty CompareSourceProperty = ModelProperty.Register(typeof(RichPresenceViewModel), "CompareSource", typeof(string), "Local");
+
+        public string CompareSource
+        {
+            get { return (string)GetValue(CompareSourceProperty); }
+            private set { SetValue(CompareSourceProperty, value); }
         }
 
         public class RichPresenceLine
@@ -193,6 +223,9 @@ namespace RATools.ViewModels
             foreach (var line in genLines)
                 lines.Add(new RichPresenceLine(line));
             Lines = lines;
+
+            GeneratedSource = "Generated (Same as Local)";
+            CompareSource = String.Empty;
 
             ModificationMessage = null;
             CompareState = GeneratedCompareState.None;

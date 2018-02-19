@@ -227,7 +227,13 @@ namespace RATools.ViewModels
             }
             else if (IsAchievementModified(Local))
             {
-                RequirementSource = (string)RequirementSourceProperty.DefaultValue;
+                if (!IsAchievementModified(Core))
+                    RequirementSource = "Generated (Same as Core)";
+                else if (!IsAchievementModified(Unofficial))
+                    RequirementSource = "Generated (Same as Unofficial)";
+                else
+                    RequirementSource = "Generated";
+
                 Other = Local;
                 ModificationMessage = "Local achievement differs from generated achievement";
                 CompareState = GeneratedCompareState.LocalDiffers;
