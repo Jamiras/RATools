@@ -151,6 +151,9 @@ namespace RATools.Parser.Internal
                 if (expression.Type == ExpressionType.ParseError)
                     return expression;
 
+                if (expression.Type == ExpressionType.Return)
+                    return new ParseErrorExpression("Return statement is implied by =>", ((ReturnExpression)expression).Keyword);
+
                 var returnExpression = new ReturnExpression(expression);
                 function.Expressions.Add(returnExpression);
                 return function;
