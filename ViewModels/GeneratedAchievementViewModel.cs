@@ -289,7 +289,7 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        RequirementSource = "???";
+                        RequirementSource = "Generated (Same as Local)";
                         Other = null;
                     }
                 }

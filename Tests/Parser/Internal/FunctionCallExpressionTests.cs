@@ -114,7 +114,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
             var parseError = (ParseErrorExpression)error;
-            Assert.That(parseError.Message, Is.EqualTo("required parameter 'j' not provided"));
+            Assert.That(parseError.Message, Is.EqualTo("Required parameter 'j' not provided"));
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
             var parseError = (ParseErrorExpression)error;
-            Assert.That(parseError.Message, Is.EqualTo("too many parameters passed to function"));
+            Assert.That(parseError.Message, Is.EqualTo("Too many parameters passed to function"));
         }
 
         [Test]
@@ -167,7 +167,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
             var parseError = (ParseErrorExpression)error;
-            Assert.That(parseError.Message, Is.EqualTo("required parameter 'i' not provided"));
+            Assert.That(parseError.Message, Is.EqualTo("Required parameter 'i' not provided"));
         }
 
         [Test]
@@ -238,7 +238,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
             var parseError = (ParseErrorExpression)error;
-            Assert.That(parseError.Message, Is.EqualTo("non-named parameter following named parameter"));
+            Assert.That(parseError.Message, Is.EqualTo("Non-named parameter following named parameter"));
         }
 
         [Test]

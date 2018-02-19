@@ -56,46 +56,12 @@ namespace RATools.Parser
 
         internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
         {
-            switch (expression.Type)
-            {
-                case ExpressionType.FunctionCall:
-                    error = ExecuteAchievementFunction((FunctionCallExpression)expression, scope);
-                    break;
-
-                case ExpressionType.Conditional:
-                    error = ExecuteAchievementConditional((ConditionalExpression)expression, scope);
-                    break;
-
-                case ExpressionType.Comparison:
-                    error = ExecuteAchievementComparison((ComparisonExpression)expression, scope);
-                    break;
-
-                case ExpressionType.Mathematic:
-                    error = ExecuteAchievementMathematic((MathematicExpression)expression, scope);
-                    break;
-
-                case ExpressionType.Variable:
-                    ExpressionBase operand;
-                    if (!((VariableExpression)expression).ReplaceVariables(scope, out operand))
-                    {
-                        error = (ParseErrorExpression)operand;
-                        return false;
-                    }
-
-                    error = ExecuteAchievementExpression(operand, scope);
-                    break;
-
-                default:
-                    error = new ParseErrorExpression("Unsupported trigger: " + expression.Type, expression);
-                    break;
-            }
-
+            error = ExecuteAchievementExpression(expression, scope);
             return (error == null);
         }
 
         private ParseErrorExpression ExecuteAchievementExpression(ExpressionBase expression, InterpreterScope scope)
         {
-            ParseErrorExpression error;
             ExpressionBase operand;
 
             switch (expression.Type)
@@ -103,27 +69,11 @@ namespace RATools.Parser
                 case ExpressionType.FunctionCall:
                     return ExecuteAchievementFunction((FunctionCallExpression)expression, scope);
 
-                case ExpressionType.Assignment:
-                    var assignment = (AssignmentExpression)expression;
-                    if (!assignment.Value.ReplaceVariables(scope, out operand))
-                        return new ParseErrorExpression(operand, assignment.Value);
-
-                    scope.AssignVariable(assignment.Variable, operand);
-                    return null;
-
                 case ExpressionType.Conditional:
                     return ExecuteAchievementConditional((ConditionalExpression)expression, scope);
 
                 case ExpressionType.Comparison:
                     return ExecuteAchievementComparison((ComparisonExpression)expression, scope);
-
-                case ExpressionType.Return:
-                    error = ExecuteAchievementExpression(((ReturnExpression)expression).Value, scope);
-                    if (error != null)
-                        return error;
-
-                    scope.IsComplete = true;
-                    return null;
 
                 case ExpressionType.Mathematic:
                     return ExecuteAchievementMathematic((MathematicExpression)expression, scope);
@@ -133,12 +83,9 @@ namespace RATools.Parser
                         return new ParseErrorExpression(operand, expression);
 
                     return ExecuteAchievementExpression(operand, scope);
-
-                case ExpressionType.If:
-                    return ExecuteAchievementIf((IfExpression)expression, scope);
             }
 
-            return new ParseErrorExpression("Unupported expression in achievement: " + expression.Type, expression);
+            return new ParseErrorExpression("Cannot generate trigger from " + expression.Type, expression);
         }
 
         private ParseErrorExpression ExecuteAchievementExpressions(ICollection<ExpressionBase> expressions, InterpreterScope scope)
@@ -155,20 +102,6 @@ namespace RATools.Parser
 
             return null;
         }
-
-        private ParseErrorExpression ExecuteAchievementIf(IfExpression ifExpression, InterpreterScope scope)
-        {
-            ParseErrorExpression error;
-            bool result = ifExpression.Condition.IsTrue(scope, out error);
-            if (error != null)
-                return error;
-
-            if (result)
-                return ExecuteAchievementExpressions(ifExpression.Expressions, scope);
-            else
-                return ExecuteAchievementExpressions(ifExpression.ElseExpressions, scope);
-        }
-
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
             var error = ExecuteAchievementExpression(mathematic.Left, scope);
@@ -193,7 +126,7 @@ namespace RATools.Parser
                             LastRequirement.Type = RequirementType.SubSource;
                             break;
                         default:
-                            return new ParseErrorExpression("expression cannot be converted to an achievement", mathematic);
+                            return new ParseErrorExpression("Expression cannot be converted to an achievement", mathematic);
                     }
 
                     LastRequirement.Operator = RequirementOperator.None;
@@ -201,12 +134,12 @@ namespace RATools.Parser
                     return ExecuteAchievementExpression(operand, scope);
                 }
 
-                return new ParseErrorExpression("expression does not evaluate to a constant", mathematic.Right);
+                return new ParseErrorExpression("Expression does not evaluate to a constant", mathematic.Right);
             }
 
             var oppositeOperation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
             if (oppositeOperation == MathematicOperation.None)
-                return new ParseErrorExpression("cannot transpose modification to result", mathematic);
+                return new ParseErrorExpression("Cannot transpose modification to result", mathematic);
 
             _equalityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
             return null;
@@ -253,7 +186,7 @@ namespace RATools.Parser
                     return null;
             }
 
-            return new ParseErrorExpression("unsupported conditional", condition);
+            return new ParseErrorExpression("Unsupported conditional", condition);
         }
 
         private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
@@ -315,7 +248,7 @@ namespace RATools.Parser
                     }
 
                     if (leftValue != rightValue)
-                        return new ParseErrorExpression("expansion of function calls results in non-zero modifier when comparing multiple memory addresses", right);
+                        return new ParseErrorExpression("Expansion of function calls results in non-zero modifier when comparing multiple memory addresses", right);
                 }
 
                 var extraRequirement = LastRequirement;
@@ -362,12 +295,15 @@ namespace RATools.Parser
             var function = scope.GetFunction(functionCall.FunctionName.Name);
             if (function != null)
             {
-                ExpressionBase error;
-                var innerScope = functionCall.GetParameters(function, scope, out error);
-                if (innerScope == null)
-                    return (ParseErrorExpression)error;
+                ExpressionBase result;
+                if (!functionCall.Evaluate(scope, out result))
+                    return (ParseErrorExpression)result;
 
-                return ExecuteAchievementExpressions(function.Expressions, innerScope);
+                ParseErrorExpression error = ExecuteAchievementExpression(result, scope);
+                if (error == null)
+                    return null;
+
+                return new ParseErrorExpression("Function call did not resolve to a valid trigger condition: " + error.Message, functionCall);
             }
 
             var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName.Name);
@@ -498,7 +434,7 @@ namespace RATools.Parser
                 return null;
             }
 
-            return new ParseErrorExpression("unsupported function within achievement: " + functionCall.FunctionName, functionCall);
+            return new ParseErrorExpression("Unsupported function within achievement: " + functionCall.FunctionName, functionCall);
         }
 
         internal static FieldSize GetMemoryLookupFunctionSize(string name)
@@ -521,6 +457,5 @@ namespace RATools.Parser
                 default: return FieldSize.None;
             }
         }
-
     }
 }

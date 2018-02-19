@@ -1,6 +1,7 @@
 v1.4.1 - 19 Feb 2017
 * more options for which code notes should be dumped when creating a new script
 * display rich presence length in editor
+* don't error if for loop appears in function called from trigger as long as function still return valid trigger expression
 
 v1.4.0 - 3 Feb 2017
 * replaced achievements grid with list, added icons

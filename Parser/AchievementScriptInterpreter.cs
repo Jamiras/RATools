@@ -204,7 +204,14 @@ namespace RATools.Parser
                         return false;
 
                     if (loopScope.IsComplete)
+                    {
+                        if (loopScope.ReturnValue != null)
+                        {
+                            scope.ReturnValue = loopScope.ReturnValue;
+                            scope.IsComplete = true;
+                        }
                         break;
+                    }
                 }
 
                 return true;
@@ -378,7 +385,7 @@ namespace RATools.Parser
 
                 var parameterIndex = Int32.Parse(index.ToString()) + parameterOffset;
                 if (parameterIndex >= parameters.Count)
-                    return EvaluationError(parameters.ElementAt(0), "invalid parameter index: " + (parameterIndex - parameterOffset));
+                    return EvaluationError(parameters.ElementAt(0), "Invalid parameter index: " + (parameterIndex - parameterOffset));
                 var parameter = parameters.ElementAt(parameterIndex) as FunctionCallExpression;
                 if (parameter == null)
                     return EvaluationError(parameters.ElementAt(parameterIndex), "parameter must be a rich_presence_ function");

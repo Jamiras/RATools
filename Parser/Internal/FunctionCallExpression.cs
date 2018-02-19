@@ -169,13 +169,13 @@ namespace RATools.Parser.Internal
                 {
                     if (namedParameters)
                     {
-                        error = new ParseErrorExpression("non-named parameter following named parameter", parameter);
+                        error = new ParseErrorExpression("Non-named parameter following named parameter", parameter);
                         return null;
                     }
 
                     if (index == function.Parameters.Count)
                     {
-                        error = new ParseErrorExpression("too many parameters passed to function", parameter);
+                        error = new ParseErrorExpression("Too many parameters passed to function", parameter);
                         return null;
                     }
 
@@ -199,7 +199,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase value;
                 if (!function.DefaultParameters.TryGetValue(parameter, out value))
                 {
-                    error = new ParseErrorExpression(String.Format("required parameter '{0}' not provided", parameter), this);
+                    error = new ParseErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), this);
                     return null;
                 }
 
