@@ -42,8 +42,8 @@ namespace RATools.ViewModels
             if (recent != null)
             {
                 var list = new List<string>(recent.Split(';'));
-                foreach (var item in list)
-                    _recentFiles.Add(item);
+                for (int i = list.Count - 1; i >= 0; i--) // add in reverse order so most recent is added last
+                    _recentFiles.Add(list[i]);
                 RecentFiles = list.ToArray();
             }
 
