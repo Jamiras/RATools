@@ -175,7 +175,7 @@ namespace RATools.Parser.Internal
             {
                 expression = ExpressionBase.Parse(tokenizer);
                 if (expression.Type == ExpressionType.ParseError)
-                    return function;
+                    return expression;
 
                 if (expression.Type == ExpressionType.Return)
                     seenReturn = true;

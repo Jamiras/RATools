@@ -82,5 +82,16 @@ namespace RATools.Test.Parser.Internal
             expr.Expressions.First().AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo("return i"));
         }
+
+        [Test]
+        public void TestParseErrorInsideDefinition()
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"));
+            tokenizer.Match("function");
+            var expr = FunctionDefinitionExpression.Parse(tokenizer);
+
+            Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)expr).Message, Is.EqualTo("Expected conditional statement following if"));
+        }
     }
 }
