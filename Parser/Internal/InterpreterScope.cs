@@ -14,6 +14,7 @@ namespace RATools.Parser.Internal
             : this()
         {
             _parent = parent;
+            Depth = parent.Depth + 1;
         }
 
         private readonly TinyDictionary<string, FunctionDefinitionExpression> _functions;
@@ -121,5 +122,7 @@ namespace RATools.Parser.Internal
         public ExpressionBase ReturnValue { get; internal set; }
 
         internal object Context { get; set; }
+
+        internal int Depth { get; private set; }
     }
 }

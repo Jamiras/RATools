@@ -299,9 +299,16 @@ namespace RATools.Parser
                 if (!functionCall.Evaluate(scope, out result))
                     return (ParseErrorExpression)result;
 
-                ParseErrorExpression error = ExecuteAchievementExpression(result, scope);
+                var innerScope = new InterpreterScope(scope);
+                if (innerScope.Depth == 100)
+                    return new ParseErrorExpression("Maximum recursion depth exceeded", functionCall);
+
+                ParseErrorExpression error = ExecuteAchievementExpression(result, innerScope);
                 if (error == null)
                     return null;
+
+                if (error.Message.StartsWith("Function call did not resolve to a valid trigger condition: "))
+                    return error;
 
                 return new ParseErrorExpression("Function call did not resolve to a valid trigger condition: " + error.Message, functionCall);
             }
