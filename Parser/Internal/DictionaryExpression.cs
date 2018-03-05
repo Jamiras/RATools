@@ -64,7 +64,7 @@ namespace RATools.Parser.Internal
                 if (key.Type == ExpressionType.FunctionCall)
                 {
                     var expression = (FunctionCallExpression)key;
-                    if (!expression.Evaluate(scope, out value))
+                    if (!expression.Evaluate(scope, out value, true))
                     {
                         result = value;
                         return false;

@@ -1,4 +1,6 @@
 ﻿using Jamiras.Components;
+using RATools.Data;
+using System.Collections.Generic;
 
 namespace RATools.Parser.Internal
 {
@@ -123,6 +125,19 @@ namespace RATools.Parser.Internal
         public ExpressionBase ReturnValue { get; internal set; }
 
         internal object Context { get; set; }
+
+        internal T GetContext<T>()
+            where T : class
+        {
+            var context = Context as T;
+            if (context != null)
+                return context;
+
+            if (_parent != null)
+                return _parent.GetContext<T>();
+
+            return null;
+        }
 
         internal int Depth { get; private set; }
     }

@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Data;
 using System.Collections.Generic;
 using System.Text;
 
@@ -189,6 +190,121 @@ namespace RATools.Parser.Internal
 
             tokenizer.Advance();
             return function;
+        }
+
+        /// <summary>
+        /// Gets the return value from calling a function.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values and function parameters.</param>
+        /// <param name="result">[out] The new expression containing the function result.</param>
+        /// <returns>
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        /// </returns>
+        public virtual bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            var interpreter = new AchievementScriptInterpreter();
+            if (!interpreter.Evaluate(Expressions, scope))
+            {
+                result = interpreter.Error;
+                return false;
+            }
+
+            result = scope.ReturnValue;
+            return true;
+        }
+
+        /// <summary>
+        /// Gets the  parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected ExpressionBase GetParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = scope.GetVariable(name);
+            if (parameter == null)
+            {
+                parseError = new ParseErrorExpression("No value provided for " + name + " parameter");
+                return null;
+            }
+
+            parseError = null;
+            return parameter;
+        }
+
+        /// <summary>
+        /// Gets the integer parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected IntegerConstantExpression GetIntegerParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as IntegerConstantExpression;
+            if (typedParameter == null)
+            {
+                parseError = new ParseErrorExpression(name + " is not an integer");
+                return null;
+            }
+
+            parseError = null;
+            return typedParameter;
+        }
+
+        /// <summary>
+        /// Gets the string parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected StringConstantExpression GetStringParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as StringConstantExpression;
+            if (typedParameter == null)
+            {
+                parseError = new ParseErrorExpression(name + " is not a string");
+                return null;
+            }
+
+            parseError = null;
+            return typedParameter;
+        }
+
+        /// <summary>
+        /// Gets the memory accessor parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected Field GetMemoryAccessorParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return new Field();
+
+            var functionCall = parameter as FunctionCallExpression;
+            if (functionCall == null)
+            {
+                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
+                return new Field();
+            }
+
+            Field accessor;
+            ParseErrorExpression error;
+            TriggerBuilderContext.GetMemoryAccessor(functionCall, scope, out accessor, out error);
+            return accessor;
         }
 
         /// <summary>

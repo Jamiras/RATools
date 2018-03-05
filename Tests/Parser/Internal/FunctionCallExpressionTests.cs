@@ -251,7 +251,7 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.True);
             Assert.That(result, Is.EqualTo(new IntegerConstantExpression(2)));
         }
 
@@ -265,7 +265,7 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.True);
             Assert.That(result, Is.EqualTo(value));
         }
 
@@ -279,7 +279,7 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.True);
             Assert.That(result, Is.EqualTo(new IntegerConstantExpression(12)));
         }
 
@@ -293,13 +293,13 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Evaluate(scope, out result, false), Is.True);
             Assert.That(result, Is.EqualTo(new IntegerConstantExpression(8)));
 
             value = new IntegerConstantExpression(2);
             functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.True);
             Assert.That(result, Is.EqualTo(new IntegerConstantExpression(4)));
         }
 
@@ -313,7 +313,7 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.False);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.False);
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("func did not return a value"));
         }
@@ -326,7 +326,7 @@ namespace RATools.Test.Parser.Internal
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.False);
+            Assert.That(functionCall.Evaluate(scope, out result, true), Is.False);
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
         }

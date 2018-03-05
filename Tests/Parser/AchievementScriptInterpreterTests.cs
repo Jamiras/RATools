@@ -381,12 +381,26 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestPrevMalformed()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
+        }
+
+        [Test]
         public void TestOnce()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x001234) == 1)"));
+        }
+
+        [Test]
+        public void TestOnceMalformed()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]
@@ -545,14 +559,22 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 Required parameter 'lookup' not provided"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupPlusOne()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234) + 1, dict))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH001234_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceInvalidIndex()
         {
             var parser = Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:23 Invalid parameter index: 1"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:30 Invalid parameter index: 1"));
         }
 
         [Test]

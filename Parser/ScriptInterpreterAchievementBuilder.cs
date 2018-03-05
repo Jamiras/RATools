@@ -9,34 +9,23 @@ namespace RATools.Parser
     {
         public ScriptInterpreterAchievementBuilder() : base()
         {
-            _current = CoreRequirements;
             _equalityModifiers = new Stack<ValueModifier>();
         }
 
-        private ICollection<Requirement> _current;
-        private bool _isInNot;
         private Stack<ValueModifier> _equalityModifiers;
 
         /// <summary>
         /// Begins an new alt group.
         /// </summary>
         /// <returns>The requirement collection for the new alt group.</returns>
-        private void BeginAlt()
+        private void BeginAlt(TriggerBuilderContext context)
         {
-            if (ReferenceEquals(_current, CoreRequirements) || _current.Count > 0)
+            if (ReferenceEquals(context.Trigger, CoreRequirements) || context.Trigger.Count > 0)
             {
                 var newAlt = new List<Requirement>();
-                _current = newAlt;
+                context.Trigger = newAlt;
                 AlternateRequirements.Add(newAlt);
             }
-        }
-
-        /// <summary>
-        /// Gets the last requirement added to the achievement.
-        /// </summary>
-        private Requirement LastRequirement
-        {
-            get { return _current.Last(); }
         }
 
         /// <summary>
@@ -47,7 +36,7 @@ namespace RATools.Parser
         public string PopulateFromExpression(ExpressionBase expression)
         {
             ParseErrorExpression error;
-            var scope = new InterpreterScope();
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             if (!PopulateFromExpression(expression, scope, out error))
                 return error.Message;
 
@@ -56,7 +45,14 @@ namespace RATools.Parser
 
         internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
         {
-            error = ExecuteAchievementExpression(expression, scope);
+            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
+
+            var parentContext = scope.GetContext<TriggerBuilderContext>();
+            if (parentContext != null)
+                context.IsInNot = parentContext.IsInNot;
+
+            var innerScope = new InterpreterScope(scope) { Context = context };
+            error = ExecuteAchievementExpression(expression, innerScope);
             return (error == null);
         }
 
@@ -112,6 +108,8 @@ namespace RATools.Parser
             if (!mathematic.Right.ReplaceVariables(scope, out operand))
                 return (ParseErrorExpression)operand;
 
+            var context = scope.GetContext<TriggerBuilderContext>();
+
             var integerOperand = operand as IntegerConstantExpression;
             if (integerOperand == null)
             {
@@ -120,17 +118,17 @@ namespace RATools.Parser
                     switch (mathematic.Operation)
                     {
                         case MathematicOperation.Add:
-                            LastRequirement.Type = RequirementType.AddSource;
+                            context.LastRequirement.Type = RequirementType.AddSource;
                             break;
                         case MathematicOperation.Subtract:
-                            LastRequirement.Type = RequirementType.SubSource;
+                            context.LastRequirement.Type = RequirementType.SubSource;
                             break;
                         default:
                             return new ParseErrorExpression("Expression cannot be converted to an achievement", mathematic);
                     }
 
-                    LastRequirement.Operator = RequirementOperator.None;
-                    LastRequirement.Right = new Field();
+                    context.LastRequirement.Operator = RequirementOperator.None;
+                    context.LastRequirement.Right = new Field();
                     return ExecuteAchievementExpression(operand, scope);
                 }
 
@@ -148,38 +146,38 @@ namespace RATools.Parser
         private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope)
         {
             ParseErrorExpression error;
+            var context = scope.GetContext<TriggerBuilderContext>();
 
             switch (condition.Operation)
             {
                 case ConditionalOperation.Not:
-                    _isInNot = !_isInNot;
-                    error = ExecuteAchievementExpression(condition.Right, scope);
+                    var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = context.Trigger, IsInNot = !context.IsInNot } };
+                    error = ExecuteAchievementExpression(condition.Right, innerScope);
                     if (error != null)
                         return error;
-                    _isInNot = !_isInNot;
                     return null;
 
                 case ConditionalOperation.And:
-                    if (_isInNot)
-                        BeginAlt();
+                    if (context.IsInNot)
+                        BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Left, scope);
                     if (error != null)
                         return error;
-                    if (_isInNot)
-                        BeginAlt();
+                    if (context.IsInNot)
+                        BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Right, scope);
                     if (error != null)
                         return error;
                     return null;
 
                 case ConditionalOperation.Or:
-                    if (!_isInNot)
-                        BeginAlt();
+                    if (!context.IsInNot)
+                        BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Left, scope);
                     if (error != null)
                         return error;
-                    if (!_isInNot)
-                        BeginAlt();
+                    if (!context.IsInNot)
+                        BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Right, scope);
                     if (error != null)
                         return error;
@@ -204,8 +202,9 @@ namespace RATools.Parser
             if (!comparison.Right.ReplaceVariables(scope, out right))
                 return (ParseErrorExpression)right;
 
+            var context = scope.GetContext<TriggerBuilderContext>();
             var op = GetRequirementOperator(comparison.Operation);
-            if (_isInNot)
+            if (context.IsInNot)
                 op = GetOppositeRequirementOperator(op);
 
             var integerRight = right as IntegerConstantExpression;
@@ -218,7 +217,7 @@ namespace RATools.Parser
                     newValue = modifier.Apply(newValue);
                 }
 
-                var requirement = LastRequirement;
+                var requirement = context.LastRequirement;
                 requirement.Operator = op;
                 requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
             }
@@ -251,10 +250,10 @@ namespace RATools.Parser
                         return new ParseErrorExpression("Expansion of function calls results in non-zero modifier when comparing multiple memory addresses", right);
                 }
 
-                var extraRequirement = LastRequirement;
-                _current.Remove(extraRequirement);
+                var extraRequirement = context.LastRequirement;
+                context.Trigger.Remove(extraRequirement);
 
-                var requirement = LastRequirement;
+                var requirement = context.LastRequirement;
                 requirement.Operator = op;
                 requirement.Right = extraRequirement.Left;
             }
@@ -292,177 +291,34 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementFunction(FunctionCallExpression functionCall, InterpreterScope scope)
         {
-            var function = scope.GetFunction(functionCall.FunctionName.Name);
-            if (function != null)
-            {
-                ExpressionBase result;
-                if (!functionCall.Evaluate(scope, out result))
-                    return (ParseErrorExpression)result;
+            // call the function
+            ExpressionBase result;
+            if (!functionCall.Evaluate(scope, out result, false))
+                return (ParseErrorExpression)result;
 
-                var innerScope = new InterpreterScope(scope);
-                if (innerScope.Depth == 100)
-                    return new ParseErrorExpression("Maximum recursion depth exceeded", functionCall);
-
-                ParseErrorExpression error = ExecuteAchievementExpression(result, innerScope);
-                if (error == null)
-                    return null;
-
-                if (error.Message.StartsWith("Function call did not resolve to a valid trigger condition: "))
-                    return error;
-
-                return new ParseErrorExpression("Function call did not resolve to a valid trigger condition: " + error.Message, functionCall);
-            }
-
-            var fieldSize = GetMemoryLookupFunctionSize(functionCall.FunctionName.Name);
-            if (fieldSize != FieldSize.None)
-            {
-                ExpressionBase address;
-                if (!functionCall.Parameters.First().ReplaceVariables(scope, out address))
-                    return (ParseErrorExpression)address;
-
-                var addressInteger = address as IntegerConstantExpression;
-                if (addressInteger == null)
-                    return new ParseErrorExpression("address did not resolve to a constant", functionCall.Parameters.First());
-
-                var requirement = new Requirement { Operator = _isInNot ? RequirementOperator.Equal : RequirementOperator.NotEqual };
-                requirement.Left = new Field { Size = fieldSize, Type = FieldType.MemoryAddress, Value = (uint)addressInteger.Value };
-                requirement.Right = new Field { Size = fieldSize, Type = FieldType.Value, Value = 0 };
-                _current.Add(requirement);
+            // void function won't have a return value. also, some built-in functions modify the context without returning a value.
+            if (result == null)               
                 return null;
-            }
 
-            if (functionCall.FunctionName.Name == "once")
-            {
-                var error = ExecuteAchievementExpression(functionCall.Parameters.First(), scope);
-                if (error != null)
-                    return error;
+            // process the return value
+            var innerScope = new InterpreterScope(scope);
+            if (innerScope.Depth == 100)
+                return new ParseErrorExpression("Maximum recursion depth exceeded", functionCall);
 
-                var requirement = LastRequirement;
-                requirement.HitCount = 1;
+            ParseErrorExpression error = ExecuteAchievementExpression(result, innerScope);
+            if (error == null)
                 return null;
-            }
 
-            if (functionCall.FunctionName.Name == "repeated")
-            {
-                var error = ExecuteAchievementExpression(functionCall.Parameters.ElementAt(1), scope);
-                if (error != null)
-                    return error;
+            // prevent recursive error stacking
+            var message = "Function call did not resolve to a valid trigger condition:";
+            if (error.Message.StartsWith(message))
+                return error;
 
-                ExpressionBase times;
-                if (!functionCall.Parameters.First().ReplaceVariables(scope, out times))
-                    return (ParseErrorExpression)times;
+            message += "\n- ";
+            if (error.Line != 0)
+                message += string.Format("{0}:{1} ", error.Line, error.Column);
 
-                if (times.Type != ExpressionType.IntegerConstant)
-                    return new ParseErrorExpression("expression does not evaluate to an integer", functionCall.Parameters.First());
-
-                var requirement = LastRequirement;
-                requirement.HitCount = (ushort)((IntegerConstantExpression)times).Value;
-                return null;
-            }
-
-            if (functionCall.FunctionName.Name == "never")
-            {
-                var temp = new ScriptInterpreterAchievementBuilder();
-                var error = temp.ExecuteAchievementExpression(functionCall.Parameters.First(), scope);
-                if (error != null)
-                    return error;
-
-                var temp2 = temp.ToAchievement();
-                if (temp2.AlternateRequirements.Any())
-                {
-                    if (temp2.CoreRequirements.Any())
-                        return new ParseErrorExpression("never does not support &&'d conditions", functionCall.Parameters.First());
-                    foreach (var alt in temp2.AlternateRequirements)
-                    {
-                        if (alt.Count() > 1)
-                            return new ParseErrorExpression("never does not support &&'d conditions", functionCall.Parameters.First());
-
-                        var requirement = alt.First();
-                        requirement.Type = RequirementType.ResetIf;
-                        _current.Add(requirement);
-                    }
-                }
-                else
-                {
-                    if (temp2.CoreRequirements.Count() > 1)
-                        return new ParseErrorExpression("never does not support &&'d conditions", functionCall.Parameters.First());
-
-                    var requirement = temp2.CoreRequirements.First();
-                    requirement.Type = RequirementType.ResetIf;
-                    _current.Add(requirement);
-                }
-
-                return null;
-            }
-
-            if (functionCall.FunctionName.Name == "unless")
-            {
-                var temp = new ScriptInterpreterAchievementBuilder();
-                var error = temp.ExecuteAchievementExpression(functionCall.Parameters.First(), scope);
-                if (error != null)
-                    return error;
-
-                var temp2 = temp.ToAchievement();
-                if (temp2.AlternateRequirements.Any())
-                {
-                    if (temp2.CoreRequirements.Any())
-                        return new ParseErrorExpression("unless does not support &&'d conditions", functionCall.Parameters.First());
-                    foreach (var alt in temp2.AlternateRequirements)
-                    {
-                        if (alt.Count() > 1)
-                            return new ParseErrorExpression("unless does not support &&'d conditions", functionCall.Parameters.First());
-
-                        var requirement = alt.First();
-                        requirement.Type = RequirementType.PauseIf;
-                        _current.Add(requirement);
-                    }
-                }
-                else
-                {
-                    if (temp2.CoreRequirements.Count() > 1)
-                        return new ParseErrorExpression("unless does not support &&'d conditions", functionCall.Parameters.First());
-
-                    var requirement = temp2.CoreRequirements.First();
-                    requirement.Type = RequirementType.PauseIf;
-                    _current.Add(requirement);
-                }
-
-                return null;
-            }
-
-            if (functionCall.FunctionName.Name == "prev")
-            {
-                var error = ExecuteAchievementExpression(functionCall.Parameters.First(), scope);
-                if (error != null)
-                    return error;
-
-                var requirement = LastRequirement;
-                requirement.Left = new Field { Size = requirement.Left.Size, Type = FieldType.PreviousValue, Value = requirement.Left.Value };
-                return null;
-            }
-
-            return new ParseErrorExpression("Unsupported function within achievement: " + functionCall.FunctionName, functionCall);
-        }
-
-        internal static FieldSize GetMemoryLookupFunctionSize(string name)
-        {
-            switch (name)
-            {
-                case "bit0": return FieldSize.Bit0;
-                case "bit1": return FieldSize.Bit1;
-                case "bit2": return FieldSize.Bit2;
-                case "bit3": return FieldSize.Bit3;
-                case "bit4": return FieldSize.Bit4;
-                case "bit5": return FieldSize.Bit5;
-                case "bit6": return FieldSize.Bit6;
-                case "bit7": return FieldSize.Bit7;
-                case "low4": return FieldSize.LowNibble;
-                case "high4": return FieldSize.HighNibble;
-                case "byte": return FieldSize.Byte;
-                case "word": return FieldSize.Word;
-                case "dword": return FieldSize.DWord;
-                default: return FieldSize.None;
-            }
+            return new ParseErrorExpression(message + error.Message, functionCall);
         }
     }
 }

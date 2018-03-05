@@ -17,11 +17,16 @@ namespace RATools.Parser.Internal
             Column = column;
         }
 
-        public ParseErrorExpression(string message, ExpressionBase expression)
-            : this(message, expression.Line, expression.Column)
+        public ParseErrorExpression(string message, int line, int column, int endLine, int endColumn)
+            : this(message, line, column)
         {
-            EndLine = expression.EndLine;
-            EndColumn = expression.EndColumn;
+            EndLine = endLine;
+            EndColumn = endColumn;
+        }
+
+        public ParseErrorExpression(string message, ExpressionBase expression)
+            : this(message, expression.Line, expression.Column, expression.EndLine, expression.EndColumn)
+        {
         }
 
         public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
