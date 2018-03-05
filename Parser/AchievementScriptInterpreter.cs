@@ -186,6 +186,24 @@ namespace RATools.Parser
             if (!forExpression.Range.ReplaceVariables(scope, out range))
                 return EvaluationError(forExpression.Range, range);
 
+            var func = range as FunctionCallExpression;
+            if (func != null)
+            {
+                ExpressionBase result;
+                if (func.FunctionName.Name == "range")
+                {
+                    if (!EvaluateRange(func, scope, out result))
+                        return EvaluationError(func, result);
+                }
+                else
+                {
+                    if (!func.Evaluate(scope, out result))
+                        return EvaluationError(func, result);
+                }
+
+                range = result;
+            }
+
             var dict = range as DictionaryExpression;
             if (dict != null)
             {
@@ -217,7 +235,118 @@ namespace RATools.Parser
                 return true;
             }
 
+            var array = range as ArrayExpression;
+            if (array != null)
+            {
+                var iterator = forExpression.IteratorName;
+                foreach (var entry in array.Entries)
+                {
+                    var loopScope = new InterpreterScope(scope);
+
+                    ExpressionBase key;
+                    if (!entry.ReplaceVariables(scope, out key))
+                        return EvaluationError(entry, key);
+
+                    scope.DefineVariable(iterator, key);
+
+                    if (!Evaluate(forExpression.Expressions, loopScope))
+                        return false;
+
+                    if (loopScope.IsComplete)
+                    {
+                        if (loopScope.ReturnValue != null)
+                        {
+                            scope.ReturnValue = loopScope.ReturnValue;
+                            scope.IsComplete = true;
+                        }
+                        break;
+                    }
+                }
+
+                return true;
+            }
+
             return EvaluationError(forExpression.Range, "Cannot iterate over " + forExpression.Range.ToString());
+        }
+
+        private FunctionDefinitionExpression _rangeFunction;
+
+        private bool EvaluateRange(FunctionCallExpression expression, InterpreterScope scope, out ExpressionBase result)
+        {
+            if (_rangeFunction == null)
+            {
+                _rangeFunction = new FunctionDefinitionExpression("range");
+                // required parameters
+                _rangeFunction.Parameters.Add(new VariableExpression("start"));
+                _rangeFunction.Parameters.Add(new VariableExpression("stop"));
+
+                // optional parameters
+                _rangeFunction.Parameters.Add(new VariableExpression("step"));
+                _rangeFunction.DefaultParameters["step"] = new IntegerConstantExpression(1);
+            }
+
+            var innerScope = expression.GetParameters(_rangeFunction, scope, out result);
+            if (innerScope == null)
+                return false;
+
+            var start = innerScope.GetVariable("start");
+            if (start.Type != ExpressionType.IntegerConstant)
+            {
+                result = new ParseErrorExpression("start did not evaluate to an integer", start);
+                return false;
+            }
+
+            var stop = innerScope.GetVariable("stop");
+            if (stop.Type != ExpressionType.IntegerConstant)
+            {
+                result = new ParseErrorExpression("stop did not evaluate to an integer", start);
+                return false;
+            }
+
+            var step = innerScope.GetVariable("step");
+            if (step.Type != ExpressionType.IntegerConstant)
+            {
+                result = new ParseErrorExpression("step did not evaluate to an integer", start);
+                return false;
+            }
+
+            var intStep = (IntegerConstantExpression)step;
+            if (intStep.Value == 0)
+            {
+                result = new ParseErrorExpression("step must not be 0", step);
+                return false;
+            }
+
+            var array = new ArrayExpression();
+
+            var intStart = (IntegerConstantExpression)start;
+            var intStop = (IntegerConstantExpression)stop;
+            if (intStart.Value > intStop.Value)
+            {
+                if (intStep.Value > 0)
+                {
+                    result = new ParseErrorExpression("step must be negative if start is after stop", expression);
+                    return false;
+                }
+
+                for (int i = intStart.Value; i >= intStop.Value; i += intStep.Value)
+                    array.Entries.Add(new IntegerConstantExpression(i));
+            }
+            else
+            {
+                if (intStep.Value < 0)
+                {
+                    result = new ParseErrorExpression("step must be positive if stop is after start", expression);
+                    return false;
+                }
+
+                for (int i = intStart.Value; i <= intStop.Value; i += intStep.Value)
+                    array.Entries.Add(new IntegerConstantExpression(i));
+            }
+
+
+            result = array;
+            return true;
         }
 
         private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)

@@ -121,6 +121,7 @@
     <Compile Include="Data\FieldTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />
     <Compile Include="Parser\AchievementScriptInterpreterTests.cs" />
+    <Compile Include="Parser\Internal\ArrayExpressionTests.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBaseTests.cs" />
     <Compile Include="Parser\Internal\KeywordExpressionTests.cs" />
     <Compile Include="Parser\Internal\ExpressionGroupTests.cs" />

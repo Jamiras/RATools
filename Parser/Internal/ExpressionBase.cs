@@ -376,6 +376,10 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     return ParseDictionary(tokenizer);
 
+                case '[':
+                    tokenizer.Advance();
+                    return ParseArray(tokenizer);
+
                 default:
                     var line = tokenizer.Line;
                     var column = tokenizer.Column;
@@ -626,6 +630,33 @@ namespace RATools.Parser.Internal
             return dict;
         }
 
+        private static ExpressionBase ParseArray(PositionalTokenizer tokenizer)
+        {
+            SkipWhitespace(tokenizer);
+
+            var array = new ArrayExpression();
+            while (tokenizer.NextChar != ']')
+            {
+                var value = ParseClause(tokenizer);
+                if (value.Type == ExpressionType.ParseError)
+                    return value;
+
+                array.Entries.Add(value);
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar == ']')
+                    break;
+
+                if (tokenizer.NextChar != ',')
+                    return ParseError(tokenizer, "Expecting comma between entries");
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+            }
+
+            tokenizer.Advance();
+            return array;
+        }
+
         internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)
         {
             ExpressionBase.SkipWhitespace(tokenizer);
@@ -841,6 +872,11 @@ namespace RATools.Parser.Internal
         /// A dictionary.
         /// </summary>
         Dictionary,
+
+        /// <summary>
+        /// An array.
+        /// </summary>
+        Array,
 
         /// <summary>
         /// A for loop.

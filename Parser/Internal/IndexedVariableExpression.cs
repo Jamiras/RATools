@@ -127,18 +127,39 @@ namespace RATools.Parser.Internal
             }
             else
             {
-                var builder = new StringBuilder();
-                builder.Append("Cannot index: ");
-
-                if (Variable != null)
-                    Variable.AppendString(builder);
+                var array = value as ArrayExpression;
+                if (array != null)
+                {
+                    var intIndex = index as IntegerConstantExpression;
+                    if (intIndex == null)
+                    {
+                        result = new ParseErrorExpression("Index does not evaluate to an integer constant", index);
+                    }
+                    else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
+                    {
+                        result = new ParseErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
+                    }
+                    else
+                    {
+                        result = array;
+                        return new DictionaryExpression.DictionaryEntry { Key = index, Value = array.Entries[intIndex.Value] };
+                    }
+                }
                 else
-                    builder.Append(Name);
+                {
+                    var builder = new StringBuilder();
+                    builder.Append("Cannot index: ");
 
-                builder.Append(" (");
-                builder.Append(value.Type);
-                builder.Append(')');
-                result = new ParseErrorExpression(builder.ToString());
+                    if (Variable != null)
+                        Variable.AppendString(builder);
+                    else
+                        builder.Append(Name);
+
+                    builder.Append(" (");
+                    builder.Append(value.Type);
+                    builder.Append(')');
+                    result = new ParseErrorExpression(builder.ToString());
+                }
             }
 
             return null;

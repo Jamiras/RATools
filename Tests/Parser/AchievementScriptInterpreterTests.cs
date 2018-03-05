@@ -148,6 +148,20 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestArrayLookup()
+        {
+            var parser = Parse("array = [ \"A\", \"B\", \"C\" ]\n" +
+                               "achievement(array[1], array[2], 5, byte(0x1234) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("B"));
+            Assert.That(achievement.Description, Is.EqualTo("C"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
         public void TestIf()
         {
             var parser = Parse("n = 1\n" +
@@ -194,7 +208,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestFor()
+        public void TestForDict()
         {
             var parser = Parse("dict = { 1: \"T\", 2: \"T2\" }\n" +
                                "for k in dict {\n" +
@@ -213,6 +227,109 @@ namespace RATools.Test.Parser
             Assert.That(achievement.Description, Is.EqualTo("D"));
             Assert.That(achievement.Points, Is.EqualTo(5));
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestForArray()
+        {
+            var parser = Parse("array = [ \"T\", \"T2\" ]\n" +
+                               "for k in array {\n" +
+                               "    achievement(k, \"D\", 5, byte(0x1234) == 1)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T2"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestForRange()
+        {
+            var parser = Parse("for k in range(1, 2) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 2"));
+        }
+
+        [Test]
+        public void TestForRangeStep()
+        {
+            var parser = Parse("for k in range(1, 5, 3) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 4"));
+        }
+
+        [Test]
+        public void TestForRangeReverse()
+        {
+            var parser = Parse("for k in range(2, 1, -1) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 2"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestForRangeReverseNoStep()
+        {
+            var parser = Parse("for k in range(2, 1) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:10 step must be negative if start is after stop"));
+        }
+
+        [Test]
+        public void TestForRangeZeroStep()
+        {
+            var parser = Parse("for k in range(1, 2, 0) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:22 step must not be 0"));
         }
 
         [Test]

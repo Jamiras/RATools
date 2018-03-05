@@ -1,3 +1,8 @@
+v1.4.2 - 4 Mar 2017
+* add array data type
+* add range helper function
+* add rich_presence_conditional_display function
+
 v1.4.1 - 19 Feb 2017
 * more options for which code notes should be dumped when creating a new script
 * display rich presence length in editor
