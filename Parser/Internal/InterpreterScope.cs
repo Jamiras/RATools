@@ -80,7 +80,8 @@ namespace RATools.Parser.Internal
             {
                 ExpressionBase result;
                 var entry = indexedVariable.GetDictionaryEntry(this, out result, true);
-                entry.Value = value;
+                if (entry != null)
+                    entry.Value = value;
                 return;
             }
 

@@ -142,7 +142,7 @@ namespace RATools.Parser.Internal
                     else
                     {
                         result = array;
-                        return new DictionaryExpression.DictionaryEntry { Key = index, Value = array.Entries[intIndex.Value] };
+                        return new ArrayDictionaryEntryWrapper { Array = array, Key = index, Value = array.Entries[intIndex.Value] };
                     }
                 }
                 else
@@ -163,6 +163,16 @@ namespace RATools.Parser.Internal
             }
 
             return null;
+        }
+
+        private class ArrayDictionaryEntryWrapper : DictionaryExpression.DictionaryEntry
+        {
+            public ArrayExpression Array { get; set; }
+            public override ExpressionBase Value
+            {
+                get { return Array.Entries[((IntegerConstantExpression)Key).Value]; }
+                set { Array.Entries[((IntegerConstantExpression)Key).Value] = value; }
+            }
         }
 
         /// <summary>

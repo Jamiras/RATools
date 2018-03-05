@@ -133,7 +133,7 @@ namespace RATools.Parser.Internal
             /// <summary>
             /// Gets or sets the value.
             /// </summary>
-            public ExpressionBase Value { get; set; }
+            public virtual ExpressionBase Value { get; set; }
         }
     }
 }
