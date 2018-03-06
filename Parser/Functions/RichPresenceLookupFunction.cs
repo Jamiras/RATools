@@ -40,7 +40,7 @@ namespace RATools.Parser.Functions
             var dictionary = parameter as DictionaryExpression;
             if (dictionary == null)
             {
-                result = new ParseErrorExpression("dictionary is not a dictionary");
+                result = new ParseErrorExpression("dictionary is not a dictionary", parameter);
                 return false;
             }
 

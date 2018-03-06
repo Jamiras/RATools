@@ -141,50 +141,58 @@ namespace RATools.ViewModels
 
             var parser = new AchievementScriptInterpreter();
 
-            using (var stream = File.OpenRead(filename))
+            try
             {
-                AddRecentFile(filename);
-
-                if (parser.Run(Tokenizer.CreateTokenizer(stream)))
+                using (var stream = File.OpenRead(filename))
                 {
-                    logger.WriteVerbose("Game ID: " + parser.GameId);
-                    logger.WriteVerbose("Generated " + parser.Achievements.Count() + " achievements");
-                    if (!String.IsNullOrEmpty(parser.RichPresence))
-                        logger.WriteVerbose("Generated Rich Presence");
-                    if (parser.Leaderboards.Count() > 0)
-                        logger.WriteVerbose("Generated " + parser.Leaderboards.Count() + " leaderboards");
+                    AddRecentFile(filename);
 
-                    CurrentFile = filename;
-
-                    foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+                    if (parser.Run(Tokenizer.CreateTokenizer(stream)))
                     {
-                        var notesFile = Path.Combine(directory, parser.GameId + "-Notes2.txt");
-                        if (File.Exists(notesFile))
+                        logger.WriteVerbose("Game ID: " + parser.GameId);
+                        logger.WriteVerbose("Generated " + parser.Achievements.Count() + " achievements");
+                        if (!String.IsNullOrEmpty(parser.RichPresence))
+                            logger.WriteVerbose("Generated Rich Presence");
+                        if (parser.Leaderboards.Count() > 0)
+                            logger.WriteVerbose("Generated " + parser.Leaderboards.Count() + " leaderboards");
+
+                        CurrentFile = filename;
+
+                        foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
                         {
-                            logger.WriteVerbose("Found code notes in " + directory);
-                            Game = new GameViewModel(parser, directory.ToString());
-                            return;
+                            var notesFile = Path.Combine(directory, parser.GameId + "-Notes2.txt");
+                            if (File.Exists(notesFile))
+                            {
+                                logger.WriteVerbose("Found code notes in " + directory);
+                                Game = new GameViewModel(parser, directory.ToString());
+                                return;
+                            }
                         }
+
+                        logger.WriteVerbose("Could not find code notes");
+                        MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
+                        return;
+                    }
+                    else if (parser.GameId != 0)
+                    {
+                        logger.WriteVerbose("Game ID: " + parser.GameId);
+                        CurrentFile = filename;
+
+                        if (!String.IsNullOrEmpty(parser.GameTitle))
+                            Game = new GameViewModel(parser.GameId, parser.GameTitle);
+                        else
+                            Game = null;
                     }
 
-                    logger.WriteVerbose("Could not find code notes");
-                    MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
-                    return;
-                }
-                else if (parser.GameId != 0)
-                {
-                    logger.WriteVerbose("Game ID: " + parser.GameId);
-                    CurrentFile = filename;
-
-                    if (!String.IsNullOrEmpty(parser.GameTitle))
-                        Game = new GameViewModel(parser.GameId, parser.GameTitle);
-                    else
-                        Game = null;
+                    logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
+                    stream.Seek(0, SeekOrigin.Begin);
+                    MessageBoxViewModel.ShowMessage(parser.GetFormattedErrorMessage(Tokenizer.CreateTokenizer(stream)));
                 }
             }
-
-            logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
-            MessageBoxViewModel.ShowMessage(parser.ErrorMessage);
+            catch (IOException ex)
+            {
+                MessageBoxViewModel.ShowMessage(ex.Message);
+            }
         }
 
         private void AddRecentFile(string newFile)

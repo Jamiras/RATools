@@ -249,7 +249,7 @@ namespace RATools.Parser.Internal
             var typedParameter = parameter as IntegerConstantExpression;
             if (typedParameter == null)
             {
-                parseError = new ParseErrorExpression(name + " is not an integer");
+                parseError = new ParseErrorExpression(name + " is not an integer", parameter);
                 return null;
             }
 
@@ -273,7 +273,7 @@ namespace RATools.Parser.Internal
             var typedParameter = parameter as StringConstantExpression;
             if (typedParameter == null)
             {
-                parseError = new ParseErrorExpression(name + " is not a string");
+                parseError = new ParseErrorExpression(name + " is not a string", parameter);
                 return null;
             }
 
@@ -301,10 +301,24 @@ namespace RATools.Parser.Internal
                 return new Field();
             }
 
-            Field accessor;
-            ParseErrorExpression error;
-            TriggerBuilderContext.GetMemoryAccessor(functionCall, scope, out accessor, out error);
-            return accessor;
+            var requirements = new List<Requirement>();
+
+            ExpressionBase result;
+            var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = requirements } };
+            if (!functionCall.Evaluate(innerScope, out result, false))
+            {
+                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter) { InnerError = (ParseErrorExpression)result };
+                return new Field();
+            }
+
+            if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
+            {
+                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
+                return new Field();
+            }
+
+            parseError = null;
+            return requirements[0].Left;
         }
 
         /// <summary>

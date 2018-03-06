@@ -79,6 +79,8 @@ namespace RATools.Parser.Internal
             var functionCall = new FunctionCallExpression(FunctionName, parameters);
             functionCall.Line = Line;
             functionCall.Column = Column;
+            functionCall.EndLine = EndLine;
+            functionCall.EndColumn = EndColumn;
             result = functionCall;
             return true;
         }
@@ -96,7 +98,7 @@ namespace RATools.Parser.Internal
             var function = scope.GetFunction(FunctionName.Name);
             if (function == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, this);
+                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 
@@ -107,14 +109,25 @@ namespace RATools.Parser.Internal
             if (!function.Evaluate(functionScope, out result))
             {
                 if (result.Line == 0)
-                    result = new ParseErrorExpression(result, this);
+                {
+                    result = new ParseErrorExpression(result, FunctionName);
+                }
+                else
+                {
+                    var parseError = (ParseErrorExpression)result;
+                    var sourceError = parseError.InnermostError;
+                    result = new ParseErrorExpression("Function call failed: " + (sourceError != null ? sourceError.Message : parseError.Message), FunctionName)
+                    {
+                        InnerError = parseError
+                    };
+                }
 
                 return false;
             }
 
             if (resultRequired && functionScope.ReturnValue == null)
             {
-                result = new ParseErrorExpression(function.Name.Name + " did not return a value", this);
+                result = new ParseErrorExpression(function.Name.Name + " did not return a value", FunctionName);
                 return false;
             }
 
@@ -161,7 +174,7 @@ namespace RATools.Parser.Internal
                             return null;
                         }
 
-                        error = new ParseErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name));
+                        error = new ParseErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name), assignedParameter.Variable);
                         return null;
                     }
 
@@ -216,7 +229,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase value;
                 if (!function.DefaultParameters.TryGetValue(parameter, out value))
                 {
-                    error = new ParseErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), this);
+                    error = new ParseErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), FunctionName);
                     return null;
                 }
 

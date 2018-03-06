@@ -1,3 +1,6 @@
+v1.4.3 - 6 Mar 2017
+* highlight context of errors when reporting them
+
 v1.4.2 - 4 Mar 2017
 * add array data type
 * add range helper function

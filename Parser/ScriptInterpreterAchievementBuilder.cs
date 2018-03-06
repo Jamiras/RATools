@@ -310,15 +310,11 @@ namespace RATools.Parser
                 return null;
 
             // prevent recursive error stacking
-            var message = "Function call did not resolve to a valid trigger condition:";
-            if (error.Message.StartsWith(message))
+            var message = "Function call did not resolve to a valid trigger condition";
+            if (error.Message == message)
                 return error;
 
-            message += "\n- ";
-            if (error.Line != 0)
-                message += string.Format("{0}:{1} ", error.Line, error.Column);
-
-            return new ParseErrorExpression(message + error.Message, functionCall);
+            return new ParseErrorExpression(message, functionCall) { InnerError = error };
         }
     }
 }

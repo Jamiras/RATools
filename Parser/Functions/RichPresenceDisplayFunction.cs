@@ -10,16 +10,19 @@ namespace RATools.Parser.Functions
     internal class RichPresenceDisplayFunction : FunctionDefinitionExpression
     {
         public RichPresenceDisplayFunction()
-            : base("rich_presence_display")
+            : this("rich_presence_display")
         {
             Parameters.Add(new VariableExpression("format_string"));
             Parameters.Add(new VariableExpression("..."));
         }
 
+        protected RichPresenceDisplayFunction(string name)
+            : base(name)
+        {
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var leaderboard = new Leaderboard();
-
             var stringExpression = GetStringParameter(scope, "format_string", out result);
             if (stringExpression == null)
                 return false;
@@ -74,7 +77,7 @@ namespace RATools.Parser.Functions
                 {
                     result = new ParseErrorExpression("Invalid positional token",
                                                       displayString.Line, displayString.Column + positionalTokenColumn,
-                                                      displayString.Line, displayString.Column + tokenizer.Column);
+                                                      displayString.Line, displayString.Column + tokenizer.Column - 1);
                     return false;
                 }
                 tokenizer.Advance();
@@ -84,7 +87,7 @@ namespace RATools.Parser.Functions
                 {
                     result = new ParseErrorExpression("Invalid parameter index: " + parameterIndex, 
                                                       displayString.Line, displayString.Column + positionalTokenColumn,
-                                                      displayString.Line, displayString.Column + tokenizer.Column);
+                                                      displayString.Line, displayString.Column + tokenizer.Column - 1);
                     return false;
                 }
 

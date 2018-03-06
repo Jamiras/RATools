@@ -12,6 +12,8 @@ namespace RATools.Parser.Internal
         {
             Variable = variable;
             Index = index;
+
+            // assert: Name is not used for IndexedVariableExpression
         }
 
         /// <summary>
@@ -91,7 +93,7 @@ namespace RATools.Parser.Internal
 
                     if (value == null)
                     {
-                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, Line, Column);
+                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, variable);
                         return null;
                     }
                 }
@@ -123,7 +125,7 @@ namespace RATools.Parser.Internal
                 var builder = new StringBuilder();
                 builder.Append("No entry in dictionary for key: ");
                 index.AppendString(builder);
-                result = new ParseErrorExpression(builder.ToString());
+                result = new ParseErrorExpression(builder.ToString(), index);
             }
             else
             {
@@ -149,16 +151,11 @@ namespace RATools.Parser.Internal
                 {
                     var builder = new StringBuilder();
                     builder.Append("Cannot index: ");
-
-                    if (Variable != null)
-                        Variable.AppendString(builder);
-                    else
-                        builder.Append(Name);
-
+                    Variable.AppendString(builder);
                     builder.Append(" (");
                     builder.Append(value.Type);
                     builder.Append(')');
-                    result = new ParseErrorExpression(builder.ToString());
+                    result = new ParseErrorExpression(builder.ToString(), Variable);
                 }
             }
 

@@ -27,39 +27,6 @@ namespace RATools.Parser
         public bool IsInNot { get; set; }
 
         /// <summary>
-        /// Gets a memory accessor.
-        /// </summary>
-        /// <param name="expression">The expression to evaluate.</param>
-        /// <param name="scope">The scope.</param>
-        /// <param name="accessor">[out] The generated accessor.</param>
-        /// <param name="error">[out] The error that occurred.</param>
-        /// <returns><c>true</c> if <paramref name="accessor"/> is set, <c>false</c> if <paramref name="error"/> is set.</returns>
-        public static bool GetMemoryAccessor(FunctionCallExpression functionCall, InterpreterScope scope, out Field accessor, out ParseErrorExpression error)
-        {
-            var requirements = new List<Requirement>();
-
-            ExpressionBase result;
-            var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = requirements } };
-            if (!functionCall.Evaluate(innerScope, out result, false))
-            {
-                accessor = new Field();
-                error = result as ParseErrorExpression;
-                return false;
-            }
-
-            if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
-            {
-                accessor = new Field();
-                error = new ParseErrorExpression(functionCall.FunctionName.Name + " did not evaluate to a memory accessor");
-                return false;
-            }
-
-            accessor = requirements[0].Left;
-            error = null;
-            return true;
-        }
-
-        /// <summary>
         /// Gets a serialized string for calculating a value from memory.
         /// </summary>
         /// <param name="expression">The expression to evaluate. May contain mathematic operations and memory accessors.</param>
@@ -146,7 +113,7 @@ namespace RATools.Parser
             var functionCall = expression as FunctionCallExpression;
             if (functionCall == null)
             {
-                result = new ParseErrorExpression("value can only contain memory accessors or arithmetic expressions");
+                result = new ParseErrorExpression("value can only contain memory accessors or arithmetic expressions", expression);
                 return false;
             }
 
@@ -160,7 +127,7 @@ namespace RATools.Parser
 
             if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
             {
-                result = new ParseErrorExpression(functionCall.FunctionName.Name + " did not evaluate to a memory accessor");
+                result = new ParseErrorExpression(functionCall.FunctionName.Name + " did not evaluate to a memory accessor", functionCall.FunctionName);
                 return false;
             }
 
