@@ -143,6 +143,7 @@ namespace RATools.ViewModels
 
             try
             {
+                string errorMessage = null;
                 using (var stream = File.OpenRead(filename))
                 {
                     AddRecentFile(filename);
@@ -186,8 +187,10 @@ namespace RATools.ViewModels
 
                     logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
                     stream.Seek(0, SeekOrigin.Begin);
-                    MessageBoxViewModel.ShowMessage(parser.GetFormattedErrorMessage(Tokenizer.CreateTokenizer(stream)));
+                    errorMessage = parser.GetFormattedErrorMessage(Tokenizer.CreateTokenizer(stream));
                 }
+
+                MessageBoxViewModel.ShowMessage(errorMessage);
             }
             catch (IOException ex)
             {

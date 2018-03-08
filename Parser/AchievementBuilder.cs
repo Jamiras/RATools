@@ -1029,17 +1029,16 @@ namespace RATools.Parser
                 var requirement = requirements[i];
 
                 // if one requirement is "X == N" and another is "ResetIf X != N", they can be merged.
-                if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.None)
+                if (requirement.HitCount == 0 && (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.None))
                 {
                     bool merged = false;
                     for (int j = 0; j < i; j++)
                     {
                         Requirement compareRequirement = requirements[j];
-                        if (requirement.Type == compareRequirement.Type)
+                        if (requirement.Type == compareRequirement.Type || compareRequirement.HitCount != 0)
                             continue;
                         if (compareRequirement.Type != RequirementType.ResetIf && compareRequirement.Type != RequirementType.None)
                             continue;
-
                         if (requirement.Left != compareRequirement.Left || requirement.Right != compareRequirement.Right)
                             continue;
 

@@ -524,6 +524,7 @@ namespace RATools.ViewModels
                 if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
                     addressFormat = "{0:X6}";
 
+                bool first;
                 var dumpNotes = SelectedNoteDump;
                 var filter = SelectedCodeNotesFilter;
                 uint previousNoteAddress = UInt32.MaxValue;
@@ -624,10 +625,13 @@ namespace RATools.ViewModels
                             stream.Write(ticket);
                             stream.Write(": ");
 
+                            first = true;
                             const int MaxLength = 103; // 120 - "// Ticket XXXXX: ".Length 
                             for (int i = 0; i < lines.Length; i++)
                             {
-                                if (i != 0)
+                                if (first)
+                                    first = false;
+                                else
                                     stream.Write("//               ");
 
                                 var line = lines[i].Trim();
@@ -645,6 +649,9 @@ namespace RATools.ViewModels
                                 if (line.Length > 0)
                                     stream.WriteLine(line);
                             }
+
+                            if (first)
+                                stream.WriteLine();
                         }
                     }
 
@@ -675,7 +682,7 @@ namespace RATools.ViewModels
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
                     DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current);
-                    bool first = true;
+                    first = true;
                     while (groupEnumerator.MoveNext())
                     {
                         if (first)
