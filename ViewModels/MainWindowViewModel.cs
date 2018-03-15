@@ -11,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Windows.Input;
 
 namespace RATools.ViewModels
 {
@@ -136,9 +135,14 @@ namespace RATools.ViewModels
                     return;
             }
 
+            var line = Game.Script.Editor.CursorLine;
+            var column = Game.Script.Editor.CursorColumn;
+
             var selectedEditor = Game.SelectedEditor.Title;
             OpenFile(Game.Script.Filename);
             Game.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+
+            Game.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }

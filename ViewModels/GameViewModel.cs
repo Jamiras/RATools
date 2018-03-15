@@ -22,6 +22,7 @@ namespace RATools.ViewModels
             GameId = gameId;
             Title = title;
             Script = new ScriptViewModel(this);
+            SelectedEditor = Script;
             Notes = new TinyDictionary<int, string>();
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");

@@ -255,7 +255,7 @@ namespace RATools.Parser
                     while (error.InnerError != null)
                         error = error.InnerError;
 
-                    expressionGroup.Errors.Add(Error);
+                    expressionGroup.Errors.Add(error);
                 }
 
                 return false;
