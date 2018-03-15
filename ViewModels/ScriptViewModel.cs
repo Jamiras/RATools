@@ -2,6 +2,7 @@
 using Jamiras.DataModels;
 using Jamiras.Services;
 using RATools.Parser;
+using RATools.Parser.Internal;
 using System;
 using System.IO;
 
@@ -13,7 +14,7 @@ namespace RATools.ViewModels
         {
             _owner = owner;
             Title = "Script";
-            Editor = new EditorViewModel();
+            Editor = new EditorViewModel(owner);
             Editor.LineChanged += (o, e) =>
             {
                 ModificationMessage = "Script differs from disk";
@@ -45,16 +46,7 @@ namespace RATools.ViewModels
 
         public void SetContent(string content)
         {
-            var backgroundWorkerService = ServiceRepository.Instance.FindService<IBackgroundWorkerService>();
-            backgroundWorkerService.RunAsync(() =>
-            {
-                backgroundWorkerService.InvokeOnUiThread(() => Editor.SetContent(content));
-
-                var interpreter = new AchievementScriptInterpreter();
-                interpreter.Run(Editor.ParsedContent);
-                _owner.PopulateEditorList(interpreter);
-            });
-
+            Editor.SetContent(content);
             ResetModified();
         }
 

@@ -34,6 +34,7 @@
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Goto Line" Command="{Binding Game.SelectedEditor.Editor.GotoLineCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+G" />
+                <MenuItem Header="Goto _Definition" Command="{Binding Game.SelectedEditor.Editor.GotoDefinitionCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="F12" />
                 <MenuItem Header="_Find" Command="{Binding Game.SelectedEditor.Editor.FindCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+F" />
                 <MenuItem Header="R_eplace" Command="{Binding Game.SelectedEditor.Editor.ReplaceCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+H" />
                 <Separator />

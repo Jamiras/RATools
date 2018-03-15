@@ -225,19 +225,21 @@ namespace RATools.Parser
                 }
             }
 
-            return Run(expressionGroup);
+            InterpreterScope scope;
+            return Run(expressionGroup, out scope);
         }
 
-        internal bool Run(ExpressionGroup expressionGroup)
+        internal bool Run(ExpressionGroup expressionGroup, out InterpreterScope scope)
         { 
             var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
             if (parseError != null)
             {
                 Error = parseError;
+                scope = null;
                 return false;
             }
 
-            var scope = new InterpreterScope(GetGlobalScope());
+            scope = new InterpreterScope(GetGlobalScope());
             scope.Context = new AchievementScriptContext
             {
                 Achievements = _achievements,
@@ -247,8 +249,15 @@ namespace RATools.Parser
 
             if (!Evaluate(expressionGroup.Expressions, scope))
             {
-                if (Error != null)
+                var error = Error;
+                if (error != null)
+                {
+                    while (error.InnerError != null)
+                        error = error.InnerError;
+
                     expressionGroup.Errors.Add(Error);
+                }
+
                 return false;
             }
 
