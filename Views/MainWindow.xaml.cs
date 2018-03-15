@@ -4,6 +4,7 @@ using Jamiras.Services;
 using Jamiras.ViewModels;
 using RATools.ViewModels;
 using System;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 
@@ -47,6 +48,27 @@ namespace RATools.Views
             textBlock.SetBinding(FormattedTextBlock.TextProperty, "Message");
             textBlock.TextWrapping = TextWrapping.Wrap;
             return new OkCancelView(textBlock);
+        }
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            var viewModel = DataContext as MainWindowViewModel;
+            if (viewModel != null && viewModel.Game != null && viewModel.Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
+            {
+                var vm = new MessageBoxViewModel("Save changes to " + viewModel.Game.Script.Title + "?");
+                switch (vm.ShowYesNoCancelDialog())
+                {
+                    case Jamiras.ViewModels.DialogResult.Yes:
+                        viewModel.Game.Script.Save();
+                        break;
+
+                    case Jamiras.ViewModels.DialogResult.Cancel:
+                        e.Cancel = true;
+                        break;
+                }
+            }
+
+            base.OnClosing(e);
         }
     }
 }

@@ -246,7 +246,11 @@ namespace RATools.Parser
             };
 
             if (!Evaluate(expressionGroup.Expressions, scope))
+            {
+                if (Error != null)
+                    expressionGroup.Errors.Add(Error);
                 return false;
+            }
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
                 RichPresence = _richPresence.ToString();
