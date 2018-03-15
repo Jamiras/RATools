@@ -233,6 +233,7 @@ namespace RATools.ViewModels
                 existingViewModel.Notes.Count == viewModel.Notes.Count)
             {
                 existingViewModel.Script.SetContent(content);
+                viewModel = existingViewModel;
             }
             else
             {
@@ -240,6 +241,9 @@ namespace RATools.ViewModels
                 viewModel.Script.SetContent(content);
                 Game = viewModel;
             }
+
+            if (viewModel.Script.Editor.ErrorsToolWindow.References.Count > 0)
+                viewModel.Script.Editor.ErrorsToolWindow.IsVisible = true;
         }
 
         private void AddRecentFile(string newFile)

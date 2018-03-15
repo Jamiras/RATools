@@ -1,8 +1,10 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.CodeEditor;
+using Jamiras.ViewModels.CodeEditor.ToolWindows;
 using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
@@ -25,6 +27,8 @@ namespace RATools.ViewModels
             Style.SetCustomColor((int)ExpressionType.Keyword, Colors.DarkGoldenrod);
             Style.SetCustomColor((int)ExpressionType.ParseError, Colors.Red);
 
+            ErrorsToolWindow = new CodeReferencesToolWindowViewModel("Error List", this);
+
             GotoDefinitionCommand = new DelegateCommand(GotoDefinitionAtCursor);
         }
 
@@ -41,6 +45,29 @@ namespace RATools.ViewModels
                 var interpreter = new AchievementScriptInterpreter();
                 interpreter.Run(_parsedContent, out _scope);
 
+                foreach (var line in Lines)
+                    line.Refresh();
+
+                backgroundWorkerService.InvokeOnUiThread(() =>
+                {
+                    ErrorsToolWindow.References.Clear();
+                    foreach (var error in _parsedContent.Errors)
+                    {
+                        var innerError = error;
+                        while (innerError.InnerError != null)
+                            innerError = innerError.InnerError;
+
+                        ErrorsToolWindow.References.Add(new CodeReferenceViewModel
+                        {
+                            StartLine = innerError.Line,
+                            StartColumn = innerError.Column,
+                            EndLine = innerError.EndLine,
+                            EndColumn = innerError.EndColumn,
+                            Message = innerError.Message
+                        });
+                    }
+                });
+
                 _owner.PopulateEditorList(interpreter);
             });
 
@@ -49,6 +76,8 @@ namespace RATools.ViewModels
 
         private ExpressionGroup _parsedContent;
         private InterpreterScope _scope;
+
+        public CodeReferencesToolWindowViewModel ErrorsToolWindow { get; private set; }
 
         public CommandBase GotoDefinitionCommand { get; private set; }
 
