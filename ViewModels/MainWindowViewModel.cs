@@ -48,8 +48,8 @@ namespace RATools.ViewModels
             if (recent != null)
             {
                 var list = new List<string>(recent.Split(';'));
-                foreach (var item in list)
-                    _recentFiles.Add(item);
+                for (int i = list.Count - 1; i >= 0; i--) // add in reverse order so most recent is added last
+                    _recentFiles.Add(list[i]);
                 RecentFiles = list.ToArray();
             }
 
@@ -153,7 +153,17 @@ namespace RATools.ViewModels
             var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             logger.WriteVerbose("Opening " + filename);
 
-            string content = File.ReadAllText(filename);
+            string content;
+            try
+            {
+                content = File.ReadAllText(filename);
+            }
+            catch (IOException ex)
+            {
+                MessageBoxViewModel.ShowMessage(ex.Message);
+                return;
+            }
+
             var tokenizer = Tokenizer.CreateTokenizer(content);
             var expressionGroup = new AchievementScriptParser().Parse(tokenizer);
 

@@ -12,6 +12,8 @@ namespace RATools.Parser.Internal
         {
             Variable = variable;
             Index = index;
+
+            // assert: Name is not used for IndexedVariableExpression
         }
 
         /// <summary>
@@ -60,7 +62,7 @@ namespace RATools.Parser.Internal
             if (Index.Type == ExpressionType.FunctionCall)
             {
                 var expression = (FunctionCallExpression)Index;
-                if (!expression.Evaluate(scope, out index))
+                if (!expression.Evaluate(scope, out index, true))
                 {
                     result = index;
                     return null;
@@ -91,7 +93,7 @@ namespace RATools.Parser.Internal
 
                     if (value == null)
                     {
-                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, Line, Column);
+                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, variable);
                         return null;
                     }
                 }
@@ -123,25 +125,51 @@ namespace RATools.Parser.Internal
                 var builder = new StringBuilder();
                 builder.Append("No entry in dictionary for key: ");
                 index.AppendString(builder);
-                result = new ParseErrorExpression(builder.ToString());
+                result = new ParseErrorExpression(builder.ToString(), index);
             }
             else
             {
-                var builder = new StringBuilder();
-                builder.Append("Cannot index: ");
-
-                if (Variable != null)
-                    Variable.AppendString(builder);
+                var array = value as ArrayExpression;
+                if (array != null)
+                {
+                    var intIndex = index as IntegerConstantExpression;
+                    if (intIndex == null)
+                    {
+                        result = new ParseErrorExpression("Index does not evaluate to an integer constant", index);
+                    }
+                    else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
+                    {
+                        result = new ParseErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
+                    }
+                    else
+                    {
+                        result = array;
+                        return new ArrayDictionaryEntryWrapper { Array = array, Key = index, Value = array.Entries[intIndex.Value] };
+                    }
+                }
                 else
-                    builder.Append(Name);
-
-                builder.Append(" (");
-                builder.Append(value.Type);
-                builder.Append(')');
-                result = new ParseErrorExpression(builder.ToString());
+                {
+                    var builder = new StringBuilder();
+                    builder.Append("Cannot index: ");
+                    Variable.AppendString(builder);
+                    builder.Append(" (");
+                    builder.Append(value.Type);
+                    builder.Append(')');
+                    result = new ParseErrorExpression(builder.ToString(), Variable);
+                }
             }
 
             return null;
+        }
+
+        private class ArrayDictionaryEntryWrapper : DictionaryExpression.DictionaryEntry
+        {
+            public ArrayExpression Array { get; set; }
+            public override ExpressionBase Value
+            {
+                get { return Array.Entries[((IntegerConstantExpression)Key).Value]; }
+                set { Array.Entries[((IntegerConstantExpression)Key).Value] = value; }
+            }
         }
 
         /// <summary>

@@ -47,9 +47,9 @@ namespace RATools.Parser.Internal
             {
                 var func = scope.GetFunction(Name);
                 if (func != null)
-                    result = new ParseErrorExpression("Function used like a variable: " + Name);
+                    result = new ParseErrorExpression("Function used like a variable: " + Name, this);
                 else
-                    result = new ParseErrorExpression("Unknown variable: " + Name);
+                    result = new ParseErrorExpression("Unknown variable: " + Name, this);
 
                 return false;
             }

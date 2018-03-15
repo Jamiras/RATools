@@ -1,0 +1,200 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:RATools.ViewModels">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="ScriptViewer.xaml" />
+        <ResourceDictionary Source="AchievementViewer.xaml" />
+        <ResourceDictionary Source="RichPresenceViewer.xaml" />
+        <ResourceDictionary Source="LeaderboardViewer.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <DataTemplate x:Key="editorRowTemplate">
+        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}">
+            <Grid.Resources>
+                <ContextMenu x:Key="updateLocalContextMenu" DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
+                    <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
+                </ContextMenu>
+            </Grid.Resources>
+            <Grid.Style>
+                <Style TargetType="{x:Type Grid}">
+                    <Setter Property="ContextMenu" Value="{StaticResource updateLocalContextMenu}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CompareState}" Value="None">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding CompareState}" Value="Same">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding UpdateLocalCommand}" Value="{x:Null}">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsGenerated}" Value="False">
+                            <Setter Property="ContextMenu" Value="{x:Null}" />
+                            <Setter Property="Opacity" Value="0.6" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="30" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Modified -->
+            <TextBlock FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
+                       ToolTip="{Binding ModificationMessage}">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedMatchesNotGenerated">
+                                <Setter Property="Text" Value="&#x25CB;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
+                                <Setter Property="Text" Value="&#x23FA;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedDiffers">
+                                <Setter Property="Text" Value="&#x25D0;" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+
+            <!-- Image -->
+            <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <ContentPresenter.Resources>
+                    <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
+                        <Image Width="12" Height="12" Source="/RATools;component/Resources/achievement.png" ToolTip="Achievement" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:LeaderboardViewModel}">
+                        <Image Width="14" Height="14" Source="/RATools;component/Resources/leaderboard.png" ToolTip="Leaderboard" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
+                        <Image Width="14" Height="14" Source="/RATools;component/Resources/rich_presence.png" ToolTip="Rich Presence" />
+                    </DataTemplate>
+                    <DataTemplate DataType="{x:Type vm:ScriptViewModel}">
+                        <Image Width="14" Height="14" Source="/RATools;component/Resources/script.png" ToolTip="Script" />
+                    </DataTemplate>
+                </ContentPresenter.Resources>
+            </ContentPresenter>
+
+            <!-- Name -->
+            <TextBlock Grid.Column="2" Margin="2,0,2,0" HorizontalAlignment="Stretch"
+                       Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+
+            <!-- Points -->
+            <TextBlock Grid.Column="3" Text="{Binding Points}" Margin="2,0,2,0" HorizontalAlignment="Right">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Points}" Value="0">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type vm:GameViewModel}">
+        <Grid Background="#F0F0F0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="238" MinWidth="128" MaxWidth="400" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" MinWidth="480" />
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Grid IsEnabled="False">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid Margin="4" Background="Red" x:Name="maxAchievementRowWidth" Height="10" />
+                <ScrollBar Grid.Column="2" Orientation="Vertical" />
+            </Grid>
+
+            <ListBox ItemsSource="{Binding Editors}" SelectedItem="{Binding SelectedEditor}" HorizontalContentAlignment="Stretch"
+                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsGrid" BorderBrush="#808080" />
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" ResizeDirection="Columns" />
+
+            <ContentPresenter Grid.Column="2" Content="{Binding SelectedEditor}" />
+
+            <Border Grid.Row="1" Grid.ColumnSpan="3" Height="20" Background="#C0C0C0" BorderBrush="DarkGray" BorderThickness="0,1,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CoreAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Core(" />
+                        <TextBlock Text="{Binding CoreAchievementCount}" Margin="-3,0,-3,0" />                        
+                        <Run Text="): " />
+                        <TextBlock Text="{Binding CoreAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text="pts" />
+                    </TextBlock>
+                    <TextBlock Grid.Column="1" Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding UnofficialAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Unofficial(" />
+                        <TextBlock Text="{Binding UnofficialAchievementCount}" Margin="-3,0,-3,0" />
+                        <Run Text="): " />
+                        <TextBlock Text="{Binding UnofficialAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text="pts" />
+                    </TextBlock>
+                    <TextBlock Grid.Column="2" Margin="4,0,4,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding LocalAchievementCount}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Run Text="Local(" />
+                        <TextBlock Text="{Binding LocalAchievementCount}" Margin="-3,0,-3,0" />
+                        <Run Text="): " />
+                        <TextBlock Text="{Binding LocalAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <Run Text="pts" />
+                    </TextBlock>
+
+                    <TextBlock Grid.Column="3" Margin="4,0,4,0" HorizontalAlignment="Right">
+                        <Run Text="Ln " />
+                        <TextBlock Text="{Binding Script.Editor.CursorLine, FallbackValue=0}" />
+                        <Run Text="   Col " />
+                        <TextBlock Text="{Binding Script.Editor.CursorColumn, FallbackValue=0}" />
+                    </TextBlock>
+                </Grid>
+            </Border>
+
+        </Grid>
+    </DataTemplate>
+
+</ResourceDictionary>

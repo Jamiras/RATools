@@ -37,6 +37,19 @@ namespace RATools.ViewModels
             _memoryItems = new List<MemoryItem>();
             _ticketNotes = new TinyDictionary<int, string>();
 
+            CodeNoteFilters = new[]
+            {
+                new CodeNoteFilterLookupItem(CodeNoteFilter.All, "All"),
+                new CodeNoteFilterLookupItem(CodeNoteFilter.ForSelectedAchievements, "For Selected Achievements"),
+            };
+
+            NoteDumps = new[]
+            {
+                new NoteDumpLookupItem(NoteDump.None, "None"),
+                new NoteDumpLookupItem(NoteDump.All, "All"),
+                new NoteDumpLookupItem(NoteDump.OnlyForDefinedMethods, "Only for Functions"),
+            };
+
             MemoryAddresses = new GridViewModel();
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
@@ -151,6 +164,8 @@ namespace RATools.ViewModels
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });
             }
 
+            if (_achievements.Count == 0)
+                SelectedCodeNotesFilter = CodeNoteFilter.All;
 
             UpdateMemoryGrid();
 
@@ -278,6 +293,64 @@ namespace RATools.ViewModels
                 achievment.IsSelected = (achievment.OpenTicketCount > 0);
         }
 
+        public enum CodeNoteFilter
+        {
+            None = 0,
+            All,
+            ForSelectedAchievements,
+        }
+
+        public enum NoteDump
+        {
+            None = 0,
+            All,
+            OnlyForDefinedMethods,
+        }
+
+        public class CodeNoteFilterLookupItem
+        {
+            public CodeNoteFilterLookupItem(CodeNoteFilter id, string label)
+            {
+                Id = id;
+                Label = label;
+            }
+            public CodeNoteFilter Id { get; private set; }
+            public string Label { get; private set; }
+        }
+        public IEnumerable<CodeNoteFilterLookupItem> CodeNoteFilters { get; private set; }
+
+        public class NoteDumpLookupItem
+        {
+            public NoteDumpLookupItem(NoteDump id, string label)
+            {
+                Id = id;
+                Label = label;
+            }
+            public NoteDump Id { get; private set; }
+            public string Label { get; private set; }
+        }
+        public IEnumerable<NoteDumpLookupItem> NoteDumps { get; private set; }
+
+        public static readonly ModelProperty SelectedCodeNotesFilterProperty = 
+            ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedCodeNotesFilter", typeof(CodeNoteFilter), CodeNoteFilter.ForSelectedAchievements, OnSelectedCodeNotesFilterChanged);
+        public CodeNoteFilter SelectedCodeNotesFilter
+        {
+            get { return (CodeNoteFilter)GetValue(SelectedCodeNotesFilterProperty); }
+            set { SetValue(SelectedCodeNotesFilterProperty, value); }
+        }
+
+        private static void OnSelectedCodeNotesFilterChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            ((NewScriptDialogViewModel)sender).UpdateMemoryGrid();
+        }
+
+        public static readonly ModelProperty SelectedNoteDumpProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedNoteDump", typeof(NoteDump), NoteDump.OnlyForDefinedMethods);
+        public NoteDump SelectedNoteDump
+        {
+            get { return (NoteDump)GetValue(SelectedNoteDumpProperty); }
+            set { SetValue(SelectedNoteDumpProperty, value); }
+        }
+
         public static readonly ModelProperty MemoryAddressesLabelProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "MemoryAddressesLabel", typeof(string), "Referenced memory addresses");
         public string MemoryAddressesLabel
         {
@@ -290,18 +363,40 @@ namespace RATools.ViewModels
         private void UpdateMemoryGrid()
         {
             var visibleAddresses = new List<MemoryItem>();
-            foreach (var achievement in _achievements)
+            if (SelectedCodeNotesFilter == CodeNoteFilter.None)
             {
-                if (!achievement.IsSelected)
-                    continue;
-
-                foreach (var address in achievement.MemoryAddresses)
+                MemoryAddressesLabel = "No memory addresses";
+            }
+            else
+            {
+                if (SelectedCodeNotesFilter == CodeNoteFilter.All)
                 {
-                    if (!visibleAddresses.Contains(address))
-                        visibleAddresses.Add(address);
+                    MemoryAddressesLabel = "All known memory addresses";
+                    foreach (var memoryItem in _memoryItems)
+                        visibleAddresses.Add(memoryItem);
+
+                    // will merge in any non-byte references from selected achievements
+                }
+                else
+                {
+                    MemoryAddressesLabel = (string)MemoryAddressesLabelProperty.DefaultValue;
+                    // will merge in all references from selected achievements
+                }
+
+                foreach (var achievement in _achievements)
+                {
+                    if (!achievement.IsSelected)
+                        continue;
+
+                    foreach (var address in achievement.MemoryAddresses)
+                    {
+                        if (!visibleAddresses.Contains(address))
+                            visibleAddresses.Add(address);
+                    }
                 }
             }
 
+            // update the grid
             var rowsToRemove = new List<MemoryItem>();
             foreach (var row in MemoryAddresses.Rows)
             {
@@ -311,17 +406,6 @@ namespace RATools.ViewModels
             }
             foreach (var memoryItem in rowsToRemove)
                 MemoryAddresses.RemoveRow(memoryItem);
-
-            if (visibleAddresses.Count > 0 || MemoryAddresses.Rows.Count > 0)
-            {
-                MemoryAddressesLabel = (string)MemoryAddressesLabelProperty.DefaultValue;
-            }
-            else
-            {
-                MemoryAddressesLabel = "All known memory addresses";
-                foreach (var memoryItem in _memoryItems)
-                    visibleAddresses.Add(memoryItem);
-            }
 
             visibleAddresses.Sort((l,r) =>
             {
@@ -434,26 +518,78 @@ namespace RATools.ViewModels
                 stream.WriteLine(_game.Title);
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
-                stream.WriteLine();
+                bool needLine = true;
+                bool hadFunction = false;
+                string addressFormat = "{0:X4}";
+                if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
+                    addressFormat = "{0:X6}";
 
+                bool first;
+                var dumpNotes = SelectedNoteDump;
+                var filter = SelectedCodeNotesFilter;
+                uint previousNoteAddress = UInt32.MaxValue;
                 foreach (var memoryItem in _memoryItems)
                 {
-                    if (!String.IsNullOrEmpty(memoryItem.FunctionName))
+                    if (filter == CodeNoteFilter.ForSelectedAchievements)
                     {
-                        string notes;
+                        if (MemoryAddresses.GetRow(memoryItem) == null)
+                            continue;
+                    }
+
+                    string notes = null;
+                    if (dumpNotes != NoteDump.None)
+                    {
                         if (_game.Notes.TryGetValue((int)memoryItem.Address, out notes))
                         {
-                            notes = notes.Trim();
-                            if (notes.Length > 0)
+                            if (String.IsNullOrEmpty(memoryItem.FunctionName))
                             {
-                                stream.WriteLine();
-                                foreach (var line in notes.Split('\n'))
-                                {
-                                    stream.Write("// ");
-                                    stream.WriteLine(line.Trim());
-                                }
+                                if (dumpNotes == NoteDump.OnlyForDefinedMethods)
+                                    continue;
+
+                                if (memoryItem.Address == previousNoteAddress)
+                                    continue;
                             }
                         }
+                    }
+
+                    if (!String.IsNullOrEmpty(notes))
+                    {
+                        notes = notes.Trim();
+                        if (notes.Length > 0)
+                        {
+                            if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
+                            {
+                                needLine = false;
+                                stream.WriteLine();
+                            }
+
+                            var lines = notes.Split('\n');
+                            stream.Write("// $");
+
+                            previousNoteAddress = memoryItem.Address;
+                            var address = String.Format(addressFormat, memoryItem.Address);
+                            stream.Write(address);
+                            stream.Write(": ");
+                            stream.WriteLine(lines[0].Trim());
+
+                            for (int i = 1; i < lines.Length; i++)
+                            {
+                                stream.Write("//        ");
+                                if (address.Length > 4)
+                                    stream.Write("   ".ToCharArray(), 0, address.Length - 4);
+                                stream.WriteLine(lines[i].Trim());
+                            }
+                        }
+                    }
+
+                    if (!String.IsNullOrEmpty(memoryItem.FunctionName))
+                    {
+                        if (needLine)
+                        {
+                            needLine = false;
+                            stream.WriteLine();
+                        }
+                        hadFunction = true;
 
                         stream.Write("function ");
                         stream.Write(memoryItem.FunctionName);
@@ -461,9 +597,11 @@ namespace RATools.ViewModels
                         var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
                         stream.WriteLine(memoryReference);
                     }
+                    else
+                    {
+                        hadFunction = false;
+                    }
                 }
-
-                stream.WriteLine();
 
                 foreach (var dumpAchievement in _achievements)
                 {
@@ -474,15 +612,46 @@ namespace RATools.ViewModels
                     if (achievement == null)
                         continue;
 
+                    stream.WriteLine();
+
                     foreach (var ticket in dumpAchievement.OpenTickets)
                     {
                         string notes;
                         if (_ticketNotes.TryGetValue(ticket, out notes))
                         {
-                            stream.Write("// ");
+                            var lines = notes.Replace("<br/>", "\n").Split('\n');
+
+                            stream.Write("// Ticket ");
                             stream.Write(ticket);
                             stream.Write(": ");
-                            stream.WriteLine(notes.Replace("\n", "\n//        "));
+
+                            first = true;
+                            const int MaxLength = 103; // 120 - "// Ticket XXXXX: ".Length 
+                            for (int i = 0; i < lines.Length; i++)
+                            {
+                                if (first)
+                                    first = false;
+                                else
+                                    stream.Write("//               ");
+
+                                var line = lines[i].Trim();
+                                while (line.Length > MaxLength)
+                                {
+                                    var index = line.LastIndexOf(' ', MaxLength - 1);
+                                    var front = line.Substring(0, index).Trim();
+                                    stream.WriteLine(front);
+                                    line = line.Substring(index + 1).Trim();
+
+                                    if (line.Length > 0)
+                                        stream.Write("//               ");
+                                }
+
+                                if (line.Length > 0)
+                                    stream.WriteLine(line);
+                            }
+
+                            if (first)
+                                stream.WriteLine();
                         }
                     }
 
@@ -513,7 +682,7 @@ namespace RATools.ViewModels
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
                     DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current);
-                    bool first = true;
+                    first = true;
                     while (groupEnumerator.MoveNext())
                     {
                         if (first)
@@ -537,7 +706,6 @@ namespace RATools.ViewModels
                     stream.WriteLine();
 
                     stream.WriteLine(")");
-                    stream.WriteLine();
                 }
             }
 
@@ -549,6 +717,8 @@ namespace RATools.ViewModels
         private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, RequirementGroupViewModel requirementGroupViewModel)
         {
             bool needsAmpersand = false;
+            const int MaxWidth = 106; // 120 - "    trigger = ".Length
+            int width = MaxWidth;
 
             var requirementEnumerator = requirementGroupViewModel.Requirements.GetEnumerator();
             while (requirementEnumerator.MoveNext())
@@ -556,9 +726,14 @@ namespace RATools.ViewModels
                 if (!String.IsNullOrEmpty(requirementEnumerator.Current.Definition))
                 {
                     if (needsAmpersand)
+                    {
                         stream.Write(" && ");
+                        width -= 4;
+                    }
                     else
+                    {
                         needsAmpersand = true;
+                    }
 
                     var definition = requirementEnumerator.Current.Definition;
                     foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
@@ -568,6 +743,14 @@ namespace RATools.ViewModels
                         definition = definition.Replace(memoryReference, functionCall);
                     }
 
+                    if (width - definition.Length < 0)
+                    {
+                        stream.WriteLine();
+                        stream.Write("              ");
+                        width = MaxWidth;
+                    }
+
+                    width -= definition.Length;
                     stream.Write(definition);
 
                     switch (requirementEnumerator.Current.Requirement.Type)

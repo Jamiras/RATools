@@ -24,6 +24,10 @@ namespace RATools.Parser.Internal
             Column = keyword.Column;
         }
 
+        internal KeywordExpression Keyword
+        {
+            get { return _keyword; }
+        }
         private readonly KeywordExpression _keyword;
 
         /// <summary>

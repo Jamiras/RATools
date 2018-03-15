@@ -107,7 +107,7 @@ namespace RATools.Test.Parser
         public void TestAchievementNoTrigger()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:1 required parameter 'trigger' not provided"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:1 Required parameter 'trigger' not provided"));
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace RATools.Test.Parser
         public void TestTransitiveConditionIncompatible()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) + 1 == byte(0x4321) - 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:46 expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:46 Expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
         }
 
         [Test]
@@ -143,6 +143,20 @@ namespace RATools.Test.Parser
             var achievement = parser.Achievements.First();
             Assert.That(achievement.Title, Is.EqualTo("T"));
             Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestArrayLookup()
+        {
+            var parser = Parse("array = [ \"A\", \"B\", \"C\" ]\n" +
+                               "achievement(array[1], array[2], 5, byte(0x1234) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("B"));
+            Assert.That(achievement.Description, Is.EqualTo("C"));
             Assert.That(achievement.Points, Is.EqualTo(5));
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
         }
@@ -194,7 +208,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestFor()
+        public void TestForDict()
         {
             var parser = Parse("dict = { 1: \"T\", 2: \"T2\" }\n" +
                                "for k in dict {\n" +
@@ -216,11 +230,135 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestForArray()
+        {
+            var parser = Parse("array = [ \"T\", \"T2\" ]\n" +
+                               "for k in array {\n" +
+                               "    achievement(k, \"D\", 5, byte(0x1234) == 1)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T2"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestForRange()
+        {
+            var parser = Parse("for k in range(1, 2) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 2"));
+        }
+
+        [Test]
+        public void TestForRangeStep()
+        {
+            var parser = Parse("for k in range(1, 5, 3) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 4"));
+        }
+
+        [Test]
+        public void TestForRangeReverse()
+        {
+            var parser = Parse("for k in range(2, 1, -1) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 2"));
+
+            achievement = parser.Achievements.Last();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestForRangeReverseNoStep()
+        {
+            var parser = Parse("for k in range(2, 1) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:10 step must be negative if start is after stop"));
+        }
+
+        [Test]
+        public void TestForRangeZeroStep()
+        {
+            var parser = Parse("for k in range(1, 2, 0) {\n" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                               "}", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:22 step must not be 0"));
+        }
+
+        [Test]
         public void TestReturnFromFunction()
         {
             var parser = Parse("function f(i) {\n" +
                                "   if (i == 1)\n" +
                                "       return byte(0x1234) == 1\n" +
+                               "   return byte(0x4567) == 1\n" +
+                               "}\n" +
+                               "achievement(\"T\", \"D\", 5, f(1))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestReturnFromLoopInFunction()
+        {
+            var parser = Parse("dict = { 1: \"T\", 2: \"T2\" }\n" +
+                               "function f(i) {\n" +
+                               "   for k in dict {\n" +
+                               "       if (i == k)\n" +
+                               "           return byte(0x1234) == 1\n" +
+                               "   }\n" +
                                "   return byte(0x4567) == 1\n" +
                                "}\n" +
                                "achievement(\"T\", \"D\", 5, f(1))");
@@ -243,12 +381,26 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestPrevMalformed()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
+        }
+
+        [Test]
         public void TestOnce()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x001234) == 1)"));
+        }
+
+        [Test]
+        public void TestOnceMalformed()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]
@@ -407,14 +559,22 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 required parameter 'lookup' not provided"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupPlusOne()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234) + 1, dict))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH001234_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceInvalidIndex()
         {
             var parser = Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:23 invalid parameter index: 1"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:30 Invalid parameter index: 1"));
         }
 
         [Test]

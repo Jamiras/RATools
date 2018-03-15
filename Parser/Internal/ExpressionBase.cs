@@ -86,7 +86,7 @@ namespace RATools.Parser.Internal
 
         internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
         {
-            var error = new ParseErrorExpression(message, line, column) { EndLine = tokenizer.Line, EndColumn = tokenizer.Column };
+            var error = new ParseErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
 
             var expressionTokenizer = tokenizer as ExpressionTokenizer;
             if (expressionTokenizer != null)
@@ -119,7 +119,7 @@ namespace RATools.Parser.Internal
             SkipWhitespace(tokenizer);
 
             if (tokenizer.NextChar == '\0')
-                return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column);
+                return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column, tokenizer.Line, tokenizer.Column);
 
             var line = tokenizer.Line;
             var column = tokenizer.Column;
@@ -376,6 +376,10 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     return ParseDictionary(tokenizer);
 
+                case '[':
+                    tokenizer.Advance();
+                    return ParseArray(tokenizer);
+
                 default:
                     var line = tokenizer.Line;
                     var column = tokenizer.Column;
@@ -414,7 +418,10 @@ namespace RATools.Parser.Internal
                         if (parseError != null)
                             return parseError;
 
-                        return new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
+                        var functionCall = new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
+                        functionCall.EndLine = tokenizer.Line;
+                        functionCall.EndColumn = tokenizer.Column - 1;
+                        return functionCall;
                     }
 
                     if (tokenizer.NextChar == '[')
@@ -626,6 +633,33 @@ namespace RATools.Parser.Internal
             return dict;
         }
 
+        private static ExpressionBase ParseArray(PositionalTokenizer tokenizer)
+        {
+            SkipWhitespace(tokenizer);
+
+            var array = new ArrayExpression();
+            while (tokenizer.NextChar != ']')
+            {
+                var value = ParseClause(tokenizer);
+                if (value.Type == ExpressionType.ParseError)
+                    return value;
+
+                array.Entries.Add(value);
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar == ']')
+                    break;
+
+                if (tokenizer.NextChar != ',')
+                    return ParseError(tokenizer, "Expecting comma between entries");
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+            }
+
+            tokenizer.Advance();
+            return array;
+        }
+
         internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)
         {
             ExpressionBase.SkipWhitespace(tokenizer);
@@ -656,6 +690,9 @@ namespace RATools.Parser.Internal
                     var statement = ExpressionBase.Parse(tokenizer);
                     if (statement.Type == ExpressionType.ParseError)
                         return statement;
+
+                    if (statement.Type == ExpressionType.Variable)
+                        return new ParseErrorExpression("standalone variable has no meaning", statement);
 
                     expressions.Add(statement);
                 } while (true);
@@ -841,6 +878,11 @@ namespace RATools.Parser.Internal
         /// A dictionary.
         /// </summary>
         Dictionary,
+
+        /// <summary>
+        /// An array.
+        /// </summary>
+        Array,
 
         /// <summary>
         /// A for loop.

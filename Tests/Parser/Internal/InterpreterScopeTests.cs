@@ -135,5 +135,41 @@ namespace RATools.Test.Parser.Internal
 
             Assert.That(dict.Entries[0].Value, Is.SameAs(value2));
         }
+
+        [Test]
+        public void TestAssignVariableIndexedArrayUpdate()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var value2 = new IntegerConstantExpression(98);
+            var array = new ArrayExpression();
+            var key = new IntegerConstantExpression(0);
+            array.Entries.Add(value);
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            var index = new IndexedVariableExpression(variable, key);
+            scope.AssignVariable(index, value2);
+
+            Assert.That(array.Entries[0], Is.SameAs(value2));
+        }
+
+        [Test]
+        public void TestAssignVariableIndexedArrayOutOfRange()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var value2 = new IntegerConstantExpression(98);
+            var array = new ArrayExpression();
+            var key = new IntegerConstantExpression(1);
+            array.Entries.Add(value);
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            var index = new IndexedVariableExpression(variable, key);
+            scope.AssignVariable(index, value2); // silently does nothing, TODO: make error
+
+            Assert.That(array.Entries[0], Is.SameAs(value));
+        }
     }
 }

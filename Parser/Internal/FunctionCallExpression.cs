@@ -79,6 +79,8 @@ namespace RATools.Parser.Internal
             var functionCall = new FunctionCallExpression(FunctionName, parameters);
             functionCall.Line = Line;
             functionCall.Column = Column;
+            functionCall.EndLine = EndLine;
+            functionCall.EndColumn = EndColumn;
             result = functionCall;
             return true;
         }
@@ -91,12 +93,12 @@ namespace RATools.Parser.Internal
         /// <returns>
         ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
         /// </returns>
-        public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public bool Evaluate(InterpreterScope scope, out ExpressionBase result, bool resultRequired)
         {
             var function = scope.GetFunction(FunctionName.Name);
             if (function == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, this);
+                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 
@@ -104,16 +106,28 @@ namespace RATools.Parser.Internal
             if (functionScope == null)
                 return false;
 
-            var interpreter = new AchievementScriptInterpreter();
-            if (!interpreter.Evaluate(function.Expressions, functionScope))
+            if (!function.Evaluate(functionScope, out result))
             {
-                result = new ParseErrorExpression(interpreter.ErrorMessage, this);
+                if (result.Line == 0)
+                {
+                    result = new ParseErrorExpression(result, FunctionName);
+                }
+                else
+                {
+                    var parseError = (ParseErrorExpression)result;
+                    var sourceError = parseError.InnermostError;
+                    result = new ParseErrorExpression("Function call failed: " + (sourceError != null ? sourceError.Message : parseError.Message), FunctionName)
+                    {
+                        InnerError = parseError
+                    };
+                }
+
                 return false;
             }
 
-            if (functionScope.ReturnValue == null)
+            if (resultRequired && functionScope.ReturnValue == null)
             {
-                result = new ParseErrorExpression(FunctionName.Name + " did not return a value", this);
+                result = new ParseErrorExpression(function.Name.Name + " did not return a value", FunctionName);
                 return false;
             }
 
@@ -136,6 +150,15 @@ namespace RATools.Parser.Internal
             foreach (var parameter in function.Parameters)
                 providedParameters.Add(parameter.Name);
 
+            ArrayExpression varargs = null;
+            if (providedParameters.Remove("..."))
+            {
+                varargs = new ArrayExpression();
+                innerScope.AssignVariable(new VariableExpression("varargs"), varargs);
+            }
+
+            var parameterCount = providedParameters.Count;
+
             int index = 0;
             bool namedParameters = false;
             foreach (var parameter in Parameters)
@@ -151,7 +174,7 @@ namespace RATools.Parser.Internal
                             return null;
                         }
 
-                        error = new ParseErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name));
+                        error = new ParseErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name), assignedParameter.Variable);
                         return null;
                     }
 
@@ -169,13 +192,13 @@ namespace RATools.Parser.Internal
                 {
                     if (namedParameters)
                     {
-                        error = new ParseErrorExpression("non-named parameter following named parameter", parameter);
+                        error = new ParseErrorExpression("Non-named parameter following named parameter", parameter);
                         return null;
                     }
 
-                    if (index == function.Parameters.Count)
+                    if (index >= parameterCount && varargs == null)
                     {
-                        error = new ParseErrorExpression("too many parameters passed to function", parameter);
+                        error = new ParseErrorExpression("Too many parameters passed to function", parameter);
                         return null;
                     }
 
@@ -186,9 +209,16 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    var variableName = function.Parameters.ElementAt(index).Name;
-                    providedParameters.Remove(variableName);
-                    innerScope.DefineVariable(new VariableExpression(variableName), value);
+                    if (index < parameterCount)
+                    {
+                        var variableName = function.Parameters.ElementAt(index).Name;
+                        providedParameters.Remove(variableName);
+                        innerScope.DefineVariable(new VariableExpression(variableName), value);
+                    }
+                    else
+                    {
+                        varargs.Entries.Add(value);
+                    }
                 }
 
                 ++index;
@@ -199,7 +229,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase value;
                 if (!function.DefaultParameters.TryGetValue(parameter, out value))
                 {
-                    error = new ParseErrorExpression(String.Format("required parameter '{0}' not provided", parameter), this);
+                    error = new ParseErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), FunctionName);
                     return null;
                 }
 

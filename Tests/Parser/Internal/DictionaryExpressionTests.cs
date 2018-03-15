@@ -92,9 +92,9 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        public void TestReplaceVariablesNestedFunctionCall()
+        public void TestReplaceVariablesLogicalFunctionCall()
         {
-            var input = "function func(i) => func2(i)";
+            var input = "function func(i) => i == 1";
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             tokenizer.Match("function");
             var functionDefinition = (FunctionDefinitionExpression)FunctionDefinitionExpression.Parse(tokenizer);

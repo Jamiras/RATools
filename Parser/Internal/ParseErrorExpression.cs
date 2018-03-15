@@ -10,18 +10,18 @@ namespace RATools.Parser.Internal
             Message = message;
         }
 
-        public ParseErrorExpression(string message, int line, int column)
+        public ParseErrorExpression(string message, int line, int column, int endLine, int endColumn)
             : this(message)
         {
             Line = line;
             Column = column;
+            EndLine = endLine;
+            EndColumn = endColumn;
         }
 
         public ParseErrorExpression(string message, ExpressionBase expression)
-            : this(message, expression.Line, expression.Column)
+            : this(message, expression.Line, expression.Column, expression.EndLine, expression.EndColumn)
         {
-            EndLine = expression.EndLine;
-            EndColumn = expression.EndColumn;
         }
 
         public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
@@ -55,6 +55,29 @@ namespace RATools.Parser.Internal
         /// Gets the message.
         /// </summary>
         public string Message { get; private set; }
+
+        /// <summary>
+        /// Gets a secondary error that caused this error.
+        /// </summary>
+        public ParseErrorExpression InnerError { get; internal set; }
+
+        /// <summary>
+        /// Gets the root error that caused this error.
+        /// </summary>
+        public ParseErrorExpression InnermostError
+        {
+            get
+            {
+                var error = InnerError;
+                if (error != null)
+                {
+                    while (error.InnerError != null)
+                        error = error.InnerError;
+                }
+
+                return error;
+            }
+        }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.

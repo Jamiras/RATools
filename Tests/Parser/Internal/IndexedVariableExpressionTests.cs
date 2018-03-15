@@ -171,5 +171,83 @@ namespace RATools.Test.Parser.Internal
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(98));
         }
+
+        [Test]
+        public void TestReplaceVariablesArray()
+        {
+            var variable = new VariableExpression("variable");
+            var index = new IntegerConstantExpression(0);
+            var indexVariable = new VariableExpression("index");
+            var value = new IntegerConstantExpression(99);
+            var array = new ArrayExpression();
+            array.Entries.Add(value);
+            var expr = new IndexedVariableExpression(variable, indexVariable);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+            scope.AssignVariable(indexVariable, index);
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(99));
+        }
+
+        [Test]
+        public void TestReplaceVariablesArrayIndexOutOfRange()
+        {
+            var variable = new VariableExpression("variable");
+            var index = new IntegerConstantExpression(1);
+            var value = new IntegerConstantExpression(99);
+            var array = new ArrayExpression();
+            array.Entries.Add(value);
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index 1 not in range 0-0"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesArrayIndexNegative()
+        {
+            var variable = new VariableExpression("variable");
+            var index = new IntegerConstantExpression(-1);
+            var value = new IntegerConstantExpression(99);
+            var array = new ArrayExpression();
+            array.Entries.Add(value);
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index -1 not in range 0-0"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesArrayIndexString()
+        {
+            var variable = new VariableExpression("variable");
+            var index = new StringConstantExpression("str");
+            var value = new IntegerConstantExpression(99);
+            var array = new ArrayExpression();
+            array.Entries.Add(value);
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index does not evaluate to an integer constant"));
+        }
     }
 }

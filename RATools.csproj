@@ -57,14 +57,30 @@
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
+    <Compile Include="Parser\AchievementScriptContext.cs" />
+    <Compile Include="Parser\Functions\AchievementFunction.cs" />
+    <Compile Include="Parser\Functions\ComparisonModificationFunction.cs" />
+    <Compile Include="Parser\Functions\FlagConditionFunction.cs" />
+    <Compile Include="Parser\Functions\RangeFunction.cs" />
+    <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />
+    <Compile Include="Parser\Functions\RichPresenceDisplayFunction.cs" />
+    <Compile Include="Parser\Functions\LeaderboardFunction.cs" />
+    <Compile Include="Parser\Functions\PrevFunction.cs" />
+    <Compile Include="Parser\Functions\RepeatedFunction.cs" />
+    <Compile Include="Parser\Functions\OnceFunction.cs" />
+    <Compile Include="Parser\Functions\MemoryAccessorFunction.cs" />
+    <Compile Include="Parser\Functions\RichPresenceLookupFunction.cs" />
+    <Compile Include="Parser\Functions\RichPresenceValueFunction.cs" />
     <Compile Include="Parser\Internal\AchievementScriptParser.cs" />
     <Compile Include="Parser\Internal\CommentExpression.cs" />
+    <Compile Include="Parser\Internal\ArrayExpression.cs" />
     <Compile Include="Parser\Internal\ExpressionGroup.cs" />
     <Compile Include="Parser\Internal\ExpressionTokenizer.cs" />
     <Compile Include="Parser\Internal\KeywordExpression.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBase.cs" />
     <Compile Include="Parser\RichPresenceBuilder.cs" />
     <Compile Include="Parser\ScriptInterpreterAchievementBuilder.cs" />
+    <Compile Include="Parser\TriggerBuilderContext.cs" />
     <Compile Include="Services\ISettings.cs" />
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />
@@ -120,6 +136,26 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\ScriptViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Common.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\GameViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\LeaderboardViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\RichPresenceViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\UpdateLocalDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

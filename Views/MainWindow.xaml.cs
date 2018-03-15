@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using Jamiras.Controls;
 using Jamiras.Services;
+using Jamiras.ViewModels;
 using RATools.ViewModels;
 using System;
 using System.Windows;
@@ -30,11 +31,22 @@ namespace RATools.Views
             dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());
             dialogService.RegisterDialogHandler(typeof(AboutDialogViewModel), vm => new OkCancelView(new AboutDialog()));
 
+            dialogService.RegisterDialogHandler(typeof(MessageBoxViewModel), CreateMessageBoxView);
+
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
             DataContext = viewModel;
 
             base.OnInitialized(e);
+        }
+
+        private FrameworkElement CreateMessageBoxView(DialogViewModelBase viewModel)
+        {
+            var textBlock = new FormattedTextBlock();
+            textBlock.Margin = new Thickness(4);
+            textBlock.SetBinding(FormattedTextBlock.TextProperty, "Message");
+            textBlock.TextWrapping = TextWrapping.Wrap;
+            return new OkCancelView(textBlock);
         }
     }
 }

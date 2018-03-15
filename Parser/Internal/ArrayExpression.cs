@@ -1,42 +1,39 @@
 ﻿using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class DictionaryExpression : ExpressionBase, INestedExpressions
+    internal class ArrayExpression : ExpressionBase, INestedExpressions
     {
-        public DictionaryExpression()
-            : base(ExpressionType.Dictionary)
+        public ArrayExpression()
+            : base(ExpressionType.Array)
         {
-            Entries = new List<DictionaryEntry>();
+            Entries = new List<ExpressionBase>();
         }
 
         /// <summary>
-        /// Gets the entries in the dictionary.
+        /// Gets the entries in the array.
         /// </summary>
-        public List<DictionaryEntry> Entries { get; private set; }
+        public List<ExpressionBase> Entries { get; private set; }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            builder.Append('{');
+            builder.Append('[');
 
             if (Entries.Count > 0)
             {
                 foreach (var entry in Entries)
                 {
-                    entry.Key.AppendString(builder);
-                    builder.Append(": ");
-                    entry.Value.AppendString(builder);
+                    entry.AppendString(builder);
                     builder.Append(", ");
                 }
                 builder.Length -= 2;
             }
 
-            builder.Append('}');
+            builder.Append(']');
         }
 
         /// <summary>
@@ -55,46 +52,20 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            var entries = new List<DictionaryEntry>();
+            var entries = new List<ExpressionBase>();
             foreach (var entry in Entries)
             {
-                ExpressionBase key, value;
-                key = entry.Key;
-
-                if (key.Type == ExpressionType.FunctionCall)
-                {
-                    var expression = (FunctionCallExpression)key;
-                    if (!expression.Evaluate(scope, out value, true))
-                    {
-                        result = value;
-                        return false;
-                    }
-
-                    key = value;
-                }
-
-                if (!key.ReplaceVariables(scope, out key))
-                {
-                    result = key;
-                    return false;
-                }
-
-                if (key.Type != ExpressionType.StringConstant && key.Type != ExpressionType.IntegerConstant)
-                {
-                    result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
-                    return false;
-                }
-
-                if (!entry.Value.ReplaceVariables(scope, out value))
+                ExpressionBase value;
+                if (!entry.ReplaceVariables(scope, out value))
                 {
                     result = value;
                     return false;
                 }
 
-                entries.Add(new DictionaryEntry { Key = key, Value = value });
+                entries.Add(value);
             }
 
-            result = new DictionaryExpression { Entries = entries };
+            result = new ArrayExpression { Entries = entries };
             return true;
         }
 
@@ -107,7 +78,7 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (DictionaryExpression)obj;
+            var that = (ArrayExpression)obj;
             return Entries == that.Entries;
         }
 
@@ -115,25 +86,11 @@ namespace RATools.Parser.Internal
         {
             foreach (var entry in Entries)
             {
-                if (line >= entry.Key.Line && line <= entry.Value.EndLine)
-                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry.Key, entry.Value }, line);
+                if (line >= entry.Line && line <= entry.EndLine)
+                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry }, line);
             }
 
             return true;
-        }
-
-        [DebuggerDisplay("{Key}: {Value}")]
-        public class DictionaryEntry
-        {
-            /// <summary>
-            /// Gets or sets the key.
-            /// </summary>
-            public ExpressionBase Key { get; set; }
-
-            /// <summary>
-            /// Gets or sets the value.
-            /// </summary>
-            public virtual ExpressionBase Value { get; set; }
         }
     }
 }

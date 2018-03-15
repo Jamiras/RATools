@@ -1,0 +1,114 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:vm="clr-namespace:RATools.ViewModels">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+        <ResourceDictionary Source="Common.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
+        <Border BorderThickness="1" BorderBrush="Gray">
+            <Grid Background="White">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Image Width="48" Height="48" Grid.RowSpan="3" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
+                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0">
+                    <TextBlock Text="{Binding RichPresenceLength}" />
+                    <TextBlock Text="/" />
+                    <TextBlock Text="{Binding RichPresenceMaxLength}" />
+                    <TextBlock Text="characters" />
+                </TextBlock>
+                <TextBlock Grid.Column="1" Grid.Row="2" FontSize="10" VerticalAlignment="Top" Margin="8,0,0,2">
+                    <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
+                        <TextBlock Text="Copy to Clipboard" />
+                    </Hyperlink>
+                </TextBlock>
+
+                <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding GeneratedSource}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding CompareSource}" />
+
+                        <ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding Lines}" HorizontalAlignment="Stretch">
+                            <ItemsControl.Resources>
+                                <DataTemplate x:Key="modifiedRichPresenceLine">
+                                    <Grid Margin="0,2,0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Generated}" TextWrapping="Wrap" Margin="0,0,4,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="1" Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,8,0">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                                            <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </DataTemplate>
+                                <DataTemplate x:Key="unmodifiedRichPresenceLine">
+                                    <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                </DataTemplate>
+                                <DataTemplate x:Key="generatedOnlyRichPresenceLine">
+                                    <TextBlock Text="{Binding Generated}" Foreground="{StaticResource newValueColor}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                </DataTemplate>
+                            </ItemsControl.Resources>
+                            <ItemsControl.Style>
+                                <Style TargetType="{x:Type ItemsControl}">
+                                    <Setter Property="ItemTemplate" Value="{StaticResource unmodifiedRichPresenceLine}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
+                                            <Setter Property="ItemTemplate" Value="{StaticResource modifiedRichPresenceLine}" />
+                                        </DataTrigger>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding CompareSource}" Value="" />
+                                                <Condition Binding="{Binding CompareState}" Value="LocalDiffers" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="ItemTemplate" Value="{StaticResource generatedOnlyRichPresenceLine}" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ItemsControl.Style>
+                        </ItemsControl>
+                    </Grid>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+</ResourceDictionary>

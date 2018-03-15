@@ -1,4 +1,6 @@
 ﻿using Jamiras.Components;
+using RATools.Data;
+using System.Collections.Generic;
 
 namespace RATools.Parser.Internal
 {
@@ -7,17 +9,18 @@ namespace RATools.Parser.Internal
         public InterpreterScope()
         {
             _functions = new TinyDictionary<string, FunctionDefinitionExpression>();
-            _variables = new TinyDictionary<string, ExpressionBase>();
+            _variables = new TinyDictionary<string, KeyValuePair<VariableExpression, ExpressionBase>>();
         }
 
         public InterpreterScope(InterpreterScope parent)
             : this()
         {
             _parent = parent;
+            Depth = parent.Depth + 1;
         }
 
         private readonly TinyDictionary<string, FunctionDefinitionExpression> _functions;
-        private readonly TinyDictionary<string, ExpressionBase> _variables;
+        private readonly TinyDictionary<string, KeyValuePair<VariableExpression, ExpressionBase>> _variables;
         private readonly InterpreterScope _parent;
 
         internal int VariableCount
@@ -57,12 +60,29 @@ namespace RATools.Parser.Internal
         /// <returns>Value of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariable(string variableName)
         {
-            ExpressionBase variable;
+            KeyValuePair<VariableExpression, ExpressionBase> variable;
             if (_variables.TryGetValue(variableName, out variable))
-                return variable;
+                return variable.Value;
 
             if (_parent != null)
                 return _parent.GetVariable(variableName);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the definition of a variable.
+        /// </summary>
+        /// <param name="variableName">Name of the variable.</param>
+        /// <returns>Definition of the variable, <c>null</c> if not found.</returns>
+        public ExpressionBase GetVariableDefinition(string variableName)
+        {
+            KeyValuePair<VariableExpression, ExpressionBase> variable;
+            if (_variables.TryGetValue(variableName, out variable))
+                return variable.Key;
+
+            if (_parent != null)
+                return _parent.GetVariableDefinition(variableName);
 
             return null;
         }
@@ -79,7 +99,8 @@ namespace RATools.Parser.Internal
             {
                 ExpressionBase result;
                 var entry = indexedVariable.GetDictionaryEntry(this, out result, true);
-                entry.Value = value;
+                if (entry != null)
+                    entry.Value = value;
                 return;
             }
 
@@ -89,7 +110,7 @@ namespace RATools.Parser.Internal
             {
                 if (scope._variables.ContainsKey(variable.Name))
                 {
-                    scope._variables[variable.Name] = value;
+                    scope.DefineVariable(variable, value);
                     return;
                 }
 
@@ -97,7 +118,7 @@ namespace RATools.Parser.Internal
             }
 
             // variable not defined, store in the current scope.
-            _variables[variable.Name] = value;
+            DefineVariable(variable, value);
         }
 
         /// <summary>
@@ -107,7 +128,7 @@ namespace RATools.Parser.Internal
         /// <param name="value">The value.</param>
         public void DefineVariable(VariableExpression variable, ExpressionBase value)
         {
-            _variables[variable.Name] = value;
+            _variables[variable.Name] = new KeyValuePair<VariableExpression, ExpressionBase>(variable, value);
         }
 
         /// <summary>
@@ -121,5 +142,20 @@ namespace RATools.Parser.Internal
         public ExpressionBase ReturnValue { get; internal set; }
 
         internal object Context { get; set; }
+
+        internal T GetContext<T>()
+            where T : class
+        {
+            var context = Context as T;
+            if (context != null)
+                return context;
+
+            if (_parent != null)
+                return _parent.GetContext<T>();
+
+            return null;
+        }
+
+        internal int Depth { get; private set; }
     }
 }
