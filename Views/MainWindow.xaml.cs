@@ -34,8 +34,6 @@ namespace RATools.Views
             viewModel.Initialize();
             DataContext = viewModel;
 
-            InputBindings.Add(new KeyBinding(viewModel.RefreshCurrentCommand, new KeyGesture(Key.F5)));
-
             base.OnInitialized(e);
         }
     }

@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Windows.Input;
 
 namespace RATools.ViewModels
 {
@@ -18,14 +19,19 @@ namespace RATools.ViewModels
     {
         public MainWindowViewModel()
         {
-            ExitCommand = new DelegateCommand(Exit);
-            CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
-            RefreshCurrentCommand = new DelegateCommand(RefreshCurrent);
-            OpenRecentCommand = new DelegateCommand<string>(OpenFile);
             NewScriptCommand = new DelegateCommand(NewScript);
-            UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+            OpenScriptCommand = new DelegateCommand(OpenFile);
+            SaveScriptCommand = DisabledCommand.Instance;
+            SaveScriptAsCommand = DisabledCommand.Instance;
+            RefreshScriptCommand = DisabledCommand.Instance;
+            OpenRecentCommand = new DelegateCommand<string>(OpenFile);
+            ExitCommand = new DelegateCommand(Exit);
+
+            UpdateLocalCommand = DisabledCommand.Instance;
+
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
+
             AboutCommand = new DelegateCommand(About);
 
             _recentFiles = new RecencyBuffer<string>(8);
@@ -87,9 +93,8 @@ namespace RATools.ViewModels
             ServiceRepository.Instance.FindService<IDialogService>().MainWindow.Close();
         }
 
-        public CommandBase CompileAchievementsCommand { get; private set; }
-
-        private void CompileAchievements()
+        public CommandBase OpenScriptCommand { get; private set; }
+        private void OpenFile()
         {
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Select achievements script";
@@ -99,6 +104,9 @@ namespace RATools.ViewModels
             if (vm.ShowOpenFileDialog() == DialogResult.Ok)
                 OpenFile(vm.FileNames[0]);
         }
+
+        public CommandBase SaveScriptCommand { get; private set; }
+        public CommandBase SaveScriptAsCommand { get; private set; }
 
         public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null);
         public GameViewModel Game
@@ -114,11 +122,23 @@ namespace RATools.ViewModels
             private set { SetValue(RecentFilesProperty, value); }
         }
 
-        public CommandBase RefreshCurrentCommand { get; private set; }
-        private void RefreshCurrent()
+        public CommandBase RefreshScriptCommand { get; private set; }
+        private void RefreshScript()
         {
-            if (Game != null)
-                OpenFile(Game.Script.Filename);
+            if (Game == null)
+                return;
+                
+            if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
+            {
+                var vm = new MessageBoxViewModel("Revert to the last saved state? Your changes will be lost.");
+                vm.DialogTitle = "Revert Script";
+                if (vm.ShowOkCancelDialog() == DialogResult.Cancel)
+                    return;
+            }
+
+            var selectedEditor = Game.SelectedEditor.Title;
+            OpenFile(Game.Script.Filename);
+            Game.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }
@@ -178,9 +198,34 @@ namespace RATools.ViewModels
                 viewModel = new GameViewModel(gameId, gameTitle);
             }
 
-            viewModel.Script.Filename = filename;
-            viewModel.Script.Content = content;
-            Game = viewModel;
+            var existingViewModel = Game as GameViewModel;
+            if (existingViewModel == null)
+            {
+                SaveScriptCommand = new DelegateCommand(SaveScript);
+                SaveScriptAsCommand = new DelegateCommand(SaveScriptAs);
+                RefreshScriptCommand = new DelegateCommand(RefreshScript);
+                UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+                OnPropertyChanged(() => SaveScriptCommand);
+                OnPropertyChanged(() => SaveScriptAsCommand);
+                OnPropertyChanged(() => RefreshScriptCommand);
+                OnPropertyChanged(() => UpdateLocalCommand);
+            }
+
+            // if we're just refreshing the current game script, only update the script content,
+            // which will be reprocessed and update the editor list. If it's not the same script,
+            // or notes have changed, use the new view model.
+            if (existingViewModel != null && existingViewModel.GameId == viewModel.GameId &&
+                existingViewModel.Script.Filename == filename &&
+                existingViewModel.Notes.Count == viewModel.Notes.Count)
+            {
+                existingViewModel.Script.SetContent(content);
+            }
+            else
+            {
+                viewModel.Script.Filename = filename;
+                viewModel.Script.SetContent(content);
+                Game = viewModel;
+            }
         }
 
         private void AddRecentFile(string newFile)
@@ -203,6 +248,26 @@ namespace RATools.ViewModels
             persistance.SetValue("RecentFiles", builder.ToString());
 
             RecentFiles = _recentFiles.ToArray();
+        }
+
+        private void SaveScript()
+        {
+            Game.Script.Save();
+        }
+
+        private void SaveScriptAs()
+        {
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Save achievements script";
+            vm.Filters["Script file"] = "*.rascript;*.txt";
+            vm.FileNames = new[] { Game.Script.Filename };
+            vm.OverwritePrompt = true;
+
+            if (vm.ShowSaveFileDialog() == DialogResult.Ok)
+            {
+                Game.Script.Filename = vm.FileNames[0];
+                SaveScript();
+            }
         }
 
         public CommandBase NewScriptCommand { get; private set; }

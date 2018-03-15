@@ -43,26 +43,40 @@ namespace RATools.ViewModels
             vm._owner.PopulateEditorList(null);
         }
 
-        public static readonly ModelProperty ContentProperty = ModelProperty.Register(typeof(ScriptViewModel), "Content", typeof(string), String.Empty, OnContentChanged);
-        public string Content
+        public void SetContent(string content)
         {
-            get { return (string)GetValue(ContentProperty); }
-            set { SetValue(ContentProperty, value); }
-        }
-
-        private static void OnContentChanged(object sender, ModelPropertyChangedEventArgs e)
-        {
-            var vm = (ScriptViewModel)sender;
-            ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(() =>
+            var backgroundWorkerService = ServiceRepository.Instance.FindService<IBackgroundWorkerService>();
+            backgroundWorkerService.RunAsync(() =>
             {
-                vm.Editor.SetContent((string)e.NewValue);
+                backgroundWorkerService.InvokeOnUiThread(() => Editor.SetContent(content));
 
                 var interpreter = new AchievementScriptInterpreter();
-                if (interpreter.Run(vm.Editor.ParsedContent))
-                    vm._owner.PopulateEditorList(interpreter);
-                else
-                    vm._owner.PopulateEditorList(null);
+                interpreter.Run(Editor.ParsedContent);
+                _owner.PopulateEditorList(interpreter);
             });
+
+            ResetModified();
+        }
+
+        public void Save()
+        {
+            Save(Filename);
+            ResetModified();
+        }
+
+        private void ResetModified()
+        { 
+            CompareState = GeneratedCompareState.Same;
+            ModificationMessage = null;
+        }
+
+        private void Save(string filename)
+        {
+            using (var file = new StreamWriter(ServiceRepository.Instance.FindService<IFileSystemService>().CreateFile(filename)))
+            {
+                foreach (var line in Editor.Lines)
+                    file.WriteLine(line.Text);
+            }
         }
     }
 }

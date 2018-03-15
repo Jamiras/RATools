@@ -22,6 +22,7 @@ namespace RATools.ViewModels
             GameId = gameId;
             Title = title;
             Script = new ScriptViewModel(this);
+            Notes = new TinyDictionary<int, string>();
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
@@ -31,7 +32,6 @@ namespace RATools.ViewModels
         {
             RACacheDirectory = raCacheDirectory;
 
-            Notes = new TinyDictionary<int, string>();
             using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, gameId + "-Notes2.txt")))
             {
                 var reader = new StreamReader(notesStream);
@@ -102,12 +102,15 @@ namespace RATools.ViewModels
                     editors.Add(achievementViewModel);
                 }
 
-                if (_isN64)
-                    MergePublishedN64(GameId, editors);
-                else
-                    MergePublished(GameId, editors);
+                if (!String.IsNullOrEmpty(RACacheDirectory))
+                {
+                    if (_isN64)
+                        MergePublishedN64(GameId, editors);
+                    else
+                        MergePublished(GameId, editors);
 
-                MergeLocal(GameId, editors);
+                    MergeLocal(GameId, editors);
+                }
 
                 foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
                     achievement.UpdateCommonProperties(this);

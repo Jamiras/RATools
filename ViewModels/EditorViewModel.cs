@@ -2,7 +2,6 @@
 using Jamiras.ViewModels.CodeEditor;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Windows.Media;
 
 namespace RATools.ViewModels
@@ -39,7 +38,7 @@ namespace RATools.ViewModels
                 foreach (var expression in expressions)
                 {
                     var expressionStart = (expression.Line == line) ? expression.Column : 1;
-                    var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.LineLength + 1;
+                    var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.Text.Length + 1;
 
                     if (expression is ParseErrorExpression)
                         e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);

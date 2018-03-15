@@ -91,12 +91,12 @@ namespace RATools.Parser.Internal
             column = tokenizer.Column;
 
             var functionName = tokenizer.ReadIdentifier();
+            function.Name = new VariableExpression(functionName.ToString(), line, column);
             if (functionName.IsEmpty)
             {
                 ExpressionBase.ParseError(tokenizer, "Invalid function name");
                 return function;
             }
-            function.Name = new VariableExpression(functionName.ToString(), line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != '(')
