@@ -27,6 +27,11 @@ namespace RATools.ViewModels
             Style.SetCustomColor((int)ExpressionType.Keyword, Colors.DarkGoldenrod);
             Style.SetCustomColor((int)ExpressionType.ParseError, Colors.Red);
 
+            Braces['('] = ')';
+            Braces['['] = ']';
+            Braces['{'] = '}';
+            Braces['"'] = '"';
+
             ErrorsToolWindow = new CodeReferencesToolWindowViewModel("Error List", this);
 
             GotoDefinitionCommand = new DelegateCommand(GotoDefinitionAtCursor);
@@ -34,44 +39,46 @@ namespace RATools.ViewModels
 
         private readonly GameViewModel _owner;
 
-        protected override void OnContentChanged(string newValue)
+        protected override void OnContentChanged(ContentChangedEventArgs e)
         {
-            var backgroundWorkerService = ServiceRepository.Instance.FindService<IBackgroundWorkerService>();
-            backgroundWorkerService.RunAsync(() =>
+            var parser = new AchievementScriptParser();
+            _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Value));
+
+            if (e.IsAborted)
+                return;
+
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.Run(_parsedContent, out _scope);
+
+            if (e.IsAborted)
+                return;
+
+            ServiceRepository.Instance.FindService<IBackgroundWorkerService>().InvokeOnUiThread(() =>
             {
-                var parser = new AchievementScriptParser();
-                _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(newValue));
-
-                var interpreter = new AchievementScriptInterpreter();
-                interpreter.Run(_parsedContent, out _scope);
-
-                foreach (var line in Lines)
-                    line.Refresh();
-
-                backgroundWorkerService.InvokeOnUiThread(() =>
+                ErrorsToolWindow.References.Clear();
+                foreach (var error in _parsedContent.Errors)
                 {
-                    ErrorsToolWindow.References.Clear();
-                    foreach (var error in _parsedContent.Errors)
+                    var innerError = error;
+                    while (innerError.InnerError != null)
+                        innerError = innerError.InnerError;
+
+                    ErrorsToolWindow.References.Add(new CodeReferenceViewModel
                     {
-                        var innerError = error;
-                        while (innerError.InnerError != null)
-                            innerError = innerError.InnerError;
-
-                        ErrorsToolWindow.References.Add(new CodeReferenceViewModel
-                        {
-                            StartLine = innerError.Line,
-                            StartColumn = innerError.Column,
-                            EndLine = innerError.EndLine,
-                            EndColumn = innerError.EndColumn,
-                            Message = innerError.Message
-                        });
-                    }
-                });
-
-                _owner.PopulateEditorList(interpreter);
+                        StartLine = innerError.Line,
+                        StartColumn = innerError.Column,
+                        EndLine = innerError.EndLine,
+                        EndColumn = innerError.EndColumn,
+                        Message = innerError.Message
+                    });
+                }
             });
 
-            base.OnContentChanged(newValue);
+            if (e.IsAborted)
+                return;
+
+            _owner.PopulateEditorList(interpreter);
+
+            base.OnContentChanged(e);
         }
 
         private ExpressionGroup _parsedContent;
@@ -85,18 +92,17 @@ namespace RATools.ViewModels
         {
             int line = e.Line.Line;
             var expressions = new List<ExpressionBase>();
-            if (_parsedContent.GetExpressionsForLine(expressions, line))
-            {
-                foreach (var expression in expressions)
-                {
-                    var expressionStart = (expression.Line == line) ? expression.Column : 1;
-                    var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.Text.Length + 1;
+            _parsedContent.GetExpressionsForLine(expressions, line);
 
-                    if (expression is ParseErrorExpression)
-                        e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);
-                    else
-                        e.SetColor(expressionStart, expressionEnd - expressionStart + 1, (int)expression.Type);
-                }
+            foreach (var expression in expressions)
+            {
+                var expressionStart = (expression.Line == line) ? expression.Column : 1;
+                var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.Text.Length + 1;
+
+                if (expression is ParseErrorExpression)
+                    e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);
+                else
+                    e.SetColor(expressionStart, expressionEnd - expressionStart + 1, (int)expression.Type);
             }
 
             base.OnFormatLine(e);

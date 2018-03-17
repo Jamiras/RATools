@@ -414,9 +414,7 @@ namespace RATools.Parser.Internal
                         tokenizer.Advance();
 
                         var parameters = new List<ExpressionBase>();
-                        var parseError = ParseParameters(tokenizer, parameters);
-                        if (parseError != null)
-                            return parseError;
+                        ParseParameters(tokenizer, parameters);
 
                         var functionCall = new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
                         functionCall.EndLine = tokenizer.Line;
@@ -469,11 +467,14 @@ namespace RATools.Parser.Internal
                 {
                     var parameter = ExpressionBase.Parse(tokenizer);
                     if (parameter.Type == ExpressionType.ParseError)
-                        return parameter;
+                        return ParseError(tokenizer, "Invalid expression", parameter);
 
                     parameters.Add(parameter);
 
                     SkipWhitespace(tokenizer);
+
+                    var commaLine = tokenizer.Line;
+                    var commaColumn = tokenizer.Column;
                     if (tokenizer.NextChar != ',')
                         break;
 
