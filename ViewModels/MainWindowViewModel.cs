@@ -124,25 +124,28 @@ namespace RATools.ViewModels
         public CommandBase RefreshScriptCommand { get; private set; }
         private void RefreshScript()
         {
-            if (Game == null)
-                return;
-                
-            if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
+            if (Game != null)
+                OpenFile(Game.Script.Filename);
+        }
+
+        public bool CloseEditor()
+        {
+            if (Game == null || Game.Script.CompareState != GeneratedCompareState.LocalDiffers)
+                return true;
+
+            var vm = new MessageBoxViewModel("Save changes to " + Game.Script.Title + "?");
+            switch (vm.ShowYesNoCancelDialog())
             {
-                var vm = new MessageBoxViewModel("Revert to the last saved state? Your changes will be lost.");
-                vm.DialogTitle = "Revert Script";
-                if (vm.ShowOkCancelDialog() == DialogResult.Cancel)
-                    return;
+                case DialogResult.Yes:
+                    return SaveScript();
+
+                case DialogResult.No:
+                    return true;
+
+                default:
+                case DialogResult.Cancel:
+                    return false;
             }
-
-            var line = Game.Script.Editor.CursorLine;
-            var column = Game.Script.Editor.CursorColumn;
-
-            var selectedEditor = Game.SelectedEditor.Title;
-            OpenFile(Game.Script.Filename);
-            Game.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
-
-            Game.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }
@@ -151,6 +154,29 @@ namespace RATools.ViewModels
             if (!File.Exists(filename))
             {
                 MessageBoxViewModel.ShowMessage("Could not open " + filename);
+                return;
+            }
+
+            int line = 1;
+            int column = 1;
+            string selectedEditor = null;
+            if (Game != null && Game.Script.Filename == filename)
+            {
+                if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
+                {
+                    var vm = new MessageBoxViewModel("Revert to the last saved state? Your changes will be lost.");
+                    vm.DialogTitle = "Revert Script";
+                    if (vm.ShowOkCancelDialog() == DialogResult.Cancel)
+                        return;
+                }
+
+                // capture current location so we can restore it after refreshing
+                line = Game.Script.Editor.CursorLine;
+                column = Game.Script.Editor.CursorColumn;
+                selectedEditor = Game.SelectedEditor.Title;
+            }
+            else if (!CloseEditor())
+            {
                 return;
             }
 
@@ -215,8 +241,8 @@ namespace RATools.ViewModels
             var existingViewModel = Game as GameViewModel;
             if (existingViewModel == null)
             {
-                SaveScriptCommand = new DelegateCommand(SaveScript);
-                SaveScriptAsCommand = new DelegateCommand(SaveScriptAs);
+                SaveScriptCommand = new DelegateCommand(() => SaveScript());
+                SaveScriptAsCommand = new DelegateCommand(() => SaveScriptAs());
                 RefreshScriptCommand = new DelegateCommand(RefreshScript);
                 UpdateLocalCommand = new DelegateCommand(UpdateLocal);
                 OnPropertyChanged(() => SaveScriptCommand);
@@ -234,6 +260,9 @@ namespace RATools.ViewModels
             {
                 existingViewModel.Script.SetContent(content);
                 viewModel = existingViewModel;
+
+                existingViewModel.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+                existingViewModel.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
             }
             else
             {
@@ -268,12 +297,16 @@ namespace RATools.ViewModels
             RecentFiles = _recentFiles.ToArray();
         }
 
-        private void SaveScript()
+        private bool SaveScript()
         {
+            if (!Game.Script.Filename.Contains(":"))
+                return SaveScriptAs();
+
             Game.Script.Save();
+            return true;
         }
 
-        private void SaveScriptAs()
+        private bool SaveScriptAs()
         {
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Save achievements script";
@@ -286,11 +319,16 @@ namespace RATools.ViewModels
                 Game.Script.Filename = vm.FileNames[0];
                 SaveScript();
             }
+
+            return false;
         }
 
         public CommandBase NewScriptCommand { get; private set; }
         private void NewScript()
         {
+            if (!CloseEditor())
+                return;
+
             var dialog = new NewScriptDialogViewModel();
             dialog.ShowDialog();
         }
@@ -303,6 +341,12 @@ namespace RATools.ViewModels
             {
                 MessageBoxViewModel.ShowMessage("No game loaded");
                 return;
+            }
+
+            if (game.Script.Editor.ErrorsToolWindow.References.Count > 0)
+            {
+                MessageBoxViewModel.ShowMessage("Cannot update while errors exist.");
+                game.Script.Editor.ErrorsToolWindow.IsVisible = true;
             }
 
             var dialog = new UpdateLocalViewModel(game);

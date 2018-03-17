@@ -1,12 +1,12 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
-using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.CodeEditor;
 using Jamiras.ViewModels.CodeEditor.ToolWindows;
 using RATools.Parser;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Windows.Media;
 
@@ -39,10 +39,10 @@ namespace RATools.ViewModels
 
         private readonly GameViewModel _owner;
 
-        protected override void OnContentChanged(ContentChangedEventArgs e)
+        protected override void OnUpdateSyntax(ContentChangedEventArgs e)
         {
             var parser = new AchievementScriptParser();
-            _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Value));
+            _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Content));
 
             if (e.IsAborted)
                 return;
@@ -73,12 +73,16 @@ namespace RATools.ViewModels
                 }
             });
 
-            if (e.IsAborted)
-                return;
+            ServiceRepository.Instance.FindService<ITimerService>().Schedule(() =>
+            {
+                if (e.IsAborted)
+                    return;
 
-            _owner.PopulateEditorList(interpreter);
+                _owner.PopulateEditorList(interpreter);
 
-            base.OnContentChanged(e);
+            }, TimeSpan.FromMilliseconds(700));
+
+            base.OnUpdateSyntax(e);
         }
 
         private ExpressionGroup _parsedContent;

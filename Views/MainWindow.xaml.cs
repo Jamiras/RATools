@@ -53,20 +53,8 @@ namespace RATools.Views
         protected override void OnClosing(CancelEventArgs e)
         {
             var viewModel = DataContext as MainWindowViewModel;
-            if (viewModel != null && viewModel.Game != null && viewModel.Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
-            {
-                var vm = new MessageBoxViewModel("Save changes to " + viewModel.Game.Script.Title + "?");
-                switch (vm.ShowYesNoCancelDialog())
-                {
-                    case Jamiras.ViewModels.DialogResult.Yes:
-                        viewModel.Game.Script.Save();
-                        break;
-
-                    case Jamiras.ViewModels.DialogResult.Cancel:
-                        e.Cancel = true;
-                        break;
-                }
-            }
+            if (viewModel != null && !viewModel.CloseEditor())
+                e.Cancel = true;
 
             base.OnClosing(e);
         }
