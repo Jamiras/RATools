@@ -107,11 +107,27 @@ namespace RATools.ViewModels
         public CommandBase SaveScriptCommand { get; private set; }
         public CommandBase SaveScriptAsCommand { get; private set; }
 
-        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null);
+        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null, OnGameChanged);
         public GameViewModel Game
         {
             get { return (GameViewModel)GetValue(GameProperty); }
             private set { SetValue(GameProperty, value); }
+        }
+
+        private static void OnGameChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            if (e.OldValue == null)
+            {
+                var vm = (MainWindowViewModel)sender;
+                vm.SaveScriptCommand = new DelegateCommand(() => vm.SaveScript());
+                vm.SaveScriptAsCommand = new DelegateCommand(() => vm.SaveScriptAs());
+                vm.RefreshScriptCommand = new DelegateCommand(vm.RefreshScript);
+                vm.UpdateLocalCommand = new DelegateCommand(vm.UpdateLocal);
+                vm.OnPropertyChanged(() => vm.SaveScriptCommand);
+                vm.OnPropertyChanged(() => vm.SaveScriptAsCommand);
+                vm.OnPropertyChanged(() => vm.RefreshScriptCommand);
+                vm.OnPropertyChanged(() => vm.UpdateLocalCommand);
+            }
         }
 
         public static readonly ModelProperty RecentFilesProperty = ModelProperty.Register(typeof(MainWindowViewModel), "RecentFiles", typeof(IEnumerable<string>), null);
@@ -239,17 +255,6 @@ namespace RATools.ViewModels
             }
 
             var existingViewModel = Game as GameViewModel;
-            if (existingViewModel == null)
-            {
-                SaveScriptCommand = new DelegateCommand(() => SaveScript());
-                SaveScriptAsCommand = new DelegateCommand(() => SaveScriptAs());
-                RefreshScriptCommand = new DelegateCommand(RefreshScript);
-                UpdateLocalCommand = new DelegateCommand(UpdateLocal);
-                OnPropertyChanged(() => SaveScriptCommand);
-                OnPropertyChanged(() => SaveScriptAsCommand);
-                OnPropertyChanged(() => RefreshScriptCommand);
-                OnPropertyChanged(() => UpdateLocalCommand);
-            }
 
             // if we're just refreshing the current game script, only update the script content,
             // which will be reprocessed and update the editor list. If it's not the same script,
@@ -299,10 +304,12 @@ namespace RATools.ViewModels
 
         private bool SaveScript()
         {
-            if (!Game.Script.Filename.Contains(":"))
+            // if there isn't a path, the user need to select a save location
+            if (!Game.Script.Filename.Contains("\\"))
                 return SaveScriptAs();
 
             Game.Script.Save();
+            AddRecentFile(Game.Script.Filename);
             return true;
         }
 
@@ -330,7 +337,8 @@ namespace RATools.ViewModels
                 return;
 
             var dialog = new NewScriptDialogViewModel();
-            dialog.ShowDialog();
+            if (dialog.ShowDialog() == DialogResult.Ok)
+                Game = dialog.Finalize();
         }
 
         public CommandBase UpdateLocalCommand { get; private set; }

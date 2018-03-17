@@ -102,24 +102,24 @@ namespace RATools.ViewModels
                     var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
                     editors.Add(achievementViewModel);
                 }
-
-                if (!String.IsNullOrEmpty(RACacheDirectory))
-                {
-                    if (_isN64)
-                        MergePublishedN64(GameId, editors);
-                    else
-                        MergePublished(GameId, editors);
-
-                    MergeLocal(GameId, editors);
-                }
-
-                foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
-                    achievement.UpdateCommonProperties(this);
             }
             else
             {
                 GeneratedAchievementCount = 0;
             }
+
+            if (!String.IsNullOrEmpty(RACacheDirectory))
+            {
+                if (_isN64)
+                    MergePublishedN64(GameId, editors);
+                else
+                    MergePublished(GameId, editors);
+
+                MergeLocal(GameId, editors);
+            }
+
+            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+                achievement.UpdateCommonProperties(this);
 
             Editors = editors;
         }      

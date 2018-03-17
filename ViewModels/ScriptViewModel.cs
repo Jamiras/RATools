@@ -1,8 +1,6 @@
 ﻿using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
-using RATools.Parser;
-using RATools.Parser.Internal;
 using System;
 using System.IO;
 
@@ -15,11 +13,7 @@ namespace RATools.ViewModels
             _owner = owner;
             Title = "Script";
             Editor = new EditorViewModel(owner);
-            Editor.LineChanged += (o, e) =>
-            {
-                ModificationMessage = "Script differs from disk";
-                CompareState = GeneratedCompareState.LocalDiffers;
-            };
+            Editor.LineChanged += (o, e) => SetModified();
         }
 
         private GameViewModel _owner;
@@ -41,7 +35,7 @@ namespace RATools.ViewModels
             var filename = (string)e.NewValue;
             vm.Title = String.IsNullOrEmpty(filename) ? "Script" : Path.GetFileName(filename);
 
-            vm._owner.PopulateEditorList(null);
+            //vm._owner.PopulateEditorList(null);
         }
 
         public void SetContent(string content)
@@ -54,6 +48,12 @@ namespace RATools.ViewModels
         {
             Save(Filename);
             ResetModified();
+        }
+
+        public void SetModified()
+        {
+            ModificationMessage = "Script differs from disk";
+            CompareState = GeneratedCompareState.LocalDiffers;
         }
 
         private void ResetModified()
