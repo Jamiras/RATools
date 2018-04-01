@@ -26,6 +26,9 @@ namespace RATools.Views
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
 
+            var windowSettingsRepository = ServiceRepository.Instance.FindService<IWindowSettingsRepository>();
+            windowSettingsRepository.RestoreSettings(this);
+
             dialogService.RegisterDialogHandler(typeof(NewScriptDialogViewModel), vm => new NewScriptDialog());
             dialogService.RegisterDialogHandler(typeof(UpdateLocalViewModel), vm => new OkCancelView(new UpdateLocalDialog()));
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new GameStatsDialog());
@@ -55,6 +58,12 @@ namespace RATools.Views
             var viewModel = DataContext as MainWindowViewModel;
             if (viewModel != null && !viewModel.CloseEditor())
                 e.Cancel = true;
+
+            if (!e.Cancel)
+            {
+                var windowSettingsRepository = ServiceRepository.Instance.FindService<IWindowSettingsRepository>();
+                windowSettingsRepository.RememberSettings(this);
+            }
 
             base.OnClosing(e);
         }

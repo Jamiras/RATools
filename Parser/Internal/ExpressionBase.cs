@@ -610,13 +610,16 @@ namespace RATools.Parser.Internal
 
                 SkipWhitespace(tokenizer);
                 if (tokenizer.NextChar != ':')
-                    return ParseError(tokenizer, "Expecting colon following key expression");
+                {
+                    ParseError(tokenizer, "Expecting colon following key expression");
+                    break;
+                }
                 tokenizer.Advance();
                 SkipWhitespace(tokenizer);
 
                 var value = ParseClause(tokenizer);
                 if (value.Type == ExpressionType.ParseError)
-                    return value;
+                    break;
 
                 dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
 
@@ -625,7 +628,10 @@ namespace RATools.Parser.Internal
                     break;
 
                 if (tokenizer.NextChar != ',')
-                    return ParseError(tokenizer, "Expecting comma between entries");
+                {
+                    ParseError(tokenizer, "Expecting comma between entries");
+                    break;
+                }
                 tokenizer.Advance();
                 SkipWhitespace(tokenizer);
             }

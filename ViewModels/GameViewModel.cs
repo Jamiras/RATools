@@ -102,6 +102,16 @@ namespace RATools.ViewModels
                     var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
                     editors.Add(achievementViewModel);
                 }
+
+                if (!String.IsNullOrEmpty(interpreter.RichPresence))
+                {
+                    var richPresenceViewModel = new RichPresenceViewModel(this, interpreter.RichPresence);
+                    if (richPresenceViewModel.Lines.Any())
+                        editors.Add(richPresenceViewModel);
+                }
+
+                foreach (var leaderboard in interpreter.Leaderboards)
+                    editors.Add(new LeaderboardViewModel(this, leaderboard));
             }
             else
             {

@@ -96,7 +96,9 @@ namespace RATools.ViewModels
                     {
                         var field = Field.Deserialize(tokenizer);
                         requirement = field.ToString();
-                        note = (field.Type == FieldType.MemoryAddress) ? notes[(int)field.Value] : null;
+                        note = null;
+                        if (field.Type == FieldType.MemoryAddress)
+                            notes.TryGetValue((int)field.Value, out note);
 
                         if (tokenizer.NextChar == '*')
                         {
