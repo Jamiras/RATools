@@ -182,7 +182,23 @@ namespace RATools.ViewModels
             private set { SetValue(TopUsersProperty, value); }
         }
 
-        private void LoadGame()
+        public static readonly ModelProperty NumberOfPlayersProperty = ModelProperty.Register(typeof(GameStatsViewModel), "NumberOfPlayers", typeof(int), 0);
+
+        public int NumberOfPlayers
+        {
+            get { return (int)GetValue(NumberOfPlayersProperty); }
+            private set { SetValue(NumberOfPlayersProperty, value); }
+        }
+
+        public static readonly ModelProperty TotalPointsProperty = ModelProperty.Register(typeof(GameStatsViewModel), "TotalPoints", typeof(int), 400);
+
+        public int TotalPoints
+        {
+            get { return (int)GetValue(TotalPointsProperty); }
+            private set { SetValue(TotalPointsProperty, value); }
+        }
+
+        internal void LoadGame()
         {
             var gamePage = RAWebCache.Instance.GetGamePage(GameId);
             if (gamePage == null)
@@ -199,6 +215,7 @@ namespace RATools.ViewModels
 
             AchievementStats mostWon = null;
             AchievementStats leastWon = null;
+            var totalPoints = 0;
 
             var allStats = new List<AchievementStats>();
             do
@@ -216,10 +233,21 @@ namespace RATools.ViewModels
 
                 if (stats.EarnedBy > 0)
                 {
-                    tokenizer.ReadTo("(");
-                    tokenizer.Advance();
-                    var hardcoreWinners = tokenizer.ReadNumber();
-                    stats.EarnedHardcoreBy = Int32.Parse(hardcoreWinners.ToString());
+                    tokenizer.SkipWhitespace();
+                    if (tokenizer.NextChar == '(')
+                    {
+                        tokenizer.Advance();
+                        var hardcoreWinners = tokenizer.ReadNumber();
+                        stats.EarnedHardcoreBy = Int32.Parse(hardcoreWinners.ToString());
+                    }
+                }
+
+                if (NumberOfPlayers == 0)
+                {
+                    tokenizer.ReadTo("of ");
+                    tokenizer.Advance(3);
+                    var players = tokenizer.ReadNumber();
+                    NumberOfPlayers = Int32.Parse(players.ToString());
                 }
 
                 tokenizer.ReadTo("<a href='/Achievement/");
@@ -246,6 +274,7 @@ namespace RATools.ViewModels
                 }
 
                 allStats.Add(stats);
+                totalPoints += stats.Points;
 
                 if (mostWon == null)
                 {
@@ -264,6 +293,9 @@ namespace RATools.ViewModels
                         leastWon = stats;
                 }
             } while (true);
+
+            var masteryPoints = (totalPoints * 2).ToString();
+            TotalPoints = totalPoints;
 
             var masters = new List<string>();
             tokenizer = Tokenizer.CreateTokenizer(gamePage);
@@ -285,7 +317,7 @@ namespace RATools.ViewModels
                 tokenizer.Advance();
 
                 var points = tokenizer.ReadTo('<');
-                if (points != "800")
+                if (points != masteryPoints)
                     break;
 
                 masters.Add(userName.ToString());
@@ -386,7 +418,7 @@ namespace RATools.ViewModels
                     else
                         stats = userStats[index];
 
-                    if (stats.PointsEarned == 400)
+                    if (stats.PointsEarned == totalPoints)
                         continue;
 
                     var achievements = masteryJson.GetField("achievements").ObjectValue;
@@ -450,7 +482,7 @@ namespace RATools.ViewModels
                 double perSessionAdjustment = user.GameTime.TotalSeconds / user.Achievements.Count;
                 user.GameTime += TimeSpan.FromSeconds(user.Sessions * perSessionAdjustment);
 
-                if (user.PointsEarned == 400)
+                if (user.PointsEarned == totalPoints)
                 {
                     sessions.Add(user.Sessions);
                     days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
