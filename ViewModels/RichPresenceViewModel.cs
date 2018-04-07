@@ -18,14 +18,17 @@ namespace RATools.ViewModels
             _richPresence = richPresence ?? string.Empty;
             var genLines = _richPresence.Trim().Length > 0 ? _richPresence.Replace("\r\n", "\n").Split('\n') : new string[0];
             string[] localLines = new string[0];
-            
-            _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
-            if (File.Exists(_richFile))
+
+            if (!String.IsNullOrEmpty(owner.RACacheDirectory))
             {
-                var coreRichPresence = File.ReadAllText(_richFile);
-                RichPresenceLength = coreRichPresence.Length;
-                if (RichPresenceLength > 0)
-                    localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
+                _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
+                if (File.Exists(_richFile))
+                {
+                    var coreRichPresence = File.ReadAllText(_richFile);
+                    RichPresenceLength = coreRichPresence.Length;
+                    if (RichPresenceLength > 0)
+                        localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
+                }
             }
 
             var lines = new List<RichPresenceLine>();
