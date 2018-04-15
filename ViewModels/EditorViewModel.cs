@@ -8,6 +8,8 @@ using RATools.Parser;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Windows.Media;
 
 namespace RATools.ViewModels
@@ -98,6 +100,48 @@ namespace RATools.ViewModels
 
         public CommandBase GotoDefinitionCommand { get; private set; }
 
+        private string BuildTooltip(ExpressionBase expression)
+        {
+            if (expression.Line > 0 && expression.EndLine > 0)
+            {
+                var text = GetText(expression.Line, expression.Column, expression.EndLine, expression.EndColumn + 1);
+                var builder = new StringBuilder();
+                bool lastCharWasWhitespace = true;
+                foreach (var c in text)
+                {
+                    if (Char.IsWhiteSpace(c))
+                    {
+                        if (lastCharWasWhitespace)
+                            continue;
+
+                        builder.Append(' ');
+                        lastCharWasWhitespace = true;
+                    }
+                    else
+                    {
+                        builder.Append(c);
+                        lastCharWasWhitespace = false;
+                    }
+                }
+
+                if (lastCharWasWhitespace && builder.Length > 0)
+                    builder.Length--;
+
+                return builder.ToString();
+            }
+
+            var tooltip = expression.ToString();
+            var index = tooltip.IndexOf(':');
+            if (index >= 0)
+            {
+                if (tooltip[index + 1] == ' ')
+                    index++;
+                tooltip = tooltip.Substring(index + 1);
+            }
+
+            return tooltip;
+        }
+
         protected override void OnFormatLine(LineFormatEventArgs e)
         {
             int line = e.Line.Line;
@@ -108,20 +152,22 @@ namespace RATools.ViewModels
             {
                 string tooltip = null;
 
-                var variable = expression as VariableExpression;
-                if (variable != null)
+                if (_scope != null)
                 {
-                    var value = _scope.GetVariable(variable.Name);
-                    if (value != null)
+                    var variable = expression as VariableExpression;
+                    if (variable != null)
                     {
-                        tooltip = value.ToString();
-                        var index = tooltip.IndexOf(':');
-                        if (index >= 0)
-                        {
-                            if (tooltip[index + 1] == ' ')
-                                index++;
-                            tooltip = tooltip.Substring(index + 1);
-                        }
+                        var value = _scope.GetVariable(variable.Name);
+                        if (value != null)
+                            tooltip = BuildTooltip(value);
+                    }
+
+                    var functionCall = expression as FunctionCallExpression;
+                    if (functionCall != null)
+                    {
+                        var function = _scope.GetFunction(functionCall.FunctionName.Name);
+                        if (function != null && function.Expressions.Count == 1)
+                            tooltip = BuildTooltip(function.Expressions.First());
                     }
                 }
 
