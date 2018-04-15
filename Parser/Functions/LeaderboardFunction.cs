@@ -9,12 +9,12 @@ namespace RATools.Parser.Functions
         public LeaderboardFunction()
             : base("leaderboard")
         {
-            Parameters.Add(new VariableExpression("title"));
-            Parameters.Add(new VariableExpression("description"));
-            Parameters.Add(new VariableExpression("start"));
-            Parameters.Add(new VariableExpression("cancel"));
-            Parameters.Add(new VariableExpression("submit"));
-            Parameters.Add(new VariableExpression("value"));
+            Parameters.Add(new VariableDefinitionExpression("title"));
+            Parameters.Add(new VariableDefinitionExpression("description"));
+            Parameters.Add(new VariableDefinitionExpression("start"));
+            Parameters.Add(new VariableDefinitionExpression("cancel"));
+            Parameters.Add(new VariableDefinitionExpression("submit"));
+            Parameters.Add(new VariableDefinitionExpression("value"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

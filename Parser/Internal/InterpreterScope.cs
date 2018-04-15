@@ -9,7 +9,7 @@ namespace RATools.Parser.Internal
         public InterpreterScope()
         {
             _functions = new TinyDictionary<string, FunctionDefinitionExpression>();
-            _variables = new TinyDictionary<string, KeyValuePair<VariableExpression, ExpressionBase>>();
+            _variables = new TinyDictionary<string, KeyValuePair<VariableDefinitionExpression, ExpressionBase>>();
         }
 
         public InterpreterScope(InterpreterScope parent)
@@ -20,7 +20,7 @@ namespace RATools.Parser.Internal
         }
 
         private readonly TinyDictionary<string, FunctionDefinitionExpression> _functions;
-        private readonly TinyDictionary<string, KeyValuePair<VariableExpression, ExpressionBase>> _variables;
+        private readonly TinyDictionary<string, KeyValuePair<VariableDefinitionExpression, ExpressionBase>> _variables;
         private readonly InterpreterScope _parent;
 
         internal int VariableCount
@@ -60,7 +60,7 @@ namespace RATools.Parser.Internal
         /// <returns>Value of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariable(string variableName)
         {
-            KeyValuePair<VariableExpression, ExpressionBase> variable;
+            KeyValuePair<VariableDefinitionExpression, ExpressionBase> variable;
             if (_variables.TryGetValue(variableName, out variable))
                 return variable.Value;
 
@@ -77,7 +77,7 @@ namespace RATools.Parser.Internal
         /// <returns>Definition of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariableDefinition(string variableName)
         {
-            KeyValuePair<VariableExpression, ExpressionBase> variable;
+            KeyValuePair<VariableDefinitionExpression, ExpressionBase> variable;
             if (_variables.TryGetValue(variableName, out variable))
                 return variable.Key;
 
@@ -110,7 +110,7 @@ namespace RATools.Parser.Internal
             {
                 if (scope._variables.ContainsKey(variable.Name))
                 {
-                    scope.DefineVariable(variable, value);
+                    scope.DefineVariable(new VariableDefinitionExpression(variable), value);
                     return;
                 }
 
@@ -118,7 +118,7 @@ namespace RATools.Parser.Internal
             }
 
             // variable not defined, store in the current scope.
-            DefineVariable(variable, value);
+            DefineVariable(new VariableDefinitionExpression(variable), value);
         }
 
         /// <summary>
@@ -126,9 +126,9 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <param name="value">The value.</param>
-        public void DefineVariable(VariableExpression variable, ExpressionBase value)
+        public void DefineVariable(VariableDefinitionExpression variable, ExpressionBase value)
         {
-            _variables[variable.Name] = new KeyValuePair<VariableExpression, ExpressionBase>(variable, value);
+            _variables[variable.Name] = new KeyValuePair<VariableDefinitionExpression, ExpressionBase>(variable, value);
         }
 
         /// <summary>

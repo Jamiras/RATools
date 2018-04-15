@@ -9,7 +9,7 @@ namespace RATools.Parser.Functions
         public ComparisonModificationFunction(string name)
             : base(name)
         {
-            Parameters.Add(new VariableExpression("comparison"));
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

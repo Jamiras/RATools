@@ -7,9 +7,9 @@ namespace RATools.Parser.Functions
         public RichPresenceLookupFunction()
             : base("rich_presence_lookup")
         {
-            Parameters.Add(new VariableExpression("name"));
-            Parameters.Add(new VariableExpression("expression"));
-            Parameters.Add(new VariableExpression("dictionary"));
+            Parameters.Add(new VariableDefinitionExpression("name"));
+            Parameters.Add(new VariableDefinitionExpression("expression"));
+            Parameters.Add(new VariableDefinitionExpression("dictionary"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

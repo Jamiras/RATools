@@ -185,7 +185,7 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    innerScope.DefineVariable(assignedParameter.Variable, value);
+                    innerScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
                     namedParameters = true;
                 }
                 else
@@ -213,7 +213,7 @@ namespace RATools.Parser.Internal
                     {
                         var variableName = function.Parameters.ElementAt(index).Name;
                         providedParameters.Remove(variableName);
-                        innerScope.DefineVariable(new VariableExpression(variableName), value);
+                        innerScope.DefineVariable(new VariableDefinitionExpression(variableName), value);
                     }
                     else
                     {
@@ -239,7 +239,7 @@ namespace RATools.Parser.Internal
                     return null;
                 }
 
-                innerScope.DefineVariable(new VariableExpression(parameter), value);
+                innerScope.DefineVariable(new VariableDefinitionExpression(parameter), value);
             }
 
             error = null;

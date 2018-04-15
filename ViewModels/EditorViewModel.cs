@@ -106,13 +106,33 @@ namespace RATools.ViewModels
 
             foreach (var expression in expressions)
             {
+                string tooltip = null;
+
+                var variable = expression as VariableExpression;
+                if (variable != null)
+                {
+                    var value = _scope.GetVariable(variable.Name);
+                    if (value != null)
+                    {
+                        tooltip = value.ToString();
+                        var index = tooltip.IndexOf(':');
+                        if (index >= 0)
+                        {
+                            if (tooltip[index + 1] == ' ')
+                                index++;
+                            tooltip = tooltip.Substring(index + 1);
+                        }
+                    }
+                }
+
                 var expressionStart = (expression.Line == line) ? expression.Column : 1;
                 var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.Text.Length + 1;
 
-                if (expression is ParseErrorExpression)
-                    e.SetError(expressionStart, expressionEnd - expressionStart + 1, ((ParseErrorExpression)expression).Message);
+                var parseError = expression as ParseErrorExpression;
+                if (parseError != null)
+                    e.SetError(expressionStart, expressionEnd - expressionStart + 1, parseError.Message);
                 else
-                    e.SetColor(expressionStart, expressionEnd - expressionStart + 1, (int)expression.Type);
+                    e.SetColor(expressionStart, expressionEnd - expressionStart + 1, (int)expression.Type, tooltip);
             }
 
             base.OnFormatLine(e);

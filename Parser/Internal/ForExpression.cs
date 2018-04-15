@@ -6,7 +6,7 @@ namespace RATools.Parser.Internal
 {
     internal class ForExpression : ExpressionBase, INestedExpressions
     {
-        public ForExpression(VariableExpression iteratorName, ExpressionBase range)
+        public ForExpression(VariableDefinitionExpression iteratorName, ExpressionBase range)
             : base(ExpressionType.For)
         {
             IteratorName = iteratorName;
@@ -19,7 +19,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the name of the iterator variable.
         /// </summary>
-        public VariableExpression IteratorName { get; private set; }
+        public VariableDefinitionExpression IteratorName { get; private set; }
 
         /// <summary>
         /// Gets the expression that defines the values for each iteration.
@@ -58,7 +58,7 @@ namespace RATools.Parser.Internal
             var iteratorName = tokenizer.ReadIdentifier();
             if (iteratorName.IsEmpty)
                 return ParseError(tokenizer, "Invalid function name", line, column);
-            var iterator = new VariableExpression(iteratorName.ToString(), line, column);
+            var iterator = new VariableDefinitionExpression(iteratorName.ToString(), line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
 

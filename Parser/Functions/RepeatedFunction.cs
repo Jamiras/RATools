@@ -8,8 +8,8 @@ namespace RATools.Parser.Functions
             : base("repeated")
         {
             Parameters.Clear();
-            Parameters.Add(new VariableExpression("count"));
-            Parameters.Add(new VariableExpression("comparison"));
+            Parameters.Add(new VariableDefinitionExpression("count"));
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

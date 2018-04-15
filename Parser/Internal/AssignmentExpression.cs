@@ -89,7 +89,7 @@ namespace RATools.Parser.Internal
                 }
                 else
                 {
-                    expressions.Add(Variable);
+                    expressions.Add(new VariableDefinitionExpression(Variable));
                 }
             }
 

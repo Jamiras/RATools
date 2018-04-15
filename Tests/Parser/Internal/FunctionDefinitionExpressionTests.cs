@@ -13,8 +13,8 @@ namespace RATools.Test.Parser.Internal
         public void TestAppendString()
         {
             var expr = new FunctionDefinitionExpression("func");
-            expr.Parameters.Add(new VariableExpression("p1"));
-            expr.Parameters.Add(new VariableExpression("p2"));
+            expr.Parameters.Add(new VariableDefinitionExpression("p1"));
+            expr.Parameters.Add(new VariableDefinitionExpression("p2"));
 
             var builder = new StringBuilder();
             expr.AppendString(builder);

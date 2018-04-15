@@ -12,8 +12,8 @@ namespace RATools.Parser.Functions
         public RichPresenceDisplayFunction()
             : this("rich_presence_display")
         {
-            Parameters.Add(new VariableExpression("format_string"));
-            Parameters.Add(new VariableExpression("..."));
+            Parameters.Add(new VariableDefinitionExpression("format_string"));
+            Parameters.Add(new VariableDefinitionExpression("..."));
         }
 
         protected RichPresenceDisplayFunction(string name)
