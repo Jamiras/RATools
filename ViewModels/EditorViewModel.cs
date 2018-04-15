@@ -47,12 +47,6 @@ namespace RATools.ViewModels
             if (e.IsAborted)
                 return;
 
-            var interpreter = new AchievementScriptInterpreter();
-            interpreter.Run(_parsedContent, out _scope);
-
-            if (e.IsAborted)
-                return;
-
             ServiceRepository.Instance.FindService<IBackgroundWorkerService>().InvokeOnUiThread(() =>
             {
                 ErrorsToolWindow.References.Clear();
@@ -72,6 +66,18 @@ namespace RATools.ViewModels
                     });
                 }
             });
+
+            if (e.IsAborted)
+                return;
+
+            if (e.IsWhitespaceOnlyChange)
+                return;
+
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.Run(_parsedContent, out _scope);
+
+            if (e.IsAborted)
+                return;
 
             ServiceRepository.Instance.FindService<ITimerService>().Schedule(() =>
             {
