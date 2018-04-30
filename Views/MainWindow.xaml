@@ -45,7 +45,7 @@
                 <MenuItem Header="_Copy" Command="{Binding Game.SelectedEditor.Editor.CopyCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+C" />
                 <MenuItem Header="_Paste" Command="{Binding Game.SelectedEditor.Editor.PasteCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+V" />
                 <Separator />
-                <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}" />
+                <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}" controls:CommandBinding.InputGesture="Ctrl+L" />
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="_Hexadecimal Values" IsCheckable="True" IsChecked="{Binding ShowHexValues}" />
