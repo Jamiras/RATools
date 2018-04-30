@@ -372,6 +372,9 @@ namespace RATools.ViewModels
 
         internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
         {
+            foreach (var group in RequirementGroups)
+                group.OnShowHexValuesChanged(e);
+
             Generated.OnShowHexValuesChanged(e);
             Local.OnShowHexValuesChanged(e);
             Unofficial.OnShowHexValuesChanged(e);
