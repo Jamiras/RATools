@@ -254,8 +254,11 @@ namespace RATools.Parser
                 context.Trigger.Remove(extraRequirement);
 
                 var requirement = context.LastRequirement;
-                requirement.Operator = op;
-                requirement.Right = extraRequirement.Left;
+                if (requirement != null)
+                {
+                    requirement.Operator = op;
+                    requirement.Right = extraRequirement.Left;
+                }
             }
 
             return null;
