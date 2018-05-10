@@ -156,6 +156,7 @@ namespace RATools.ViewModels
                     return SaveScript();
 
                 case DialogResult.No:
+                    Game.Script.DeleteBackup();
                     return true;
 
                 default:
@@ -196,6 +197,27 @@ namespace RATools.ViewModels
                 return;
             }
 
+            var backupFilename = ScriptViewModel.GetBackupFilename(filename);
+            bool usingBackup = false;
+            if (File.Exists(backupFilename))
+            {
+                var vm2 = new MessageBoxViewModel("Found an autosave file from " + File.GetLastWriteTime(backupFilename) + ".\nDo you want to open it instead?");
+                vm2.DialogTitle = Path.GetFileName(filename);
+                switch (vm2.ShowYesNoCancelDialog())
+                {
+                    case DialogResult.Cancel:
+                        return;
+
+                    case DialogResult.Yes:
+                        filename = backupFilename;
+                        usingBackup = true;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
             var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             logger.WriteVerbose("Opening " + filename);
 
@@ -229,7 +251,9 @@ namespace RATools.ViewModels
                 return;
             }
 
-            AddRecentFile(filename);
+            if (!usingBackup)
+                AddRecentFile(filename);
+
             logger.WriteVerbose("Game ID: " + gameId);
 
             var gameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
@@ -271,7 +295,17 @@ namespace RATools.ViewModels
             }
             else
             {
-                viewModel.Script.Filename = filename;
+                if (usingBackup)
+                {
+                    viewModel.Script.Filename = Path.GetFileName(filename);
+                    var title = viewModel.Title + " (from backup)";
+                    viewModel.SetValue(GameViewModel.TitleProperty, title);
+                }
+                else
+                {
+                    viewModel.Script.Filename = filename;
+                }
+
                 viewModel.Script.SetContent(content);
                 Game = viewModel;
             }

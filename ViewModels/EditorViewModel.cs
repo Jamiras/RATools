@@ -81,6 +81,7 @@ namespace RATools.ViewModels
             if (e.IsAborted)
                 return;
 
+            // wait a short while before updating the editor list
             ServiceRepository.Instance.FindService<ITimerService>().Schedule(() =>
             {
                 if (e.IsAborted)
@@ -91,6 +92,25 @@ namespace RATools.ViewModels
             }, TimeSpan.FromMilliseconds(700));
 
             base.OnUpdateSyntax(e);
+        }
+
+        protected override void OnContentChanged(ContentChangedEventArgs e)
+        {
+            // create a backup file in a few seconds
+            if (!String.IsNullOrEmpty(_owner.Script.Filename) && _owner.Script.Filename.Contains('\\'))
+            {
+                ServiceRepository.Instance.FindService<ITimerService>().Schedule(() =>
+                {
+                    if (e.IsAborted)
+                        return;
+
+                    if (_owner.Script.CompareState == GeneratedCompareState.LocalDiffers)
+                        _owner.Script.SaveBackup(e.Content);
+
+                }, TimeSpan.FromSeconds(5));
+            }
+
+            base.OnContentChanged(e);
         }
 
         private ExpressionGroup _parsedContent;

@@ -34,14 +34,34 @@ namespace RATools.ViewModels
             var vm = (ScriptViewModel)sender;
             var filename = (string)e.NewValue;
             vm.Title = String.IsNullOrEmpty(filename) ? "Script" : Path.GetFileName(filename);
-
-            //vm._owner.PopulateEditorList(null);
         }
 
         public void SetContent(string content)
         {
             Editor.SetContent(content);
             ResetModified();
+        }
+
+        public static string GetBackupFilename(string filename)
+        {
+            var partial = Path.GetFileName(filename);
+            return Path.Combine(Path.GetTempPath(), partial);
+        }
+
+        internal void SaveBackup(string content)
+        {
+            var filename = GetBackupFilename(Filename);
+
+            // write to a tmp file so we don't destroy the actual backup if something happens while we're writing
+            using (var temp = File.CreateText(filename + ".tmp"))
+            {
+                temp.Write(content);
+            }
+
+            // delete the previous backup (if present) and rename the tmp file
+            if (File.Exists(filename))
+                File.Delete(filename);
+            File.Move(filename + ".tmp", filename);
         }
 
         public void Save()
@@ -69,6 +89,15 @@ namespace RATools.ViewModels
                 foreach (var line in Editor.Lines)
                     file.WriteLine(line.Text);
             }
+
+            DeleteBackup();
+        }
+
+        public void DeleteBackup()
+        { 
+            var backupFilename = GetBackupFilename(Filename);
+            if (File.Exists(backupFilename))
+                File.Delete(backupFilename);
         }
     }
 }
