@@ -72,13 +72,13 @@ namespace RATools.ViewModels
             if (e.IsAborted)
                 return;
 
-            if (e.IsWhitespaceOnlyChange)
-                return;
-
             var interpreter = new AchievementScriptInterpreter();
             interpreter.Run(_parsedContent, out _scope);
 
             if (e.IsAborted)
+                return;
+
+            if (e.IsWhitespaceOnlyChange)
                 return;
 
             // wait a short while before updating the editor list
