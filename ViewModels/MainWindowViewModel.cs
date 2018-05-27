@@ -141,7 +141,10 @@ namespace RATools.ViewModels
         private void RefreshScript()
         {
             if (Game != null)
+            {
+                Game.Script.DeleteBackup();
                 OpenFile(Game.Script.Filename);
+            }
         }
 
         public bool CloseEditor()
