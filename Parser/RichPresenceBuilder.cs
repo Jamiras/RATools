@@ -23,6 +23,7 @@ namespace RATools.Parser
         private TinyDictionary<string, IDictionary<int, string>> _lookupFields;
 
         public string DisplayString { get; set; }
+        public int Line { get; set; }
 
         public void AddConditionalDisplayString(string condition, string displayString)
         {

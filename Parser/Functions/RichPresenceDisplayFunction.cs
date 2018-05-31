@@ -29,6 +29,7 @@ namespace RATools.Parser.Functions
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
+            scope = new InterpreterScope(scope);
             scope.Context = new RichPresenceDisplayContext { RichPresence = context.RichPresence };
 
             if (!ProcessRichPresenceDisplay(stringExpression, scope, out result))
@@ -44,6 +45,9 @@ namespace RATools.Parser.Functions
         {
             result = null;
             richPresence.DisplayString = displayString;
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
+                richPresence.Line = functionCall.Line;
             return true;
         }
 

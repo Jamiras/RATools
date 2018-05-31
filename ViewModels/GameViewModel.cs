@@ -118,7 +118,10 @@ namespace RATools.ViewModels
                 {
                     var richPresenceViewModel = new RichPresenceViewModel(this, interpreter.RichPresence);
                     if (richPresenceViewModel.Lines.Any())
+                    {
+                        richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
                         editors.Add(richPresenceViewModel);
+                    }
                 }
 
                 foreach (var leaderboard in interpreter.Leaderboards)

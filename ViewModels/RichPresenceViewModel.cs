@@ -226,6 +226,8 @@ namespace RATools.ViewModels
             get { return _hasGenerated; }
         }
 
+        public int SourceLine { get; set; }
+
         public int RichPresenceLength { get; private set; }
 
         public int RichPresenceMaxLength
