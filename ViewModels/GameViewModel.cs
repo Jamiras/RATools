@@ -1,4 +1,5 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.IO.Serialization;
 using Jamiras.Services;
@@ -24,6 +25,7 @@ namespace RATools.ViewModels
             Script = new ScriptViewModel(this);
             SelectedEditor = Script;
             Notes = new TinyDictionary<int, string>();
+            GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
@@ -85,6 +87,15 @@ namespace RATools.ViewModels
         }
 
         public ScriptViewModel Script { get; private set; }
+
+        public CommandBase<int> GoToSourceCommand { get; private set; }
+        private void GoToSource(int line)
+        {
+            SelectedEditor = Script;
+            Script.Editor.MoveCursorTo(line, Script.Editor.Lines[line - 1].Text.Length + 1, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
+            Script.Editor.MoveCursorTo(line, 0, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.Highlighting);
+            Script.Editor.IsFocusRequested = true;
+        }
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
         { 

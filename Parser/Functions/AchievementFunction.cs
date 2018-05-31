@@ -61,9 +61,14 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
                 return false;
 
+            var newAchievement = achievement.ToAchievement();
+            var functionCall = scope.GetOutermostContext<FunctionCallExpression>();
+            if (functionCall != null)
+                newAchievement.SourceLine = functionCall.Line;
+
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
-            context.Achievements.Add(achievement.ToAchievement());
+            context.Achievements.Add(newAchievement);
             return true;
         }
     }

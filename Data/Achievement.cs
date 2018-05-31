@@ -62,6 +62,8 @@ namespace RATools.Data
         /// </summary>
         public IEnumerable<IEnumerable<Requirement>> AlternateRequirements { get; internal set; }
 
+        internal int SourceLine { get; set; }
+
         /// <summary>
         /// Determines if the achievement's requirements match a second achievement.
         /// </summary>

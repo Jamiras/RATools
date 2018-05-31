@@ -114,6 +114,11 @@ namespace RATools.ViewModels
             get { return Generated.Achievement != null; }
         }
 
+        public int SourceLine
+        {
+            get { return (Generated.Achievement != null) ? Generated.Achievement.SourceLine : 0; }
+        }
+
         public AchievementViewModel Generated { get; private set; }
         public AchievementViewModel Local { get; private set; }
         public AchievementViewModel Unofficial { get; private set; }

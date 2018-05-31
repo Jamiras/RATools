@@ -146,14 +146,35 @@ namespace RATools.Parser.Internal
         internal T GetContext<T>()
             where T : class
         {
-            var context = Context as T;
-            if (context != null)
-                return context;
+            var scope = this;
+            do
+            {
+                var context = scope.Context as T;
+                if (context != null)
+                    return context;
 
-            if (_parent != null)
-                return _parent.GetContext<T>();
+                scope = scope._parent;
+            } while (scope != null);
 
             return null;
+        }
+
+        internal T GetOutermostContext<T>()
+            where T : class
+        {
+            T outermostContext = null;
+
+            var scope = this;
+            do
+            {
+                var context = scope.Context as T;
+                if (context != null)
+                    outermostContext = context;
+
+                scope = scope._parent;
+            } while (scope != null);
+
+            return outermostContext;
         }
 
         internal int Depth { get; private set; }

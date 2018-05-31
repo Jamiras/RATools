@@ -106,6 +106,8 @@ namespace RATools.Parser.Internal
             if (functionScope == null)
                 return false;
 
+            functionScope.Context = this;
+
             if (!function.Evaluate(functionScope, out result))
             {
                 if (result.Line == 0)
