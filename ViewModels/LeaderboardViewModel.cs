@@ -61,6 +61,11 @@ namespace RATools.ViewModels
             get { return true; }
         }
 
+        public int SourceLine
+        {
+            get { return _leaderboard.SourceLine; }
+        }
+
         public class LeaderboardGroupViewModel
         {
             public LeaderboardGroupViewModel(string label, IEnumerable<Requirement> requirements, IDictionary<int, string> notes)

@@ -47,6 +47,10 @@ namespace RATools.Parser.Functions
             if (leaderboard.Value == null)
                 return false;
 
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
+                leaderboard.SourceLine = functionCall.Line;
+
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
             context.Leaderboards.Add(leaderboard);
