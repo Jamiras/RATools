@@ -92,8 +92,7 @@ namespace RATools.ViewModels
         private void GoToSource(int line)
         {
             SelectedEditor = Script;
-            Script.Editor.MoveCursorTo(line, Script.Editor.Lines[line - 1].Text.Length + 1, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
-            Script.Editor.MoveCursorTo(line, 0, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.Highlighting);
+            Script.Editor.GotoLine(line);
             Script.Editor.IsFocusRequested = true;
         }
 

@@ -237,6 +237,7 @@ namespace RATools.ViewModels
                     var function = _scope.GetFunction(functionCall.FunctionName.Name);
                     if (function != null && function.Line != 0)
                     {
+                        GotoLine(function.Name.Line);
                         MoveCursorTo(function.Name.Line, function.Name.Column, MoveCursorFlags.None);
                         MoveCursorTo(function.Name.EndLine, function.Name.EndColumn + 1, MoveCursorFlags.Highlighting);
                     }
