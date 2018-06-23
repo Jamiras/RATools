@@ -8,8 +8,8 @@ namespace RATools.Parser.Functions
         public RichPresenceValueFunction()
             : base("rich_presence_value")
         {
-            Parameters.Add(new VariableExpression("name"));
-            Parameters.Add(new VariableExpression("expression"));
+            Parameters.Add(new VariableDefinitionExpression("name"));
+            Parameters.Add(new VariableDefinitionExpression("expression"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

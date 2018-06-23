@@ -15,7 +15,7 @@ namespace RATools.ViewModels
             _achievements = new ObservableCollection<UpdateAchievementViewModel>();
             DialogTitle = "Update Local - " + game.Title;
 
-            foreach (var achievement in game.Achievements.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in game.Editors.OfType<GeneratedAchievementViewModel>())
             {
                 if (achievement.IsGenerated || achievement.Local.Achievement != null)
                     _achievements.Add(new UpdateAchievementViewModel(achievement));

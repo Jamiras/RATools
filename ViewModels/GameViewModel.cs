@@ -1,4 +1,5 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.IO.Serialization;
 using Jamiras.Services;
@@ -17,39 +18,24 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Title}")]
     public class GameViewModel : ViewModelBase
     {
-        public GameViewModel(AchievementScriptInterpreter parser, string raCacheDirectory)
-            : this(parser.GameId, parser.GameTitle, raCacheDirectory, parser.Achievements)
-        {
-            var richPresenceViewModel = new RichPresenceViewModel(this, parser.RichPresence);
-            if (richPresenceViewModel.Lines.Any())
-                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(richPresenceViewModel);
-
-            foreach (var leaderboard in parser.Leaderboards)
-                ((ICollection<GeneratedItemViewModelBase>)Achievements).Add(new LeaderboardViewModel(this, leaderboard));
-        }
-
         public GameViewModel(int gameId, string title)
         {
             GameId = gameId;
             Title = title;
-            Achievements = new GeneratedItemViewModelBase[0];
+            Script = new ScriptViewModel(this);
+            SelectedEditor = Script;
+            Notes = new TinyDictionary<int, string>();
+            GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
 
         public GameViewModel(int gameId, string title, string raCacheDirectory)
-            : this(gameId, title, raCacheDirectory, new Achievement[0])
-        {
-
-        }
-
-        private GameViewModel(int gameId, string title, string raCacheDirectory, IEnumerable<Achievement> achievements)
             : this(gameId, title)
         {
             RACacheDirectory = raCacheDirectory;
 
-            Notes = new TinyDictionary<int, string>();
-            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, GameId + "-Notes2.txt")))
+            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, gameId + "-Notes2.txt")))
             {
                 var reader = new StreamReader(notesStream);
                 var firstChar = reader.Peek();
@@ -98,27 +84,68 @@ namespace RATools.ViewModels
             }
 
             _logger.WriteVerbose("Read " + Notes.Count + " code notes");
+        }
 
-            var achievementViewModels = new List<GeneratedItemViewModelBase>(achievements.Count());
-            foreach (var achievement in achievements)
+        public ScriptViewModel Script { get; private set; }
+
+        public CommandBase<int> GoToSourceCommand { get; private set; }
+        private void GoToSource(int line)
+        {
+            SelectedEditor = Script;
+            Script.Editor.GotoLine(line);
+            Script.Editor.IsFocusRequested = true;
+        }
+
+        internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
+        { 
+            var editors = new List<GeneratedItemViewModelBase>();
+            if (Script != null)
+                editors.Add(Script);
+
+            if (interpreter != null)
             {
-                var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
-                achievementViewModels.Add(achievementViewModel);
+                GeneratedAchievementCount = interpreter.Achievements.Count();
+                editors.Capacity += GeneratedAchievementCount;
+
+                foreach (var achievement in interpreter.Achievements)
+                {
+                    var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
+                    editors.Add(achievementViewModel);
+                }
+
+                if (!String.IsNullOrEmpty(interpreter.RichPresence))
+                {
+                    var richPresenceViewModel = new RichPresenceViewModel(this, interpreter.RichPresence);
+                    if (richPresenceViewModel.Lines.Any())
+                    {
+                        richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
+                        editors.Add(richPresenceViewModel);
+                    }
+                }
+
+                foreach (var leaderboard in interpreter.Leaderboards)
+                    editors.Add(new LeaderboardViewModel(this, leaderboard));
             }
-            GeneratedAchievementCount = achievementViewModels.Count;
-
-            if (_isN64)
-                MergePublishedN64(GameId, achievementViewModels);
             else
-                MergePublished(GameId, achievementViewModels);
+            {
+                GeneratedAchievementCount = 0;
+            }
 
-            MergeLocal(GameId, achievementViewModels);
+            if (!String.IsNullOrEmpty(RACacheDirectory))
+            {
+                if (_isN64)
+                    MergePublishedN64(GameId, editors);
+                else
+                    MergePublished(GameId, editors);
 
-            foreach (var achievement in achievementViewModels.OfType<GeneratedAchievementViewModel>())
+                MergeLocal(GameId, editors);
+            }
+
+            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
                 achievement.UpdateCommonProperties(this);
 
-            Achievements = achievementViewModels;
-        }
+            Editors = editors;
+        }      
 
         private LocalAchievements _localAchievements;
         private readonly bool _isN64;
@@ -128,18 +155,18 @@ namespace RATools.ViewModels
         internal string RACacheDirectory { get; private set; }
         internal TinyDictionary<int, string> Notes { get; private set; }
         
-        public static readonly ModelProperty AchievementsProperty = ModelProperty.Register(typeof(GameViewModel), "Achievements", typeof(IEnumerable<GeneratedItemViewModelBase>), null);
-        public IEnumerable<GeneratedItemViewModelBase> Achievements
+        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<GeneratedItemViewModelBase>), new GeneratedItemViewModelBase[0]);
+        public IEnumerable<GeneratedItemViewModelBase> Editors
         {
-            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(AchievementsProperty); }
-            private set { SetValue(AchievementsProperty, value); }
+            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(EditorsProperty); }
+            private set { SetValue(EditorsProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedAchievementProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedAchievement", typeof(GeneratedItemViewModelBase), null);
-        public GeneratedItemViewModelBase SelectedAchievement
+        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(GeneratedItemViewModelBase), null);
+        public GeneratedItemViewModelBase SelectedEditor
         {
-            get { return (GeneratedItemViewModelBase)GetValue(SelectedAchievementProperty); }
-            set { SetValue(SelectedAchievementProperty, value); }
+            get { return (GeneratedItemViewModelBase)GetValue(SelectedEditorProperty); }
+            set { SetValue(SelectedEditorProperty, value); }
         }
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement)
@@ -192,18 +219,32 @@ namespace RATools.ViewModels
             private set { SetValue(GeneratedAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty PublishedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "PublishedAchievementCount", typeof(int), 0);
-        public int PublishedAchievementCount
+        public static readonly ModelProperty CoreAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CoreAchievementCount", typeof(int), 0);
+        public int CoreAchievementCount
         {
-            get { return (int)GetValue(PublishedAchievementCountProperty); }
-            private set { SetValue(PublishedAchievementCountProperty, value); }
+            get { return (int)GetValue(CoreAchievementCountProperty); }
+            private set { SetValue(CoreAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty PublishedAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "PublishedAchievementPoints", typeof(int), 0);
-        public int PublishedAchievementPoints
+        public static readonly ModelProperty CoreAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CoreAchievementPoints", typeof(int), 0);
+        public int CoreAchievementPoints
         {
-            get { return (int)GetValue(PublishedAchievementPointsProperty); }
-            private set { SetValue(PublishedAchievementPointsProperty, value); }
+            get { return (int)GetValue(CoreAchievementPointsProperty); }
+            private set { SetValue(CoreAchievementPointsProperty, value); }
+        }
+
+        public static readonly ModelProperty UnofficialAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "UnofficialAchievementCount", typeof(int), 0);
+        public int UnofficialAchievementCount
+        {
+            get { return (int)GetValue(UnofficialAchievementCountProperty); }
+            private set { SetValue(UnofficialAchievementCountProperty, value); }
+        }
+
+        public static readonly ModelProperty UnofficialAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "UnofficialAchievementPoints", typeof(int), 0);
+        public int UnofficialAchievementPoints
+        {
+            get { return (int)GetValue(UnofficialAchievementPointsProperty); }
+            private set { SetValue(UnofficialAchievementPointsProperty, value); }
         }
 
         public static readonly ModelProperty LocalAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "LocalAchievementCount", typeof(int), 0);
@@ -234,13 +275,13 @@ namespace RATools.ViewModels
                 Title = publishedData.GetField("Title").StringValue;
 
                 var publishedAchievements = publishedData.GetField("Achievements");
-                var count = 0;
-                var points = 0;
+                var coreCount = 0;
+                var corePoints = 0;
+                var unofficialCount = 0;
+                var unofficialPoints = 0;
                 foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
                 {
-                    count++;
-                    points += publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-
+                    var points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
                     var title = publishedAchievement.GetField("Title").StringValue;
 
                     var id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
@@ -268,15 +309,26 @@ namespace RATools.ViewModels
                     builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
 
                     if (publishedAchievement.GetField("Flags").IntegerValue == 5)
+                    {
                         achievement.Unofficial.LoadAchievement(builtAchievement);
+                        unofficialCount++;
+                        unofficialPoints += points;
+                    }
                     else
+                    {
                         achievement.Core.LoadAchievement(builtAchievement);
+                        coreCount++;
+                        corePoints += points;
+                    }
                 }
 
-                PublishedAchievementCount = count;
-                PublishedAchievementPoints = points;
+                CoreAchievementCount = coreCount;
+                CoreAchievementPoints = corePoints;
+                UnofficialAchievementCount = unofficialCount;
+                UnofficialAchievementPoints = unofficialPoints;
 
-                _logger.WriteVerbose(String.Format("Merged {0} published achievements ({1} points)", count, points));
+                _logger.WriteVerbose(String.Format("Merged {0} core achievements ({1} points)", coreCount, corePoints));
+                _logger.WriteVerbose(String.Format("Merged {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
             }
         }
 
@@ -323,8 +375,8 @@ namespace RATools.ViewModels
                 }
             }
 
-            PublishedAchievementCount = count;
-            PublishedAchievementPoints = points;
+            CoreAchievementCount = count;
+            CoreAchievementPoints = points;
 
             _logger.WriteVerbose(String.Format("Merged {0} published achievements ({1} points)", count, points));
         }

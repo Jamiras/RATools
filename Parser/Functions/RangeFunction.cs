@@ -8,11 +8,11 @@ namespace RATools.Parser.Functions
             : base("range")
         {
             // required parameters
-            Parameters.Add(new VariableExpression("start"));
-            Parameters.Add(new VariableExpression("stop"));
+            Parameters.Add(new VariableDefinitionExpression("start"));
+            Parameters.Add(new VariableDefinitionExpression("stop"));
 
             // optional parameters
-            Parameters.Add(new VariableExpression("step"));
+            Parameters.Add(new VariableDefinitionExpression("step"));
             DefaultParameters["step"] = new IntegerConstantExpression(1);
         }
 

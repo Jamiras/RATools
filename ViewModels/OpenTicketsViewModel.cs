@@ -206,35 +206,31 @@ namespace RATools.ViewModels
 
                 var ticketId = Int32.Parse(tokenizer.ReadNumber().ToString());
 
+                tokenizer.ReadTo("<a href='/Achievement/");
+                tokenizer.Advance(22);
+                var achievementId = Int32.Parse(tokenizer.ReadNumber().ToString());
+                tokenizer.ReadTo("/>");
+                tokenizer.Advance(2);
+                var achievementName = tokenizer.ReadTo("</a>");
+
                 tokenizer.ReadTo("<a href='/Game/");
                 tokenizer.Advance(15);
                 var gameId = Int32.Parse(tokenizer.ReadNumber().ToString());
+                tokenizer.ReadTo("/>");
+                tokenizer.Advance(2);
+                var gameName = tokenizer.ReadTo("</a>");
 
                 GameTickets gameTickets;
                 if (!games.TryGetValue(gameId, out gameTickets))
                 {
-                    gameTickets = new GameTickets { GameId = gameId };
-
-                    tokenizer.ReadTo("/>");
-                    tokenizer.Advance(2);
-                    gameTickets.GameName = tokenizer.ReadTo("</a>").ToString();
-
+                    gameTickets = new GameTickets { GameId = gameId, GameName = gameName.ToString() };
                     games[gameId] = gameTickets;
                 }
-
-                tokenizer.ReadTo("<a href='/Achievement/");
-                tokenizer.Advance(22);
-                var achievementId = Int32.Parse(tokenizer.ReadNumber().ToString());
 
                 AchievementTickets achievementTickets;
                 if (!tickets.TryGetValue(achievementId, out achievementTickets))
                 {
-                    achievementTickets = new AchievementTickets { AchievementId = achievementId, Game = gameTickets };
-
-                    tokenizer.ReadTo("/>");
-                    tokenizer.Advance(2);
-                    achievementTickets.AchievementName = tokenizer.ReadTo("</a>").ToString();
-
+                    achievementTickets = new AchievementTickets { AchievementId = achievementId, Game = gameTickets, AchievementName = achievementName.ToString() };
                     tickets[achievementId] = achievementTickets;
                 }
 

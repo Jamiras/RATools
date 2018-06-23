@@ -37,5 +37,7 @@ namespace RATools.Data
         /// Gets or sets the serialized value formula for the leaderboard.
         /// </summary>
         public string Value { get; set; }
+
+        internal int SourceLine { get; set; }
     }
 }

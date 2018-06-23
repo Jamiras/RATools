@@ -18,19 +18,38 @@ namespace RATools.ViewModels
             _richPresence = richPresence ?? string.Empty;
             var genLines = _richPresence.Trim().Length > 0 ? _richPresence.Replace("\r\n", "\n").Split('\n') : new string[0];
             string[] localLines = new string[0];
-            
-            _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
-            if (File.Exists(_richFile))
+
+            if (!String.IsNullOrEmpty(owner.RACacheDirectory))
             {
-                var coreRichPresence = File.ReadAllText(_richFile);
-                RichPresenceLength = coreRichPresence.Length;
-                if (RichPresenceLength > 0)
-                    localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
+                _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
+                if (File.Exists(_richFile))
+                {
+                    var coreRichPresence = File.ReadAllText(_richFile);
+                    RichPresenceLength = coreRichPresence.Length;
+                    if (RichPresenceLength > 0)
+                        localLines = coreRichPresence.Replace("\r\n", "\n").Split('\n');
+                }
             }
 
             var lines = new List<RichPresenceLine>();
             int genIndex = 0, localIndex = 0;
             bool isModified = false;
+
+            var genTags = new TinyDictionary<string, int>();
+            for (int i = 0; i < genLines.Length; i++)
+            {
+                var line = genLines[i];
+                if (line.StartsWith("Format:") || line.StartsWith("Lookup:") || line.StartsWith("Display:"))
+                    genTags[line] = i;
+            }
+
+            var localTags = new TinyDictionary<string, int>();
+            for (int i = 0; i < localLines.Length; i++)
+            {
+                var line = localLines[i];
+                if (line.StartsWith("Format:") || line.StartsWith("Lookup:") || line.StartsWith("Display:"))
+                    localTags[line] = i;
+            }
 
             _hasGenerated = genLines.Length > 0;
             _hasLocal = localLines.Length > 0;
@@ -57,6 +76,45 @@ namespace RATools.ViewModels
                 {
                     // blank core line, advance generated
                     lines.Add(new RichPresenceLine(localLines[localIndex], genLines[genIndex++]));
+                    continue;
+                }
+
+                // if we're starting a lookup or value, try to line them up
+                int genTagLine, localTagLine;
+                if (!genTags.TryGetValue(localLines[localIndex], out genTagLine))
+                    genTagLine = -1;
+                if (!localTags.TryGetValue(genLines[genIndex], out localTagLine))
+                    localTagLine = -1;
+
+                if (genTagLine != -1 && localTagLine != -1)
+                {
+                    if (genTagLine > localTagLine)
+                        genTagLine = -1;
+                    else
+                        localTagLine = -1;
+                }
+
+                if (genTagLine != -1)
+                {
+                    do
+                    {
+                        lines.Add(new RichPresenceLine("", genLines[genIndex++]));
+                    } while (genIndex < genLines.Length && genLines[genIndex].Length > 0);
+
+                    if (genIndex < genLines.Length)
+                        lines.Add(new RichPresenceLine("", genLines[genIndex++]));
+                    continue;
+                }
+
+                if (localTagLine != -1)
+                {
+                    do
+                    {
+                        lines.Add(new RichPresenceLine(localLines[localIndex++], ""));
+                    } while (localIndex < localLines.Length && localLines[localIndex].Length > 0);
+
+                    if (localIndex < localLines.Length)
+                        lines.Add(new RichPresenceLine(localLines[localIndex++], ""));
                     continue;
                 }
 
@@ -167,6 +225,8 @@ namespace RATools.ViewModels
         {
             get { return _hasGenerated; }
         }
+
+        public int SourceLine { get; set; }
 
         public int RichPresenceLength { get; private set; }
 

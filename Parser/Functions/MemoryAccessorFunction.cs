@@ -10,7 +10,7 @@ namespace RATools.Parser.Functions
         {
             _size = size;
 
-            Parameters.Add(new VariableExpression("address"));
+            Parameters.Add(new VariableDefinitionExpression("address"));
         }
 
         private readonly FieldSize _size;

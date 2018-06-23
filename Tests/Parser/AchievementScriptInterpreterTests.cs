@@ -31,6 +31,18 @@ namespace RATools.Test.Parser
             return parser;
         }
 
+        private static string GetInnerErrorMessage(AchievementScriptInterpreter parser)
+        {
+            if (parser.Error == null)
+                return null;
+
+            var err = parser.Error;
+            while (err.InnerError != null)
+                err = err.InnerError;
+
+            return string.Format("{0}:{1} {2}", err.Line, err.Column, err.Message);
+        }
+
         private static string GetRequirements(Achievement achievement)
         {
             var builder = new AchievementBuilder(achievement);
@@ -130,7 +142,7 @@ namespace RATools.Test.Parser
         public void TestTransitiveConditionIncompatible()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) + 1 == byte(0x4321) - 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:46 Expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:46 Expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
         }
 
         [Test]
@@ -320,7 +332,7 @@ namespace RATools.Test.Parser
             var parser = Parse("for k in range(2, 1) {\n" +
                                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
                                "}", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:10 step must be negative if start is after stop"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:19 step must be negative if start is after stop"));
         }
 
         [Test]
@@ -329,7 +341,7 @@ namespace RATools.Test.Parser
             var parser = Parse("for k in range(1, 2, 0) {\n" +
                                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
                                "}", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:22 step must not be 0"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:22 step must not be 0"));
         }
 
         [Test]
@@ -384,7 +396,7 @@ namespace RATools.Test.Parser
         public void TestPrevMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
         }
 
         [Test]
@@ -400,7 +412,7 @@ namespace RATools.Test.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]
@@ -559,7 +571,7 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
         }
 
         [Test]
@@ -574,7 +586,7 @@ namespace RATools.Test.Parser
         public void TestRichPresenceInvalidIndex()
         {
             var parser = Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:30 Invalid parameter index: 1"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:30 Invalid parameter index: 1"));
         }
 
         [Test]

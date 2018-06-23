@@ -1,17 +1,24 @@
-v1.4.3 - 8 Mar 2017
+v1.5.0 - 23 Jun 2018
+* add code editor
+* update open tickets dialog for reordered ticket list
+* new script no longer requires immediately writing the file to disk
+* improved rich presence diff calculation
+* allow AddSource/SubSource to exceed variable size for final comparison
+
+v1.4.3 - 8 Mar 2018
 * highlight context of errors when reporting them
 
-v1.4.2 - 4 Mar 2017
+v1.4.2 - 4 Mar 2018
 * add array data type
 * add range helper function
 * add rich_presence_conditional_display function
 
-v1.4.1 - 19 Feb 2017
+v1.4.1 - 19 Feb 2018
 * more options for which code notes should be dumped when creating a new script
 * display rich presence length in editor
 * don't error if for loop appears in function called from trigger as long as function still return valid trigger expression
 
-v1.4.0 - 3 Feb 2017
+v1.4.0 - 3 Feb 2018
 * replaced achievements grid with list, added icons
 * removed tabs from achievement viewer - if achievement is generated, will be shown with diff to local or core,
   otherwise local or core achievement will be shown
@@ -19,17 +26,17 @@ v1.4.0 - 3 Feb 2017
 * improved location reporting for some error messages
 * fixed exception activating 'Update Local' when loaded script had a parse error
 
-v1.3.1 - 21 Jan 2017
+v1.3.1 - 21 Jan 2018
 * prevent exception dumping unofficial achievements
 
-v1.3.0 - 17 Jan 2017
+v1.3.0 - 17 Jan 2018
 * replace "Dump Published" dialog with "New Script" dialog
 * added ability to dump unofficial achievements
 * support for generating achievements using AddSource/SubSource
 * add session counts to game stats dialog
 * prevent exception if incorrect number of parameters passed to rich_presence_value or rich_presence_lookup
 
-v1.2.0 - 7 Jan 2017
+v1.2.0 - 7 Jan 2018
 * added "Update Local" dialog for updating multiple items at a time
 * support indexing dictionary using function call result
 * support for modulus operator (%)

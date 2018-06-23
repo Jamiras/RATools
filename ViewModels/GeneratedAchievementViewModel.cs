@@ -114,6 +114,11 @@ namespace RATools.ViewModels
             get { return Generated.Achievement != null; }
         }
 
+        public int SourceLine
+        {
+            get { return (Generated.Achievement != null) ? Generated.Achievement.SourceLine : 0; }
+        }
+
         public AchievementViewModel Generated { get; private set; }
         public AchievementViewModel Local { get; private set; }
         public AchievementViewModel Unofficial { get; private set; }
@@ -372,6 +377,9 @@ namespace RATools.ViewModels
 
         internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
         {
+            foreach (var group in RequirementGroups)
+                group.OnShowHexValuesChanged(e);
+
             Generated.OnShowHexValuesChanged(e);
             Local.OnShowHexValuesChanged(e);
             Unofficial.OnShowHexValuesChanged(e);

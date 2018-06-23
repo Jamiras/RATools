@@ -12,7 +12,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestAppendString()
         {
-            var expr = new ForExpression(new VariableExpression("i"), new VariableExpression("dict"));
+            var expr = new ForExpression(new VariableDefinitionExpression("i"), new VariableExpression("dict"));
 
             var builder = new StringBuilder();
             expr.AppendString(builder);

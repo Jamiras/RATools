@@ -2,15 +2,15 @@
 
 namespace RATools.Parser.Internal
 {
-    internal class VariableExpression : ExpressionBase
+    internal abstract class VariableExpressionBase : ExpressionBase
     {
-        public VariableExpression(string name)
+        public VariableExpressionBase(string name)
             : base(ExpressionType.Variable)
         {
             Name = name;
         }
 
-        internal VariableExpression(string name, int line, int column)
+        internal VariableExpressionBase(string name, int line, int column)
             : this(name)
         {
             Line = line;
@@ -30,6 +30,20 @@ namespace RATools.Parser.Internal
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append(Name);
+        }
+
+    }
+
+    internal class VariableExpression : VariableExpressionBase
+    {
+        public VariableExpression(string name)
+            : base(name)
+        {
+        }
+
+        internal VariableExpression(string name, int line, int column)
+            : base(name, line, column)
+        {
         }
 
         /// <summary>
@@ -67,6 +81,39 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = (VariableExpression)obj;
+            return Name == that.Name;
+        }
+    }
+
+    internal class VariableDefinitionExpression : VariableExpressionBase
+    {
+        public VariableDefinitionExpression(string name)
+            : base(name)
+        {
+        }
+
+        internal VariableDefinitionExpression(string name, int line, int column)
+            : base(name, line, column)
+        {
+        }
+
+        internal VariableDefinitionExpression(VariableExpression variable)
+            : base(variable.Name, variable.Line, variable.Column)
+        {
+            EndLine = variable.EndLine;
+            EndColumn = variable.EndColumn;
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = (VariableDefinitionExpression)obj;
             return Name == that.Name;
         }
     }
