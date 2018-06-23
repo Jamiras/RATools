@@ -498,6 +498,11 @@ namespace RATools.ViewModels
             return _game;
         }
 
+        private static string EscapeString(string input)
+        {
+            return input.Replace("\"", "\\\"");
+        }
+
         private void Dump(Stream outStream)
         {
             MemoryAddresses.Commit();
@@ -651,9 +656,9 @@ namespace RATools.ViewModels
                     var achievementData = achievementViewModel.Achievement;
 
                     stream.Write("    title = \"");
-                    stream.Write(achievementData.Title);
+                    stream.Write(EscapeString(achievementData.Title));
                     stream.Write("\", description = \"");
-                    stream.Write(achievementData.Description);
+                    stream.Write(EscapeString(achievementData.Description));
                     stream.Write("\", points = ");
                     stream.Write(achievementData.Points);
                     stream.WriteLine(",");
