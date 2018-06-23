@@ -1,6 +1,8 @@
 ﻿<Window x:Class="RATools.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:commands="clr-namespace:Jamiras.Commands;assembly=Jamiras.Core"
+        xmlns:controls="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
         Title="{Binding Game.Title, StringFormat='RA Tools - {0}', FallbackValue='RA Tools - No Game Loaded'}" Height="768" Width="1024">
     <Window.Resources>
         <ResourceDictionary>
@@ -12,34 +14,14 @@
     <DockPanel Background="#F0F0F0">
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem Header="Compile _Achievements" Command="{Binding CompileAchievementsCommand}" />
                 <MenuItem Header="_New Script" Command="{Binding NewScriptCommand}" />
+                <MenuItem Header="_Open Script" Command="{Binding OpenScriptCommand}" />
+                <MenuItem Header="_Save Script" Command="{Binding SaveScriptCommand}" 
+                          controls:CommandBinding.InputGesture="Ctrl+S" />
+                <MenuItem Header="Save Script _As" Command="{Binding SaveScriptAsCommand}" />
+                <MenuItem Header="_Revert" Command="{Binding RefreshScriptCommand}" 
+                          controls:CommandBinding.InputGesture="F5" />
                 <Separator />
-                <MenuItem Header="Refresh _Current" Command="{Binding RefreshCurrentCommand}" InputGestureText="F5">
-                    <MenuItem.Style>
-                        <Style TargetType="{x:Type MenuItem}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CurrentFile}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </MenuItem.Style>
-                </MenuItem>
-                <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}">
-                    <MenuItem.Style>
-                        <Style TargetType="{x:Type MenuItem}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CurrentFile}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Game.GeneratedAchievementCount}" Value="0">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </MenuItem.Style>
-                </MenuItem>
                 <MenuItem Header="_Recent" ItemsSource="{Binding RecentFiles}">
                     <MenuItem.ItemTemplate>
                         <DataTemplate>
@@ -48,10 +30,27 @@
                     </MenuItem.ItemTemplate>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="_Exit" Command="{Binding ExitCommand}" />
+                <MenuItem Header="_Exit" Command="{Binding ExitCommand}" InputGestureText="Alt+F4" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Goto Line" Command="{Binding Game.SelectedEditor.Editor.GotoLineCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+G" />
+                <MenuItem Header="Goto _Definition" Command="{Binding Game.SelectedEditor.Editor.GotoDefinitionCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="F12" />
+                <MenuItem Header="_Find" Command="{Binding Game.SelectedEditor.Editor.FindCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+F" />
+                <MenuItem Header="R_eplace" Command="{Binding Game.SelectedEditor.Editor.ReplaceCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+H" />
+                <Separator />
+                <MenuItem Header="_Undo" Command="{Binding Game.SelectedEditor.Editor.UndoCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+Z" />
+                <MenuItem Header="_Redo" Command="{Binding Game.SelectedEditor.Editor.RedoCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+Y" />
+                <Separator />
+                <MenuItem Header="Cu_t" Command="{Binding Game.SelectedEditor.Editor.CutCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+X" />
+                <MenuItem Header="_Copy" Command="{Binding Game.SelectedEditor.Editor.CopyCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+C" />
+                <MenuItem Header="_Paste" Command="{Binding Game.SelectedEditor.Editor.PasteCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+V" />
+                <Separator />
+                <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}" controls:CommandBinding.InputGesture="Ctrl+L" />
             </MenuItem>
             <MenuItem Header="_View">
                 <MenuItem Header="_Hexadecimal Values" IsCheckable="True" IsChecked="{Binding ShowHexValues}" />
+                <Separator />
+                <MenuItem Header="_Error List" IsCheckable="True" IsChecked="{Binding Game.SelectedEditor.Editor.ErrorsToolWindow.IsVisible, FallbackValue=False}" />
             </MenuItem>
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />

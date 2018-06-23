@@ -432,8 +432,15 @@ namespace RATools.Parser
             var alwaysTrue = new List<Requirement>();
             var alwaysFalse = new List<Requirement>();
 
+            bool isAddSource = false;
             foreach (var requirement in requirements)
             {
+                if (requirement.Type == RequirementType.AddSource || requirement.Type == RequirementType.SubSource)
+                {
+                    isAddSource = true;
+                    continue;
+                }
+
                 if (requirement.Right.Type != FieldType.Value)
                     continue;
 
@@ -468,65 +475,71 @@ namespace RATools.Parser
 
                 uint max;
 
-                switch (requirement.Left.Size)
+                if (isAddSource)
                 {
-                    case FieldSize.Bit0:
-                    case FieldSize.Bit1:
-                    case FieldSize.Bit2:
-                    case FieldSize.Bit3:
-                    case FieldSize.Bit4:
-                    case FieldSize.Bit5:
-                    case FieldSize.Bit6:
-                    case FieldSize.Bit7:
-                        max = 1;
-                        break;
-
-                    case FieldSize.LowNibble:
-                    case FieldSize.HighNibble:
-                        max = 15;
-                        break;
-
-                    case FieldSize.Byte:
-                        max = 255;
-                        break;
-
-                    case FieldSize.Word:
-                        max = 65535;
-                        break;
-
-                    default:
-                    case FieldSize.DWord:
-                        max = uint.MaxValue;
-                        break;
+                    max = uint.MaxValue;
+                    isAddSource = false;
                 }
-
-                if (requirement.Right.Value > max)
-                    requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = max };
-
-                if (max == 1)
+                else
                 {
-                    if (requirement.Right.Value == 0)
+                    switch (requirement.Left.Size)
                     {
-                        switch (requirement.Operator)
-                        {
-                            case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
-                            case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
-                                requirement.Operator = RequirementOperator.Equal;
-                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                                continue;
-                        }
+                        case FieldSize.Bit0:
+                        case FieldSize.Bit1:
+                        case FieldSize.Bit2:
+                        case FieldSize.Bit3:
+                        case FieldSize.Bit4:
+                        case FieldSize.Bit5:
+                        case FieldSize.Bit6:
+                        case FieldSize.Bit7:
+                            max = 1;
+
+                            if (requirement.Right.Value == 0)
+                            {
+                                switch (requirement.Operator)
+                                {
+                                    case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
+                                    case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
+                                        requirement.Operator = RequirementOperator.Equal;
+                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                                        continue;
+                                }
+                            }
+                            else
+                            {
+                                switch (requirement.Operator)
+                                {
+                                    case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                                    case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                                        requirement.Operator = RequirementOperator.Equal;
+                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                                        continue;
+                                }
+                            }
+
+                            break;
+
+                        case FieldSize.LowNibble:
+                        case FieldSize.HighNibble:
+                            max = 15;
+                            break;
+
+                        case FieldSize.Byte:
+                            max = 255;
+                            break;
+
+                        case FieldSize.Word:
+                            max = 65535;
+                            break;
+
+                        default:
+                        case FieldSize.DWord:
+                            max = uint.MaxValue;
+                            break;
                     }
-                    else
-                    {
-                        switch (requirement.Operator)
-                        {
-                            case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
-                            case RequirementOperator.LessThan: // bit < 1 -> bit == 0
-                                requirement.Operator = RequirementOperator.Equal;
-                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                continue;
-                        }
-                    }
+
+                    if (requirement.Right.Value > max)
+                        requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = max };
                 }
 
                 if (requirement.Right.Value == max)

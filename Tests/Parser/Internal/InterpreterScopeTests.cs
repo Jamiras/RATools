@@ -78,7 +78,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestDefineAndGetVariableNested()
         {
-            var variable = new VariableExpression("test");
+            var variable = new VariableDefinitionExpression("test");
             var value = new IntegerConstantExpression(99);
             var scope = new InterpreterScope();
             scope.DefineVariable(variable, value);
@@ -90,7 +90,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestDefineAndGetVariableNestedOverride()
         {
-            var variable = new VariableExpression("test");
+            var variable = new VariableDefinitionExpression("test");
             var value = new IntegerConstantExpression(99);
             var value2 = new IntegerConstantExpression(98);
             var scope = new InterpreterScope();

@@ -10,13 +10,13 @@ namespace RATools.Parser.Internal
         public FunctionDefinitionExpression(string name)
             : this()
         {
-            Name = new VariableExpression(name);
+            Name = new VariableDefinitionExpression(name);
         }
 
         private FunctionDefinitionExpression()
             : base(ExpressionType.FunctionDefinition)
         {
-            Parameters = new List<VariableExpression>();
+            Parameters = new List<VariableDefinitionExpression>();
             Expressions = new List<ExpressionBase>();
             DefaultParameters = new TinyDictionary<string, ExpressionBase>();
         }
@@ -24,14 +24,14 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the name of the function.
         /// </summary>
-        public VariableExpression Name { get; private set; }
+        public VariableDefinitionExpression Name { get; private set; }
 
         private KeywordExpression _keyword;
 
         /// <summary>
         /// Gets the names of the parameters.
         /// </summary>
-        public ICollection<VariableExpression> Parameters { get; private set; }
+        public ICollection<VariableDefinitionExpression> Parameters { get; private set; }
 
         /// <summary>
         /// Gets default values for the parameters.
@@ -92,12 +92,12 @@ namespace RATools.Parser.Internal
             column = tokenizer.Column;
 
             var functionName = tokenizer.ReadIdentifier();
+            function.Name = new VariableDefinitionExpression(functionName.ToString(), line, column);
             if (functionName.IsEmpty)
             {
                 ExpressionBase.ParseError(tokenizer, "Invalid function name");
                 return function;
             }
-            function.Name = new VariableExpression(functionName.ToString(), line, column);
 
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != '(')
@@ -122,7 +122,7 @@ namespace RATools.Parser.Internal
                         return function;
                     }
 
-                    function.Parameters.Add(new VariableExpression(parameter.ToString(), line, column));
+                    function.Parameters.Add(new VariableDefinitionExpression(parameter.ToString(), line, column));
 
                     ExpressionBase.SkipWhitespace(tokenizer);
                     if (tokenizer.NextChar == ')')

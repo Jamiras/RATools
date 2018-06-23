@@ -7,9 +7,9 @@ namespace RATools.Parser.Functions
         public RichPresenceConditionalDisplayFunction()
             : base("rich_presence_conditional_display")
         {
-            Parameters.Add(new VariableExpression("condition"));
-            Parameters.Add(new VariableExpression("format_string"));
-            Parameters.Add(new VariableExpression("..."));
+            Parameters.Add(new VariableDefinitionExpression("condition"));
+            Parameters.Add(new VariableDefinitionExpression("format_string"));
+            Parameters.Add(new VariableDefinitionExpression("..."));
         }
 
         protected override bool SetDisplayString(RichPresenceBuilder richPresence, string displayString, InterpreterScope scope, out ExpressionBase result)

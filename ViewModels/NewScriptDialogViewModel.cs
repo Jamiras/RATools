@@ -16,6 +16,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -87,6 +88,7 @@ namespace RATools.ViewModels
         private void LoadGame(int gameId, string raCacheDirectory)
         {
             _game = new GameViewModel(GameId.Value.GetValueOrDefault(), "", raCacheDirectory);
+            _game.PopulateEditorList(null);
             DialogTitle = "New Script - " + _game.Title;
 
             _achievements.Clear();
@@ -95,7 +97,7 @@ namespace RATools.ViewModels
             MemoryAddresses.Rows.Clear();
 
             var unofficialAchievements = new List<DumpAchievementItem>();
-            foreach (var achievement in _game.Achievements.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in _game.Editors.OfType<GeneratedAchievementViewModel>())
             {
                 AchievementViewModel source = achievement.Core;
                 if (source.Achievement == null)
@@ -479,40 +481,28 @@ namespace RATools.ViewModels
 
         private readonly List<MemoryItem> _memoryItems;
 
-        protected override void ExecuteOkCommand()
+        public GameViewModel Finalize()
         {
-            var errors = Validate();
-            if (!String.IsNullOrEmpty(errors))
-            {
-                MessageBoxViewModel.ShowMessage(errors);
-                return;
-            }
-
-            var vm = new FileDialogViewModel();
-            vm.DialogTitle = "Create Script File";
-            vm.Filters["Script file"] = "*.rascript";
-
             var cleansed = _game.Title;
             foreach (var c in Path.GetInvalidFileNameChars())
                 cleansed = cleansed.Replace(c.ToString(), "");
             if (String.IsNullOrEmpty(cleansed))
                 cleansed = _game.GameId.ToString();
-            vm.FileNames = new[] { cleansed + ".rascript" };
+            _game.Script.Filename = cleansed + ".rascript";
 
-            if (vm.ShowSaveFileDialog() != DialogResult.Ok)
-                return;
+            var memoryStream = new MemoryStream();
+            Dump(memoryStream);
+            _game.Script.SetContent(Encoding.UTF8.GetString(memoryStream.ToArray()));
+            _game.Script.SetModified();
 
-            Dump(vm.FileNames[0]);
+            return _game;
         }
 
-        private void Dump(string filename)
+        private void Dump(Stream outStream)
         {
             MemoryAddresses.Commit();
 
-            var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
-            logger.WriteVerbose("Dumping to file " + filename);
-
-            using (var stream = File.CreateText(filename))
+            using (var stream = new StreamWriter(outStream))
             {
                 stream.Write("// ");
                 stream.WriteLine(_game.Title);
@@ -608,7 +598,7 @@ namespace RATools.ViewModels
                     if (!dumpAchievement.IsSelected)
                         continue;
 
-                    var achievement = _game.Achievements.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
+                    var achievement = _game.Editors.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
                     if (achievement == null)
                         continue;
 
@@ -708,10 +698,6 @@ namespace RATools.ViewModels
                     stream.WriteLine(")");
                 }
             }
-
-            var vm = new MessageBoxViewModel(Path.GetFileName(filename) + " created.");
-            vm.DialogTitle = DialogTitle;
-            vm.ShowDialog();
         }
 
         private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, RequirementGroupViewModel requirementGroupViewModel)

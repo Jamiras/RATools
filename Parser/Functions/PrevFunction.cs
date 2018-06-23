@@ -8,7 +8,7 @@ namespace RATools.Parser.Functions
         public PrevFunction()
             : base("prev")
         {
-            Parameters.Add(new VariableExpression("accessor"));
+            Parameters.Add(new VariableDefinitionExpression("accessor"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

@@ -3,7 +3,7 @@ using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
-using RATools.Parser;
+using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -18,14 +18,19 @@ namespace RATools.ViewModels
     {
         public MainWindowViewModel()
         {
-            ExitCommand = new DelegateCommand(Exit);
-            CompileAchievementsCommand = new DelegateCommand(CompileAchievements);
-            RefreshCurrentCommand = new DelegateCommand(RefreshCurrent);
-            OpenRecentCommand = new DelegateCommand<string>(OpenFile);
             NewScriptCommand = new DelegateCommand(NewScript);
-            UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+            OpenScriptCommand = new DelegateCommand(OpenFile);
+            SaveScriptCommand = DisabledCommand.Instance;
+            SaveScriptAsCommand = DisabledCommand.Instance;
+            RefreshScriptCommand = DisabledCommand.Instance;
+            OpenRecentCommand = new DelegateCommand<string>(OpenFile);
+            ExitCommand = new DelegateCommand(Exit);
+
+            UpdateLocalCommand = DisabledCommand.Instance;
+
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
+
             AboutCommand = new DelegateCommand(About);
 
             _recentFiles = new RecencyBuffer<string>(8);
@@ -87,9 +92,8 @@ namespace RATools.ViewModels
             ServiceRepository.Instance.FindService<IDialogService>().MainWindow.Close();
         }
 
-        public CommandBase CompileAchievementsCommand { get; private set; }
-
-        private void CompileAchievements()
+        public CommandBase OpenScriptCommand { get; private set; }
+        private void OpenFile()
         {
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Select achievements script";
@@ -100,18 +104,30 @@ namespace RATools.ViewModels
                 OpenFile(vm.FileNames[0]);
         }
 
-        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null);
+        public CommandBase SaveScriptCommand { get; private set; }
+        public CommandBase SaveScriptAsCommand { get; private set; }
+
+        public static readonly ModelProperty GameProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Game", typeof(GameViewModel), null, OnGameChanged);
         public GameViewModel Game
         {
             get { return (GameViewModel)GetValue(GameProperty); }
             private set { SetValue(GameProperty, value); }
         }
 
-        public static readonly ModelProperty CurrentFileProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CurrentFile", typeof(string), null);
-        public string CurrentFile
+        private static void OnGameChanged(object sender, ModelPropertyChangedEventArgs e)
         {
-            get { return (string)GetValue(CurrentFileProperty); }
-            private set { SetValue(CurrentFileProperty, value); }
+            if (e.OldValue == null)
+            {
+                var vm = (MainWindowViewModel)sender;
+                vm.SaveScriptCommand = new DelegateCommand(() => vm.SaveScript());
+                vm.SaveScriptAsCommand = new DelegateCommand(() => vm.SaveScriptAs());
+                vm.RefreshScriptCommand = new DelegateCommand(vm.RefreshScript);
+                vm.UpdateLocalCommand = new DelegateCommand(vm.UpdateLocal);
+                vm.OnPropertyChanged(() => vm.SaveScriptCommand);
+                vm.OnPropertyChanged(() => vm.SaveScriptAsCommand);
+                vm.OnPropertyChanged(() => vm.RefreshScriptCommand);
+                vm.OnPropertyChanged(() => vm.UpdateLocalCommand);
+            }
         }
 
         public static readonly ModelProperty RecentFilesProperty = ModelProperty.Register(typeof(MainWindowViewModel), "RecentFiles", typeof(IEnumerable<string>), null);
@@ -121,10 +137,35 @@ namespace RATools.ViewModels
             private set { SetValue(RecentFilesProperty, value); }
         }
 
-        public CommandBase RefreshCurrentCommand { get; private set; }
-        private void RefreshCurrent()
+        public CommandBase RefreshScriptCommand { get; private set; }
+        private void RefreshScript()
         {
-            OpenFile(CurrentFile);
+            if (Game != null)
+            {
+                Game.Script.DeleteBackup();
+                OpenFile(Game.Script.Filename);
+            }
+        }
+
+        public bool CloseEditor()
+        {
+            if (Game == null || Game.Script.CompareState != GeneratedCompareState.LocalDiffers)
+                return true;
+
+            var vm = new MessageBoxViewModel("Save changes to " + Game.Script.Title + "?");
+            switch (vm.ShowYesNoCancelDialog())
+            {
+                case DialogResult.Yes:
+                    return SaveScript();
+
+                case DialogResult.No:
+                    Game.Script.DeleteBackup();
+                    return true;
+
+                default:
+                case DialogResult.Cancel:
+                    return false;
+            }
         }
 
         public CommandBase<string> OpenRecentCommand { get; private set; }
@@ -136,66 +177,144 @@ namespace RATools.ViewModels
                 return;
             }
 
+            int line = 1;
+            int column = 1;
+            string selectedEditor = null;
+            if (Game != null && Game.Script.Filename == filename)
+            {
+                if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
+                {
+                    var vm = new MessageBoxViewModel("Revert to the last saved state? Your changes will be lost.");
+                    vm.DialogTitle = "Revert Script";
+                    if (vm.ShowOkCancelDialog() == DialogResult.Cancel)
+                        return;
+                }
+
+                // capture current location so we can restore it after refreshing
+                line = Game.Script.Editor.CursorLine;
+                column = Game.Script.Editor.CursorColumn;
+                selectedEditor = Game.SelectedEditor.Title;
+            }
+            else if (!CloseEditor())
+            {
+                return;
+            }
+
+            var backupFilename = ScriptViewModel.GetBackupFilename(filename);
+            bool usingBackup = false;
+            if (File.Exists(backupFilename))
+            {
+                var vm2 = new MessageBoxViewModel("Found an autosave file from " + File.GetLastWriteTime(backupFilename) + ".\nDo you want to open it instead?");
+                vm2.DialogTitle = Path.GetFileName(filename);
+                switch (vm2.ShowYesNoCancelDialog())
+                {
+                    case DialogResult.Cancel:
+                        return;
+
+                    case DialogResult.Yes:
+                        filename = backupFilename;
+                        usingBackup = true;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
             var logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
             logger.WriteVerbose("Opening " + filename);
 
-            var parser = new AchievementScriptInterpreter();
-
+            string content;
             try
             {
-                string errorMessage = null;
-                using (var stream = File.OpenRead(filename))
-                {
-                    AddRecentFile(filename);
-
-                    if (parser.Run(Tokenizer.CreateTokenizer(stream)))
-                    {
-                        logger.WriteVerbose("Game ID: " + parser.GameId);
-                        logger.WriteVerbose("Generated " + parser.Achievements.Count() + " achievements");
-                        if (!String.IsNullOrEmpty(parser.RichPresence))
-                            logger.WriteVerbose("Generated Rich Presence");
-                        if (parser.Leaderboards.Count() > 0)
-                            logger.WriteVerbose("Generated " + parser.Leaderboards.Count() + " leaderboards");
-
-                        CurrentFile = filename;
-
-                        foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
-                        {
-                            var notesFile = Path.Combine(directory, parser.GameId + "-Notes2.txt");
-                            if (File.Exists(notesFile))
-                            {
-                                logger.WriteVerbose("Found code notes in " + directory);
-                                Game = new GameViewModel(parser, directory.ToString());
-                                return;
-                            }
-                        }
-
-                        logger.WriteVerbose("Could not find code notes");
-                        MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + parser.GameId);
-                        return;
-                    }
-                    else if (parser.GameId != 0)
-                    {
-                        logger.WriteVerbose("Game ID: " + parser.GameId);
-                        CurrentFile = filename;
-
-                        if (!String.IsNullOrEmpty(parser.GameTitle))
-                            Game = new GameViewModel(parser.GameId, parser.GameTitle);
-                        else
-                            Game = null;
-                    }
-
-                    logger.WriteVerbose("Parse error: " + parser.ErrorMessage);
-                    stream.Seek(0, SeekOrigin.Begin);
-                    errorMessage = parser.GetFormattedErrorMessage(Tokenizer.CreateTokenizer(stream));
-                }
-
-                MessageBoxViewModel.ShowMessage(errorMessage);
+                content = File.ReadAllText(filename);
             }
             catch (IOException ex)
             {
                 MessageBoxViewModel.ShowMessage(ex.Message);
+                return;
             }
+
+            var tokenizer = Tokenizer.CreateTokenizer(content);
+            var expressionGroup = new AchievementScriptParser().Parse(tokenizer);
+
+            int gameId = 0;
+            var idComment = expressionGroup.Comments.FirstOrDefault(c => c.Value.Contains("#ID"));
+            if (idComment != null)
+            {
+                var tokens = idComment.Value.Split('=');
+                if (tokens.Length > 1)
+                    Int32.TryParse(tokens[1].ToString(), out gameId);
+            }
+
+            if (gameId == 0)
+            {
+                logger.WriteVerbose("Could not find game ID");
+                MessageBoxViewModel.ShowMessage("Could not find game id");
+                return;
+            }
+
+            if (!usingBackup)
+                AddRecentFile(filename);
+
+            logger.WriteVerbose("Game ID: " + gameId);
+
+            var gameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
+            GameViewModel viewModel = null;
+
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            {
+                var notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                if (File.Exists(notesFile))
+                {
+                    logger.WriteVerbose("Found code notes in " + directory);
+
+                    viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
+                }
+            }
+
+            if (viewModel == null)
+            {
+                logger.WriteVerbose("Could not find code notes");
+                MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+
+                viewModel = new GameViewModel(gameId, gameTitle);
+            }
+
+            var existingViewModel = Game as GameViewModel;
+
+            // if we're just refreshing the current game script, only update the script content,
+            // which will be reprocessed and update the editor list. If it's not the same script,
+            // or notes have changed, use the new view model.
+            if (existingViewModel != null && existingViewModel.GameId == viewModel.GameId &&
+                existingViewModel.Script.Filename == filename &&
+                existingViewModel.Notes.Count == viewModel.Notes.Count)
+            {
+                existingViewModel.Script.SetContent(content);
+                viewModel = existingViewModel;
+
+                existingViewModel.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+                existingViewModel.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
+            }
+            else
+            {
+                if (usingBackup)
+                {
+                    viewModel.Script.Filename = Path.GetFileName(filename);
+                    var title = viewModel.Title + " (from backup)";
+                    viewModel.SetValue(GameViewModel.TitleProperty, title);
+                }
+                else
+                {
+                    viewModel.Script.Filename = filename;
+                }
+
+                viewModel.Script.SetContent(content);
+                Game = viewModel;
+            }
+
+            if (viewModel.Script.Editor.ErrorsToolWindow.References.Count > 0)
+                viewModel.Script.Editor.ErrorsToolWindow.IsVisible = true;
         }
 
         private void AddRecentFile(string newFile)
@@ -220,23 +339,62 @@ namespace RATools.ViewModels
             RecentFiles = _recentFiles.ToArray();
         }
 
+        private bool SaveScript()
+        {
+            // if there isn't a path, the user need to select a save location
+            if (!Game.Script.Filename.Contains("\\"))
+                return SaveScriptAs();
+
+            Game.Script.Save();
+            AddRecentFile(Game.Script.Filename);
+            return true;
+        }
+
+        private bool SaveScriptAs()
+        {
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Save achievements script";
+            vm.Filters["Script file"] = "*.rascript;*.txt";
+            vm.FileNames = new[] { Game.Script.Filename };
+            vm.OverwritePrompt = true;
+
+            if (vm.ShowSaveFileDialog() == DialogResult.Ok)
+            {
+                Game.Script.Filename = vm.FileNames[0];
+                SaveScript();
+            }
+
+            return false;
+        }
+
         public CommandBase NewScriptCommand { get; private set; }
         private void NewScript()
         {
+            if (!CloseEditor())
+                return;
+
             var dialog = new NewScriptDialogViewModel();
-            dialog.ShowDialog();
+            if (dialog.ShowDialog() == DialogResult.Ok)
+                Game = dialog.Finalize();
         }
 
         public CommandBase UpdateLocalCommand { get; private set; }
         private void UpdateLocal()
         {
-            if (Game == null)
+            var game = Game;
+            if (game == null)
             {
                 MessageBoxViewModel.ShowMessage("No game loaded");
                 return;
             }
 
-            var dialog = new UpdateLocalViewModel(Game);
+            if (game.Script.Editor.ErrorsToolWindow.References.Count > 0)
+            {
+                MessageBoxViewModel.ShowMessage("Cannot update while errors exist.");
+                game.Script.Editor.ErrorsToolWindow.IsVisible = true;
+            }
+
+            var dialog = new UpdateLocalViewModel(game);
             dialog.ShowDialog();
         }
 
@@ -251,9 +409,10 @@ namespace RATools.ViewModels
         {
             ServiceRepository.Instance.FindService<ISettings>().HexValues = (bool)e.NewValue;
             var vm = (MainWindowViewModel)sender;
-            if (vm.Game != null)
+            var game = vm.Game;
+            if (game != null)
             {
-                foreach (var achievement in vm.Game.Achievements)
+                foreach (var achievement in game.Editors)
                     achievement.OnShowHexValuesChanged(e);
             }
         }

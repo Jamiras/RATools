@@ -254,8 +254,11 @@ namespace RATools.Parser
                 context.Trigger.Remove(extraRequirement);
 
                 var requirement = context.LastRequirement;
-                requirement.Operator = op;
-                requirement.Right = extraRequirement.Left;
+                if (requirement != null)
+                {
+                    requirement.Operator = op;
+                    requirement.Right = extraRequirement.Left;
+                }
             }
 
             return null;
@@ -302,7 +305,7 @@ namespace RATools.Parser
 
             // process the return value
             var innerScope = new InterpreterScope(scope);
-            if (innerScope.Depth == 100)
+            if (innerScope.Depth >= 100)
                 return new ParseErrorExpression("Maximum recursion depth exceeded", functionCall);
 
             ParseErrorExpression error = ExecuteAchievementExpression(result, innerScope);
