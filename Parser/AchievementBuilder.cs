@@ -599,6 +599,11 @@ namespace RATools.Parser
             // use ResetIf conditions to keep the HitCount counter at 0 until the achievement is activated. This is 
             // a bad practice, as it makes the achievement harder to read, and it normally adds an additional 
             // condition to be evaluated every frame.
+
+            // a PauseIf condition in an achievement without any HitCount conditions prevents the achievement from
+            // triggering while the PauseIf condition is true. Conversely, the achievement can only trigger if the 
+            // condition is false, so invert the logic on the condition and make it a requirement.
+
             // if no hit counts are found, then invert any PauseIfs or ResetIfs.
             if (!HasHitCount())
             {
