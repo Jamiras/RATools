@@ -109,8 +109,15 @@ namespace RATools.Parser.Internal
                 expressions.Add(IteratorName);
             if (_keywordIn != null && _keywordIn.Line == line)
                 expressions.Add(_keywordIn);
+
             if (Range.Line == line)
-                expressions.Add(Range);
+            {
+                var nestedExpressions = Range as INestedExpressions;
+                if (nestedExpressions != null)
+                    nestedExpressions.GetExpressionsForLine(expressions, line);
+                else
+                    expressions.Add(Range);
+            }
 
             return ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
         }

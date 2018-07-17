@@ -104,6 +104,17 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestParseAssignmentArray()
+        {
+            var tokenizer = CreateTokenizer("var = [3]");
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<AssignmentExpression>());
+            var assign = (AssignmentExpression)expression;
+            Assert.That(assign.Variable, Is.InstanceOf<VariableExpression>());
+            Assert.That(assign.Value, Is.InstanceOf<ArrayExpression>());
+        }
+
+        [Test]
         public void TestParseFunctionDefinition()
         {
             var tokenizer = CreateTokenizer("function test() => 1");

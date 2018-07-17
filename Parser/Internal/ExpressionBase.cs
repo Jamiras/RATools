@@ -579,6 +579,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.ParseError:
                     return value;
 
+                case ExpressionType.Array:
                 case ExpressionType.Comparison:
                 case ExpressionType.Conditional:
                 case ExpressionType.Dictionary:
