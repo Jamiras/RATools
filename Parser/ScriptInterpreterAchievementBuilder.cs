@@ -13,6 +13,7 @@ namespace RATools.Parser
         }
 
         private Stack<ValueModifier> _equalityModifiers;
+        private ConditionalExpression _delayedOrClause;
 
         /// <summary>
         /// Begins an new alt group.
@@ -53,7 +54,26 @@ namespace RATools.Parser
 
             var innerScope = new InterpreterScope(scope) { Context = context };
             error = ExecuteAchievementExpression(expression, innerScope);
-            return (error == null);
+            if (error != null)
+            {
+                if (error.InnerError != null)
+                    error = new ParseErrorExpression(error.InnermostError.Message, error.Line, error.Column, error.EndLine, error.EndColumn);
+                return false;
+            }
+
+            if (_delayedOrClause != null)
+            {
+                BeginAlt(context);
+                error = ExecuteAchievementExpression(_delayedOrClause.Left, innerScope);
+                if (error != null)
+                    return false;
+                BeginAlt(context);
+                error = ExecuteAchievementExpression(_delayedOrClause.Right, innerScope);
+                if (error != null)
+                    return false;
+            }
+
+            return true;
         }
 
         private ParseErrorExpression ExecuteAchievementExpression(ExpressionBase expression, InterpreterScope scope)
@@ -172,7 +192,19 @@ namespace RATools.Parser
 
                 case ConditionalOperation.Or:
                     if (!context.IsInNot)
+                    {
+                        // make sure we have all the Core requirements defined before
+                        // we create the first alt group
+                        if (ReferenceEquals(context.Trigger, CoreRequirements))
+                        {
+                            if (_delayedOrClause != null)
+                                return new ParseErrorExpression("Multiple OR clauses cannot be ANDed together", condition);
+                            _delayedOrClause = condition;
+                            return null;
+                        }
+
                         BeginAlt(context);
+                    }
                     error = ExecuteAchievementExpression(condition.Left, scope);
                     if (error != null)
                         return error;

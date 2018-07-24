@@ -27,13 +27,21 @@ namespace RATools.Parser.Internal
                 return;
             }
 
+            if (Left.IsLogicalUnit)
+                builder.Append('(');
             Left.AppendString(builder);
+            if (Left.IsLogicalUnit)
+                builder.Append(')');
             builder.Append(' ');
 
             builder.Append(GetOperatorString(Operation));
 
             builder.Append(' ');
+            if (Right.IsLogicalUnit)
+                builder.Append('(');
             Right.AppendString(builder);
+            if (Right.IsLogicalUnit)
+                builder.Append(')');
         }
 
         internal static string GetOperatorString(ConditionalOperation operation)
@@ -93,6 +101,7 @@ namespace RATools.Parser.Internal
                     var conditionalRight = Right as ConditionalExpression;
                     if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
                     {
+                        // enforce order of operations
                         // A && B || C => (A && B) || C
                         return Rebalance(conditionalRight);
                     }

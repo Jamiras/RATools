@@ -125,7 +125,7 @@ namespace RATools.Parser.Internal
                 var builder = new StringBuilder();
                 builder.Append("No entry in dictionary for key: ");
                 index.AppendString(builder);
-                result = new ParseErrorExpression(builder.ToString(), index);
+                result = new ParseErrorExpression(builder.ToString(), Index);
             }
             else
             {

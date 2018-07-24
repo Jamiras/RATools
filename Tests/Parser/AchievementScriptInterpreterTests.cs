@@ -396,7 +396,7 @@ namespace RATools.Test.Parser
         public void TestPrevMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 accessor did not evaluate to a memory accessor"));
         }
 
         [Test]
@@ -412,7 +412,7 @@ namespace RATools.Test.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]
@@ -506,6 +506,16 @@ namespace RATools.Test.Parser
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) - byte(0x001235) == 1"));
+        }
+
+        [Test]
+        public void TestTransitiveOrClause()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x003456) == 3 && (byte(0x001234) == 1 || byte(0x002345) == 2)"));
         }
 
         [Test]
