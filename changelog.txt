@@ -1,3 +1,7 @@
+v1.5.2 - 25 Jul 2018
+* move rich presence before achievements in editor list
+* add shortcuts for editor window: Ctrl+E to display, F8 for next error, Shift+F8 for previous error
+
 v1.5.1 - 16 Jul 2018
 * allow assigning arrays to variables
 
