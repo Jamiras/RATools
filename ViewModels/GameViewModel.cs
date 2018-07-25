@@ -107,12 +107,6 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = interpreter.Achievements.Count();
                 editors.Capacity += GeneratedAchievementCount;
 
-                foreach (var achievement in interpreter.Achievements)
-                {
-                    var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
-                    editors.Add(achievementViewModel);
-                }
-
                 if (!String.IsNullOrEmpty(interpreter.RichPresence))
                 {
                     var richPresenceViewModel = new RichPresenceViewModel(this, interpreter.RichPresence);
@@ -121,6 +115,12 @@ namespace RATools.ViewModels
                         richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
                         editors.Add(richPresenceViewModel);
                     }
+                }
+
+                foreach (var achievement in interpreter.Achievements)
+                {
+                    var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
+                    editors.Add(achievementViewModel);
                 }
 
                 foreach (var leaderboard in interpreter.Leaderboards)
