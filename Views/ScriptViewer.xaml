@@ -9,7 +9,8 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type toolwindows:CodeReferencesToolWindowViewModel}">
-        <ListView ItemsSource="{Binding References}" x:Name="referencesList" BorderThickness="0" jamiras:ListViewUtils.HasAutoSizeColumns="True">
+        <ListView ItemsSource="{Binding References}" x:Name="referencesList" BorderThickness="0" jamiras:ListViewUtils.HasAutoSizeColumns="True"
+                  SelectedIndex="{Binding SelectedReferenceIndex}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="{x:Type ListViewItem}">
                     <Setter Property="jamiras:CommandBinding.DoubleClickCommand" Value="{Binding DataContext.GotoReferenceCommand, ElementName=referencesList}" />

@@ -1,5 +1,6 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.CodeEditor;
@@ -34,7 +35,7 @@ namespace RATools.ViewModels
             Braces['{'] = '}';
             Braces['"'] = '"';
 
-            ErrorsToolWindow = new CodeReferencesToolWindowViewModel("Error List", this);
+            ErrorsToolWindow = new ErrorsToolWindowViewModel(this);
 
             GotoDefinitionCommand = new DelegateCommand(GotoDefinitionAtCursor);
         }
@@ -115,6 +116,21 @@ namespace RATools.ViewModels
 
         private ExpressionGroup _parsedContent;
         private InterpreterScope _scope;
+
+        private class ErrorsToolWindowViewModel : CodeReferencesToolWindowViewModel
+        {
+            public ErrorsToolWindowViewModel(CodeEditorViewModel owner)
+                : base("Error List", owner)
+            {
+            }
+
+            public static readonly ModelProperty SelectedReferenceIndexProperty = ModelProperty.Register(typeof(ErrorsToolWindowViewModel), "SelectedReferenceIndex", typeof(int), -1);
+            public int SelectedReferenceIndex
+            {
+                get { return (int)GetValue(SelectedReferenceIndexProperty); }
+                set { SetValue(SelectedReferenceIndexProperty, value); }
+            }
+        }
 
         public CodeReferencesToolWindowViewModel ErrorsToolWindow { get; private set; }
 
@@ -213,6 +229,20 @@ namespace RATools.ViewModels
                 return;
             }
 
+            if (e.Key == System.Windows.Input.Key.E && e.Modifiers == System.Windows.Input.ModifierKeys.Control)
+            {
+                ErrorsToolWindow.IsVisible = !ErrorsToolWindow.IsVisible;
+                e.Handled = true;
+                return;
+            }
+
+            if (e.Key == System.Windows.Input.Key.F8)
+            {
+                GotoNextError(e.Modifiers);
+                e.Handled = true;
+                return;
+            }
+
             base.OnKeyPressed(e);
         }
 
@@ -256,6 +286,32 @@ namespace RATools.ViewModels
                     }
 
                     break;
+                }
+            }
+        }
+
+        private void GotoNextError(System.Windows.Input.ModifierKeys modifierKeys)
+        {
+            var errorsToolWindowViewModel = ((ErrorsToolWindowViewModel)ErrorsToolWindow);
+            if (errorsToolWindowViewModel.References.Count > 0)
+            {
+                if (modifierKeys == System.Windows.Input.ModifierKeys.Shift)
+                {
+                    if (errorsToolWindowViewModel.SelectedReferenceIndex > 0)
+                        errorsToolWindowViewModel.SelectedReferenceIndex--;
+                    else
+                        errorsToolWindowViewModel.SelectedReferenceIndex = errorsToolWindowViewModel.References.Count - 1;
+
+                    errorsToolWindowViewModel.GotoReferenceCommand.Execute(errorsToolWindowViewModel.References[errorsToolWindowViewModel.SelectedReferenceIndex]);
+                }
+                else if (modifierKeys == System.Windows.Input.ModifierKeys.None)
+                {
+                    if (errorsToolWindowViewModel.SelectedReferenceIndex < 0)
+                        errorsToolWindowViewModel.SelectedReferenceIndex = 0;
+                    else
+                        errorsToolWindowViewModel.SelectedReferenceIndex = (errorsToolWindowViewModel.SelectedReferenceIndex + 1) % errorsToolWindowViewModel.References.Count;
+
+                    errorsToolWindowViewModel.GotoReferenceCommand.Execute(errorsToolWindowViewModel.References[errorsToolWindowViewModel.SelectedReferenceIndex]);
                 }
             }
         }
