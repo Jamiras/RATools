@@ -52,6 +52,6 @@ using System.Windows;
 // [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion("1.5.2.0")]
 [assembly: AssemblyFileVersion("1.5.2.0")]
-[assembly: AssemblyInformationalVersion("25 Jul 2018")]
+[assembly: AssemblyInformationalVersion("4 Aug 2018")]
 
 [assembly: InternalsVisibleTo("RATools.Test")]
