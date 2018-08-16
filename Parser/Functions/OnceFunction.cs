@@ -1,17 +1,17 @@
-﻿using System.Linq;
+﻿using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
 {
-    internal class OnceFunction : ComparisonModificationFunction
+    internal class OnceFunction : RepeatedFunction
     {
         public OnceFunction()
             : base("once")
         {
         }
 
-        protected override void ModifyRequirements(ScriptInterpreterAchievementBuilder builder)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            builder.CoreRequirements.Last().HitCount = 1;
+            return Evaluate(scope, 1, out result);
         }
     }
 }

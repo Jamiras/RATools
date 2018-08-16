@@ -121,6 +121,8 @@
     <Compile Include="Data\FieldTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />
     <Compile Include="Parser\AchievementScriptInterpreterTests.cs" />
+    <Compile Include="Parser\Functions\OnceFunctionTests.cs" />
+    <Compile Include="Parser\Functions\RepeatedFunctionTests.cs" />
     <Compile Include="Parser\Internal\ArrayExpressionTests.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBaseTests.cs" />
     <Compile Include="Parser\Internal\KeywordExpressionTests.cs" />
@@ -171,9 +173,7 @@
       <Name>RATools</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Parser\Functions\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

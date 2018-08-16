@@ -123,7 +123,6 @@ namespace RATools.Parser
 
                 switch (requirement.Type)
                 {
-                    case RequirementType.AddHits:
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
                         requirement.Operator = RequirementOperator.None;
@@ -288,7 +287,6 @@ namespace RATools.Parser
             {
                 case RequirementType.AddSource:
                 case RequirementType.SubSource:
-                case RequirementType.AddHits:
                     builder.Append("=0");
                     break;
 
@@ -329,6 +327,69 @@ namespace RATools.Parser
             }
         }
 
+        static void AppendDebugStringGroup(StringBuilder builder, ICollection<Requirement> group)
+        {
+            var enumerator = group.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                var requirement = enumerator.Current;
+
+                if (requirement.Type == RequirementType.AddHits)
+                {
+                    var queue = new Queue<Requirement>();
+                    do
+                    {
+                        queue.Enqueue(requirement);
+                        if (!enumerator.MoveNext())
+                            return;
+
+                        requirement = enumerator.Current;
+                    } while (requirement.Type == RequirementType.AddHits);
+
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.ResetIf:
+                            builder.Append("never(");
+                            break;
+
+                        case RequirementType.PauseIf:
+                            builder.Append("unless(");
+                            break;
+                    }
+
+                    builder.Append("repeated(");
+                    builder.Append(requirement.HitCount);
+                    builder.Append(", ");
+
+                    while (queue.Count > 0)
+                    {
+                        requirement = queue.Dequeue();
+                        requirement.AppendString(builder, NumberFormat.Decimal);
+                        builder.Append(" || ");
+                    }
+
+                    requirement = enumerator.Current;
+                    requirement.AppendCondition(builder, NumberFormat.Decimal);
+
+                    builder.Append(')');
+
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.ResetIf:
+                        case RequirementType.PauseIf:
+                            builder.Append(')');
+                            break;
+                    }
+                }
+                else
+                {
+                    requirement.AppendString(builder, NumberFormat.Decimal);
+                }
+
+                AppendDebugStringCombiner(builder, requirement);
+            }
+        }
+
         /// <summary>
         /// Gets the requirements formatted as a human-readable string.
         /// </summary>
@@ -337,11 +398,7 @@ namespace RATools.Parser
             get
             {
                 var builder = new StringBuilder();
-                foreach (var requirement in CoreRequirements)
-                {
-                    builder.Append(requirement);
-                    AppendDebugStringCombiner(builder, requirement);
-                }
+                AppendDebugStringGroup(builder, CoreRequirements);
 
                 if (AlternateRequirements.Count > 0)
                 {
@@ -353,11 +410,7 @@ namespace RATools.Parser
                         if (altGroup.Count > 1)
                             builder.Append('(');
 
-                        foreach (var requirement in altGroup)
-                        {
-                            builder.Append(requirement);
-                            AppendDebugStringCombiner(builder, requirement);
-                        }
+                        AppendDebugStringGroup(builder, altGroup);
                         builder.Length -= 4;
 
                         if (altGroup.Count > 1)

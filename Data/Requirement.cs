@@ -60,13 +60,27 @@ namespace RATools.Data
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
+                    AppendCondition(builder, numberFormat);
+                    builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
+                    AppendCondition(builder, numberFormat);
+                    builder.Append(')');
+                    break;
+
+                default:
+                    AppendCondition(builder, numberFormat);
                     break;
             }
 
+            if (HitCount != 0)
+                builder.Append(')');
+        }
+
+        internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat)
+        {
             Left.AppendString(builder, numberFormat);
 
             switch (Type)
@@ -99,21 +113,12 @@ namespace RATools.Data
                 case RequirementOperator.GreaterThanOrEqual:
                     builder.Append(" >= ");
                     break;
+
+                case RequirementOperator.None:
+                    return;
             }
 
-            if (Operator != RequirementOperator.None)
-                Right.AppendString(builder, numberFormat);
-
-            switch (Type)
-            {
-                case RequirementType.ResetIf:
-                case RequirementType.PauseIf:
-                    builder.Append(')');
-                    break;
-            }
-
-            if (HitCount != 0)
-                builder.Append(')');
+            Right.AppendString(builder, numberFormat);
         }
 
         /// <summary>

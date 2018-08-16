@@ -1,5 +1,6 @@
 v1.5.3 - 8 Aug 2018
 * error on duplicate key when building dictionary
+* support for AddHits via 'repeated(n, condition1 || condition2 ...)'
 
 v1.5.2 - 4 Aug 2018
 * move rich presence before achievements in editor list

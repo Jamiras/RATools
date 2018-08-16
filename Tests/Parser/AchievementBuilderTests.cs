@@ -176,6 +176,7 @@ namespace RATools.Test.Parser
         [TestCase("P:0xH000440=0", "unless(byte(0x000440) == 0)")]
         [TestCase("A:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) + bit2(0x20770F) == 0")]
         [TestCase("B:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) - bit2(0x20770F) == 0")]
+        [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
         public void TestParseRequirements(string input, string expected)
         {
             var builder = new AchievementBuilder();
@@ -206,6 +207,7 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x000440) == 140)", "0xH000440=140.1.")]
         [TestCase("never(byte(0x000440) == 0)", "R:0xH000440=0")]
         [TestCase("unless(byte(0x000440) == 0)", "P:0xH000440=0")]
+        [TestCase("repeated(4, byte(0x1234) == 56 || byte(0x2345) == 67)", "C:0xH001234=56_0xH002345=67.4.")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder

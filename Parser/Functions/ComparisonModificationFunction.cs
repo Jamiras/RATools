@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -35,24 +36,33 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            if (builder.CoreRequirements.Count == 0 ||
-                builder.CoreRequirements.Last().Operator == RequirementOperator.None)
-            {
-                result = new ParseErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+            if (!ValidateSingleCondition(comparison, builder.CoreRequirements, out result))
                 return false;
-            }
-
-            if (builder.CoreRequirements.Count(r => r.Operator != RequirementOperator.None) != 1)
-            {
-                result = new ParseErrorExpression(Name.Name + " does not support &&'d conditions", comparison);
-                return false;
-            }
 
             ModifyRequirements(builder);
 
             foreach (var requirement in builder.CoreRequirements)
                 context.Trigger.Add(requirement);
 
+            return true;
+        }
+
+        protected bool ValidateSingleCondition(ExpressionBase comparison, ICollection<Requirement> requirements, out ExpressionBase result)
+        {
+            if (requirements.Count == 0 ||
+                requirements.Last().Operator == RequirementOperator.None)
+            {
+                result = new ParseErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                return false;
+            }
+
+            if (requirements.Count(r => r.Operator != RequirementOperator.None) != 1)
+            {
+                result = new ParseErrorExpression(Name.Name + " does not support &&'d conditions", comparison);
+                return false;
+            }
+
+            result = null;
             return true;
         }
 
