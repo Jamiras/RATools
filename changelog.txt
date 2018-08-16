@@ -1,6 +1,9 @@
+v1.5.3 - 8 Aug 2018
+* error on duplicate key when building dictionary
+
 v1.5.2 - 4 Aug 2018
 * move rich presence before achievements in editor list
-* add shortcuts for editor window: Ctrl+E to display, F8 for next error, Shift+F8 for previous error
+* add shortcuts for error window: Ctrl+E to display, F8 for next error, Shift+F8 for previous error
 
 v1.5.1 - 16 Jul 2018
 * allow assigning arrays to variables

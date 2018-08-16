@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Jamiras.Components;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
@@ -37,6 +38,49 @@ namespace RATools.Parser.Internal
             }
 
             builder.Append('}');
+        }
+
+        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        {
+            SkipWhitespace(tokenizer);
+
+            var dict = new DictionaryExpression();
+            while (tokenizer.NextChar != '}')
+            {
+                var key = ExpressionBase.ParseClause(tokenizer);
+                if (key.Type == ExpressionType.ParseError)
+                    return key;
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar != ':')
+                {
+                    ParseError(tokenizer, "Expecting colon following key expression");
+                    break;
+                }
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+
+                var value = ExpressionBase.ParseClause(tokenizer);
+                if (value.Type == ExpressionType.ParseError)
+                    break;
+
+                dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar == '}')
+                    break;
+
+                if (tokenizer.NextChar != ',')
+                {
+                    ParseError(tokenizer, "Expecting comma between entries");
+                    break;
+                }
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+            }
+
+            tokenizer.Advance();
+            return dict;
         }
 
         /// <summary>
@@ -88,6 +132,15 @@ namespace RATools.Parser.Internal
                 if (!entry.Value.ReplaceVariables(scope, out value))
                 {
                     result = value;
+                    return false;
+                }
+
+                if (entries.Exists(e => e.Key == key))
+                {
+                    StringBuilder builder = new StringBuilder();
+                    key.AppendString(builder);
+                    builder.Append(" already exists in dictionary");
+                    result = new ParseErrorExpression(builder.ToString(), entry.Key);
                     return false;
                 }
 

@@ -264,7 +264,7 @@ namespace RATools.Parser.Internal
             return clause;
         }
 
-        private static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
+        protected static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
             var line = tokenizer.Line;
             var column = tokenizer.Column;
@@ -374,7 +374,7 @@ namespace RATools.Parser.Internal
 
                 case '{':
                     tokenizer.Advance();
-                    return ParseDictionary(tokenizer);
+                    return DictionaryExpression.Parse(tokenizer);
 
                 case '[':
                     tokenizer.Advance();
@@ -596,49 +596,6 @@ namespace RATools.Parser.Internal
             }
 
             return new AssignmentExpression((VariableExpression)variable, value);
-        }
-
-        private static ExpressionBase ParseDictionary(PositionalTokenizer tokenizer)
-        {
-            SkipWhitespace(tokenizer);
-
-            var dict = new DictionaryExpression();
-            while (tokenizer.NextChar != '}')
-            {
-                var key = ParseClause(tokenizer);
-                if (key.Type == ExpressionType.ParseError)
-                    return key;
-
-                SkipWhitespace(tokenizer);
-                if (tokenizer.NextChar != ':')
-                {
-                    ParseError(tokenizer, "Expecting colon following key expression");
-                    break;
-                }
-                tokenizer.Advance();
-                SkipWhitespace(tokenizer);
-
-                var value = ParseClause(tokenizer);
-                if (value.Type == ExpressionType.ParseError)
-                    break;
-
-                dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
-
-                SkipWhitespace(tokenizer);
-                if (tokenizer.NextChar == '}')
-                    break;
-
-                if (tokenizer.NextChar != ',')
-                {
-                    ParseError(tokenizer, "Expecting comma between entries");
-                    break;
-                }
-                tokenizer.Advance();
-                SkipWhitespace(tokenizer);
-            }
-
-            tokenizer.Advance();
-            return dict;
         }
 
         private static ExpressionBase ParseArray(PositionalTokenizer tokenizer)
