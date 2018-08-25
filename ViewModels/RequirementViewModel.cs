@@ -102,6 +102,9 @@ namespace RATools.ViewModels
         private void UpdateDefinition(NumberFormat numberFormat)
         {
             var builder = new StringBuilder();
+            if (Requirement.Type == RequirementType.AddHits)
+                builder.Append("AddHits ");
+
             Requirement.AppendString(builder, numberFormat);
             Definition = builder.ToString();
         }

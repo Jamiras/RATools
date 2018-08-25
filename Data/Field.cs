@@ -75,6 +75,7 @@ namespace RATools.Data
                             builder.AppendFormat("{0:X1}", Value);
                             break;
 
+                        default:
                         case FieldSize.Byte:
                             builder.AppendFormat("{0:X2}", Value);
                             break;
