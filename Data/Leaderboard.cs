@@ -38,6 +38,92 @@ namespace RATools.Data
         /// </summary>
         public string Value { get; set; }
 
+        /// <summary>
+        /// Gets or sets the format to use when displaying the value.
+        /// </summary>
+        public ValueFormat Format { get; set; }
+
+        /// <summary>
+        /// Converts a format string to a <see cref="ValueFormat"/>.
+        /// </summary>
+        /// <param name="format">The format as a string.</param>
+        /// <returns>The format as a <see cref="ValueFormat"/>, None if not valid.</returns>
+        public static ValueFormat ParseFormat(string format)
+        {
+            var formatStr = format.ToUpper();
+            switch (formatStr)
+            {
+                case "VALUE":
+                    return ValueFormat.Value;
+
+                case "SECS":
+                case "TIMESECS":
+                    return ValueFormat.TimeSecs;
+
+                case "FRAMES":
+                case "TIME":
+                    return ValueFormat.TimeFrames;
+
+                case "POINTS":
+                case "SCORE":
+                    return ValueFormat.Score;
+
+                case "MILLISECS":
+                    return ValueFormat.TimeMillisecs;
+
+                case "OTHER":
+                    return ValueFormat.Other;
+
+                default:
+                    return ValueFormat.None;
+            }
+        }
+
         internal int SourceLine { get; set; }
     }
+
+    /// <summary>
+    /// Supported formats to apply to values.
+    /// </summary>
+    /// <remarks>
+    /// Used by leaderboards and rich presence
+    /// </remarks>
+    public enum ValueFormat
+    {
+        /// <summary>
+        /// Unspecified
+        /// </summary>
+        None,
+
+        /// <summary>
+        /// Generic value - %01d
+        /// </summary>
+        Value,
+
+        /// <summary>
+        /// Generic value followed by "Points" - %06d Points
+        /// </summary>
+        Score,
+
+        /// <summary>
+        /// Convert the value (in seconds) to minutes/seconds - %02d:%02d
+        /// </summary>
+        TimeSecs,
+
+        /// <summary>
+        /// Convert the value (in hundredths of a second) to minutes/seconds/hundredths - %02d:%02d.%02d
+        /// </summary>
+        TimeMillisecs,
+
+        /// <summary>
+        /// Convert the value (in sixtieths of a second) to minutes/seconds/hundredths - %02d:%02d.%02d
+        /// </summary>
+        TimeFrames,     //	Value is a number describing the amount of frames.
+
+        /// <summary>
+        /// Zero-padded value - %06d
+        /// </summary>
+        Other,
+    }
+
 }

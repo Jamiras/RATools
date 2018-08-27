@@ -1,7 +1,8 @@
-v1.5.3 - 16 Aug 2018
+v1.5.3 - 27 Aug 2018
 * show error on duplicate key when building dictionary
 * support for AddHits via 'repeated(n, condition1 || condition2 ...)'
 * support for building AND/OR chain starting with uninitialized variable
+* add optional 'format' parameter to rich_presence_value and leaderboard functions
 
 v1.5.2 - 4 Aug 2018
 * move rich presence before achievements in editor list

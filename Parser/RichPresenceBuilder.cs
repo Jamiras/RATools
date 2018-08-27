@@ -1,9 +1,9 @@
 ﻿using Jamiras.Components;
+using RATools.Data;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 
 namespace RATools.Parser
@@ -13,13 +13,13 @@ namespace RATools.Parser
     {
         public RichPresenceBuilder()
         {
-            _valueFields = new List<string>();
+            _valueFields = new TinyDictionary<string, ValueFormat>();
             _lookupFields = new TinyDictionary<string, IDictionary<int, string>>();
             _conditionalDisplayStrings = new List<string>();
         }
 
         private List<string> _conditionalDisplayStrings;
-        private List<string> _valueFields;
+        private TinyDictionary<string, ValueFormat> _valueFields;
         private TinyDictionary<string, IDictionary<int, string>> _lookupFields;
 
         public string DisplayString { get; set; }
@@ -30,10 +30,9 @@ namespace RATools.Parser
             _conditionalDisplayStrings.Add(String.Format("?{0}?{1}", condition, displayString));
         }
 
-        public void AddValueField(string name)
+        public void AddValueField(string name, ValueFormat format)
         {
-            if (!_valueFields.Contains(name))
-                _valueFields.Add(name);
+            _valueFields[name] = format;
         }
 
         public void AddLookupField(string name, IDictionary<int, string> dict)
@@ -89,8 +88,36 @@ namespace RATools.Parser
             foreach (var value in _valueFields)
             {
                 builder.Append("Format:");
-                builder.AppendLine(value);
-                builder.AppendLine("FormatType=VALUE");
+                builder.AppendLine(value.Key);
+
+                builder.Append("FormatType=");
+                switch (value.Value)
+                {
+                    case ValueFormat.Value:
+                        builder.AppendLine("VALUE");
+                        break;
+
+                    case ValueFormat.Score:
+                        builder.AppendLine("SCORE");
+                        break;
+
+                    case ValueFormat.TimeSecs:
+                        builder.AppendLine("SECS");
+                        break;
+
+                    case ValueFormat.TimeMillisecs:
+                        builder.AppendLine("MILLISECS");
+                        break;
+
+                    case ValueFormat.TimeFrames:
+                        builder.AppendLine("FRAMES");
+                        break;
+
+                    case ValueFormat.Other:
+                        builder.AppendLine("OTHER");
+                        break;
+                }
+
                 builder.AppendLine();
             }
 

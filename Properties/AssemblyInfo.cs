@@ -50,8 +50,8 @@ using System.Windows;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("1.5.2.0")]
-[assembly: AssemblyFileVersion("1.5.2.0")]
-[assembly: AssemblyInformationalVersion("4 Aug 2018")]
+[assembly: AssemblyVersion("1.5.3.0")]
+[assembly: AssemblyFileVersion("1.5.3.0")]
+[assembly: AssemblyInformationalVersion("27 Aug 2018")]
 
 [assembly: InternalsVisibleTo("RATools.Test")]

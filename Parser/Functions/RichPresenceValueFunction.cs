@@ -10,6 +10,9 @@ namespace RATools.Parser.Functions
         {
             Parameters.Add(new VariableDefinitionExpression("name"));
             Parameters.Add(new VariableDefinitionExpression("expression"));
+            Parameters.Add(new VariableDefinitionExpression("format"));
+
+            DefaultParameters["format"] = new StringConstantExpression("value");
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
@@ -25,6 +28,17 @@ namespace RATools.Parser.Functions
             if (name == null)
                 return false;
 
+            var format = GetStringParameter(scope, "format", out result);
+            if (format == null)
+                return false;
+
+            var valueFormat = Leaderboard.ParseFormat(format.Value);
+            if (valueFormat == ValueFormat.None)
+            {
+                result = new ParseErrorExpression(format.Value + " is not a supported rich_presence_value format", format);
+                return false;
+            }
+
             var expression = GetParameter(scope, "expression", out result);
             if (expression == null)
                 return false;
@@ -33,7 +47,7 @@ namespace RATools.Parser.Functions
             if (value == null)
                 return false;
 
-            context.RichPresence.AddValueField(name.Value);
+            context.RichPresence.AddValueField(name.Value, valueFormat);
 
             context.DisplayString.Append('@');
             context.DisplayString.Append(name.Value);
