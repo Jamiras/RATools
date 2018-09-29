@@ -1010,9 +1010,27 @@ namespace RATools.Parser
         private void PromoteCommonAltsToCore()
         {
             // identify requirements present in all alt groups.
+            bool combiningRequirement = false;
             var requirementsFoundInAll = new List<Requirement>();
             foreach (var requirement in _alts[0])
             {
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        combiningRequirement = true;
+                        continue;
+
+                    default:
+                        if (combiningRequirement)
+                        {
+                            combiningRequirement = false;
+                            continue;
+                        }
+                        break;
+                }
+
                 bool foundInAll = true;
                 for (int i = 1; i < _alts.Count; i++)
                 {
@@ -1040,6 +1058,31 @@ namespace RATools.Parser
                         for (int i = alt.Count - 1; i >= 0; i--)
                         {
                             if (alt[i].HitCount > 0 && !requirementsFoundInAll.Contains(alt[i]))
+                            {
+                                canPromote = false;
+                                break;
+                            }
+                        }
+
+                        if (!canPromote)
+                            break;
+                    }
+
+                    if (!canPromote)
+                        continue;
+                }
+
+                // ResetIf in an alt group may be disabled by a PauseIf, don't promote if any PauseIfs 
+                // are not promoted
+                if (requirement.Type == RequirementType.ResetIf)
+                {
+                    bool canPromote = true;
+
+                    foreach (IList<Requirement> alt in _alts)
+                    {
+                        for (int i = alt.Count - 1; i >= 0; i--)
+                        {
+                            if (alt[i].Type == RequirementType.PauseIf && !requirementsFoundInAll.Contains(alt[i]))
                             {
                                 canPromote = false;
                                 break;
