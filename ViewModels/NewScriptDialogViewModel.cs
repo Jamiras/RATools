@@ -73,7 +73,10 @@ namespace RATools.ViewModels
             int gameId = GameId.Value.GetValueOrDefault();
             foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
             {
-                var notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                var notesFile = Path.Combine(directory, gameId + "-Notes.json");
+                if (!File.Exists(notesFile))
+                    notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+
                 if (File.Exists(notesFile))
                 {
                     LoadGame(gameId, directory);

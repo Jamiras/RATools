@@ -30,12 +30,27 @@ namespace RATools.ViewModels
             _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
         }
 
+        private void ParseNotes(IEnumerable<JsonObject> notes)
+        {
+            foreach (var note in notes)
+            {
+                var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
+                var text = note.GetField("Note").StringValue;
+                if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
+                    Notes[address] = text;
+            }
+        }
+
         public GameViewModel(int gameId, string title, string raCacheDirectory)
             : this(gameId, title)
         {
             RACacheDirectory = raCacheDirectory;
 
-            using (var notesStream = File.OpenRead(Path.Combine(raCacheDirectory, gameId + "-Notes2.txt")))
+            var filename = Path.Combine(raCacheDirectory, gameId + "-Notes.json");
+            if (!File.Exists(filename))
+                filename = Path.Combine(raCacheDirectory, gameId + "-Notes2.txt");
+
+            using (var notesStream = File.OpenRead(filename))
             {
                 var reader = new StreamReader(notesStream);
                 var firstChar = reader.Peek();
@@ -45,15 +60,17 @@ namespace RATools.ViewModels
                 {
                     _isN64 = false;
 
-                    // standard JSON format
+                    // full JSON response
                     var notes = new JsonObject(notesStream);
-                    foreach (var note in notes.GetField("CodeNotes").ObjectArrayValue)
-                    {
-                        var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
-                        var text = note.GetField("Note").StringValue;
-                        if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
-                            Notes[address] = text;
-                    }
+                    ParseNotes(notes.GetField("CodeNotes").ObjectArrayValue);
+                }
+                else if (firstChar == '[')
+                {
+                    _isN64 = false;
+
+                    // just notes subobject.
+                    var notes = new JsonObject(notesStream);
+                    ParseNotes(notes.GetField("items").ObjectArrayValue);
                 }
                 else
                 {
@@ -265,9 +282,13 @@ namespace RATools.ViewModels
 
         private void MergePublished(int gameId, List<GeneratedItemViewModelBase> achievements)
         {
-            var fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
+            var fileName = Path.Combine(RACacheDirectory, gameId + ".json");
             if (!File.Exists(fileName))
-                return;
+            {
+                fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
+                if (!File.Exists(fileName))
+                    return;
+            }
 
             using (var stream = File.OpenRead(fileName))
             {
@@ -334,9 +355,13 @@ namespace RATools.ViewModels
 
         private void MergePublishedN64(int gameId, List<GeneratedItemViewModelBase> achievements)
         {
-            var fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
+            var fileName = Path.Combine(RACacheDirectory, gameId + ".json");
             if (!File.Exists(fileName))
-                return;
+            {
+                fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
+                if (!File.Exists(fileName))
+                    return;
+            }
 
             var count = 0;
             var points = 0;

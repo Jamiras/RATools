@@ -271,6 +271,16 @@ namespace RATools.ViewModels
 
                     viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
                 }
+                else
+                {
+                    notesFile = Path.Combine(directory, gameId + "-Notes.json");
+                    if (File.Exists(notesFile))
+                    {
+                        logger.WriteVerbose("Found code notes in " + directory);
+
+                        viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
+                    }
+                }
             }
 
             if (viewModel == null)
