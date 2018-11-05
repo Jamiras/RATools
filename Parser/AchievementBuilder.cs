@@ -954,6 +954,43 @@ namespace RATools.Parser
             return false;
         }
 
+        static bool Evaluate(Requirement requirement)
+        {
+            switch (requirement.Operator)
+            {
+                case RequirementOperator.Equal:
+                    return (requirement.Left.Value == requirement.Right.Value);
+                case RequirementOperator.NotEqual:
+                    return (requirement.Left.Value != requirement.Right.Value);
+                case RequirementOperator.LessThan:
+                    return (requirement.Left.Value <= requirement.Right.Value);
+                case RequirementOperator.LessThanOrEqual:
+                    return (requirement.Left.Value < requirement.Right.Value);
+                case RequirementOperator.GreaterThan:
+                    return (requirement.Left.Value > requirement.Right.Value);
+                case RequirementOperator.GreaterThanOrEqual:
+                    return (requirement.Left.Value >= requirement.Right.Value);
+                default:
+                    return false;
+            }
+        }
+
+        static bool IsTrue(Requirement requirement)
+        {
+            if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
+                return Evaluate(requirement);
+
+            return false;
+        }
+
+        static bool IsFalse(Requirement requirement)
+        {
+            if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
+                return !Evaluate(requirement);
+
+            return false;
+        }
+
         private void MergeDuplicateAlts()
         {
             for (int i = _alts.Count - 1; i > 0; i--)
@@ -996,6 +1033,51 @@ namespace RATools.Parser
                             altsJ.Add(requirement);
                         _alts.RemoveAt(i);
                         break;
+                    }
+                }
+            }
+
+            if (_alts.Count > 2)
+            {
+                bool hasAlwaysTrue = false;
+
+                // if a trigger contains an always_false alt group, remove it unless it would promote another alt group to core. it's
+                // typically used for two cases: building an alt group list or keeping a PauseIf out of core
+                for (int j = _alts.Count - 1; j >= 0; j--)
+                {
+                    if (_alts[j].Count == 1)
+                    {
+                        if (IsFalse(_alts[j].First()))
+                        {
+                            _alts.RemoveAt(j);
+                            if (_alts.Count == 2)
+                                break;
+                        }
+                        else if (IsTrue(_alts[j].First()))
+                        {
+                            hasAlwaysTrue = true;
+                        }
+                    }
+                }
+
+                // if a trigger contains an always_true alt group, remove any other alt groups that don't have PauseIf or ResetIf conditions as they are unimportant
+                if (hasAlwaysTrue)
+                {
+                    for (int j = _alts.Count - 1; j >= 0; j--)
+                    {
+                        if (_alts[j].Count == 1 && IsTrue(_alts[j].First()))
+                            continue;
+
+                        bool hasPauseIf = _alts[j].Any(r => r.Type == RequirementType.PauseIf);
+                        bool hasResetIf = _alts[j].Any(r => r.Type == RequirementType.ResetIf);
+                        if (!hasPauseIf && !hasResetIf)
+                            _alts.RemoveAt(j);
+                    }
+
+                    if (_alts.Count == 1)
+                    {
+                        // only AlwaysTrue group left, get rid of it
+                        _alts.Clear();
                     }
                 }
             }

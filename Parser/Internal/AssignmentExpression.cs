@@ -54,25 +54,10 @@ namespace RATools.Parser.Internal
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             ExpressionBase value;
-
-            var conditionExpression = Value as ConditionalExpression;
-            if (conditionExpression != null && conditionExpression.Left == Variable &&
-                scope.GetVariable(Variable.Name) == null)
+            if (!Value.ReplaceVariables(scope, out value))
             {
-                // "a = a && b" for undefined "a" should just evaluate to "b"
-                if (!conditionExpression.Right.ReplaceVariables(scope, out value))
-                {
-                    result = value;
-                    return false;
-                }
-            }
-            else
-            {
-                if (!Value.ReplaceVariables(scope, out value))
-                {
-                    result = value;
-                    return false;
-                }
+                result = value;
+                return false;
             }
 
             result = new AssignmentExpression(Variable, value);

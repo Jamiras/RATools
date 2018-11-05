@@ -1,10 +1,11 @@
-v1.5.3 - 29 Sep 2018
-* show error on duplicate key when building dictionary
+v1.5.3 - 4 Nov 2018
 * support for AddHits via 'repeated(n, condition1 || condition2 ...)'
-* support for building AND/OR chain starting with uninitialized variable
+* add always_true() and always_false() methods for constructing alt chains
 * add optional 'format' parameter to rich_presence_value and leaderboard functions
+* show error on duplicate key when building dictionary
 * don't promote partial AddSource/SubSource/AddHits clause when common across alts
 * don't promote ResetIf clause from alt when protected by a PauseIf
+* support .json file extension for RACache files
 
 v1.5.2 - 4 Aug 2018
 * move rich presence before achievements in editor list

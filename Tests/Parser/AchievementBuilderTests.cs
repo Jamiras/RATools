@@ -403,6 +403,11 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 3", "byte(0x001234) <= 2 || byte(0x001234) >= 3")] // always true, can't really collapse
         [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 2", "byte(0x001234) <= 2 || byte(0x001234) >= 2")] // always true, can't really collapse
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "byte(0x001234) >= 2 || byte(0x001234) <= 2")] // always true, can't really collapse
+        [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
+        [TestCase("always_false() || byte(0x001234) == 2", "0 == 1 || byte(0x001234) == 2")] // minimum of two alts
+        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
+        [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
+            "0 == 0 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
         // ==== RemoveAltsAlreadyInCore ====
         [TestCase("byte(0x001234) == 2 && ((byte(0x001234) == 2 && byte(0x004567) == 3) || (byte(0x001234) == 2 && byte(0x004567) == 4))",
                   "byte(0x001234) == 2 && (byte(0x004567) == 3 || byte(0x004567) == 4)")]
