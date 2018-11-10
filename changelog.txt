@@ -1,4 +1,4 @@
-v1.5.3 - 4 Nov 2018
+v1.5.3 - 10 Nov 2018
 * support for AddHits via 'repeated(n, condition1 || condition2 ...)'
 * add always_true() and always_false() methods for constructing alt chains
 * add optional 'format' parameter to rich_presence_value and leaderboard functions

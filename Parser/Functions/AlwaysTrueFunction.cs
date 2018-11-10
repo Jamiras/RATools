@@ -20,9 +20,9 @@ namespace RATools.Parser.Functions
             }
 
             var requirement = new Requirement();
-            requirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 };
+            requirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
             requirement.Operator = RequirementOperator.Equal;
-            requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 };
+            requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
 
             context.Trigger.Add(requirement);
 
