@@ -82,13 +82,27 @@ namespace RATools.Parser
                         achievement.Id = num;
                     tokenizer.Advance();
 
-                    achievement.ParseRequirements(tokenizer);
+                    if (tokenizer.NextChar == '"')
+                    {
+                        var requirements = tokenizer.ReadQuotedString();
+                        achievement.ParseRequirements(Tokenizer.CreateTokenizer(requirements));
+                    }
+                    else
+                    {
+                        achievement.ParseRequirements(tokenizer);
+                    }
                     tokenizer.Advance();
 
-                    achievement.Title = tokenizer.ReadTo(':').ToString();
+                    if (tokenizer.NextChar == '"')
+                        achievement.Title = tokenizer.ReadQuotedString().ToString();
+                    else
+                        achievement.Title = tokenizer.ReadTo(':').ToString();
                     tokenizer.Advance();
 
-                    achievement.Description = tokenizer.ReadTo(':').ToString();
+                    if (tokenizer.NextChar == '"')
+                        achievement.Description = tokenizer.ReadQuotedString().ToString();
+                    else
+                        achievement.Description = tokenizer.ReadTo(':').ToString();
                     tokenizer.Advance();
 
                     tokenizer.ReadTo(':'); // deprecated
