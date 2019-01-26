@@ -234,6 +234,9 @@ namespace RATools.Parser
         {
             _equalityModifiers.Clear();
 
+            var context = scope.GetContext<TriggerBuilderContext>();
+            var insertIndex = context.Trigger.Count;
+
             ExpressionBase left;
             if (!comparison.Left.ReplaceVariables(scope, out left))
                 return (ParseErrorExpression)left;
@@ -245,7 +248,6 @@ namespace RATools.Parser
             if (!comparison.Right.ReplaceVariables(scope, out right))
                 return (ParseErrorExpression)right;
 
-            var context = scope.GetContext<TriggerBuilderContext>();
             var op = GetRequirementOperator(comparison.Operation);
             if (context.IsInNot)
                 op = GetOppositeRequirementOperator(op);
@@ -289,8 +291,24 @@ namespace RATools.Parser
                         rightValue = ValueModifier.Apply(rightValue, MathematicExpression.GetOppositeOperation(modifier.Operation), modifier.Amount);
                     }
 
-                    if (leftValue != rightValue)
-                        return new ParseErrorExpression("Expansion of function calls results in non-zero modifier when comparing multiple memory addresses", right);
+                    var diff = leftValue - rightValue;
+                    if (diff != 0)
+                    {
+                        var modifier = new Requirement();
+
+                        if (diff < 0)
+                        {
+                            modifier.Left = new Field { Type = FieldType.Value, Value = (uint)(-diff) };
+                            modifier.Type = RequirementType.SubSource;
+                        }
+                        else
+                        {
+                            modifier.Left = new Field { Type = FieldType.Value, Value = (uint)diff };
+                            modifier.Type = RequirementType.AddSource;
+                        }
+
+                        ((IList<Requirement>)context.Trigger).Insert(insertIndex, modifier);
+                    }
                 }
 
                 var extraRequirement = context.LastRequirement;

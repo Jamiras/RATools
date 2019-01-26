@@ -129,6 +129,13 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234) / 2 == 4", "byte(0x001234) == 8")]
         [TestCase("byte(0x1234) * 2 + 1 == byte(0x4321) * 2 + 1", "byte(0x001234) == byte(0x004321)")]
         [TestCase("byte(0x1234) + 2 - 1 == byte(0x4321) + 1", "byte(0x001234) == byte(0x004321)")]
+        [TestCase("byte(0x1234) + 3 == prev(byte(0x1234))", "(3 + byte(0x001234)) == prev(byte(0x001234))")] // value decreases by 3
+        [TestCase("byte(0x1234) == prev(byte(0x1234)) - 3", "(3 + byte(0x001234)) == prev(byte(0x001234))")] // value decreases by 3
+        [TestCase("prev(byte(0x1234)) - byte(0x1234) == 3", "(prev(byte(0x001234)) - byte(0x001234)) == 3")] // value decreases by 3
+        [TestCase("byte(0x1234) - 3 == prev(byte(0x1234))", "(byte(0x001234) - 3) == prev(byte(0x001234))")] // value increases by 3
+        [TestCase("byte(0x1234) == prev(byte(0x1234)) + 3", "(byte(0x001234) - 3) == prev(byte(0x001234))")] // value increases by 3
+        [TestCase("byte(0x1234) - prev(byte(0x1234)) == 3", "(byte(0x001234) - prev(byte(0x001234))) == 3")] // value increases by 3
+        [TestCase("byte(0x1234) + 1 == byte(0x4321) - 1", "(2 + byte(0x001234)) == byte(0x004321)")] // modifiers on different addresses
         public void TestTransitiveCondition(string trigger, string expectedRequirement)
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, " + trigger + ")");
@@ -136,13 +143,6 @@ namespace RATools.Test.Parser
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo(expectedRequirement));
-        }
-
-        [Test]
-        public void TestTransitiveConditionIncompatible()
-        {
-            var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) + 1 == byte(0x4321) - 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:46 Expansion of function calls results in non-zero modifier when comparing multiple memory addresses"));
         }
 
         [Test]
