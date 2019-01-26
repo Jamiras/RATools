@@ -1,5 +1,6 @@
 v1.5.4 - 26 Jan 2019
 * support for quoted strings in local achievements
+* support for matching the difference between values at two addresses: "byte(0x1234) - byte(0x3456) == 6"
 * don't auto-insert matching brace/parenthesis if the next character is not whitespace or punctuation
 * fix dumping achievements using AddSource/SubSource/AddHits
 * fix order when generating condition with SubSource
