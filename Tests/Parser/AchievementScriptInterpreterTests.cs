@@ -483,7 +483,7 @@ namespace RATools.Test.Parser
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) + byte(0x001235) == 1"));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) + byte(0x001235)) == 1"));
         }
 
         [Test]
@@ -494,7 +494,7 @@ namespace RATools.Test.Parser
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) + byte(0x001235) + byte(0x001236) + byte(0x001237) == 1"));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) + byte(0x001235) + byte(0x001236) + byte(0x001237)) == 1"));
         }
 
         [Test]
@@ -505,7 +505,7 @@ namespace RATools.Test.Parser
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) - byte(0x001235) == 1"));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) - byte(0x001235)) == 1"));
         }
 
         [Test]

@@ -314,79 +314,64 @@ namespace RATools.Parser
             }
         }
 
-        static void AppendDebugStringCombiner(StringBuilder builder, Requirement requirement)
-        {
-            switch (requirement.Type)
-            {
-                case RequirementType.AddSource:
-                case RequirementType.SubSource:
-                    break;
-                default:
-                    builder.Append(" && ");
-                    break;
-            }
-        }
-
         static void AppendDebugStringGroup(StringBuilder builder, ICollection<Requirement> group)
         {
+            bool needsAmpersand = false;
+
             var enumerator = group.GetEnumerator();
             while (enumerator.MoveNext())
             {
                 var requirement = enumerator.Current;
 
-                if (requirement.Type == RequirementType.AddHits)
+                var addSources = new StringBuilder();
+                var subSources = new StringBuilder();
+                var addHits = new StringBuilder();
+                bool isCombining = true;
+                do
                 {
-                    var queue = new Queue<Requirement>();
-                    do
-                    {
-                        queue.Enqueue(requirement);
-                        if (!enumerator.MoveNext())
-                            return;
-
-                        requirement = enumerator.Current;
-                    } while (requirement.Type == RequirementType.AddHits);
-
                     switch (requirement.Type)
                     {
-                        case RequirementType.ResetIf:
-                            builder.Append("never(");
+                        case RequirementType.AddSource:
+                            requirement.Left.AppendString(addSources, NumberFormat.Decimal);
+                            addSources.Append(" + ");
                             break;
 
-                        case RequirementType.PauseIf:
-                            builder.Append("unless(");
+                        case RequirementType.SubSource:
+                            subSources.Append(" - ");
+                            requirement.Left.AppendString(subSources, NumberFormat.Decimal);
+                            break;
+
+                        case RequirementType.AddHits:
+                            requirement.AppendString(addHits, NumberFormat.Decimal);
+                            addHits.Append(" || ");
+                            break;
+
+                        default:
+                            isCombining = false;
                             break;
                     }
 
-                    builder.Append("repeated(");
-                    builder.Append(requirement.HitCount);
-                    builder.Append(", ");
+                    if (!isCombining)
+                        break;
 
-                    while (queue.Count > 0)
-                    {
-                        requirement = queue.Dequeue();
-                        requirement.AppendString(builder, NumberFormat.Decimal);
-                        builder.Append(" || ");
-                    }
+                    if (!enumerator.MoveNext())
+                        return;
 
                     requirement = enumerator.Current;
-                    requirement.AppendCondition(builder, NumberFormat.Decimal);
+                } while (true);
 
-                    builder.Append(')');
+                var definition = new StringBuilder();
+                requirement.AppendString(definition, NumberFormat.Decimal,
+                    addSources.Length > 0 ? addSources.ToString() : null,
+                    subSources.Length > 0 ? subSources.ToString() : null,
+                    addHits.Length > 0 ? addHits.ToString() : null);
 
-                    switch (requirement.Type)
-                    {
-                        case RequirementType.ResetIf:
-                        case RequirementType.PauseIf:
-                            builder.Append(')');
-                            break;
-                    }
-                }
+                if (needsAmpersand)
+                    builder.Append(" && ");
                 else
-                {
-                    requirement.AppendString(builder, NumberFormat.Decimal);
-                }
+                    needsAmpersand = true;
 
-                AppendDebugStringCombiner(builder, requirement);
+                builder.Append(definition.ToString());
             }
         }
 
@@ -403,7 +388,7 @@ namespace RATools.Parser
                 if (AlternateRequirements.Count > 0)
                 {
                     if (CoreRequirements.Count > 0)
-                        builder.Append('(');
+                        builder.Append(" && (");
 
                     foreach (var altGroup in AlternateRequirements)
                     {
@@ -411,7 +396,6 @@ namespace RATools.Parser
                             builder.Append('(');
 
                         AppendDebugStringGroup(builder, altGroup);
-                        builder.Length -= 4;
 
                         if (altGroup.Count > 1)
                             builder.Append(')');
@@ -423,10 +407,6 @@ namespace RATools.Parser
 
                     if (CoreRequirements.Count > 0)
                         builder.Append(')');
-                }
-                else if (builder.Length > 4)
-                {
-                    builder.Length -= 4;
                 }
 
                 return builder.ToString();

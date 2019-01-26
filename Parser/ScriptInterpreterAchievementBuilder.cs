@@ -120,20 +120,29 @@ namespace RATools.Parser
         }
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
-            var error = ExecuteAchievementExpression(mathematic.Left, scope);
+            var left = mathematic.Left;
+
+            ExpressionBase right;
+            if (!mathematic.Right.ReplaceVariables(scope, out right))
+                return (ParseErrorExpression)right;
+
+            // if subtracting a non-integer, swap the order to perform a SubSource
+            if (mathematic.Operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression))
+            {
+                left = right;
+                right = mathematic.Left;
+            }
+
+            // generate the condition for the first expression
+            var error = ExecuteAchievementExpression(left, scope);
             if (error != null)
                 return error;
 
-            ExpressionBase operand;
-            if (!mathematic.Right.ReplaceVariables(scope, out operand))
-                return (ParseErrorExpression)operand;
-
             var context = scope.GetContext<TriggerBuilderContext>();
-
-            var integerOperand = operand as IntegerConstantExpression;
+            var integerOperand = right as IntegerConstantExpression;
             if (integerOperand == null)
             {
-                if (operand is FunctionCallExpression || operand is MathematicExpression)
+                if (right is FunctionCallExpression || right is MathematicExpression)
                 {
                     switch (mathematic.Operation)
                     {
@@ -149,7 +158,9 @@ namespace RATools.Parser
 
                     context.LastRequirement.Operator = RequirementOperator.None;
                     context.LastRequirement.Right = new Field();
-                    return ExecuteAchievementExpression(operand, scope);
+
+                    // generate the condition for the second expression
+                    return ExecuteAchievementExpression(right, scope);
                 }
 
                 return new ParseErrorExpression("Expression does not evaluate to a constant", mathematic.Right);

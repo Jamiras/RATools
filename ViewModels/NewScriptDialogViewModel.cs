@@ -518,6 +518,7 @@ namespace RATools.ViewModels
                 stream.WriteLine(String.Format("{0}", _game.GameId));
                 bool needLine = true;
                 bool hadFunction = false;
+                var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
                 string addressFormat = "{0:X4}";
                 if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
                     addressFormat = "{0:X6}";
@@ -679,7 +680,7 @@ namespace RATools.ViewModels
                     var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
-                    DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current);
+                    DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat);
                     first = true;
                     while (groupEnumerator.MoveNext())
                     {
@@ -695,7 +696,7 @@ namespace RATools.ViewModels
                             stream.Write("               (");
                         }
 
-                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current);
+                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat);
                         stream.Write(")");
                     }
                     if (!first)
@@ -708,7 +709,8 @@ namespace RATools.ViewModels
             }
         }
 
-        private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, RequirementGroupViewModel requirementGroupViewModel)
+        private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
+            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat)
         {
             bool needsAmpersand = false;
             const int MaxWidth = 106; // 120 - "    trigger = ".Length
@@ -717,45 +719,89 @@ namespace RATools.ViewModels
             var requirementEnumerator = requirementGroupViewModel.Requirements.GetEnumerator();
             while (requirementEnumerator.MoveNext())
             {
-                if (!String.IsNullOrEmpty(requirementEnumerator.Current.Definition))
+                if (String.IsNullOrEmpty(requirementEnumerator.Current.Definition))
+                    continue;
+
+                var addSources = new StringBuilder();
+                var subSources = new StringBuilder();
+                var addHits = new StringBuilder();
+                bool isCombining = true;
+                do
                 {
-                    if (needsAmpersand)
-                    {
-                        stream.Write(" && ");
-                        width -= 4;
-                    }
-                    else
-                    {
-                        needsAmpersand = true;
-                    }
-
-                    var definition = requirementEnumerator.Current.Definition;
-                    foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
-                    {
-                        var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                        var functionCall = memoryItem.FunctionName + "()";
-                        definition = definition.Replace(memoryReference, functionCall);
-                    }
-
-                    if (width - definition.Length < 0)
-                    {
-                        stream.WriteLine();
-                        stream.Write("              ");
-                        width = MaxWidth;
-                    }
-
-                    width -= definition.Length;
-                    stream.Write(definition);
-
                     switch (requirementEnumerator.Current.Requirement.Type)
                     {
                         case RequirementType.AddSource:
+                            requirementEnumerator.Current.Requirement.Left.AppendString(addSources, numberFormat);
+                            addSources.Append(" + ");
+                            break;
+
                         case RequirementType.SubSource:
+                            subSources.Append(" - ");
+                            requirementEnumerator.Current.Requirement.Left.AppendString(subSources, numberFormat);
+                            break;
+
                         case RequirementType.AddHits:
-                            needsAmpersand = false;
+                            requirementEnumerator.Current.Requirement.AppendString(addHits, numberFormat);
+                            addHits.Append(" || ");
+                            break;
+
+                        default:
+                            isCombining = false;
                             break;
                     }
+
+                    if (!isCombining)
+                        break;
+
+                    if (!requirementEnumerator.MoveNext())
+                        return;
+                } while (true);
+
+                var definition = new StringBuilder();
+                requirementEnumerator.Current.Requirement.AppendString(definition, numberFormat, 
+                    addSources.Length > 0 ? addSources.ToString() : null, 
+                    subSources.Length > 0 ? subSources.ToString() : null,
+                    addHits.Length > 0 ? addHits.ToString() : null);
+
+                foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
+                {
+                    var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                    var functionCall = memoryItem.FunctionName + "()";
+                    definition.Replace(memoryReference, functionCall);
                 }
+
+                if (needsAmpersand)
+                {
+                    stream.Write(" && ");
+                    width -= 4;
+                }
+                else
+                {
+                    needsAmpersand = true;
+                }
+
+                while (definition.Length > MaxWidth)
+                {
+                    var index = width;
+                    while (index > 0 && definition[index] != ' ')
+                        index--;
+
+                    stream.Write(definition.ToString().Substring(0, index));
+                    stream.WriteLine();
+                    stream.Write("              ");
+                    definition.Remove(0, index);
+                    width = MaxWidth;
+                }
+
+                if (width - definition.Length < 0)
+                {
+                    stream.WriteLine();
+                    stream.Write("              ");
+                    width = MaxWidth;
+                }
+
+                width -= definition.Length;
+                stream.Write(definition.ToString());
             }
         }
     }

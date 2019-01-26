@@ -1,6 +1,8 @@
-v1.5.4 - 21 Jan 2019
+v1.5.4 - 26 Jan 2019
 * support for quoted strings in local achievements
 * don't auto-insert matching brace/parenthesis if the next character is not whitespace or punctuation
+* fix dumping achievements using AddSource/SubSource/AddHits
+* fix order when generating condition with SubSource
 
 v1.5.3 - 10 Nov 2018
 * support for AddHits via 'repeated(n, condition1 || condition2 ...)'

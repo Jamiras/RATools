@@ -49,7 +49,8 @@ namespace RATools.Data
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
-        internal void AppendString(StringBuilder builder, NumberFormat numberFormat)
+        internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
+            string addSources = null, string subSources = null, string addHits = null)
         {
             if (HitCount == 1)
                 builder.Append("once(");
@@ -60,18 +61,18 @@ namespace RATools.Data
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendCondition(builder, numberFormat);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendCondition(builder, numberFormat);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
                     builder.Append(')');
                     break;
 
                 default:
-                    AppendCondition(builder, numberFormat);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
                     break;
             }
 
@@ -79,18 +80,48 @@ namespace RATools.Data
                 builder.Append(')');
         }
 
-        internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat)
+        internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
+            string addSources = null, string subSources = null, string addHits = null)
         {
-            Left.AppendString(builder, numberFormat);
+            if (!string.IsNullOrEmpty(addSources))
+            {
+                builder.Append('(');
+                builder.Append(addSources);
+            }
+            else if (!string.IsNullOrEmpty(subSources))
+            {
+                builder.Append('(');
+            }
+            else if (!string.IsNullOrEmpty(addHits))
+            {
+                builder.Append(addHits);
+            }
 
             switch (Type)
             {
                 case RequirementType.AddSource:
+                    Left.AppendString(builder, numberFormat);
                     builder.Append(" + ");
                     break;
+
                 case RequirementType.SubSource:
                     builder.Append(" - ");
+                    Left.AppendString(builder, numberFormat);
                     break;
+
+                default:
+                    Left.AppendString(builder, numberFormat);
+                    break;
+            }
+
+            if (!string.IsNullOrEmpty(subSources))
+            {
+                builder.Append(subSources);
+                builder.Append(')');
+            }
+            else if (!string.IsNullOrEmpty(addSources))
+            {
+                builder.Append(')');
             }
 
             switch (Operator)

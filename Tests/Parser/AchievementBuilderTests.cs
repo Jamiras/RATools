@@ -174,8 +174,8 @@ namespace RATools.Test.Parser
         [TestCase("0xH000440=140(1)", "once(byte(0x000440) == 140)")] // old format
         [TestCase("R:0xH000440=0", "never(byte(0x000440) == 0)")]
         [TestCase("P:0xH000440=0", "unless(byte(0x000440) == 0)")]
-        [TestCase("A:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) + bit2(0x20770F) == 0")]
-        [TestCase("B:0xN20770f=0_0xO20770f=0", "bit1(0x20770F) - bit2(0x20770F) == 0")]
+        [TestCase("A:0xN20770f=0_0xO20770f=0", "(bit1(0x20770F) + bit2(0x20770F)) == 0")]
+        [TestCase("B:0xN20770f=0_0xO20770f=0", "(bit2(0x20770F) - bit1(0x20770F)) == 0")]
         [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
         public void TestParseRequirements(string input, string expected)
         {
@@ -316,7 +316,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && byte(0x004567) < 255", "byte(0x001234) == 1 && byte(0x004567) != 255")] // byte cannot be greater than 255, change to not equals
         [TestCase("byte(0x001234) == 1 && word(0x004567) < 65535", "byte(0x001234) == 1 && word(0x004567) != 65535")] // word cannot be greater than 255, change to not equals
         [TestCase("byte(0x001234) == 1 && dword(0x004567) < 4294967295", "byte(0x001234) == 1 && dword(0x004567) != 4294967295")] // dword cannot be greater than 4294967295, change to not equals
-        [TestCase("bit0(0x001234) + bit1(0x001234) == 2", "bit0(0x001234) + bit1(0x001234) == 2")] // addition can exceed max size of source
+        [TestCase("bit0(0x001234) + bit1(0x001234) == 2", "(bit0(0x001234) + bit1(0x001234)) == 2")] // addition can exceed max size of source
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
@@ -346,7 +346,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)))",
                   "byte(0x001234) == 1 && unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)")] // PauseIf in both alts is promoted to core if all HitCounts are also promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) + byte(0x002346) == 2)) || (never(byte(0x002345) + byte(0x002347) == 2)))",
-                  "once(byte(0x001234) == 1) && ((byte(0x002345) + never(byte(0x002346) == 2)) || (byte(0x002345) + never(byte(0x002347) == 2)))")] // partial AddSource cannot be promoted [NOTE: output format is incorrect for ResetIf+AddSource]
+                  "once(byte(0x001234) == 1) && ((never((byte(0x002345) + byte(0x002346)) == 2)) || (never((byte(0x002345) + byte(0x002347)) == 2)))")] // partial AddSource cannot be promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
                   "once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))")] // resetif cannot be promoted if pauseif is present
         // ==== RemoveDuplicates ====
