@@ -1,5 +1,4 @@
-﻿using System;
-using Jamiras.Components;
+﻿using Jamiras.Components;
 
 namespace RATools.Parser.Internal
 {
