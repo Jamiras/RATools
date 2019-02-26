@@ -366,13 +366,14 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) != 3 && byte(0x001234) == 2", "byte(0x001234) == 2")] // =2 is implicitly !=3
         [TestCase("byte(0x001234) == 3 && byte(0x001234) != 2", "byte(0x001234) == 3")] // =3 is implicitly !=2
         [TestCase("byte(0x001234) == 3 && byte(0x001234) == 3", "byte(0x001234) == 3")] // redundant
-        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 2", "")] // cannot both be true
-        [TestCase("byte(0x001234) > 3 && byte(0x001234) < 2", "")] // cannot both be true
-        [TestCase("byte(0x001234) > 2 && byte(0x001234) < 2", "")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 2", "")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 3", "")] // cannot both be true
-        [TestCase("byte(0x001234) >= 3 && byte(0x001234) <= 2", "")] // cannot both be true
-        [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 3", "")] // cannot both be true
+        [TestCase("byte(0x001234) > 3 && byte(0x001234) < 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) > 2 && byte(0x001234) < 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 3", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) >= 3 && byte(0x001234) <= 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 3", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) - prev(byte(0x001234)) == 1 && byte(0x001234) == 2", "(byte(0x001234) - prev(byte(0x001234))) == 1 && byte(0x001234) == 2")] // conflict with part of a SubSource clause should not be treated as wholly conflicting
         [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 2", "byte(0x001234) == 2")] // only overlap is the one value
         [TestCase("byte(0x001234) >= 2 && byte(0x001234) <= 2", "byte(0x001234) == 2")] // only overlap is the one value
         [TestCase("once(byte(0x001234) == 2) && once(byte(0x001234) == 3)", "once(byte(0x001234) == 2) && once(byte(0x001234) == 3)")] // cannot both be true at the same time, but can each be true once
