@@ -18,6 +18,7 @@ namespace RATools.ViewModels
                 UpdateDefinition(numberFormat);
 
                 if (requirement.Right.Type == FieldType.Value ||
+                    requirement.Right.Type == FieldType.None ||
                     (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
                 {
                     string note;
@@ -106,6 +107,15 @@ namespace RATools.ViewModels
                 builder.Append("AddHits ");
 
             Requirement.AppendString(builder, numberFormat);
+
+            if (Requirement.Type == RequirementType.SubSource)
+            {
+                // change " - " to "-" and add " + " to the end
+                builder.Remove(0, 1);
+                builder.Remove(1, 1);
+                builder.Append(" + ");
+            }
+
             Definition = builder.ToString();
         }
     }
