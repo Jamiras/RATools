@@ -83,9 +83,12 @@ namespace RATools.Parser.Internal
                 var mathematicRight = Right as MathematicExpression;
                 if (mathematicRight != null)
                 {
-                    if (GetPriority(Operation) > GetPriority(mathematicRight.Operation))
+                    // multiply and divide should happen before add or subtract.
+                    // at the same priority, they should happen left-to-right.
+                    if (GetPriority(Operation) >= GetPriority(mathematicRight.Operation))
                     {
                         var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
+                        newLeft = newLeft.Rebalance() as MathematicExpression;
                         return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
                     }
                 }
