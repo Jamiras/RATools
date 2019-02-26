@@ -9,7 +9,7 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate x:Key="editorRowTemplate">
-        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}">
+        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}" Height="13" Margin="-2,0,0,0">
             <Grid.Resources>
                 <ContextMenu x:Key="updateLocalContextMenu" DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
                     <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
@@ -36,7 +36,7 @@
                 </Style>
             </Grid.Style>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="10" />
+                <ColumnDefinition Width="8" />
                 <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="30" />
@@ -44,7 +44,7 @@
 
             <!-- Modified -->
             <TextBlock FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
-                       ToolTip="{Binding ModificationMessage}">
+                       ToolTip="{Binding ModificationMessage}" Margin="-2,-2,0,0">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
@@ -52,7 +52,7 @@
                                 <Setter Property="Text" Value="&#x25CB;" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
-                                <Setter Property="Text" Value="&#x23FA;" />
+                                <Setter Property="Text" Value="&#x2BC3;" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CompareState}" Value="PublishedDiffers">
                                 <Setter Property="Text" Value="&#x25D0;" />
@@ -63,7 +63,7 @@
             </TextBlock>
 
             <!-- Image -->
-            <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,-1">
                 <ContentPresenter.Resources>
                     <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
                         <Image Width="12" Height="12" Source="/RATools;component/Resources/achievement.png" ToolTip="Achievement" />
@@ -81,7 +81,7 @@
             </ContentPresenter>
 
             <!-- Name -->
-            <TextBlock Grid.Column="2" Margin="2,0,2,0" HorizontalAlignment="Stretch"
+            <TextBlock Grid.Column="2" Margin="2,-3,2,0" HorizontalAlignment="Stretch"
                        Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
 
             <!-- Points -->
