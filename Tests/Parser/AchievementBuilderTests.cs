@@ -208,6 +208,8 @@ namespace RATools.Test.Parser
         [TestCase("never(byte(0x000440) == 0)", "R:0xH000440=0")]
         [TestCase("unless(byte(0x000440) == 0)", "P:0xH000440=0")]
         [TestCase("repeated(4, byte(0x1234) == 56 || byte(0x2345) == 67)", "C:0xH001234=56_0xH002345=67.4.")]
+        [TestCase("dword(0x1234) == 12345678 * 30 / 60", "0xX001234=6172839")]
+        [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "B:d0xH001234=0_A:0xH001234=0_0xH002345=6")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder
