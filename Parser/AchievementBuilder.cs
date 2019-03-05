@@ -1198,10 +1198,38 @@ namespace RATools.Parser
             }
         }
 
+        private static bool IsMultiClause(RequirementType type)
+        {
+            switch (type)
+            {
+                case RequirementType.AddSource:
+                case RequirementType.SubSource:
+                case RequirementType.AddHits:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         private void RemoveRedundancies(IList<Requirement> requirements)
         {
+            var multiClauseConditions = new List<int>();
+            for (int i = 0; i < requirements.Count; i++)
+            {
+                if (IsMultiClause(requirements[i].Type))
+                {
+                    multiClauseConditions.Add(i);
+                    if (!multiClauseConditions.Contains(i + 1))
+                        multiClauseConditions.Add(i + 1);
+                }
+            }
+
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
+                if (multiClauseConditions.Contains(i))
+                    continue;
+
                 var requirement = requirements[i];
 
                 // if one requirement is "X == N" and another is "ResetIf X != N", they can be merged.
@@ -1210,6 +1238,9 @@ namespace RATools.Parser
                     bool merged = false;
                     for (int j = 0; j < i; j++)
                     {
+                        if (multiClauseConditions.Contains(j))
+                            continue;
+
                         Requirement compareRequirement = requirements[j];
                         if (requirement.Type == compareRequirement.Type || compareRequirement.HitCount != 0)
                             continue;
@@ -1242,13 +1273,22 @@ namespace RATools.Parser
                 {
                     for (int j = 0; j < i; j++)
                     {
+                        if (multiClauseConditions.Contains(j))
+                            continue;
+
                         Requirement merged;
                         if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
                         {
                             if (merged == null)
                             {
-                                // conflicting requirements, void out the entire requirement set
+                                // conflicting requirements, replace the entire requirement set with an always_false()
                                 requirements.Clear();
+                                requirements.Add(new Requirement
+                                {
+                                    Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 },
+                                    Operator = RequirementOperator.Equal,
+                                    Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 },
+                                });
                                 return;
                             }
 
@@ -1279,12 +1319,29 @@ namespace RATools.Parser
 
         private void MergeBits(IList<Requirement> requirements)
         {
+            var mergableRequirements = new List<Requirement>();
+
+            bool inMultiClause = false;
             var references = new TinyDictionary<uint, int>();
             foreach (var requirement in requirements)
             {
-                if (!IsMergable(requirement))
+                if (IsMultiClause(requirement.Type))
+                {
+                    inMultiClause = true;
                     continue;
+                }
+                else if (inMultiClause)
+                {
+                    inMultiClause = false;
+                    continue;
+                }
 
+                if (IsMergable(requirement))
+                    mergableRequirements.Add(requirement);
+            }
+
+            foreach (var requirement in mergableRequirements)
+            {
                 int flags;
                 references.TryGetValue(requirement.Left.Value, out flags);
                 switch (requirement.Left.Size)
@@ -1350,28 +1407,28 @@ namespace RATools.Parser
             {
                 if ((kvp.Value & 0xFF) == 0xFF)
                 {
-                    MergeBits(requirements, kvp.Key, FieldSize.Byte, (kvp.Value >> 8) & 0xFF);
+                    MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.Byte, (kvp.Value >> 8) & 0xFF);
                 }
                 else
                 {
                     if ((kvp.Value & 0x0F) == 0x0F)
-                        MergeBits(requirements, kvp.Key, FieldSize.LowNibble, (kvp.Value >> 8) & 0x0F);
+                        MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.LowNibble, (kvp.Value >> 8) & 0x0F);
                     if ((kvp.Value & 0xF0) == 0xF0)
-                        MergeBits(requirements, kvp.Key, FieldSize.HighNibble, (kvp.Value >> 12) & 0x0F);
+                        MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.HighNibble, (kvp.Value >> 12) & 0x0F);
                 }
             }
         }
 
-        private static void MergeBits(IList<Requirement> requirements, uint address, FieldSize newSize, int newValue)
+        private static void MergeBits(IList<Requirement> requirements, ICollection<Requirement> mergableRequirements, uint address, FieldSize newSize, int newValue)
         {
             bool insert = true;
             int insertAt = 0;
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
-                if (!IsMergable(requirements[i]))
+                var requirement = requirements[i];
+                if (!mergableRequirements.Contains(requirement))
                     continue;
 
-                var requirement = requirements[i];
                 if (requirement.Left.Value != address)
                     continue;
 

@@ -1,3 +1,6 @@
+v1.5.5 - TBD
+* ignore multi-clause conditions when optimizing
+
 v1.5.4 - 26 Jan 2019
 * support for quoted strings in local achievements
 * support for matching the difference between values at two addresses: "byte(0x1234) - byte(0x3456) == 6"
