@@ -3,6 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:commands="clr-namespace:Jamiras.Commands;assembly=Jamiras.Core"
         xmlns:controls="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
+        SnapsToDevicePixels="True"
+        UseLayoutRounding="True"
+        RenderOptions.BitmapScalingMode="HighQuality"
         Title="{Binding Game.Title, StringFormat='RA Tools - {0}', FallbackValue='RA Tools - No Game Loaded'}" Height="768" Width="1024">
     <Window.Resources>
         <ResourceDictionary>
