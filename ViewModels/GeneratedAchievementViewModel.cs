@@ -28,8 +28,16 @@ namespace RATools.ViewModels
             Unofficial = new AchievementViewModel(owner, "Unofficial");
             Core = new AchievementViewModel(owner, "Core");
 
-            UpdateLocalCommand = new DelegateCommand(() => UpdateLocal(owner));
-            DeleteLocalCommand = new DelegateCommand(() => DeleteLocal(owner));
+            if (String.IsNullOrEmpty(owner.RACacheDirectory))
+            {
+                UpdateLocalCommand = DisabledCommand.Instance;
+                DeleteLocalCommand = DisabledCommand.Instance;
+            }
+            else
+            {
+                UpdateLocalCommand = new DelegateCommand(() => UpdateLocal(owner));
+                DeleteLocalCommand = new DelegateCommand(() => DeleteLocal(owner));
+            }
         }
 
         private readonly GameViewModel _owner;

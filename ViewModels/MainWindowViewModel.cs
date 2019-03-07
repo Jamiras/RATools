@@ -402,6 +402,13 @@ namespace RATools.ViewModels
             {
                 MessageBoxViewModel.ShowMessage("Cannot update while errors exist.");
                 game.Script.Editor.ErrorsToolWindow.IsVisible = true;
+                return;
+            }
+
+            if (String.IsNullOrEmpty(game.RACacheDirectory))
+            {
+                MessageBoxViewModel.ShowMessage("Could not identify local directory.");
+                return;
             }
 
             var dialog = new UpdateLocalViewModel(game);

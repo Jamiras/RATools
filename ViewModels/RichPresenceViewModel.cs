@@ -19,8 +19,14 @@ namespace RATools.ViewModels
             var genLines = _richPresence.Trim().Length > 0 ? _richPresence.Replace("\r\n", "\n").Split('\n') : new string[0];
             string[] localLines = new string[0];
 
-            if (!String.IsNullOrEmpty(owner.RACacheDirectory))
+            if (String.IsNullOrEmpty(owner.RACacheDirectory))
             {
+                UpdateLocalCommand = DisabledCommand.Instance;
+            }
+            else
+            {
+                UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+
                 _richFile = Path.Combine(owner.RACacheDirectory, owner.GameId + "-Rich.txt");
                 if (File.Exists(_richFile))
                 {
@@ -186,7 +192,6 @@ namespace RATools.ViewModels
                 RichPresenceLength = _richPresence.Length;
                 ModificationMessage = _hasLocal ? "Local value differs from generated value" : "Local value does not exist";
                 CompareState = GeneratedCompareState.LocalDiffers;
-                UpdateLocalCommand = new DelegateCommand(UpdateLocal);
                 CanUpdate = true;
             }
             else
