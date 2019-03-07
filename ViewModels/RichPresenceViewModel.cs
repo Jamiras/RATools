@@ -232,7 +232,7 @@ namespace RATools.ViewModels
 
         public int RichPresenceMaxLength
         {
-            get { return 2450; }
+            get { return 16384; }
         }
 
         public static readonly ModelProperty GeneratedSourceProperty = ModelProperty.Register(typeof(RichPresenceViewModel), "GeneratedSource", typeof(string), "Generated");
