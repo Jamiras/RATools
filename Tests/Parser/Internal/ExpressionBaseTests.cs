@@ -65,6 +65,15 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestParseNegativeHexNumber()
+        {
+            var tokenizer = CreateTokenizer("-0x123456");
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expression).Value, Is.EqualTo(-0x123456));
+        }
+
+        [Test]
         public void TestParseNumberLeadingZero()
         {
             var tokenizer = CreateTokenizer("0123456");
