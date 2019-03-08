@@ -188,7 +188,7 @@ namespace RATools.Parser
 
                 foreach (var achievement in _achievements)
                 {
-                    writer.Write(0); // id always 0 in local file
+                    writer.Write(achievement.Id);
                     writer.Write(':');
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);

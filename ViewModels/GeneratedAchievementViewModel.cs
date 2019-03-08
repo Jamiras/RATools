@@ -22,7 +22,10 @@ namespace RATools.ViewModels
 
             Generated = new AchievementViewModel(owner, "Generated");
             if (generatedAchievement != null)
+            {
                 Generated.LoadAchievement(generatedAchievement);
+                Id = Generated.Id;
+            }
 
             Local = new AchievementViewModel(owner, "Local");
             Unofficial = new AchievementViewModel(owner, "Unofficial");
