@@ -365,6 +365,20 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
                     {
+                        if (tokenizer.Match("0x"))
+                        {
+                            string hexNumber = "";
+                            while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
+                            {
+                                hexNumber += tokenizer.NextChar;
+                                tokenizer.Advance();
+                            }
+
+                            int hexValue = 0;
+                            Int32.TryParse(hexNumber, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out hexValue);
+                            return new IntegerConstantExpression(-hexValue);
+                        }
+
                         var number = tokenizer.ReadNumber();
                         int value;
                         Int32.TryParse(number.ToString(), out value);
