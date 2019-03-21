@@ -16,6 +16,8 @@ namespace RATools.Parser
     [DebuggerDisplay("LocalAchievements: {Title}")]
     public class LocalAchievements
     {
+        const int AchievementMaxLength = 16384;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalAchievements"/> class.
         /// </summary>
@@ -192,9 +194,9 @@ namespace RATools.Parser
                     writer.Write(':');
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);
-                    if (requirements.Length > 1024)
+                    if (requirements.Length > AchievementMaxLength)
                     {
-                        warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit ({1}/{2})", achievement.Title, requirements.Length, 1024);
+                        warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit ({1}/{2})", achievement.Title, requirements.Length, AchievementMaxLength);
                         warning.AppendLine();
                     }
 
