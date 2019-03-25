@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Collections;
@@ -570,12 +571,9 @@ namespace RATools.Parser
                             max = uint.MaxValue;
                             break;
                     }
-
-                    if (requirement.Right.Value > max)
-                        requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = max };
                 }
 
-                if (requirement.Right.Value == max)
+                if (requirement.Right.Value >= max)
                 {
                     switch (requirement.Operator)
                     {
@@ -584,7 +582,10 @@ namespace RATools.Parser
                             break;
 
                         case RequirementOperator.GreaterThanOrEqual: // n >= max -> n == max
-                            requirement.Operator = RequirementOperator.Equal;
+                            if (requirement.Right.Value == max)
+                                requirement.Operator = RequirementOperator.Equal;
+                            else
+                                alwaysFalse.Add(requirement);
                             break;
 
                         case RequirementOperator.LessThanOrEqual: // n <= max -> always true
@@ -592,7 +593,10 @@ namespace RATools.Parser
                             break;
 
                         case RequirementOperator.LessThan: // n < max -> n != max
-                            requirement.Operator = RequirementOperator.NotEqual;
+                            if (requirement.Right.Value == max)
+                                requirement.Operator = RequirementOperator.NotEqual;
+                            else
+                                alwaysTrue.Add(requirement);
                             break;
                     }
                 }
@@ -600,12 +604,17 @@ namespace RATools.Parser
 
             if (alwaysFalse.Count > 0)
             {
+                // at least one requirement can never be true, replace the entire group with an always_false()
                 requirements.Clear();
+                requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
             }
             else
             {
                 foreach (var requirement in alwaysTrue)
                     requirements.Remove(requirement);
+
+                if (requirements.Count == 0)
+                    requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
             }
         }
 
@@ -934,7 +943,7 @@ namespace RATools.Parser
             return false;
         }
 
-        static bool Evaluate(Requirement requirement)
+        protected static bool Evaluate(Requirement requirement)
         {
             switch (requirement.Operator)
             {
@@ -943,9 +952,9 @@ namespace RATools.Parser
                 case RequirementOperator.NotEqual:
                     return (requirement.Left.Value != requirement.Right.Value);
                 case RequirementOperator.LessThan:
-                    return (requirement.Left.Value <= requirement.Right.Value);
-                case RequirementOperator.LessThanOrEqual:
                     return (requirement.Left.Value < requirement.Right.Value);
+                case RequirementOperator.LessThanOrEqual:
+                    return (requirement.Left.Value <= requirement.Right.Value);
                 case RequirementOperator.GreaterThan:
                     return (requirement.Left.Value > requirement.Right.Value);
                 case RequirementOperator.GreaterThanOrEqual:
@@ -1283,12 +1292,7 @@ namespace RATools.Parser
                             {
                                 // conflicting requirements, replace the entire requirement set with an always_false()
                                 requirements.Clear();
-                                requirements.Add(new Requirement
-                                {
-                                    Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 },
-                                    Operator = RequirementOperator.Equal,
-                                    Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 },
-                                });
+                                requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
                                 return;
                             }
 

@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -240,9 +241,6 @@ namespace RATools.Parser
             ExpressionBase left;
             if (!comparison.Left.ReplaceVariables(scope, out left))
                 return (ParseErrorExpression)left;
-            var error = ExecuteAchievementExpression(left, scope);
-            if (error != null)
-                return error;
 
             ExpressionBase right;
             if (!comparison.Right.ReplaceVariables(scope, out right))
@@ -251,6 +249,38 @@ namespace RATools.Parser
             var op = GetRequirementOperator(comparison.Operation);
             if (context.IsInNot)
                 op = GetOppositeRequirementOperator(op);
+
+            if (left.Type == ExpressionType.IntegerConstant)
+            {
+                if (right.Type == ExpressionType.IntegerConstant)
+                {
+                    // comparing two constants, convert to always_true or always_false
+                    var requirement = new Requirement
+                    {
+                        Left = new Field { Type = FieldType.Value, Value = (uint)((IntegerConstantExpression)left).Value },
+                        Operator = op,
+                        Right = new Field { Type = FieldType.Value, Value = (uint)((IntegerConstantExpression)right).Value },
+                    };
+
+                    if (Evaluate(requirement))
+                        context.Trigger.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                    else
+                        context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+
+                    return null;
+                }
+
+                // swap the operands and operator so the constant is on the right
+                var temp = left;
+                left = right;
+                right = temp;
+
+                op = GetReversedRequirementOperator(op);
+            }
+
+            var error = ExecuteAchievementExpression(left, scope);
+            if (error != null)
+                return error;
 
             var integerRight = right as IntegerConstantExpression;
             if (integerRight != null)
@@ -349,6 +379,20 @@ namespace RATools.Parser
                 case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThan;
                 case RequirementOperator.GreaterThan: return RequirementOperator.LessThanOrEqual;
                 case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThan;
+                default: return RequirementOperator.None;
+            }
+        }
+
+        private static RequirementOperator GetReversedRequirementOperator(RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.Equal: return RequirementOperator.Equal;
+                case RequirementOperator.NotEqual: return RequirementOperator.NotEqual;
+                case RequirementOperator.LessThan: return RequirementOperator.GreaterThan;
+                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
+                case RequirementOperator.GreaterThan: return RequirementOperator.LessThan;
+                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 default: return RequirementOperator.None;
             }
         }

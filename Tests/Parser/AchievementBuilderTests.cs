@@ -201,6 +201,7 @@ namespace RATools.Test.Parser
         [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
         [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
         [TestCase("byte(0x000028) == 3", "0xH000028=3")]
+        [TestCase("3 == byte(0x000028)", "0xH000028=3")] // prefer constants on right
         [TestCase("high4(0x00616A) == 8", "0xU00616a=8")]
         [TestCase("word(0x000042) == 5786", "0x 000042=5786")]
         [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000", "0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")]
@@ -296,12 +297,12 @@ namespace RATools.Test.Parser
         [TestCase("bit0(0x001234) != 1", "bit0(0x001234) == 0")] // bit not equal to one must be 0
         [TestCase("bit0(0x001234) < 1", "bit0(0x001234) == 0")] // bit less than one must be 0
         [TestCase("byte(0x001234) < 1", "byte(0x001234) == 0")] // byte less than one must be 0
-        [TestCase("byte(0x001234) == 1 && byte(0x004567) < 0", "")] // less than 0 can never be true, ignore entire requirement
-        [TestCase("byte(0x001234) == 1 && low4(0x004567) > 15", "")] // nibble cannot be greater than 15, ignore entire requirement
-        [TestCase("byte(0x001234) == 1 && high4(0x004567) > 15", "")] // nibble cannot be greater than 15, ignore entire requirement
-        [TestCase("byte(0x001234) == 1 && byte(0x004567) > 255", "")] // byte cannot be greater than 255, ignore entire requirement
-        [TestCase("byte(0x001234) == 1 && word(0x004567) > 65535", "")] // word cannot be greater than 255, ignore entire requirement
-        [TestCase("byte(0x001234) == 1 && dword(0x004567) > 4294967295", "")] // dword cannot be greater than 4294967295, ignore entire requirement
+        [TestCase("byte(0x001234) == 1 && byte(0x004567) < 0", "0 == 1")] // less than 0 can never be true, replace with always_false
+        [TestCase("byte(0x001234) == 1 && low4(0x004567) > 15", "0 == 1")] // nibble cannot be greater than 15, replace with always_false
+        [TestCase("byte(0x001234) == 1 && high4(0x004567) > 15", "0 == 1")] // nibble cannot be greater than 15, replace with always_false
+        [TestCase("byte(0x001234) == 1 && byte(0x004567) > 255", "0 == 1")] // byte cannot be greater than 255, replace with always_false
+        [TestCase("byte(0x001234) == 1 && word(0x004567) > 65535", "0 == 1")] // word cannot be greater than 255, replace with always_false
+        [TestCase("byte(0x001234) == 1 && dword(0x004567) > 4294967295", "0 == 1")] // dword cannot be greater than 4294967295, replace with always_false
         [TestCase("byte(0x001234) == 1 && low4(0x004567) >= 15", "byte(0x001234) == 1 && low4(0x004567) == 15")] // nibble cannot be greater than 15, change to equals
         [TestCase("byte(0x001234) == 1 && high4(0x004567) >= 15", "byte(0x001234) == 1 && high4(0x004567) == 15")] // nibble cannot be greater than 15, change to equals
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 255", "byte(0x001234) == 1 && byte(0x004567) == 255")] // byte cannot be greater than 255, change to equals
@@ -319,6 +320,12 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && word(0x004567) < 65535", "byte(0x001234) == 1 && word(0x004567) != 65535")] // word cannot be greater than 255, change to not equals
         [TestCase("byte(0x001234) == 1 && dword(0x004567) < 4294967295", "byte(0x001234) == 1 && dword(0x004567) != 4294967295")] // dword cannot be greater than 4294967295, change to not equals
         [TestCase("bit0(0x001234) + bit1(0x001234) == 2", "(bit0(0x001234) + bit1(0x001234)) == 2")] // addition can exceed max size of source
+        [TestCase("byte(0x001234) > 256", "0 == 1")] // can never be true
+        [TestCase("byte(0x001234) < 256", "1 == 1")] // always true
+        [TestCase("0 < 256", "1 == 1")] // always true
+        [TestCase("0 == 1", "0 == 1")] // always false
+        [TestCase("1 == 1", "1 == 1")] // always true
+        [TestCase("3 > 6", "0 == 1")] // always false
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
