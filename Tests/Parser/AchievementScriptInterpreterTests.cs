@@ -634,7 +634,7 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("function foo() => byte(1)\n" +
                                "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:48 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 comparison did not evaluate to a valid comparison"));
         }
     }
 }

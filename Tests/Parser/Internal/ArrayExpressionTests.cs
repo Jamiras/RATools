@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -49,11 +50,29 @@ namespace RATools.Test.Parser.Internal
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<ArrayExpression>());
-            var dictResult = (ArrayExpression)result;
-            Assert.That(dictResult.Entries.Count, Is.EqualTo(3));
-            Assert.That(dictResult.Entries[0], Is.EqualTo(value1));
-            Assert.That(dictResult.Entries[1], Is.EqualTo(value2));
-            Assert.That(dictResult.Entries[2], Is.EqualTo(value3));
+            var arrayResult = (ArrayExpression)result;
+            Assert.That(arrayResult.Entries.Count, Is.EqualTo(3));
+            Assert.That(arrayResult.Entries[0], Is.EqualTo(value1));
+            Assert.That(arrayResult.Entries[1], Is.EqualTo(value2));
+            Assert.That(arrayResult.Entries[2], Is.EqualTo(value3));
+        }
+
+        [Test]
+        public void TestReplaceVariablesMemoryAccessor()
+        {
+            var value = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(1) });
+            var expr = new ArrayExpression();
+            expr.Entries.Add(value);
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+
+            Assert.That(result, Is.InstanceOf<ArrayExpression>());
+            var arrayResult = (ArrayExpression)result;
+            Assert.That(arrayResult.Entries.Count, Is.EqualTo(1));
+            Assert.That(arrayResult.Entries[0].ToString(), Is.EqualTo(value.ToString()));
         }
     }
 }

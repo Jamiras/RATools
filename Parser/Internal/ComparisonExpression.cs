@@ -69,8 +69,7 @@ namespace RATools.Parser.Internal
             }
 
             var comparison = new ComparisonExpression(left, Operation, right);
-            comparison.Line = Line;
-            comparison.Column = Column;
+            CopyLocation(comparison);
             result = comparison;
             return true;
         }

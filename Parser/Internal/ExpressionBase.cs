@@ -42,6 +42,20 @@ namespace RATools.Parser.Internal
         public int EndColumn { get; protected set; }
 
         /// <summary>
+        /// Copies the location of this expression into another expression.
+        /// </summary>
+        protected void CopyLocation(ExpressionBase source)
+        {
+            if (Line != 0)
+            {
+                source.Line = Line;
+                source.Column = Column;
+                source.EndLine = EndLine;
+                source.EndColumn = EndColumn;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets whether this is a logical unit.
         /// </summary>
         /// <remarks>

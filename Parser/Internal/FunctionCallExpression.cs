@@ -84,15 +84,7 @@ namespace RATools.Parser.Internal
             if (!functionDefinition.ReplaceVariables(functionScope, out result))
                 return false;
 
-            var functionCall = result as FunctionCallExpression;
-            if (functionCall != null && functionCall.Line == 0)
-            {
-                functionCall.Line = Line;
-                functionCall.Column = Column;
-                functionCall.EndLine = EndLine;
-                functionCall.EndColumn = EndColumn;
-            }
-
+            CopyLocation(result);
             return true;
         }
 
