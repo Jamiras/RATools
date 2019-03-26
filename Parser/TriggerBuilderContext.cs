@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -118,12 +119,11 @@ namespace RATools.Parser
             }
 
             var requirements = new List<Requirement>();
-            var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = requirements } };
-            if (!functionCall.Evaluate(innerScope, out result, false))
-                return false;
-
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            var innerScope = new InterpreterScope(scope) { Context = context };
+            result = context.CallFunction(functionCall, innerScope);
             if (result != null)
-                return ProcessValueExpression(result, scope, builder, out result);
+                return false;
 
             if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
             {
@@ -133,6 +133,39 @@ namespace RATools.Parser
 
             requirements[0].Left.Serialize(builder);
             return true;
+        }
+
+        internal abstract class FunctionDefinition : FunctionDefinitionExpression
+        {
+            public FunctionDefinition(string name)
+                : base(name)
+            {
+            }
+
+            public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+            {
+                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
+                return false;
+            }
+
+            public abstract ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);
+        }
+
+        public ParseErrorExpression CallFunction(FunctionCallExpression functionCall, InterpreterScope scope)
+        {
+            var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
+            if (functionDefinition == null)
+                return new ParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name, functionCall.FunctionName);
+
+            var triggerBuilderFunction = functionDefinition as FunctionDefinition;
+            if (triggerBuilderFunction == null)
+                return new ParseErrorExpression(functionCall.FunctionName.Name + " cannot be called from within a trigger clause", functionCall);
+
+            var error = triggerBuilderFunction.BuildTrigger(this, scope, functionCall);
+            if (error != null)
+                return new ParseErrorExpression(error, functionCall);
+
+            return null;
         }
 
         /// <summary>

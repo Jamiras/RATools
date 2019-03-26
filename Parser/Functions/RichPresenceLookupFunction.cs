@@ -1,8 +1,9 @@
 ﻿using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceLookupFunction : FunctionDefinitionExpression
+    internal class RichPresenceLookupFunction : RichPresenceDisplayFunction.FunctionDefinition
     {
         public RichPresenceLookupFunction()
             : base("rich_presence_lookup")
@@ -12,25 +13,14 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("dictionary"));
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<RichPresenceDisplayFunction.RichPresenceDisplayContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
-                return false;
-            }
-
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
                 return false;
 
             var expression = GetParameter(scope, "expression", out result);
             if (expression == null)
-                return false;
-
-            var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
-            if (value == null)
                 return false;
 
             var parameter = GetParameter(scope, "dictionary", out result);
@@ -44,6 +34,21 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, dictionary });
+            return true;
+        }
+
+        public override ParseErrorExpression BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            var name = (StringConstantExpression)functionCall.Parameters.First();
+            var expression = functionCall.Parameters.ElementAt(1);
+            var dictionary = (DictionaryExpression)functionCall.Parameters.ElementAt(2);
+
+            ExpressionBase result;
+            var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
+            if (value == null)
+                return (ParseErrorExpression)result;
+
             context.RichPresence.AddLookupField(name.Value, dictionary);
 
             context.DisplayString.Append('@');
@@ -51,7 +56,7 @@ namespace RATools.Parser.Functions
             context.DisplayString.Append('(');
             context.DisplayString.Append(value);
             context.DisplayString.Append(')');
-            return true;
+            return null;
         }
     }
 }

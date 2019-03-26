@@ -3,26 +3,23 @@ using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
 {
-    internal class AlwaysFalseFunction : FunctionDefinitionExpression
+    internal class AlwaysFalseFunction : TriggerBuilderContext.FunctionDefinition
     {
         public AlwaysFalseFunction()
             : base("always_false")
         {
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                return false;
-            }
-
-            context.Trigger.Add(CreateAlwaysFalseRequirement());
-
-            result = null;
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[0]);
             return true;
+        }
+
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            context.Trigger.Add(CreateAlwaysFalseRequirement());
+            return null;
         }
 
         public static Requirement CreateAlwaysFalseRequirement()

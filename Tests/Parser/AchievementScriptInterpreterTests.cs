@@ -396,7 +396,7 @@ namespace RATools.Test.Parser
         public void TestPrevMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
         }
 
         [Test]
@@ -412,7 +412,7 @@ namespace RATools.Test.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]

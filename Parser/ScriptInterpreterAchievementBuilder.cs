@@ -37,9 +37,15 @@ namespace RATools.Parser
         /// <returns><c>null</c> if successful, otherwise an error message indicating why it failed.</returns>
         public string PopulateFromExpression(ExpressionBase expression)
         {
+            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = context };
+
+            ExpressionBase result;
+            if (!expression.ReplaceVariables(scope, out result))
+                return ((ParseErrorExpression)result).Message;
+
             ParseErrorExpression error;
-            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            if (!PopulateFromExpression(expression, scope, out error))
+            if (!PopulateFromExpression(result, scope, out error))
                 return error.Message;
 
             return null;
@@ -48,7 +54,6 @@ namespace RATools.Parser
         internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
         {
             var context = new TriggerBuilderContext { Trigger = CoreRequirements };
-
             var parentContext = scope.GetContext<TriggerBuilderContext>();
             if (parentContext != null)
                 context.IsInNot = parentContext.IsInNot;
@@ -119,6 +124,7 @@ namespace RATools.Parser
 
             return null;
         }
+
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
             var left = mathematic.Left;
@@ -238,13 +244,8 @@ namespace RATools.Parser
             var context = scope.GetContext<TriggerBuilderContext>();
             var insertIndex = context.Trigger.Count;
 
-            ExpressionBase left;
-            if (!comparison.Left.ReplaceVariables(scope, out left))
-                return (ParseErrorExpression)left;
-
-            ExpressionBase right;
-            if (!comparison.Right.ReplaceVariables(scope, out right))
-                return (ParseErrorExpression)right;
+            var left = comparison.Left;
+            var right = comparison.Right;
 
             var op = GetRequirementOperator(comparison.Operation);
             if (context.IsInNot)
@@ -399,30 +400,8 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementFunction(FunctionCallExpression functionCall, InterpreterScope scope)
         {
-            // call the function
-            ExpressionBase result;
-            if (!functionCall.Evaluate(scope, out result, false))
-                return (ParseErrorExpression)result;
-
-            // void function won't have a return value. also, some built-in functions modify the context without returning a value.
-            if (result == null)               
-                return null;
-
-            // process the return value
-            var innerScope = new InterpreterScope(scope);
-            if (innerScope.Depth >= 100)
-                return new ParseErrorExpression("Maximum recursion depth exceeded", functionCall);
-
-            ParseErrorExpression error = ExecuteAchievementExpression(result, innerScope);
-            if (error == null)
-                return null;
-
-            // prevent recursive error stacking
-            var message = "Function call did not resolve to a valid trigger condition";
-            if (error.Message == message)
-                return error;
-
-            return new ParseErrorExpression(message, functionCall) { InnerError = error };
+            var context = scope.GetContext<TriggerBuilderContext>();
+            return context.CallFunction(functionCall, scope);
         }
     }
 }

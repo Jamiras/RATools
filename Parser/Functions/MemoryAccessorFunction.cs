@@ -1,9 +1,10 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class MemoryAccessorFunction : FunctionDefinitionExpression
+    internal class MemoryAccessorFunction : TriggerBuilderContext.FunctionDefinition
     {
         public MemoryAccessorFunction(string name, FieldSize size)
             : base(name)
@@ -15,24 +16,23 @@ namespace RATools.Parser.Functions
 
         private readonly FieldSize _size;
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                return false;
-            }
-
             var address = GetIntegerParameter(scope, "address", out result);
             if (address == null)
                 return false;
 
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { address });
+            return true;
+        }
+
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
             var requirement = new Requirement();
+            var address = (IntegerConstantExpression)functionCall.Parameters.First();
             requirement.Left = new Field { Size = _size, Type = FieldType.MemoryAddress, Value = (uint)address.Value };
             context.Trigger.Add(requirement);
-
-            return true;
+            return null;
         }
     }
 }

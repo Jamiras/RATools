@@ -384,7 +384,7 @@ namespace RATools.Parser
             if (func != null)
             {
                 ExpressionBase result;
-                if (!func.Evaluate(scope, out result, true))
+                if (!func.ReplaceVariables(scope, out result))
                 {
                     Error = result as ParseErrorExpression;
                     return false;
@@ -483,8 +483,15 @@ namespace RATools.Parser
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            if (!expression.Evaluate(scope, out result, false))
+            bool success = scope.IsReplacingVariables ? expression.ReplaceVariables(scope, out result) : expression.Invoke(scope, out result);
+            if (!success)
             {
+                if (scope.GetContext<FunctionCallExpression>() != null)
+                {
+                    var error = result as ParseErrorExpression;
+                    result = new ParseErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };
+                }
+
                 Error = result as ParseErrorExpression;
                 return false;
             }

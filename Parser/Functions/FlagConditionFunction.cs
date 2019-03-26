@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -13,9 +14,10 @@ namespace RATools.Parser.Functions
 
         private readonly RequirementType _type;
 
-        protected override void ModifyRequirements(ScriptInterpreterAchievementBuilder builder)
+        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
             builder.CoreRequirements.Last().Type = _type;
+            return null;
         }
     }
 }

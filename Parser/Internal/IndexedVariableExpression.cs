@@ -62,7 +62,7 @@ namespace RATools.Parser.Internal
             if (Index.Type == ExpressionType.FunctionCall)
             {
                 var expression = (FunctionCallExpression)Index;
-                if (!expression.Evaluate(scope, out index, true))
+                if (!expression.ReplaceVariables(scope, out index))
                 {
                     result = index;
                     return null;

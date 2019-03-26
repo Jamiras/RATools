@@ -85,7 +85,7 @@
                        Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
 
             <!-- Points -->
-            <TextBlock Grid.Column="3" Text="{Binding Points}" Margin="2,0,2,0" HorizontalAlignment="Right">
+            <TextBlock Grid.Column="3" Text="{Binding Points}" Margin="2,-2,2,0" HorizontalAlignment="Right">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>

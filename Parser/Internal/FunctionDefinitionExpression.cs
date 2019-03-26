@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
+using RATools.Parser.Functions;
 using System.Collections.Generic;
 using System.Text;
 
@@ -193,6 +194,32 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Replaces the variables in the expression with values from <paramref name="scope"/>.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values.</param>
+        /// <param name="result">[out] The new expression containing the replaced variables.</param>
+        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            scope = new InterpreterScope(scope) { IsReplacingVariables = true };
+            if (!Evaluate(scope, out result))
+                return false;
+
+            if (result == null)
+            {
+                var functionCall = scope.GetContext<FunctionCallExpression>();
+                if (functionCall != null)
+                    result = new ParseErrorExpression(Name.Name + " did not return a value", functionCall.FunctionName);
+                else
+                    result = new ParseErrorExpression(Name.Name + " did not return a value");
+
+                return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Gets the return value from calling a function.
         /// </summary>
         /// <param name="scope">The scope object containing variable values and function parameters.</param>
@@ -288,37 +315,36 @@ namespace RATools.Parser.Internal
         /// <param name="name">The name of the parameter.</param>
         /// <param name="parseError">[out] The error that occurred.</param>
         /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
-        protected Field GetMemoryAccessorParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        protected FunctionCallExpression GetMemoryAccessorParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
         {
             var parameter = GetParameter(scope, name, out parseError);
             if (parameter == null)
-                return new Field();
+                return null;
 
             var functionCall = parameter as FunctionCallExpression;
             if (functionCall == null)
             {
                 parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
-                return new Field();
+                return null;
             }
 
-            var requirements = new List<Requirement>();
-
-            ExpressionBase result;
-            var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = requirements } };
-            if (!functionCall.Evaluate(innerScope, out result, false))
-            {
-                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter) { InnerError = (ParseErrorExpression)result };
-                return new Field();
-            }
-
-            if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
+            var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
+            var memoryAccessor = functionDefinition as MemoryAccessorFunction;
+            if (memoryAccessor == null)
             {
                 parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
-                return new Field();
+                return null;
+            }
+
+            ExpressionBase result;
+            if (!functionCall.ReplaceVariables(scope, out result))
+            {
+                parseError = (ParseErrorExpression)result;
+                return null;
             }
 
             parseError = null;
-            return requirements[0].Left;
+            return (FunctionCallExpression)result;
         }
 
         /// <summary>
