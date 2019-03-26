@@ -306,8 +306,10 @@ namespace RATools.Parser
             {
                 case ExpressionType.Assignment:
                     var assignment = (AssignmentExpression)expression;
+                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+
                     ExpressionBase result;
-                    if (!assignment.Value.ReplaceVariables(scope, out result))
+                    if (!assignment.Value.ReplaceVariables(assignmentScope, out result))
                     {
                         Error = result as ParseErrorExpression;
                         return false;
@@ -350,7 +352,8 @@ namespace RATools.Parser
         private bool EvaluateReturn(ReturnExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            if (!expression.Value.ReplaceVariables(scope, out result))
+            var returnScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression("@return"), expression.Value) };
+            if (!expression.Value.ReplaceVariables(returnScope, out result))
             {
                 Error = result as ParseErrorExpression;
                 return false;
@@ -359,8 +362,10 @@ namespace RATools.Parser
             var functionCall = result as FunctionCallExpression;
             if (functionCall != null)
             {
-                if (!CallFunction(functionCall, scope))
+                if (!CallFunction(functionCall, returnScope))
                     return false;
+
+                scope.ReturnValue = returnScope.ReturnValue;
             }
             else
             {
@@ -483,10 +488,10 @@ namespace RATools.Parser
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            bool success = scope.IsReplacingVariables ? expression.ReplaceVariables(scope, out result) : expression.Invoke(scope, out result);
+            bool success = (scope.GetInterpreterContext<AssignmentExpression>() != null) ? expression.ReplaceVariables(scope, out result) : expression.Invoke(scope, out result);
             if (!success)
             {
-                if (scope.GetContext<FunctionCallExpression>() != null)
+                if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
                 {
                     var error = result as ParseErrorExpression;
                     result = new ParseErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };

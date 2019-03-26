@@ -12,6 +12,9 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            if (!IsInTriggerClause(scope, out result))
+                return false;
+
             result = new FunctionCallExpression(Name.Name, new ExpressionBase[0]);
             return true;
         }

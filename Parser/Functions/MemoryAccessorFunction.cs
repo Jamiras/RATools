@@ -18,6 +18,9 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            if (!IsInTriggerClause(scope, out result))
+                return false;
+
             var address = GetIntegerParameter(scope, "address", out result);
             if (address == null)
                 return false;

@@ -32,11 +32,11 @@ namespace RATools.Test.Parser.Functions
 
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
 
             ExpressionBase evaluated;
             Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
-
-            var context = new TriggerBuilderContext { Trigger = requirements };
 
             if (expectedError == null)
             {

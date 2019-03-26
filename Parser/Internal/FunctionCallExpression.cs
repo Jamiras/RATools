@@ -159,7 +159,7 @@ namespace RATools.Parser.Internal
         /// <returns>The new scope, <c>null</c> if an error occurred - see <paramref name="error"/> for error details.</returns>
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
-            var innerScope = new InterpreterScope(scope);
+            var parameterScope = new InterpreterScope(scope);
 
             var providedParameters = new List<string>(function.Parameters.Count);
             foreach (var parameter in function.Parameters)
@@ -169,7 +169,7 @@ namespace RATools.Parser.Internal
             if (providedParameters.Remove("..."))
             {
                 varargs = new ArrayExpression();
-                innerScope.AssignVariable(new VariableExpression("varargs"), varargs);
+                parameterScope.AssignVariable(new VariableExpression("varargs"), varargs);
             }
 
             var parameterCount = providedParameters.Count;
@@ -193,14 +193,16 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
+                    var assignmentScope = new InterpreterScope(scope) { Context = assignedParameter };
+
                     ExpressionBase value;
-                    if (!assignedParameter.Value.ReplaceVariables(scope, out value))
+                    if (!assignedParameter.Value.ReplaceVariables(assignmentScope, out value))
                     {
                         error = new ParseErrorExpression(value, assignedParameter.Value);
                         return null;
                     }
 
-                    innerScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
+                    parameterScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
                     namedParameters = true;
                 }
                 else
@@ -217,8 +219,11 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
+                    var variableName = (index < parameterCount) ? function.Parameters.ElementAt(index).Name : "...";
+                    var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(variableName), parameter) };
+
                     ExpressionBase value;
-                    if (!parameter.ReplaceVariables(scope, out value))
+                    if (!parameter.ReplaceVariables(assignmentScope, out value))
                     {
                         error = new ParseErrorExpression(value, parameter);
                         return null;
@@ -226,9 +231,8 @@ namespace RATools.Parser.Internal
 
                     if (index < parameterCount)
                     {
-                        var variableName = function.Parameters.ElementAt(index).Name;
                         providedParameters.Remove(variableName);
-                        innerScope.DefineVariable(new VariableDefinitionExpression(variableName), value);
+                        parameterScope.DefineVariable(new VariableDefinitionExpression(variableName), value);
                     }
                     else
                     {
@@ -248,17 +252,18 @@ namespace RATools.Parser.Internal
                     return null;
                 }
 
-                if (!value.ReplaceVariables(scope, out value))
+                var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(parameter), value) };
+                if (!value.ReplaceVariables(assignmentScope, out value))
                 {
                     error = new ParseErrorExpression(value, this);
                     return null;
                 }
 
-                innerScope.DefineVariable(new VariableDefinitionExpression(parameter), value);
+                parameterScope.DefineVariable(new VariableDefinitionExpression(parameter), value);
             }
 
             error = null;
-            return innerScope;
+            return parameterScope;
         }
 
         /// <summary>

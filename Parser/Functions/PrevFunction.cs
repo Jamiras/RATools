@@ -14,6 +14,9 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            if (!IsInTriggerClause(scope, out result))
+                return false;
+
             var accessor = GetMemoryAccessorParameter(scope, "accessor", out result);
             if (accessor == null)
                 return false;

@@ -612,5 +612,29 @@ namespace RATools.Test.Parser
             Assert.That(leaderboard.Submit, Is.EqualTo("0xH001234=3"));
             Assert.That(leaderboard.Value, Is.EqualTo("0xH004567"));
         }
+
+        [Test]
+        public void TestFunctionCallInFunctionInExpression()
+        {
+            var parser = Parse("function foo() {\n" +
+                               "    trigger = always_false() always_true()\n" + // always_true() should be flagged as an error
+                               "\n" +
+                               "    for offset in [0, 1] {\n" +
+                               "        trigger = trigger || byte(offset) == 10\n" +
+                               "    }\n" +
+                               "\n" +
+                               "    return trigger\n" +
+                               "}\n" +
+                               "achievement(\"Title\", \"Description\", 5, foo())\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:30 always_true has no meaning outside of a trigger clause"));
+        }
+
+        [Test]
+        public void TestErrorInFunctionInExpression()
+        {
+            var parser = Parse("function foo() => byte(1)\n" +
+                               "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:48 comparison did not evaluate to a valid comparison"));
+        }
     }
 }

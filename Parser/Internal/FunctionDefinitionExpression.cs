@@ -201,7 +201,6 @@ namespace RATools.Parser.Internal
         /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            scope = new InterpreterScope(scope) { IsReplacingVariables = true };
             if (!Evaluate(scope, out result))
                 return false;
 
@@ -230,13 +229,14 @@ namespace RATools.Parser.Internal
         public virtual bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var interpreter = new AchievementScriptInterpreter();
-            if (!interpreter.Evaluate(Expressions, scope))
+            var interpreterScope = new InterpreterScope(scope) { Context = interpreter };
+            if (!interpreter.Evaluate(Expressions, interpreterScope))
             {
                 result = interpreter.Error;
                 return false;
             }
 
-            result = scope.ReturnValue;
+            result = interpreterScope.ReturnValue;
             return true;
         }
 

@@ -16,7 +16,6 @@ namespace RATools.Parser.Internal
         {
             _parent = parent;
             Depth = parent.Depth + 1;
-            IsReplacingVariables = parent.IsReplacingVariables;
         }
 
         private readonly TinyDictionary<string, FunctionDefinitionExpression> _functions;
@@ -135,12 +134,7 @@ namespace RATools.Parser.Internal
         /// Gets whether or not the processor has encountered an early exit statement (return, break)
         /// </summary>
         public bool IsComplete { get; internal set; }
-
-        /// <summary>
-        /// Gets whether function calls should be evaluated or invoked.
-        /// </summary>
-        public bool IsReplacingVariables { get; internal set; }
-
+ 
         /// <summary>
         /// Gets the value to return when leaving the scope.
         /// </summary>
@@ -157,6 +151,25 @@ namespace RATools.Parser.Internal
                 var context = scope.Context as T;
                 if (context != null)
                     return context;
+
+                scope = scope._parent;
+            } while (scope != null);
+
+            return null;
+        }
+
+        internal T GetInterpreterContext<T>()
+            where T : class
+        {
+            var scope = this;
+            do
+            {
+                var context = scope.Context as T;
+                if (context != null)
+                    return context;
+
+                if (scope.Context is AchievementScriptInterpreter)
+                    break;
 
                 scope = scope._parent;
             } while (scope != null);
