@@ -476,6 +476,59 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestVariableScopeNested()
+        {
+            var parser = Parse(
+                "function foo2(a)\n" +                            // a = 1
+                "{\n" +
+                "    a = a + 1\n" +                               // a = 2
+                "    b = a + 1\n" +                               // b = 3 (should not update b in foo)
+                "    return byte(0x0000) == b\n" +                // byte(0x0000) == 3
+                "}\n" +
+                "function foo(a)\n" +                             // a = 1
+                "{\n" +
+                "    b = a + 1\n" +                               // b = 2
+                "    return foo2(a) && byte(a) == b\n" +          // foo2(1) && byte(0x0001) == 2 (a and b should not have been updated)
+                "}\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1))\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x000000) == 3 && byte(0x000001) == 2"));
+        }
+
+        [Test]
+        public void TestVariableScopeGlobalLocation()
+        {
+            var parser = Parse(
+                "c = 1\n" +
+                "function foo(a)\n" +
+                "{\n" +
+                "    b = a + 1\n" +                     // global variable declared after function definition
+                "    c = a + 1\n" +                     // global variable declared before function definition
+                "    return byte(0x0000) == b\n" +
+                "}\n" +
+                "\n" +
+                "b = 1\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1) && byte(b) == c)\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x000000) == 2 && byte(0x000002) == 2"));
+
+            parser = Parse(
+                "function foo(a)\n" +
+                "{\n" +
+                "    b = a + 1\n" +                     // global variable declared after function called - becomes local
+                "    return byte(0x0000) == b\n" +
+                "}\n" +
+                "\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1) && byte(0x0001) == b)\n" + // global b not defined yet, should error
+                "b = 1\n", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("7:65 Unknown variable: b"));
+        }
+
+        [Test]
         public void TestAddSource()
         {
             var parser = Parse("function f() => byte(0x1234) + byte(0x1235)" +

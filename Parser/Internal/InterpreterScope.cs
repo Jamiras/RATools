@@ -27,6 +27,28 @@ namespace RATools.Parser.Internal
             get { return _variables.Count; }
         }
 
+        private static InterpreterScope GetParentScope(InterpreterScope scope)
+        {
+            if (scope.Context is FunctionCallExpression)
+            {
+                // function call starts a new local scope, jump over any other local scopes to the script scope
+                InterpreterScope outermostScriptScope = null;
+
+                do
+                {
+                    if (scope.Context is AchievementScriptContext)
+                        outermostScriptScope = scope;
+
+                    if (scope._parent == null)
+                        return outermostScriptScope ?? scope;
+
+                    scope = scope._parent;
+                } while (true);
+            }
+
+            return scope._parent;
+        }
+
         /// <summary>
         /// Gets the function definition for a function.
         /// </summary>
@@ -38,8 +60,9 @@ namespace RATools.Parser.Internal
             if (_functions.TryGetValue(functionName, out function))
                 return function;
 
-            if (_parent != null)
-                return _parent.GetFunction(functionName);
+            var parentScope = GetParentScope(this);
+            if (parentScope != null)
+                return parentScope.GetFunction(functionName);
 
             return null;
         }
@@ -63,8 +86,9 @@ namespace RATools.Parser.Internal
             if (_variables.TryGetValue(variableName, out variable))
                 return variable.Value;
 
-            if (_parent != null)
-                return _parent.GetVariable(variableName);
+            var parentScope = GetParentScope(this);
+            if (parentScope != null)
+                return parentScope.GetVariable(variableName);
 
             return null;
         }
@@ -80,8 +104,9 @@ namespace RATools.Parser.Internal
             if (_variables.TryGetValue(variableName, out variable))
                 return variable.Key;
 
-            if (_parent != null)
-                return _parent.GetVariableDefinition(variableName);
+            var parentScope = GetParentScope(this);
+            if (parentScope != null)
+                return parentScope.GetVariableDefinition(variableName);
 
             return null;
         }
@@ -105,7 +130,7 @@ namespace RATools.Parser.Internal
 
             // find the scope where the variable is defined and update it there.
             var scope = this;
-            while (scope != null)
+            do
             {
                 if (scope._variables.ContainsKey(variable.Name))
                 {
@@ -113,8 +138,8 @@ namespace RATools.Parser.Internal
                     return;
                 }
 
-                scope = scope._parent;
-            }
+                scope = GetParentScope(scope);
+            } while (scope != null);
 
             // variable not defined, store in the current scope.
             DefineVariable(new VariableDefinitionExpression(variable), value);
