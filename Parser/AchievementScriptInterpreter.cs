@@ -385,33 +385,26 @@ namespace RATools.Parser
                 return false;
             }
 
-            var func = range as FunctionCallExpression;
-            if (func != null)
-            {
-                ExpressionBase result;
-                if (!func.ReplaceVariables(scope, out result))
-                {
-                    Error = result as ParseErrorExpression;
-                    return false;
-                }
-                range = result;
-            }
-
             var dict = range as DictionaryExpression;
             if (dict != null)
             {
                 var iterator = forExpression.IteratorName;
+                var iteratorScope = new InterpreterScope(scope);
+                var iteratorVariable = new VariableExpression(iterator.Name);
+
                 foreach (var entry in dict.Entries)
                 {
-                    var loopScope = new InterpreterScope(scope);
+                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry.Key);
 
                     ExpressionBase key;
-                    if (!entry.Key.ReplaceVariables(scope, out key))
+                    if (!entry.Key.ReplaceVariables(iteratorScope, out key))
                     {
                         Error = key as ParseErrorExpression;
                         return false;
                     }
-                    scope.DefineVariable(iterator, key);
+
+                    var loopScope = new InterpreterScope(scope);
+                    loopScope.DefineVariable(iterator, key);
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
@@ -434,17 +427,22 @@ namespace RATools.Parser
             if (array != null)
             {
                 var iterator = forExpression.IteratorName;
+                var iteratorScope = new InterpreterScope(scope);
+                var iteratorVariable = new VariableExpression(iterator.Name);
+
                 foreach (var entry in array.Entries)
                 {
-                    var loopScope = new InterpreterScope(scope);
+                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
 
                     ExpressionBase key;
-                    if (!entry.ReplaceVariables(scope, out key))
+                    if (!entry.ReplaceVariables(iteratorScope, out key))
                     {
                         Error = key as ParseErrorExpression;
                         return false;
                     }
-                    scope.DefineVariable(iterator, key);
+
+                    var loopScope = new InterpreterScope(scope);
+                    loopScope.DefineVariable(iterator, key);
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
