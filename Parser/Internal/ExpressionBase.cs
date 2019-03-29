@@ -44,7 +44,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Copies the location of this expression into another expression.
         /// </summary>
-        protected void CopyLocation(ExpressionBase source)
+        internal void CopyLocation(ExpressionBase source)
         {
             if (Line != 0)
             {

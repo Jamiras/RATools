@@ -689,5 +689,13 @@ namespace RATools.Test.Parser
                                "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 comparison did not evaluate to a valid comparison"));
         }
+
+        [Test]
+        public void TestErrorInFunctionParameterLocation()
+        {
+            var parser = Parse("tens = word(0x1234) * 10\n" +
+                               "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
+        }
     }
 }

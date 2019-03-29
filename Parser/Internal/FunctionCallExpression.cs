@@ -194,6 +194,8 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
+                    assignedParameter.Value.CopyLocation(value);
+
                     parameterScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
                     namedParameters = true;
                 }
@@ -220,6 +222,8 @@ namespace RATools.Parser.Internal
                         error = new ParseErrorExpression(value, parameter);
                         return null;
                     }
+
+                    parameter.CopyLocation(value);
 
                     if (index < parameterCount)
                     {
