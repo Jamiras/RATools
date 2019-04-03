@@ -71,7 +71,8 @@ namespace RATools.ViewModels
                             innerError = innerError.InnerError;
                         } while (innerError.InnerError != null);
 
-                        message += String.Format(" (called from {0}:{1})", error.Line, error.Column);
+                        if (error.Line != innerError.Line || error.Column != innerError.Column)
+                            message += String.Format(" (called from {0}:{1})", error.Line, error.Column);
                     }
 
                     ErrorsToolWindow.References.Add(new CodeReferenceViewModel
