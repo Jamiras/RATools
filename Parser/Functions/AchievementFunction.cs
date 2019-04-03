@@ -59,7 +59,11 @@ namespace RATools.Parser.Functions
                 return false;
 
             if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
+            {
+                var error = (ParseErrorExpression)result;
+                result = new ParseErrorExpression(error.Message, trigger) { InnerError = error };
                 return false;
+            }
 
             var newAchievement = achievement.ToAchievement();
             var functionCall = scope.GetOutermostContext<FunctionCallExpression>();

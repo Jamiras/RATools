@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -156,18 +157,30 @@ namespace RATools.Parser
                         case MathematicOperation.Add:
                             context.LastRequirement.Type = RequirementType.AddSource;
                             break;
+
                         case MathematicOperation.Subtract:
                             context.LastRequirement.Type = RequirementType.SubSource;
                             break;
+
                         default:
-                            return new ParseErrorExpression("Expression cannot be converted to an achievement", mathematic);
+                            return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
                     }
 
                     context.LastRequirement.Operator = RequirementOperator.None;
                     context.LastRequirement.Right = new Field();
 
                     // generate the condition for the second expression
-                    return ExecuteAchievementExpression(right, scope);
+                    error = ExecuteAchievementExpression(right, scope);
+                    if (error != null)
+                        return error;
+
+                    if (_equalityModifiers.Any())
+                    {
+                        var equalityOperation = MathematicExpression.GetOppositeOperation(_equalityModifiers.First().Operation);
+                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(equalityOperation)), mathematic);
+                    }
+
+                    return null;
                 }
 
                 return new ParseErrorExpression("Expression does not evaluate to a constant", mathematic.Right);
@@ -175,7 +188,7 @@ namespace RATools.Parser
 
             var oppositeOperation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
             if (oppositeOperation == MathematicOperation.None)
-                return new ParseErrorExpression("Cannot transpose modification to result", mathematic);
+                return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
 
             _equalityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
             return null;
@@ -289,8 +302,28 @@ namespace RATools.Parser
                 int newValue = integerRight.Value;
                 while (_equalityModifiers.Count > 0)
                 {
+                    var originalValue = newValue;
                     var modifier = _equalityModifiers.Pop();
                     newValue = modifier.Apply(newValue);
+
+                    var restoredValue = modifier.Remove(newValue);
+                    switch (op)
+                    {
+                        case RequirementOperator.Equal:
+                            if (restoredValue != originalValue)
+                                return new ParseErrorExpression("Result can never be true using integer math", comparison);
+                            break;
+
+                        case RequirementOperator.NotEqual:
+                            if (restoredValue != originalValue)
+                                return new ParseErrorExpression("Result is always true using integer math", comparison);
+                            break;
+
+                        case RequirementOperator.GreaterThanOrEqual:
+                            if (restoredValue != originalValue)
+                                op = RequirementOperator.GreaterThan;
+                            break;
+                    }
                 }
 
                 var requirement = context.LastRequirement;

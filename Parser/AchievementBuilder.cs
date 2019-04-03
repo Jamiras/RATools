@@ -598,6 +598,16 @@ namespace RATools.Parser
                             else
                                 alwaysTrue.Add(requirement);
                             break;
+
+                        case RequirementOperator.Equal:
+                            if (requirement.Right.Value > max)
+                                alwaysFalse.Add(requirement);
+                            break;
+
+                        case RequirementOperator.NotEqual:
+                            if (requirement.Right.Value > max)
+                                alwaysTrue.Add(requirement);
+                            break;
                     }
                 }
             }

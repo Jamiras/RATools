@@ -256,12 +256,7 @@ namespace RATools.Parser
             {
                 var error = Error;
                 if (error != null)
-                {
-                    while (error.InnerError != null)
-                        error = error.InnerError;
-
                     expressionGroup.Errors.Add(error);
-                }
 
                 return false;
             }

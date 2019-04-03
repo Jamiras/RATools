@@ -61,9 +61,18 @@ namespace RATools.ViewModels
                 ErrorsToolWindow.References.Clear();
                 foreach (var error in _parsedContent.Errors)
                 {
+                    string message = error.Message;
+
                     var innerError = error;
-                    while (innerError.InnerError != null)
-                        innerError = innerError.InnerError;
+                    if (innerError.InnerError != null)
+                    {
+                        do
+                        {
+                            innerError = innerError.InnerError;
+                        } while (innerError.InnerError != null);
+
+                        message += String.Format(" (called from {0}:{1})", error.Line, error.Column);
+                    }
 
                     ErrorsToolWindow.References.Add(new CodeReferenceViewModel
                     {
@@ -71,7 +80,7 @@ namespace RATools.ViewModels
                         StartColumn = innerError.Column,
                         EndLine = innerError.EndLine,
                         EndColumn = innerError.EndColumn,
-                        Message = innerError.Message
+                        Message = message
                     });
                 }
             });
