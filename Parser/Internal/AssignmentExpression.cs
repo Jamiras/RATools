@@ -53,8 +53,9 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            var expressionScope = new InterpreterScope(scope) { Context = this };
             ExpressionBase value;
-            if (!Value.ReplaceVariables(scope, out value))
+            if (!Value.ReplaceVariables(expressionScope, out value))
             {
                 result = value;
                 return false;

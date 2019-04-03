@@ -1,9 +1,10 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceValueFunction : FunctionDefinitionExpression
+    internal class RichPresenceValueFunction : RichPresenceDisplayFunction.FunctionDefinition
     {
         public RichPresenceValueFunction()
             : base("rich_presence_value")
@@ -15,14 +16,10 @@ namespace RATools.Parser.Functions
             DefaultParameters["format"] = new StringConstantExpression("value");
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<RichPresenceDisplayFunction.RichPresenceDisplayContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
+            if (!IsInRichPresenceDisplayClause(scope, out result))
                 return false;
-            }
 
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
@@ -43,9 +40,21 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, format });
+            return true;
+        }
+
+        public override ParseErrorExpression BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            var name = (StringConstantExpression)functionCall.Parameters.First();
+            var expression = functionCall.Parameters.ElementAt(1);
+            var format = (StringConstantExpression)functionCall.Parameters.ElementAt(2);
+            var valueFormat = Leaderboard.ParseFormat(format.Value);
+
+            ExpressionBase result;
             var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
-                return false;
+                return (ParseErrorExpression)result;
 
             context.RichPresence.AddValueField(name.Value, valueFormat);
 
@@ -54,7 +63,7 @@ namespace RATools.Parser.Functions
             context.DisplayString.Append('(');
             context.DisplayString.Append(value);
             context.DisplayString.Append(')');
-            return true;
+            return null;
         }
     }
 }

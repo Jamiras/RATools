@@ -39,15 +39,26 @@ namespace RATools.Test.Parser.Functions
             var context = new RichPresenceDisplayFunction.RichPresenceDisplayContext { RichPresence = new RichPresenceBuilder() };
             scope.Context = context;
 
+            ExpressionBase evaluated;
+            if (expectedError != null && expectedError.EndsWith(" format"))
+            {
+                Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
+                var parseError = evaluated as ParseErrorExpression;
+                Assert.That(parseError, Is.Not.Null);
+                Assert.That(parseError.Message, Is.EqualTo(expectedError));
+                return context.RichPresence;
+            }
+
+            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
             if (expectedError == null)
             {
-                Assert.That(funcDef.Evaluate(scope, out error), Is.True);
+                Assert.That(funcDef.BuildMacro(context, scope, (FunctionCallExpression)evaluated), Is.Null);
             }
             else
             {
-                Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-                Assert.That(error, Is.InstanceOf<ParseErrorExpression>());
-                Assert.That(((ParseErrorExpression)error).Message, Is.EqualTo(expectedError));
+                var parseError = funcDef.BuildMacro(context, scope, (FunctionCallExpression)evaluated);
+                Assert.That(parseError, Is.Not.Null);
+                Assert.That(parseError.Message, Is.EqualTo(expectedError));
             }
 
             context.RichPresence.DisplayString = context.DisplayString.ToString();

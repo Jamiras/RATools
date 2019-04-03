@@ -306,8 +306,10 @@ namespace RATools.Parser
             {
                 case ExpressionType.Assignment:
                     var assignment = (AssignmentExpression)expression;
+                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+
                     ExpressionBase result;
-                    if (!assignment.Value.ReplaceVariables(scope, out result))
+                    if (!assignment.Value.ReplaceVariables(assignmentScope, out result))
                     {
                         Error = result as ParseErrorExpression;
                         return false;
@@ -350,7 +352,8 @@ namespace RATools.Parser
         private bool EvaluateReturn(ReturnExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            if (!expression.Value.ReplaceVariables(scope, out result))
+            var returnScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression("@return"), expression.Value) };
+            if (!expression.Value.ReplaceVariables(returnScope, out result))
             {
                 Error = result as ParseErrorExpression;
                 return false;
@@ -359,8 +362,10 @@ namespace RATools.Parser
             var functionCall = result as FunctionCallExpression;
             if (functionCall != null)
             {
-                if (!CallFunction(functionCall, scope))
+                if (!CallFunction(functionCall, returnScope))
                     return false;
+
+                scope.ReturnValue = returnScope.ReturnValue;
             }
             else
             {
@@ -380,33 +385,26 @@ namespace RATools.Parser
                 return false;
             }
 
-            var func = range as FunctionCallExpression;
-            if (func != null)
-            {
-                ExpressionBase result;
-                if (!func.Evaluate(scope, out result, true))
-                {
-                    Error = result as ParseErrorExpression;
-                    return false;
-                }
-                range = result;
-            }
-
             var dict = range as DictionaryExpression;
             if (dict != null)
             {
                 var iterator = forExpression.IteratorName;
+                var iteratorScope = new InterpreterScope(scope);
+                var iteratorVariable = new VariableExpression(iterator.Name);
+
                 foreach (var entry in dict.Entries)
                 {
-                    var loopScope = new InterpreterScope(scope);
+                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry.Key);
 
                     ExpressionBase key;
-                    if (!entry.Key.ReplaceVariables(scope, out key))
+                    if (!entry.Key.ReplaceVariables(iteratorScope, out key))
                     {
                         Error = key as ParseErrorExpression;
                         return false;
                     }
-                    scope.DefineVariable(iterator, key);
+
+                    var loopScope = new InterpreterScope(scope);
+                    loopScope.DefineVariable(iterator, key);
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
@@ -429,17 +427,22 @@ namespace RATools.Parser
             if (array != null)
             {
                 var iterator = forExpression.IteratorName;
+                var iteratorScope = new InterpreterScope(scope);
+                var iteratorVariable = new VariableExpression(iterator.Name);
+
                 foreach (var entry in array.Entries)
                 {
-                    var loopScope = new InterpreterScope(scope);
+                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
 
                     ExpressionBase key;
-                    if (!entry.ReplaceVariables(scope, out key))
+                    if (!entry.ReplaceVariables(iteratorScope, out key))
                     {
                         Error = key as ParseErrorExpression;
                         return false;
                     }
-                    scope.DefineVariable(iterator, key);
+
+                    var loopScope = new InterpreterScope(scope);
+                    loopScope.DefineVariable(iterator, key);
 
                     if (!Evaluate(forExpression.Expressions, loopScope))
                         return false;
@@ -483,8 +486,15 @@ namespace RATools.Parser
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            if (!expression.Evaluate(scope, out result, false))
+            bool success = (scope.GetInterpreterContext<AssignmentExpression>() != null) ? expression.ReplaceVariables(scope, out result) : expression.Invoke(scope, out result);
+            if (!success)
             {
+                if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
+                {
+                    var error = result as ParseErrorExpression;
+                    result = new ParseErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };
+                }
+
                 Error = result as ParseErrorExpression;
                 return false;
             }

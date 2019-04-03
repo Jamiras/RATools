@@ -171,5 +171,17 @@ namespace RATools.Tests.Data
             Assert.That(field1 != field2);
             Assert.That(!field1.Equals(field2));
         }
+
+        [Test]
+        public void TestEqualsDifferentSizeValue()
+        {
+            // Size should be ignored when comparing two Value fields, all Value fields are 32-bit in the runtime
+            var field1 = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 8 };
+            var field2 = new Field { Size = FieldSize.Word, Type = FieldType.Value, Value = 8 };
+
+            Assert.That(field1, Is.EqualTo(field2));
+            Assert.That(field1 == field2);
+            Assert.That(field1.Equals(field2));
+        }
     }
 }

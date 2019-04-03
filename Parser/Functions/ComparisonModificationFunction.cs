@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal abstract class ComparisonModificationFunction : FunctionDefinitionExpression
+    internal abstract class ComparisonModificationFunction : TriggerBuilderContext.FunctionDefinition
     {
         public ComparisonModificationFunction(string name)
             : base(name)
@@ -13,59 +13,63 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
+            if (!IsInTriggerClause(scope, out result))
                 return false;
-            }
 
             var comparison = GetParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
 
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { comparison });
+            return true;
+        }
+
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            var comparison = functionCall.Parameters.First();
+            return BuildTriggerCondition(context, scope, comparison);
+        }
+
+        protected ParseErrorExpression BuildTriggerCondition(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase condition)
+        { 
             var builder = new ScriptInterpreterAchievementBuilder();
-            if (!TriggerBuilderContext.ProcessAchievementConditions(builder, comparison, scope, out result))
-                return false;
+            ExpressionBase result;
+            if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
+                return (ParseErrorExpression)result;
 
             if (builder.AlternateRequirements.Count > 0)
-            {
-                result = new ParseErrorExpression(Name.Name + " does not support ||'d conditions", comparison);
-                return false;
-            }
+                return new ParseErrorExpression(Name.Name + " does not support ||'d conditions", condition);
 
-            if (!ValidateSingleCondition(comparison, builder.CoreRequirements, out result))
-                return false;
+            ParseErrorExpression error = ValidateSingleCondition(builder.CoreRequirements);
+            if (error != null)
+                return new ParseErrorExpression(error, condition);
 
-            ModifyRequirements(builder);
+            error = ModifyRequirements(builder);
+            if (error != null)
+                return error;
 
             foreach (var requirement in builder.CoreRequirements)
                 context.Trigger.Add(requirement);
 
-            return true;
+            return null;
         }
 
-        protected bool ValidateSingleCondition(ExpressionBase comparison, ICollection<Requirement> requirements, out ExpressionBase result)
+        protected ParseErrorExpression ValidateSingleCondition(ICollection<Requirement> requirements)
         {
             if (requirements.Count == 0 ||
                 requirements.Last().Operator == RequirementOperator.None)
             {
-                result = new ParseErrorExpression("comparison did not evaluate to a valid comparison", comparison);
-                return false;
+                return new ParseErrorExpression("comparison did not evaluate to a valid comparison");
             }
 
             if (requirements.Count(r => r.Operator != RequirementOperator.None) != 1)
-            {
-                result = new ParseErrorExpression(Name.Name + " does not support &&'d conditions", comparison);
-                return false;
-            }
+                return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
 
-            result = null;
-            return true;
+            return null;
         }
 
-        protected abstract void ModifyRequirements(ScriptInterpreterAchievementBuilder builder);
+        protected abstract ParseErrorExpression ModifyRequirements(AchievementBuilder builder);
     }
 }

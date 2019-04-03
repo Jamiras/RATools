@@ -61,7 +61,7 @@ namespace RATools.Parser.Functions
                     array.Entries.Add(new IntegerConstantExpression(i));
             }
 
-            scope.ReturnValue = array;
+            result = array;
             return true;
         }
     }

@@ -99,16 +99,20 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
+            var dictScope = new InterpreterScope(scope);
+
             var entries = new List<DictionaryEntry>();
             foreach (var entry in Entries)
             {
                 ExpressionBase key, value;
                 key = entry.Key;
 
+                dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
+
                 if (key.Type == ExpressionType.FunctionCall)
                 {
                     var expression = (FunctionCallExpression)key;
-                    if (!expression.Evaluate(scope, out value, true))
+                    if (!expression.ReplaceVariables(dictScope, out value))
                     {
                         result = value;
                         return false;
@@ -117,19 +121,28 @@ namespace RATools.Parser.Internal
                     key = value;
                 }
 
-                if (!key.ReplaceVariables(scope, out key))
+                if (!key.ReplaceVariables(dictScope, out key))
                 {
                     result = key;
                     return false;
                 }
 
-                if (key.Type != ExpressionType.StringConstant && key.Type != ExpressionType.IntegerConstant)
+                switch (key.Type)
                 {
-                    result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
-                    return false;
+                    case ExpressionType.StringConstant:
+                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
+                        break;
+
+                    case ExpressionType.IntegerConstant:
+                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
+                        break;
+
+                    default:
+                        result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
+                        return false;
                 }
 
-                if (!entry.Value.ReplaceVariables(scope, out value))
+                if (!entry.Value.ReplaceVariables(dictScope, out value))
                 {
                     result = value;
                     return false;

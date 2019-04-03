@@ -52,11 +52,15 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
+            var arrayScope = new InterpreterScope(scope);
+
+            int index = 0;
             var entries = new List<ExpressionBase>();
             foreach (var entry in Entries)
             {
                 ExpressionBase value;
-                if (!entry.ReplaceVariables(scope, out value))
+                arrayScope.Context = new AssignmentExpression(new VariableExpression("[" + (index++) + "]"), entry);
+                if (!entry.ReplaceVariables(arrayScope, out value))
                 {
                     result = value;
                     return false;

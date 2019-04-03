@@ -396,7 +396,7 @@ namespace RATools.Test.Parser
         public void TestPrevMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
         }
 
         [Test]
@@ -412,7 +412,7 @@ namespace RATools.Test.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
         }
 
         [Test]
@@ -473,6 +473,59 @@ namespace RATools.Test.Parser
                                "test()\n" +
                                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("3:23 Unknown variable: p"));
+        }
+
+        [Test]
+        public void TestVariableScopeNested()
+        {
+            var parser = Parse(
+                "function foo2(a)\n" +                            // a = 1
+                "{\n" +
+                "    a = a + 1\n" +                               // a = 2
+                "    b = a + 1\n" +                               // b = 3 (should not update b in foo)
+                "    return byte(0x0000) == b\n" +                // byte(0x0000) == 3
+                "}\n" +
+                "function foo(a)\n" +                             // a = 1
+                "{\n" +
+                "    b = a + 1\n" +                               // b = 2
+                "    return foo2(a) && byte(a) == b\n" +          // foo2(1) && byte(0x0001) == 2 (a and b should not have been updated)
+                "}\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1))\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x000000) == 3 && byte(0x000001) == 2"));
+        }
+
+        [Test]
+        public void TestVariableScopeGlobalLocation()
+        {
+            var parser = Parse(
+                "c = 1\n" +
+                "function foo(a)\n" +
+                "{\n" +
+                "    b = a + 1\n" +                     // global variable declared after function definition
+                "    c = a + 1\n" +                     // global variable declared before function definition
+                "    return byte(0x0000) == b\n" +
+                "}\n" +
+                "\n" +
+                "b = 1\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1) && byte(b) == c)\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x000000) == 2 && byte(0x000002) == 2"));
+
+            parser = Parse(
+                "function foo(a)\n" +
+                "{\n" +
+                "    b = a + 1\n" +                     // global variable declared after function called - becomes local
+                "    return byte(0x0000) == b\n" +
+                "}\n" +
+                "\n" +
+                "achievement(\"Test\", \"Description\", 5, foo(1) && byte(0x0001) == b)\n" + // global b not defined yet, should error
+                "b = 1\n", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("7:65 Unknown variable: b"));
         }
 
         [Test]
@@ -611,6 +664,38 @@ namespace RATools.Test.Parser
             Assert.That(leaderboard.Cancel, Is.EqualTo("0xH001234=2"));
             Assert.That(leaderboard.Submit, Is.EqualTo("0xH001234=3"));
             Assert.That(leaderboard.Value, Is.EqualTo("0xH004567"));
+        }
+
+        [Test]
+        public void TestFunctionCallInFunctionInExpression()
+        {
+            var parser = Parse("function foo() {\n" +
+                               "    trigger = always_false() always_true()\n" + // always_true() should be flagged as an error
+                               "\n" +
+                               "    for offset in [0, 1] {\n" +
+                               "        trigger = trigger || byte(offset) == 10\n" +
+                               "    }\n" +
+                               "\n" +
+                               "    return trigger\n" +
+                               "}\n" +
+                               "achievement(\"Title\", \"Description\", 5, foo())\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:30 always_true has no meaning outside of a trigger clause"));
+        }
+
+        [Test]
+        public void TestErrorInFunctionInExpression()
+        {
+            var parser = Parse("function foo() => byte(1)\n" +
+                               "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 comparison did not evaluate to a valid comparison"));
+        }
+
+        [Test]
+        public void TestErrorInFunctionParameterLocation()
+        {
+            var parser = Parse("tens = word(0x1234) * 10\n" +
+                               "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
         }
     }
 }

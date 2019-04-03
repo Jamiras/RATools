@@ -20,65 +20,73 @@ namespace RATools.Parser.Functions
         {
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            if (!IsInTriggerClause(scope, out result))
+                return false;
+
             var count = GetIntegerParameter(scope, "count", out result);
             if (count == null)
                 return false;
 
-            return Evaluate(scope, (ushort)count.Value, out result);
-        }
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
 
-        protected bool Evaluate(InterpreterScope scope, ushort count, out ExpressionBase result)
-        { 
-            var logicalComparison = GetParameter(scope, "comparison", out result) as ConditionalExpression;
-            if (logicalComparison != null && logicalComparison.Operation == ConditionalOperation.Or)
-            {
-                if (!EvaluateAddHits(scope, logicalComparison, out result))
-                    return false;
-            }
-            else
-            {
-                if (!base.Evaluate(scope, out result))
-                    return false;
-            }
-
-            var context = scope.GetContext<TriggerBuilderContext>();
-            context.LastRequirement.HitCount = count;
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { count, comparison });
             return true;
         }
 
-        protected override void ModifyRequirements(ScriptInterpreterAchievementBuilder builder)
+        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
-            // we want to set the HitCount on the last requirement, but don't know what to set it to. will modify back in Evaluate
+            // not actually called because we override BuildTrigger, but required because its abstract in the base class
+            return null;
         }
 
-        private bool EvaluateAddHits(InterpreterScope scope, ConditionalExpression condition, out ExpressionBase result)
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                return false;
-            }
+            var count = (IntegerConstantExpression)functionCall.Parameters.First();
+            var comparison = functionCall.Parameters.ElementAt(1);
+
+            return BuildTriggerConditions(context, scope, comparison, count.Value);
+        }
+
+        protected ParseErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
+        {
+            ParseErrorExpression error;
+
+            var logicalComparison = comparison as ConditionalExpression;
+            if (logicalComparison != null && logicalComparison.Operation == ConditionalOperation.Or)
+                error = EvaluateAddHits(context, scope, logicalComparison);
+            else
+                error = BuildTriggerCondition(context, scope, comparison);
+
+            if (error != null)
+                return error;
+
+            context.LastRequirement.HitCount = (ushort)count;
+            return null;
+        }
+
+        private ParseErrorExpression EvaluateAddHits(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
+        {
+            ExpressionBase result;
 
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.CoreRequirements.Add(new Requirement()); // empty core requirement required for optimize call, we'll ignore it
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
-                return false;
+                return (ParseErrorExpression)result;
 
             var requirements = new List<Requirement>();
             foreach (var altGroup in builder.AlternateRequirements)
             {
-                if (!ValidateSingleCondition(condition, altGroup, out result))
-                    return false;
+                var error = ValidateSingleCondition(altGroup);
+                if (error != null)
+                    return error;
 
                 var requirement = altGroup.First();
                 if (requirement.Type != RequirementType.None)
-                {
-                    result = new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
-                    return false;
-                }
+                    return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
 
                 requirements.Add(requirement);
             }
@@ -120,7 +128,7 @@ namespace RATools.Parser.Functions
             foreach (var requirement in requirements)
                 context.Trigger.Add(requirement);
 
-            return true;
+            return null;
         }
     }
 }

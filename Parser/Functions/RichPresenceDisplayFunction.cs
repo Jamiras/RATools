@@ -31,10 +31,12 @@ namespace RATools.Parser.Functions
             scope = new InterpreterScope(scope);
             scope.Context = new RichPresenceDisplayContext { RichPresence = context.RichPresence };
 
-            if (!ProcessRichPresenceDisplay(stringExpression, scope, out result))
+            string displayString;
+            result = ProcessRichPresenceDisplay(stringExpression, scope, out displayString);
+            if (result != null)
                 return false;
 
-            if (!SetDisplayString(context.RichPresence, ((StringConstantExpression)result).Value, scope, out result))
+            if (!SetDisplayString(context.RichPresence, displayString, scope, out result))
                 return false;
 
             return true;
@@ -50,21 +52,24 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        private bool ProcessRichPresenceDisplay(StringConstantExpression displayString, InterpreterScope scope, out ExpressionBase result)
+        private ParseErrorExpression ProcessRichPresenceDisplay(StringConstantExpression stringExpression, InterpreterScope scope, out string displayString)
         {
-            result = null;
+            displayString = null;
 
+            ExpressionBase result;
             var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
             if (varargs == null)
             {
-                if (result == null)
-                    result = new ParseErrorExpression("unexpected varargs", displayString);
-                return false;
+                var error = result as ParseErrorExpression;
+                if (error == null)
+                    error = new ParseErrorExpression("unexpected varargs", stringExpression);
+                return error;
             }
 
-            var builder = ((RichPresenceDisplayContext)scope.Context).DisplayString;
+            var context = scope.GetContext<RichPresenceDisplayContext>();
+            var builder = context.DisplayString;
 
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(displayString.Value));
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(stringExpression.Value));
             while (tokenizer.NextChar != '\0')
             {
                 var token = tokenizer.ReadTo('{');
@@ -78,35 +83,37 @@ namespace RATools.Parser.Functions
                 var index = tokenizer.ReadNumber();
                 if (tokenizer.NextChar != '}')
                 {
-                    result = new ParseErrorExpression("Invalid positional token",
-                                                      displayString.Line, displayString.Column + positionalTokenColumn,
-                                                      displayString.Line, displayString.Column + tokenizer.Column - 1);
-                    return false;
+                    return new ParseErrorExpression("Invalid positional token", 
+                                                    stringExpression.Line, stringExpression.Column + positionalTokenColumn,
+                                                    stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
                 }
                 tokenizer.Advance();
 
                 var parameterIndex = Int32.Parse(index.ToString());
                 if (parameterIndex >= varargs.Entries.Count)
                 {
-                    result = new ParseErrorExpression("Invalid parameter index: " + parameterIndex, 
-                                                      displayString.Line, displayString.Column + positionalTokenColumn,
-                                                      displayString.Line, displayString.Column + tokenizer.Column - 1);
-                    return false;
+                    return new ParseErrorExpression("Invalid parameter index: " + parameterIndex,
+                                                    stringExpression.Line, stringExpression.Column + positionalTokenColumn,
+                                                    stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
                 }
 
-                var richPresenceFunction = varargs.Entries[parameterIndex] as FunctionCallExpression;
-                if (richPresenceFunction == null || !richPresenceFunction.FunctionName.Name.StartsWith("rich_presence_"))
-                {
-                    result = new ParseErrorExpression("Parameter must be a rich_presence_ function", richPresenceFunction);
-                    return false;
-                }
+                var functionCall = varargs.Entries[parameterIndex] as FunctionCallExpression;
 
-                if (!richPresenceFunction.Evaluate(scope, out result, false))
-                    return false;
+                var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
+                if (functionDefinition == null)
+                    return new ParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name);
+
+                var richPresenceFunction = functionDefinition as FunctionDefinition;
+                if (richPresenceFunction == null)
+                    return new ParseErrorExpression(functionCall.FunctionName.Name + " cannot be called as a rich_presence_display parameter", functionCall);
+
+                var error = richPresenceFunction.BuildMacro(context, scope, functionCall);
+                if (error != null)
+                    return new ParseErrorExpression(error, functionCall);
             }
 
-            result = new StringConstantExpression(builder.ToString());
-            return true;
+            displayString = builder.ToString();
+            return null;
         }
 
         internal class RichPresenceDisplayContext
@@ -118,6 +125,44 @@ namespace RATools.Parser.Functions
 
             public RichPresenceBuilder RichPresence { get; set; }
             public StringBuilder DisplayString { get; private set; }
+        }
+
+        internal abstract class FunctionDefinition : FunctionDefinitionExpression
+        {
+            public FunctionDefinition(string name)
+                : base(name)
+            {
+            }
+
+            protected bool IsInRichPresenceDisplayClause(InterpreterScope scope, out ExpressionBase result)
+            {
+                var richPresence = scope.GetContext<RichPresenceDisplayContext>(); // explicitly in rich_presence_display clause
+                if (richPresence == null)
+                {
+                    var assignment = scope.GetInterpreterContext<AssignmentExpression>(); // in generic assignment clause - may be used byte rich_presence_display - will determine later
+                    if (assignment == null)
+                    {
+                        result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
+                        return false;
+                    }
+                }
+
+                result = null;
+                return true;
+            }
+
+            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+            {
+                return IsInRichPresenceDisplayClause(scope, out result);
+            }
+
+            public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+            {
+                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
+                return false;
+            }
+
+            public abstract ParseErrorExpression BuildMacro(RichPresenceDisplayContext context, InterpreterScope scope, FunctionCallExpression functionCall);
         }
     }
 }

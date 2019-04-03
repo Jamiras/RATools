@@ -307,7 +307,13 @@ namespace RATools.Data
                 return false;
 
             var that = (Field)obj;
-            return that.Type == Type && that.Size == Size && that.Value == Value;
+            if (that.Type != Type || that.Value != Value)
+                return false;
+
+            if (Type == FieldType.Value)
+                return true;
+
+            return that.Size == Size;
         }
 
         /// <summary>

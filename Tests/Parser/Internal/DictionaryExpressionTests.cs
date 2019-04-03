@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -12,7 +13,8 @@ namespace RATools.Test.Parser.Internal
         public void TestAppendString()
         {
             var expr = new DictionaryExpression();
-            expr.Entries.Add(new DictionaryExpression.DictionaryEntry {
+            expr.Entries.Add(new DictionaryExpression.DictionaryEntry
+            {
                 Key = new VariableExpression("a"),
                 Value = new IntegerConstantExpression(1)
             });
@@ -223,6 +225,25 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("1 already exists in dictionary"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesMemoryAccessor()
+        {
+            var key = new IntegerConstantExpression(6);
+            var value = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(1) });
+            var expr = new DictionaryExpression();
+            expr.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+
+            Assert.That(result, Is.InstanceOf<DictionaryExpression>());
+            var arrayResult = (DictionaryExpression)result;
+            Assert.That(arrayResult.Entries.Count, Is.EqualTo(1));
+            Assert.That(arrayResult.Entries[0].Value.ToString(), Is.EqualTo(value.ToString()));
         }
     }
 }

@@ -1,9 +1,10 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class PrevFunction : FunctionDefinitionExpression
+    internal class PrevFunction : TriggerBuilderContext.FunctionDefinition
     {
         public PrevFunction()
             : base("prev")
@@ -11,24 +12,29 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("accessor"));
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            if (context == null)
-            {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                return false;
-            }
-
-            Field accessor = GetMemoryAccessorParameter(scope, "accessor", out result);
-            if (accessor.Type == FieldType.None)
+            if (!IsInTriggerClause(scope, out result))
                 return false;
 
-            var requirement = new Requirement();
-            requirement.Left = new Field { Size = accessor.Size, Type = FieldType.PreviousValue, Value = accessor.Value };
-            context.Trigger.Add(requirement);
+            var accessor = GetMemoryAccessorParameter(scope, "accessor", out result);
+            if (accessor == null)
+                return false;
 
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { accessor });
             return true;
+        }
+
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            var accessor = (FunctionCallExpression)functionCall.Parameters.First();
+            var error = context.CallFunction(accessor, scope);
+            if (error != null)
+                return error;
+
+            var left = context.LastRequirement.Left;
+            context.LastRequirement.Left = new Field { Size = left.Size, Type = FieldType.PreviousValue, Value = left.Value };
+            return null;
         }
     }
 }
