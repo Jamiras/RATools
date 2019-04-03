@@ -10,3 +10,4 @@
 *.ReSharper.user
 .vs
 lib
+/Tests/Regressions
