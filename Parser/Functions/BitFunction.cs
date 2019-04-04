@@ -39,11 +39,8 @@ namespace RATools.Parser.Functions
             if (index < 0 || index > 31)
                 return new ParseErrorExpression("index must be between 0 and 31", functionCall.Parameters.First());
 
-            while (index >= 8)
-            {
-                index -= 8;
-                address++;
-            }
+            address += index / 8;
+            index %= 8;
 
             FieldSize size;
             switch (index)
