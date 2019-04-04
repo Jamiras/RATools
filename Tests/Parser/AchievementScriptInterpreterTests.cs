@@ -697,5 +697,18 @@ namespace RATools.Test.Parser
                                "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
         }
+
+        [Test]
+        public void TestUnknownVariableInIfInFunction()
+        {
+            var parser = Parse("function foo(param) {\n" +
+                               "    if param == 1\n" +
+                               "        return AREA\n" +
+                               "\n" +
+                               "    return byte(0x1234) == 0\n" +
+                               "}\n" +
+                               "achievement(\"Title\", \"Description\", 5, foo(1))\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:16 Unknown variable: AREA"));
+        }
     }
 }
