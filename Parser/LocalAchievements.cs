@@ -176,6 +176,25 @@ namespace RATools.Parser
             return previousAchievement;
         }
 
+        private static void WriteEscaped(StreamWriter writer, string str)
+        {
+            if (str.IndexOf('"') == -1 && str.IndexOf('\\') == -1)
+            {
+                writer.Write(str);
+                return;
+            }
+
+            foreach (var c in str)
+            {
+                if (c == '"')
+                    writer.Write("\\\"");
+                else if (c == '\\')
+                    writer.Write("\\\\");
+                else
+                    writer.Write(c);
+            }
+        }
+
         /// <summary>
         /// Commits the achivement list back to the 'XXX-User.txt' file.
         /// </summary>
@@ -191,7 +210,7 @@ namespace RATools.Parser
                 foreach (var achievement in _achievements)
                 {
                     writer.Write(achievement.Id);
-                    writer.Write(':');
+                    writer.Write(":\"");
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);
                     if (requirements.Length > AchievementMaxLength)
@@ -201,13 +220,13 @@ namespace RATools.Parser
                     }
 
                     writer.Write(requirements);
-                    writer.Write(':');
+                    writer.Write("\":\"");
 
-                    writer.Write(achievement.Title);
-                    writer.Write(':');
+                    WriteEscaped(writer, achievement.Title);
+                    writer.Write("\":\"");
 
-                    writer.Write(achievement.Description);
-                    writer.Write(':');
+                    WriteEscaped(writer, achievement.Description);
+                    writer.Write("\":");
 
                     writer.Write(" : : :"); // discontinued features
 
