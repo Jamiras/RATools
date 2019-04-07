@@ -76,6 +76,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MemoryAccessorFunction("high4", FieldSize.HighNibble));
                 _globalScope.AddFunction(new MemoryAccessorFunction("word", FieldSize.Word));
                 _globalScope.AddFunction(new MemoryAccessorFunction("dword", FieldSize.DWord));
+                _globalScope.AddFunction(new BitFunction());
 
                 _globalScope.AddFunction(new PrevFunction());
 
@@ -256,12 +257,7 @@ namespace RATools.Parser
             {
                 var error = Error;
                 if (error != null)
-                {
-                    while (error.InnerError != null)
-                        error = error.InnerError;
-
                     expressionGroup.Errors.Add(error);
-                }
 
                 return false;
             }
@@ -475,12 +471,7 @@ namespace RATools.Parser
                 return false;
             }
 
-            if (result)
-                Evaluate(ifExpression.Expressions, scope);
-            else
-                Evaluate(ifExpression.ElseExpressions, scope);
-
-            return true;
+            return Evaluate(result ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)

@@ -22,7 +22,7 @@ namespace RATools.ViewModels
                     (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
                 {
                     string note;
-                    if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                    if (requirement.Left.Type != FieldType.Value && notes.TryGetValue((int)requirement.Left.Value, out note))
                         Notes = note;
                 }
                 else
@@ -30,10 +30,10 @@ namespace RATools.ViewModels
                     var builder = new StringBuilder();
 
                     string note;
-                    if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                    if (requirement.Left.Type != FieldType.Value && notes.TryGetValue((int)requirement.Left.Value, out note))
                         builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
 
-                    if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                    if (requirement.Right.Type != FieldType.Value && notes.TryGetValue((int)requirement.Right.Value, out note))
                     {
                         if (builder.Length > 0)
                             builder.AppendLine();

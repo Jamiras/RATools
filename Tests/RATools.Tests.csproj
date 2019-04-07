@@ -122,6 +122,7 @@
     <Compile Include="Data\FieldTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />
     <Compile Include="Parser\AchievementScriptInterpreterTests.cs" />
+    <Compile Include="Parser\Functions\MemoryAccessFunctionTests.cs" />
     <Compile Include="Parser\Functions\RichPresenceValueFunctionTests.cs" />
     <Compile Include="Parser\Functions\OnceFunctionTests.cs" />
     <Compile Include="Parser\Functions\RepeatedFunctionTests.cs" />
@@ -147,6 +148,7 @@
     <Compile Include="Parser\Internal\ComparisonExpressionTests.cs" />
     <Compile Include="Parser\Internal\AssignmentExpressionTests.cs" />
     <Compile Include="Parser\LocalAchievementsTests.cs" />
+    <Compile Include="Parser\RegressionTests.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(SolutionFileName)' == 'RATools + Core.sln'">

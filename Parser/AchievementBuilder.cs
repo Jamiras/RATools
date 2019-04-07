@@ -598,6 +598,16 @@ namespace RATools.Parser
                             else
                                 alwaysTrue.Add(requirement);
                             break;
+
+                        case RequirementOperator.Equal:
+                            if (requirement.Right.Value > max)
+                                alwaysFalse.Add(requirement);
+                            break;
+
+                        case RequirementOperator.NotEqual:
+                            if (requirement.Right.Value > max)
+                                alwaysTrue.Add(requirement);
+                            break;
                     }
                 }
             }
@@ -1178,7 +1188,11 @@ namespace RATools.Parser
                     }
                 }
 
-                // and put it in the core group
+                // the the core only contains an always true statement, remove it
+                if (_core.Count == 1 && IsTrue(_core[0]))
+                    _core.Clear();
+
+                // put one copy of the repeated requirement it in the core group
                 _core.Add(requirement);
             }
         }

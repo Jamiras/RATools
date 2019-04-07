@@ -1,4 +1,7 @@
 ﻿using NUnit.Framework;
+using RATools.Data;
+using RATools.Parser;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -202,6 +205,21 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestAddZero()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.Add, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+        }
+
+        [Test]
         public void TestAddVariables()
         {
             var value1 = new IntegerConstantExpression(1);
@@ -276,6 +294,21 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestSubtractZero()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.Subtract, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+        }
+
+        [Test]
         public void TestMultiply()
         {
             var left = new IntegerConstantExpression(7);
@@ -287,6 +320,36 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(21));
+        }
+
+        [Test]
+        public void TestMultiplyZero()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.Multiply, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(right.ToString()));
+        }
+
+        [Test]
+        public void TestMultiplyOne()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(1);
+            var expr = new MathematicExpression(left, MathematicOperation.Multiply, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
         }
 
         [Test]
@@ -304,6 +367,36 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestDivideZero()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.Divide, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("division by zero"));
+        }
+
+        [Test]
+        public void TestDivideOne()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(1);
+            var expr = new MathematicExpression(left, MathematicOperation.Divide, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+        }
+
+        [Test]
         public void TestModulus()
         {
             var left = new IntegerConstantExpression(20);
@@ -315,6 +408,36 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestModulusZero()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.Modulus, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("division by zero"));
+        }
+
+        [Test]
+        public void TestModulusOne()
+        {
+            var left = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var right = new IntegerConstantExpression(1);
+            var expr = new MathematicExpression(left, MathematicOperation.Modulus, right);
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result.ToString(), Is.EqualTo(new IntegerConstantExpression(0).ToString()));
         }
     }
 }

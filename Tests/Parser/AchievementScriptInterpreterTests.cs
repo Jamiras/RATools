@@ -400,6 +400,25 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestPrevMathematic()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) + 6) == 10)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("prev(byte(0x001234)) == 4"));
+
+            parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) * 10 + 20) == 80)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("prev(byte(0x001234)) == 6"));
+
+            parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) + byte(0x2345)) == 7)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(prev(byte(0x001234)) + prev(byte(0x002345))) == 7"));
+        }
+
+        [Test]
         public void TestOnce()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
@@ -434,12 +453,32 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestNeverWithOrs()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x002345) == 0) && never(byte(0x001234) == 0) && never(byte(0x001234) == 2) && never(byte(0x001234) == 5)"));
+        }
+
+        [Test]
         public void TestUnless()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && unless(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x004567) == 1) && unless(byte(0x001234) == 1)"));
+        }
+
+        [Test]
+        public void TestUnlessWithOrs()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x002345) == 0) && unless(byte(0x001234) == 0) && unless(byte(0x001234) == 2) && unless(byte(0x001234) == 5)"));
         }
 
         [Test]
@@ -693,9 +732,61 @@ namespace RATools.Test.Parser
         [Test]
         public void TestErrorInFunctionParameterLocation()
         {
-            var parser = Parse("tens = word(0x1234) * 10\n" +
+            var parser = Parse("tens = word(0x1234) == 3\n" +
                                "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
+        }
+
+        [TestCase("word(0x1234) * 10 == 10000", true, "word(0x001234) == 1000")]
+        [TestCase("word(0x1234) * 10 == 9999", false, "1:26 Result can never be true using integer math")]
+        [TestCase("word(0x1234) * 10 != 9999", false, "1:26 Result is always true using integer math")]
+        [TestCase("word(0x1234) * 10 == 9990", true, "word(0x001234) == 999")]
+        [TestCase("word(0x1234) * 10 >= 9999", true, "word(0x001234) > 999")]
+        [TestCase("word(0x1234) * 10 <= 9999", true, "word(0x001234) <= 999")]
+        [TestCase("word(0x1234) * 10 * 2 == 10000", true, "word(0x001234) == 500")]
+        [TestCase("2 * word(0x1234) * 10 == 10000", true, "word(0x001234) == 500")]
+        [TestCase("word(0x1234) * 10 / 2 == 10000", true, "word(0x001234) == 2000")]
+        [TestCase("word(0x1234) * 10 + 10 == 10000", true, "word(0x001234) == 999")]
+        [TestCase("word(0x1234) * 10 - 10 == 10000", true, "word(0x001234) == 1001")]
+        [TestCase("word(0x1234) * 10 + byte(0x1235) == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        [TestCase("byte(0x1235) + word(0x1234) * 10 == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        [TestCase("word(0x1234) * 10 + byte(0x1235) * 2 == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        public void TestMultiplicationInExpression(string input, bool expectedResult, string output)
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")\n", expectedResult);
+
+            if (expectedResult)
+            {
+                var achievement = parser.Achievements.First();
+                Assert.That(GetRequirements(achievement), Is.EqualTo(output));
+            }
+            else
+            {
+                Assert.That(GetInnerErrorMessage(parser), Is.EqualTo(output));
+            }
+        }
+
+        [Test]
+        public void TestUnknownVariableInIfInFunction()
+        {
+            var parser = Parse("function foo(param) {\n" +
+                               "    if param == 1\n" +
+                               "        return AREA\n" +
+                               "\n" +
+                               "    return byte(0x1234) == 0\n" +
+                               "}\n" +
+                               "achievement(\"Title\", \"Description\", 5, foo(1))\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:16 Unknown variable: AREA"));
+        }
+
+        [Test]
+        public void TestFunctionWithCommonConditionPromotedToCore()
+        {
+            var parser = Parse("function test(x) => byte(0x1234) == 1 && byte(0x2345) == x\n" +
+                               "achievement(\"Title\", \"Description\", 5, test(3) || test(4))\n");
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1 && (byte(0x002345) == 3 || byte(0x002345) == 4)"));
         }
     }
 }
