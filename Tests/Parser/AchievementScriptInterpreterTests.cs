@@ -434,12 +434,32 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestNeverWithOrs()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x002345) == 0) && never(byte(0x001234) == 0) && never(byte(0x001234) == 2) && never(byte(0x001234) == 5)"));
+        }
+
+        [Test]
         public void TestUnless()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && unless(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x004567) == 1) && unless(byte(0x001234) == 1)"));
+        }
+
+        [Test]
+        public void TestUnlessWithOrs()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x002345) == 0) && unless(byte(0x001234) == 0) && unless(byte(0x001234) == 2) && unless(byte(0x001234) == 5)"));
         }
 
         [Test]
