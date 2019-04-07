@@ -778,5 +778,15 @@ namespace RATools.Test.Parser
                                "achievement(\"Title\", \"Description\", 5, foo(1))\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:16 Unknown variable: AREA"));
         }
+
+        [Test]
+        public void TestFunctionWithCommonConditionPromotedToCore()
+        {
+            var parser = Parse("function test(x) => byte(0x1234) == 1 && byte(0x2345) == x\n" +
+                               "achievement(\"Title\", \"Description\", 5, test(3) || test(4))\n");
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1 && (byte(0x002345) == 3 || byte(0x002345) == 4)"));
+        }
     }
 }

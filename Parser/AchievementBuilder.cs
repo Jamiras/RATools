@@ -1188,7 +1188,11 @@ namespace RATools.Parser
                     }
                 }
 
-                // and put it in the core group
+                // the the core only contains an always true statement, remove it
+                if (_core.Count == 1 && IsTrue(_core[0]))
+                    _core.Clear();
+
+                // put one copy of the repeated requirement it in the core group
                 _core.Add(requirement);
             }
         }
