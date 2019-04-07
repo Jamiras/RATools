@@ -147,6 +147,7 @@
     <Compile Include="Parser\Internal\ComparisonExpressionTests.cs" />
     <Compile Include="Parser\Internal\AssignmentExpressionTests.cs" />
     <Compile Include="Parser\LocalAchievementsTests.cs" />
+    <Compile Include="Parser\RegressionTests.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(SolutionFileName)' == 'RATools + Core.sln'">

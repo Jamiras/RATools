@@ -43,6 +43,19 @@ namespace RATools.Parser.Internal
             }
         }
 
+        internal static string GetOperatorType(MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add: return "addition";
+                case MathematicOperation.Subtract: return "subtraction";
+                case MathematicOperation.Multiply: return "multiplication";
+                case MathematicOperation.Divide: return "division";
+                case MathematicOperation.Modulus: return "modulus";
+                default: return "mathematic";
+            }
+        }
+
         internal static MathematicPriority GetPriority(MathematicOperation operation)
         {
             switch (operation)
@@ -135,12 +148,6 @@ namespace RATools.Parser.Internal
             switch (Operation)
             {
                 case MathematicOperation.Add:
-                    if (integerLeft != null && integerRight != null)
-                    {
-                        result = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
-                        return true;
-                    }
-                   
                     var stringLeft = left as StringConstantExpression;
                     var stringRight = right as StringConstantExpression;
                     if (stringLeft != null)
@@ -165,37 +172,127 @@ namespace RATools.Parser.Internal
                             return true;
                         }
                     }
-                    break;
 
-                case MathematicOperation.Subtract:
-                    if (integerLeft != null && integerRight != null)
+                    // prefer constants on right
+                    if (integerLeft != null && integerRight == null)
                     {
-                        result = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
-                        return true;
+                        var temp = left;
+                        left = right;
+                        right = temp;
+                        integerRight = integerLeft;
+                        integerLeft = null;
+                    }
+
+                    if (integerRight != null)
+                    {
+                        if (integerRight.Value == 0) // anything plus 0 is itself
+                        {
+                            result = left;
+                            return true;
+                        }
+
+                        if (integerLeft != null)
+                        {
+                            result = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
+                            return true;
+                        }
                     }
                     break;
 
-                case MathematicOperation.Multiply:
-                    if (integerLeft != null && integerRight != null)
+                case MathematicOperation.Subtract:
+                    if (integerRight != null)
                     {
-                        result = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
-                        return true;
+                        if (integerRight.Value == 0) // anything minus 0 is itself
+                        {
+                            result = left;
+                            return true;
+                        }
+
+                        if (integerLeft != null)
+                        {
+                            result = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                            return true;
+                        }
+                    }
+
+                    break;
+
+                case MathematicOperation.Multiply:
+                    // prefer constants on right
+                    if (integerLeft != null && integerRight == null)
+                    {
+                        var temp = left;
+                        left = right;
+                        right = temp;
+                        integerRight = integerLeft;
+                        integerLeft = null;
+                    }
+
+                    if (integerRight != null)
+                    {
+                        if (integerRight.Value == 0) // anything times 0 is 0
+                        {
+                            result = right;
+                            return true;
+                        }
+
+                        if (integerRight.Value == 1) // anything times 1 is itself
+                        {
+                            result = left;
+                            return true;
+                        }
+
+                        if (integerLeft != null)
+                        {
+                            result = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
+                            return true;
+                        }
                     }
                     break;
 
                 case MathematicOperation.Divide:
-                    if (integerLeft != null && integerRight != null)
+                    if (integerRight != null)
                     {
-                        result = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
-                        return true;
+                        if (integerRight.Value == 0) // division by 0 is impossible
+                        {
+                            result = new ParseErrorExpression("division by zero", this);
+                            return false;
+                        }
+
+                        if (integerRight.Value == 1) // anything divided by 1 is itself
+                        {
+                            result = left;
+                            return true;
+                        }
+
+                        if (integerLeft != null)
+                        {
+                            result = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
+                            return true;
+                        }
                     }
                     break;
 
                 case MathematicOperation.Modulus:
-                    if (integerLeft != null && integerRight != null)
+                    if (integerRight != null)
                     {
-                        result = new IntegerConstantExpression(integerLeft.Value % integerRight.Value);
-                        return true;
+                        if (integerRight.Value == 0) // division by 0 is impossible
+                        {
+                            result = new ParseErrorExpression("division by zero", this);
+                            return false;
+                        }
+
+                        if (integerRight.Value == 1) // anything modulus 1 is 0
+                        {
+                            result = new IntegerConstantExpression(0);
+                            return true;
+                        }
+
+                        if (integerLeft != null)
+                        {
+                            result = new IntegerConstantExpression(integerLeft.Value % integerRight.Value);
+                            return true;
+                        }
                     }
                     break;
             }
@@ -308,11 +405,21 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Applies the specified operation and amount to the provided <paramref name="value"/>.
         /// </summary>
-        /// <param name="value">The value to modified.</param>
+        /// <param name="value">The value to modify.</param>
         /// <returns>The modified value.</returns>
         public int Apply(int value)
         {
             return Apply(value, Operation, Amount);
+        }
+
+        /// <summary>
+        /// Reverses application of the specified operation and amount to the provided <paramref name="value"/>.
+        /// </summary>
+        /// <param name="value">The value to modify.</param>
+        /// <returns>The modified value.</returns>
+        public int Remove(int value)
+        {
+            return Apply(value, MathematicExpression.GetOppositeOperation(Operation), Amount);
         }
 
         /// <summary>
