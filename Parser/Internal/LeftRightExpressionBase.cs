@@ -34,7 +34,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the right side of the expression.
         /// </summary>
-        public ExpressionBase Right { get; private set; }
+        public ExpressionBase Right { get; internal set; }
 
         /// <summary>
         /// Rebalances the current node and the <paramref name="newRoot"/> so <paramref name="newRoot" /> becomes the parent node.

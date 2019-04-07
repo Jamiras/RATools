@@ -309,45 +309,6 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Gets the memory accessor parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
-        /// </summary>
-        /// <param name="scope">The scope.</param>
-        /// <param name="name">The name of the parameter.</param>
-        /// <param name="parseError">[out] The error that occurred.</param>
-        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
-        protected FunctionCallExpression GetMemoryAccessorParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
-        {
-            var parameter = GetParameter(scope, name, out parseError);
-            if (parameter == null)
-                return null;
-
-            var functionCall = parameter as FunctionCallExpression;
-            if (functionCall == null)
-            {
-                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
-                return null;
-            }
-
-            var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
-            var memoryAccessor = functionDefinition as MemoryAccessorFunction;
-            if (memoryAccessor == null)
-            {
-                parseError = new ParseErrorExpression(name + " did not evaluate to a memory accessor", parameter);
-                return null;
-            }
-
-            ExpressionBase result;
-            if (!functionCall.ReplaceVariables(scope, out result))
-            {
-                parseError = (ParseErrorExpression)result;
-                return null;
-            }
-
-            parseError = null;
-            return (FunctionCallExpression)result;
-        }
-
-        /// <summary>
         /// Determines whether the specified <see cref="FunctionDefinitionExpression" /> is equal to this instance.
         /// </summary>
         /// <param name="obj">The <see cref="FunctionDefinitionExpression" /> to compare with this instance.</param>
