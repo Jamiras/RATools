@@ -129,69 +129,126 @@ namespace RATools.Parser
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
             var left = mathematic.Left;
+            var operation = mathematic.Operation;
+            var context = scope.GetContext<TriggerBuilderContext>();
+            ParseErrorExpression error;
 
             ExpressionBase right;
             if (!mathematic.Right.ReplaceVariables(scope, out right))
                 return (ParseErrorExpression)right;
 
-            // if subtracting a non-integer, swap the order to perform a SubSource
-            if (mathematic.Operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression))
+            if (operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression))
             {
-                left = right;
-                right = mathematic.Left;
-            }
+                // if subtracting a non-integer, swap the order to perform a SubSource
+                var newEqualityModifiers = new Stack<ValueModifier>();
+                var oldEqualityModifiers = _equalityModifiers;
+                _equalityModifiers = newEqualityModifiers;
 
-            // generate the condition for the first expression
-            var error = ExecuteAchievementExpression(left, scope);
-            if (error != null)
-                return error;
+                var requirements = new List<Requirement>();
+                var innerContext = new TriggerBuilderContext() { Trigger = requirements };
+                var innerScope = new InterpreterScope(scope) { Context = innerContext };
 
-            var context = scope.GetContext<TriggerBuilderContext>();
-            var integerOperand = right as IntegerConstantExpression;
-            if (integerOperand == null)
-            {
-                if (right is FunctionCallExpression || right is MathematicExpression)
+                // generate the condition for the right side
+                error = ExecuteAchievementExpression(right, innerScope);
+                _equalityModifiers = oldEqualityModifiers;
+                if (error != null)
+                    return error;
+
+                foreach (var requirement in requirements)
                 {
-                    switch (mathematic.Operation)
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.None:
+                        case RequirementType.AddSource:
+                            requirement.Type = RequirementType.SubSource;
+                            break;
+                        case RequirementType.SubSource:
+                            requirement.Type = RequirementType.AddSource;
+                            break;
+                        default:
+                            return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
+                    }
+
+                    context.Trigger.Add(requirement);
+                }
+
+                foreach (var modifier in newEqualityModifiers)
+                {
+                    switch (modifier.Operation)
                     {
                         case MathematicOperation.Add:
-                            context.LastRequirement.Type = RequirementType.AddSource;
+                            _equalityModifiers.Push(new ValueModifier(MathematicOperation.Subtract, modifier.Amount));
                             break;
-
                         case MathematicOperation.Subtract:
-                            context.LastRequirement.Type = RequirementType.SubSource;
+                            _equalityModifiers.Push(new ValueModifier(MathematicOperation.Add, modifier.Amount));
                             break;
-
                         default:
+                            return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
+                    }
+                }
+
+                right = mathematic.Left;
+                operation = MathematicOperation.Add;
+            }
+            else
+            {
+                // generate the condition for the first expression
+                error = ExecuteAchievementExpression(left, scope);
+                if (error != null)
+                    return error;
+            }
+
+            var integerOperand = right as IntegerConstantExpression;
+            if (integerOperand != null)
+            {
+                var oppositeOperation = MathematicExpression.GetOppositeOperation(operation);
+                if (oppositeOperation == MathematicOperation.None)
+                    return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
+
+                var priority = MathematicExpression.GetPriority(mathematic.Operation);
+                if (priority != MathematicPriority.Add)
+                {
+                    if (context.Trigger.Count > 1)
+                    {
+                        var previousRequirementType = context.Trigger.ElementAt(context.Trigger.Count - 2).Type;
+                        if (previousRequirementType == RequirementType.AddSource || previousRequirementType == RequirementType.SubSource)
                             return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
                     }
 
-                    context.LastRequirement.Operator = RequirementOperator.None;
-                    context.LastRequirement.Right = new Field();
-
-                    // generate the condition for the second expression
-                    error = ExecuteAchievementExpression(right, scope);
-                    if (error != null)
-                        return error;
-
-                    if (_equalityModifiers.Any())
-                    {
-                        var equalityOperation = MathematicExpression.GetOppositeOperation(_equalityModifiers.First().Operation);
-                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(equalityOperation)), mathematic);
-                    }
-
-                    return null;
+                    if (_equalityModifiers.Any(e => MathematicExpression.GetPriority(e.Operation) != priority))
+                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
                 }
 
-                return new ParseErrorExpression("Expression does not evaluate to a constant", mathematic.Right);
+                _equalityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
+                return null;
             }
 
-            var oppositeOperation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
-            if (oppositeOperation == MathematicOperation.None)
-                return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
+            if (operation == MathematicOperation.Add)
+            {
+                foreach (var modifier in _equalityModifiers)
+                {
+                    if (MathematicExpression.GetPriority(modifier.Operation) != MathematicPriority.Add)
+                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(MathematicExpression.GetOppositeOperation(modifier.Operation))), mathematic);
+                }
 
-            _equalityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
-            return null;
+                // adding two memory accessors - make sure previous is AddSource or SubSource
+                if (context.LastRequirement.Type != RequirementType.SubSource)
+                {
+                    context.LastRequirement.Type = RequirementType.AddSource;
+                    context.LastRequirement.Operator = RequirementOperator.None;
+                    context.LastRequirement.Right = new Field();
+                }
+            }
+            else
+            {
+                return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
+            }
+
+            // generate the condition for the second expression
+            error = ExecuteAchievementExpression(right, scope);
+            if (error != null)
+                error = new ParseErrorExpression(error.Message, mathematic);
+            return error;
         }
 
         private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope)

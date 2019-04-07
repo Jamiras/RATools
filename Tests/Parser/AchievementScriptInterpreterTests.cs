@@ -611,6 +611,16 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestTransitiveMath()
+        {
+            var parser = Parse("function f(n) => byte(n) + 1\n" +
+                               "achievement(\"T\", \"D\", 5, f(0x1234) - f(0x2345) == 3)\n");
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) - byte(0x002345)) == 3"));
+        }
+
+        [Test]
         public void TestRichPresenceDisplay()
         {
             var parser = Parse("rich_presence_display(\"simple string\")");
