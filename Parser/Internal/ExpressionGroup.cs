@@ -30,11 +30,9 @@ namespace RATools.Parser.Internal
 
             foreach (var error in Errors)
             {
-                if (error.Line > line)
-                    break;
-
-                if (error.Line == line)
-                    expressions.Add(error);
+                var innerError = error.InnermostError ?? error;
+                if (innerError.Line == line)
+                    expressions.Add(innerError);
             }
 
             return result;

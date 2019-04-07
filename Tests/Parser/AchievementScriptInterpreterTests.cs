@@ -697,5 +697,35 @@ namespace RATools.Test.Parser
                                "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
         }
+
+        [Test]
+        [TestCase("word(0x1234) * 10 == 10000", true, "word(0x001234) == 1000")]
+        [TestCase("word(0x1234) * 10 == 9999", false, "1:26 Result can never be true using integer math")]
+        [TestCase("word(0x1234) * 10 != 9999", false, "1:26 Result is always true using integer math")]
+        [TestCase("word(0x1234) * 10 == 9990", true, "word(0x001234) == 999")]
+        [TestCase("word(0x1234) * 10 >= 9999", true, "word(0x001234) > 999")]
+        [TestCase("word(0x1234) * 10 <= 9999", true, "word(0x001234) <= 999")]
+        [TestCase("word(0x1234) * 10 * 2 == 10000", true, "word(0x001234) == 500")]
+        [TestCase("2 * word(0x1234) * 10 == 10000", true, "word(0x001234) == 500")]
+        [TestCase("word(0x1234) * 10 / 2 == 10000", true, "word(0x001234) == 2000")]
+        [TestCase("word(0x1234) * 10 + 10 == 10000", true, "word(0x001234) == 999")]
+        [TestCase("word(0x1234) * 10 - 10 == 10000", true, "word(0x001234) == 1001")]
+        [TestCase("word(0x1234) * 10 + byte(0x1235) == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        [TestCase("byte(0x1235) + word(0x1234) * 10 == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        [TestCase("word(0x1234) * 10 + byte(0x1235) * 2 == 10000", false, "1:26 Cannot normalize expression to eliminate multiplication")]
+        public void TestMultiplicationInExpression(string input, bool expectedResult, string output)
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")\n", expectedResult);
+
+            if (expectedResult)
+            {
+                var achievement = parser.Achievements.First();
+                Assert.That(GetRequirements(achievement), Is.EqualTo(output));
+            }
+            else
+            {
+                Assert.That(GetInnerErrorMessage(parser), Is.EqualTo(output));
+            }
+        }
     }
 }
