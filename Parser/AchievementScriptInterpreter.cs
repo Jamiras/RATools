@@ -470,12 +470,7 @@ namespace RATools.Parser
                 return false;
             }
 
-            if (result)
-                Evaluate(ifExpression.Expressions, scope);
-            else
-                Evaluate(ifExpression.ElseExpressions, scope);
-
-            return true;
+            return Evaluate(result ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
