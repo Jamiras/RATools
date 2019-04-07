@@ -400,6 +400,25 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestPrevMathematic()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) + 6) == 10)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("prev(byte(0x001234)) == 4"));
+
+            parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) * 10 + 20) == 80)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("prev(byte(0x001234)) == 6"));
+
+            parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) + byte(0x2345)) == 7)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+            achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(prev(byte(0x001234)) + prev(byte(0x002345))) == 7"));
+        }
+
+        [Test]
         public void TestOnce()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
@@ -713,7 +732,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestErrorInFunctionParameterLocation()
         {
-            var parser = Parse("tens = word(0x1234) * 10\n" +
+            var parser = Parse("tens = word(0x1234) == 3\n" +
                                "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
         }
