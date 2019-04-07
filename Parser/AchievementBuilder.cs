@@ -1153,9 +1153,9 @@ namespace RATools.Parser
                         continue;
                 }
 
-                // ResetIf in an alt group may be disabled by a PauseIf, don't promote if any PauseIfs 
-                // are not promoted
-                if (requirement.Type == RequirementType.ResetIf)
+                // ResetIf or HitCount in an alt group may be disabled by a PauseIf, don't promote if
+                // any PauseIfs are not promoted
+                if (requirement.Type == RequirementType.ResetIf || requirement.HitCount > 0)
                 {
                     bool canPromote = true;
 

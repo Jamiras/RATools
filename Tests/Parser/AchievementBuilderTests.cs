@@ -359,6 +359,8 @@ namespace RATools.Test.Parser
                   "once(byte(0x001234) == 1) && ((never((byte(0x002345) + byte(0x002346)) == 2)) || (never((byte(0x002345) + byte(0x002347)) == 2)))")] // partial AddSource cannot be promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
                   "once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))")] // resetif cannot be promoted if pauseif is present
+        [TestCase("once(byte(0x001234) == 1) && ((once(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (once(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
+                  "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (once(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))")] // item with hitcount cannot be promoted if pauseif is present
         [TestCase("1 == 1 && ((byte(0x001234) == 1 && byte(0x002345) == 1) || (byte(0x001234) == 1 && byte(0x002345) == 2))",
                   "byte(0x001234) == 1 && (byte(0x002345) == 1 || byte(0x002345) == 2)")] // core "1=1" should be removed by promotion of another condition
         // ==== RemoveDuplicates ====
