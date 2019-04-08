@@ -368,6 +368,10 @@ namespace RATools.Test.Parser
         [TestCase("prev(byte(0x001234)) == 1 && prev(byte(0x001234)) == 1", "prev(byte(0x001234)) == 1")]
         [TestCase("once(byte(0x001234) == 1) && once(byte(0x001234) == 1)", "once(byte(0x001234) == 1)")]
         [TestCase("never(byte(0x001234) != prev(byte(0x001234))) && never(byte(0x001234) != prev(byte(0x001234)))", "byte(0x001234) == prev(byte(0x001234))")]
+        [TestCase("byte(0x001234) == 1 && byte(0x002345) + byte(0x001234) == 1", "byte(0x001234) == 1 && (byte(0x002345) + byte(0x001234)) == 1")] // duplicate in AddSource clause should be ignored
+        [TestCase("byte(0x002345) + byte(0x001234) == 1 && byte(0x002345) + byte(0x001234) == 1", "(byte(0x002345) + byte(0x001234)) == 1")] // complete AddSource duplicate should be elimiated
+        [TestCase("byte(0x001234) == 2 && ((byte(0x001234) == 2 && byte(0x004567) == 3) || (byte(0x001234) == 2 && byte(0x004567) == 4))",
+                  "byte(0x001234) == 2 && (byte(0x004567) == 3 || byte(0x004567) == 4)")] // alts in core are redundant
         // ==== RemoveRedundancies ====
         [TestCase("byte(0x001234) > 1 && byte(0x001234) > 2", "byte(0x001234) > 2")] // >1 && >2 is only >2
         [TestCase("byte(0x001234) > 1 && byte(0x001235) > 2", "byte(0x001234) > 1 && byte(0x001235) > 2")] // different addresses
@@ -420,12 +424,9 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "byte(0x001234) >= 2 || byte(0x001234) <= 2")] // always true, can't really collapse
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
         [TestCase("always_false() || byte(0x001234) == 2", "0 == 1 || byte(0x001234) == 2")] // minimum of two alts
-        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
+        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "1 == 1")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
             "1 == 1 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
-        // ==== RemoveAltsAlreadyInCore ====
-        [TestCase("byte(0x001234) == 2 && ((byte(0x001234) == 2 && byte(0x004567) == 3) || (byte(0x001234) == 2 && byte(0x004567) == 4))",
-                  "byte(0x001234) == 2 && (byte(0x004567) == 3 || byte(0x004567) == 4)")]
         // ==== MergeBits ====
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
@@ -436,20 +437,7 @@ namespace RATools.Test.Parser
         public void TestOptimize(string input, string expected)
         {
             var achievement = CreateAchievement(input);
-
-            if (achievement.CoreRequirements.Count == 0)
-            {
-                // core requirement required, so fake one
-                var fakeRequirement = new Requirement();
-                achievement.CoreRequirements.Add(fakeRequirement);
-                achievement.Optimize();
-                achievement.CoreRequirements.Remove(fakeRequirement);
-            }
-            else
-            {
-                achievement.Optimize();
-            }
-
+            achievement.Optimize();
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
         }
     }

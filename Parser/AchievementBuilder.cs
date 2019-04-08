@@ -461,29 +461,36 @@ namespace RATools.Parser
 
         // ==== Optimize helpers ====
 
-        private static void NormalizeComparisons(ICollection<Requirement> requirements)
+        private static void NormalizeComparisons(ICollection<RequirementEx> requirements)
         {
-            var alwaysTrue = new List<Requirement>();
-            var alwaysFalse = new List<Requirement>();
+            var alwaysTrue = new List<RequirementEx>();
+            var alwaysFalse = new List<RequirementEx>();
 
-            bool isAddSource = false;
-            foreach (var requirement in requirements)
+            foreach (var requirementEx in requirements)
             {
-                if (requirement.Type == RequirementType.AddSource || requirement.Type == RequirementType.SubSource)
-                {
-                    isAddSource = true;
+                if (requirementEx.Requirements.Count > 1)
                     continue;
-                }
 
+                var requirement = requirementEx.Requirements[0];
                 if (requirement.Right.Type != FieldType.Value)
                     continue;
+
+                if (requirement.Left.Type == FieldType.Value)
+                {
+                    if (Evaluate(requirement))
+                        alwaysTrue.Add(requirementEx);
+                    else
+                        alwaysFalse.Add(requirementEx);
+
+                    continue;
+                }
 
                 if (requirement.Right.Value == 0)
                 {
                     switch (requirement.Operator)
                     {
                         case RequirementOperator.LessThan: // n < 0 -> never true
-                            alwaysFalse.Add(requirement);
+                            alwaysFalse.Add(requirementEx);
                             continue;
 
                         case RequirementOperator.LessThanOrEqual: // n <= 0 -> n == 0
@@ -495,7 +502,7 @@ namespace RATools.Parser
                             break;
 
                         case RequirementOperator.GreaterThanOrEqual: // n >= 0 -> always true
-                            alwaysTrue.Add(requirement);
+                            alwaysTrue.Add(requirementEx);
                             continue;
                     }
                 }
@@ -509,68 +516,60 @@ namespace RATools.Parser
 
                 uint max;
 
-                if (isAddSource)
+                switch (requirement.Left.Size)
                 {
-                    max = uint.MaxValue;
-                    isAddSource = false;
-                }
-                else
-                {
-                    switch (requirement.Left.Size)
-                    {
-                        case FieldSize.Bit0:
-                        case FieldSize.Bit1:
-                        case FieldSize.Bit2:
-                        case FieldSize.Bit3:
-                        case FieldSize.Bit4:
-                        case FieldSize.Bit5:
-                        case FieldSize.Bit6:
-                        case FieldSize.Bit7:
-                            max = 1;
+                    case FieldSize.Bit0:
+                    case FieldSize.Bit1:
+                    case FieldSize.Bit2:
+                    case FieldSize.Bit3:
+                    case FieldSize.Bit4:
+                    case FieldSize.Bit5:
+                    case FieldSize.Bit6:
+                    case FieldSize.Bit7:
+                        max = 1;
 
-                            if (requirement.Right.Value == 0)
+                        if (requirement.Right.Value == 0)
+                        {
+                            switch (requirement.Operator)
                             {
-                                switch (requirement.Operator)
-                                {
-                                    case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
-                                    case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
-                                        requirement.Operator = RequirementOperator.Equal;
-                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                                        continue;
-                                }
+                                case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
+                                case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
+                                    requirement.Operator = RequirementOperator.Equal;
+                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                                    continue;
                             }
-                            else
+                        }
+                        else
+                        {
+                            switch (requirement.Operator)
                             {
-                                switch (requirement.Operator)
-                                {
-                                    case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
-                                    case RequirementOperator.LessThan: // bit < 1 -> bit == 0
-                                        requirement.Operator = RequirementOperator.Equal;
-                                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                        continue;
-                                }
+                                case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                                case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                                    requirement.Operator = RequirementOperator.Equal;
+                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                                    continue;
                             }
+                        }
 
-                            break;
+                        break;
 
-                        case FieldSize.LowNibble:
-                        case FieldSize.HighNibble:
-                            max = 15;
-                            break;
+                    case FieldSize.LowNibble:
+                    case FieldSize.HighNibble:
+                        max = 15;
+                        break;
 
-                        case FieldSize.Byte:
-                            max = 255;
-                            break;
+                    case FieldSize.Byte:
+                        max = 255;
+                        break;
 
-                        case FieldSize.Word:
-                            max = 65535;
-                            break;
+                    case FieldSize.Word:
+                        max = 65535;
+                        break;
 
-                        default:
-                        case FieldSize.DWord:
-                            max = uint.MaxValue;
-                            break;
-                    }
+                    default:
+                    case FieldSize.DWord:
+                        max = uint.MaxValue;
+                        break;
                 }
 
                 if (requirement.Right.Value >= max)
@@ -578,35 +577,35 @@ namespace RATools.Parser
                     switch (requirement.Operator)
                     {
                         case RequirementOperator.GreaterThan: // n > max -> always false
-                            alwaysFalse.Add(requirement);
+                            alwaysFalse.Add(requirementEx);
                             break;
 
                         case RequirementOperator.GreaterThanOrEqual: // n >= max -> n == max
                             if (requirement.Right.Value == max)
                                 requirement.Operator = RequirementOperator.Equal;
                             else
-                                alwaysFalse.Add(requirement);
+                                alwaysFalse.Add(requirementEx);
                             break;
 
                         case RequirementOperator.LessThanOrEqual: // n <= max -> always true
-                            alwaysTrue.Add(requirement);
+                            alwaysTrue.Add(requirementEx);
                             break;
 
                         case RequirementOperator.LessThan: // n < max -> n != max
                             if (requirement.Right.Value == max)
                                 requirement.Operator = RequirementOperator.NotEqual;
                             else
-                                alwaysTrue.Add(requirement);
+                                alwaysTrue.Add(requirementEx);
                             break;
 
                         case RequirementOperator.Equal:
                             if (requirement.Right.Value > max)
-                                alwaysFalse.Add(requirement);
+                                alwaysFalse.Add(requirementEx);
                             break;
 
                         case RequirementOperator.NotEqual:
                             if (requirement.Right.Value > max)
-                                alwaysTrue.Add(requirement);
+                                alwaysTrue.Add(requirementEx);
                             break;
                     }
                 }
@@ -616,44 +615,39 @@ namespace RATools.Parser
             {
                 // at least one requirement can never be true, replace the entire group with an always_false()
                 requirements.Clear();
-                requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                var requirementEx = new RequirementEx();
+                requirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                requirements.Add(requirementEx);
             }
-            else
+            else if (alwaysTrue.Count > 0)
             {
-                foreach (var requirement in alwaysTrue)
-                    requirements.Remove(requirement);
+                foreach (var requirementEx in alwaysTrue)
+                    requirements.Remove(requirementEx);
 
                 if (requirements.Count == 0)
-                    requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                {
+                    var requirementEx = new RequirementEx();
+                    requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                    requirements.Add(requirementEx);
+                }
             }
         }
 
-        private static bool HasHitCount(IEnumerable<Requirement> requirements)
+        private static bool HasHitCount(List<List<RequirementEx>> groups)
         {
-            foreach (var requirement in requirements)
+            foreach (var group in groups)
             {
-                if (requirement.HitCount > 0)
-                    return true;
+                foreach (var requirement in group)
+                {
+                    if (requirement.HasHitCount)
+                        return true;
+                }
             }
 
             return false;
         }
 
-        private bool HasHitCount()
-        {
-            if (HasHitCount(_core))
-                return true;
-
-            foreach (var alt in _alts)
-            {
-                if (HasHitCount(alt))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private void NormalizeNonHitCountResetAndPauseIfs()
+        private void NormalizeNonHitCountResetAndPauseIfs(List<List<RequirementEx>> groups, bool hasHitCount)
         {
             // if this is a dumped achievement, don't convert these, it just makes the diff hard to read.
             if (Id != 0)
@@ -669,51 +663,60 @@ namespace RATools.Parser
             // triggering while the PauseIf condition is true. Conversely, the achievement can only trigger if the 
             // condition is false, so invert the logic on the condition and make it a requirement.
 
-            // if no hit counts are found, then invert any PauseIfs or ResetIfs.
-            if (!HasHitCount())
-            {
-                NormalizeNonHitCountResetAndPauseIfs(_core);
-                foreach (var alt in _alts)
-                    NormalizeNonHitCountResetAndPauseIfs(alt);
-            }
-        }
+            if (hasHitCount)
+                return;
 
-        private static void NormalizeNonHitCountResetAndPauseIfs(ICollection<Requirement> requirements)
-        {
-            foreach (var requirement in requirements)
+            // if no hit counts are found, then invert any PauseIfs or ResetIfs.
+            foreach (var group in groups)
             {
-                if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
+                foreach (var requirementEx in group)
                 {
-                    requirement.Type = RequirementType.None;
-                    requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
+                    var requirement = requirementEx.Requirements.Last();
+
+                    if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
+                    {
+                        requirement.Type = RequirementType.None;
+                        requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
+                    }
                 }
             }
         }
 
-        private static bool MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
+        private static bool MergeRequirements(RequirementEx first, RequirementEx second, ConditionalOperation condition, out RequirementEx merged)
         {
             merged = null;
-            if (left.Type != right.Type)
-                return false;
+            Requirement left, right;
 
-            if (left.HitCount != right.HitCount)
-                return false;
-
-            if (left.Left != right.Left)
-                return false;
-
-            if (left.Operator == right.Operator)
+            // make sure all the lefts are the same
+            for (int i = 0; i < first.Requirements.Count; i++)
             {
-                if (left.Right == right.Right)
-                {
-                    merged = left;
-                    return true;
-                }
+                left = first.Requirements[i];
+                right = second.Requirements[i];
+
+                if (left.Type != right.Type)
+                    return false;
+
+                if (left.HitCount != right.HitCount)
+                    return false;
+
+                if (left.Left != right.Left)
+                    return false;
             }
 
+            // if the operator and the final right are the same, we have an exact match
+            left = first.Requirements[first.Requirements.Count - 1];
+            right = second.Requirements[second.Requirements.Count - 1];
+            if (left.Operator == right.Operator && left.Right == right.Right)
+            {
+                merged = first;
+                return true;
+            }
+
+            // if either right is not a value field, we can't merge
             if (left.Right.Type != FieldType.Value || right.Right.Type != FieldType.Value)
                 return false;
 
+            // both rights are value fields, see if there's overlap in the logic
             bool useRight = false, useLeft = false, conflicting = false;
             RequirementOperator newOperator = RequirementOperator.None;
             switch (left.Operator)
@@ -913,19 +916,20 @@ namespace RATools.Parser
             {
                 if (useRight)
                 {
-                    merged = right;
+                    merged = second;
                     return true;
                 }
 
                 if (useLeft)
                 {
-                    merged = left;
+                    merged = first;
                     return true;
                 }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = new Requirement { Left = left.Left, Right = left.Right, HitCount = left.HitCount, Operator = newOperator, Type = left.Type };
+                    merged = first;
+                    merged.Requirements.Last().Operator = newOperator;
                     return true;
                 }
             }
@@ -933,19 +937,20 @@ namespace RATools.Parser
             {
                 if (useRight)
                 {
-                    merged = left;
+                    merged = first;
                     return true;
                 }
 
                 if (useLeft)
                 {
-                    merged = right;
+                    merged = second;
                     return true;
                 }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = new Requirement { Left = left.Left, Right = left.Right, HitCount = left.HitCount, Operator = RequirementOperator.Equal, Type = left.Type };
+                    merged = first;
+                    merged.Requirements.Last().Operator = RequirementOperator.Equal;
                     return true;
                 }
             }
@@ -974,7 +979,7 @@ namespace RATools.Parser
             }
         }
 
-        static bool IsTrue(Requirement requirement)
+        private static bool IsTrue(Requirement requirement)
         {
             if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
                 return Evaluate(requirement);
@@ -982,7 +987,7 @@ namespace RATools.Parser
             return false;
         }
 
-        static bool IsFalse(Requirement requirement)
+        private static bool IsFalse(Requirement requirement)
         {
             if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
                 return !Evaluate(requirement);
@@ -990,21 +995,23 @@ namespace RATools.Parser
             return false;
         }
 
-        private void MergeDuplicateAlts()
+        private static void MergeDuplicateAlts(List<List<RequirementEx>> groups)
         {
-            for (int i = _alts.Count - 1; i > 0; i--)
+            // if two alt groups are exactly identical, or can otherwise be represented by merging their
+            // logic, eliminate the redundant group.
+            for (int i = groups.Count - 1; i > 1; i--)
             {
-                var altsI = (IList<Requirement>)_alts[i];
+                var altsI = groups[i];
 
-                for (int j = i - 1; j >= 0; j--)
+                for (int j = i - 1; j >= 1; j--)
                 {
-                    var altsJ = (IList<Requirement>)_alts[j];
+                    var altsJ = groups[j];
 
                     if (altsI.Count != altsJ.Count)
                         continue;
 
                     bool[] matches = new bool[altsI.Count];
-                    Requirement[] merged = new Requirement[altsI.Count];
+                    RequirementEx[] merged = new RequirementEx[altsI.Count];
                     for (int k = 0; k < matches.Length; k++)
                     {
                         bool matched = false;
@@ -1030,30 +1037,33 @@ namespace RATools.Parser
                         altsJ.Clear();
                         foreach (var requirement in merged)
                             altsJ.Add(requirement);
-                        _alts.RemoveAt(i);
+                        groups.RemoveAt(i);
                         break;
                     }
                 }
             }
 
-            if (_alts.Count > 2)
+            // if at least two alt groups still exist, check for always_true and always_false placeholders
+            if (groups.Count > 2)
             {
                 bool hasAlwaysTrue = false;
 
-                // if a trigger contains an always_false alt group, remove it unless it would promote another alt group to core. it's
-                // typically used for two cases: building an alt group list or keeping a PauseIf out of core
-                for (int j = _alts.Count - 1; j >= 0; j--)
+                for (int j = groups.Count - 1; j >= 1; j--)
                 {
-                    if (_alts[j].Count == 1)
+                    if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1)
                     {
-                        if (IsFalse(_alts[j].First()))
+                        if (IsFalse(groups[j][0].Requirements[0]))
                         {
-                            _alts.RemoveAt(j);
-                            if (_alts.Count == 2)
-                                break;
+                            // an always_false alt group is used for two cases:
+                            // 1) building an alt group list (safe to remove)
+                            // 2) keeping a PauseIf out of core (safe to remove if at least two other alt groups still exist)
+                            if (groups.Count > 3)
+                                groups.RemoveAt(j);
                         }
-                        else if (IsTrue(_alts[j].First()))
+                        else if (IsTrue(groups[j][0].Requirements[0]))
                         {
+                            // an always_true alt group supercedes all other alt groups.
+                            // if we see one, keep track of that and we'll process it later.
                             hasAlwaysTrue = true;
                         }
                     }
@@ -1062,60 +1072,85 @@ namespace RATools.Parser
                 // if a trigger contains an always_true alt group, remove any other alt groups that don't have PauseIf or ResetIf conditions as they are unimportant
                 if (hasAlwaysTrue)
                 {
-                    for (int j = _alts.Count - 1; j >= 0; j--)
+                    for (int j = groups.Count - 1; j >= 1; j--)
                     {
-                        if (_alts[j].Count == 1 && IsTrue(_alts[j].First()))
+                        if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1 && IsTrue(groups[j][0].Requirements[0]))
                             continue;
 
-                        bool hasPauseIf = _alts[j].Any(r => r.Type == RequirementType.PauseIf);
-                        bool hasResetIf = _alts[j].Any(r => r.Type == RequirementType.ResetIf);
+                        bool hasPauseIf = false;
+                        bool hasResetIf = false;
+                        foreach (var requirementEx in groups[j])
+                        {
+                            switch (requirementEx.Requirements.Last().Type)
+                            {
+                                case RequirementType.PauseIf:
+                                    hasPauseIf = true;
+                                    break;
+                                case RequirementType.ResetIf:
+                                    hasResetIf = true;
+                                    break;
+                            }
+                        }
+
                         if (!hasPauseIf && !hasResetIf)
-                            _alts.RemoveAt(j);
+                            groups.RemoveAt(j);
                     }
 
-                    if (_alts.Count == 1)
+                    // if only the always_true group is left, get rid of it
+                    if (groups.Count == 2)
                     {
-                        // only AlwaysTrue group left, get rid of it
-                        _alts.Clear();
+                        groups.RemoveAt(1);
+
+                        // if the core group is empty, add an explicit always_true
+                        if (groups[0].Count == 0)
+                        {
+                            var requirementEx = new RequirementEx();
+                            requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                            groups[0].Add(requirementEx);
+                        }
                     }
                 }
             }
 
-            if (_alts.Count == 1)
+            // if only one alt group is left, merge it into the core group
+            if (groups.Count == 2)
             {
-                _core.AddRange(_alts[0]);
-                _alts.Clear();
+                groups[0].AddRange(groups[1]);
+                groups.RemoveAt(1);
             }
         }
 
-        private void PromoteCommonAltsToCore()
+        private static void PromoteCommonAltsToCore(List<List<RequirementEx>> groups)
         {
-            // identify requirements present in all alt groups.
-            bool combiningRequirement = false;
-            var requirementsFoundInAll = new List<Requirement>();
-            foreach (var requirement in _alts[0])
+            if (groups.Count < 2) // no alts
+                return;
+
+            if (groups.Count == 2) // only one alt group, merge to core
             {
-                switch (requirement.Type)
-                {
-                    case RequirementType.AddHits:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                        combiningRequirement = true;
-                        continue;
+                groups[0].AddRange(groups[1]);
+                groups.RemoveAt(1);
+                return;
+            }
 
-                    default:
-                        if (combiningRequirement)
-                        {
-                            combiningRequirement = false;
-                            continue;
-                        }
-                        break;
-                }
-
+            // identify requirements present in all alt groups.
+            var requirementsFoundInAll = new List<RequirementEx>();
+            for (int i = 0; i < groups[1].Count; i++)
+            {
+                var requirementI = groups[1][i];
                 bool foundInAll = true;
-                for (int i = 1; i < _alts.Count; i++)
+                for (int j = 2; j < groups.Count; j++)
                 {
-                    if (!_alts[i].Any(a => a == requirement))
+                    bool foundInGroup = false;
+                    foreach (var requirementJ in groups[j])
+                    {
+                        if (requirementJ == requirementI)
+                        {
+                            foundInGroup = true;
+                            break;
+                        }
+                    }
+
+                    if (!foundInGroup)
                     {
                         foundInAll = false;
                         break;
@@ -1123,22 +1158,22 @@ namespace RATools.Parser
                 }
 
                 if (foundInAll)
-                    requirementsFoundInAll.Add(requirement);
+                    requirementsFoundInAll.Add(requirementI);
             }
 
             foreach (var requirement in requirementsFoundInAll)
             {
                 // PauseIf only affects the alt group that it's in, so it can only be promoted if all 
                 // the HitCounts in the alt group are also promoted
-                if (requirement.Type == RequirementType.PauseIf)
+                if (requirement.Requirements.Last().Type == RequirementType.PauseIf)
                 {
                     bool canPromote = false;
 
-                    foreach (IList<Requirement> alt in _alts)
+                    for (int i = 1; i < groups.Count; i++)
                     {
-                        for (int i = alt.Count - 1; i >= 0; i--)
+                        foreach (var requirementJ in groups[i])
                         {
-                            if (alt[i].HitCount > 0 && !requirementsFoundInAll.Contains(alt[i]))
+                            if (requirementJ.Requirements.Last().HitCount > 0 && !requirementsFoundInAll.Contains(requirementJ))
                             {
                                 canPromote = false;
                                 break;
@@ -1155,15 +1190,16 @@ namespace RATools.Parser
 
                 // ResetIf or HitCount in an alt group may be disabled by a PauseIf, don't promote if
                 // any PauseIfs are not promoted
-                if (requirement.Type == RequirementType.ResetIf || requirement.HitCount > 0)
+                if (requirement.Requirements.Last().Type == RequirementType.ResetIf || 
+                    requirement.Requirements.Last().HitCount > 0)
                 {
                     bool canPromote = true;
 
-                    foreach (IList<Requirement> alt in _alts)
+                    for (int i = 1; i < groups.Count; i++)
                     {
-                        for (int i = alt.Count - 1; i >= 0; i--)
+                        foreach (var requirementJ in groups[i])
                         {
-                            if (alt[i].Type == RequirementType.PauseIf && !requirementsFoundInAll.Contains(alt[i]))
+                            if (requirementJ.Requirements.Last().Type == RequirementType.PauseIf && !requirementsFoundInAll.Contains(requirementJ))
                             {
                                 canPromote = false;
                                 break;
@@ -1179,81 +1215,59 @@ namespace RATools.Parser
                 }
 
                 // remove the requirement from each alt group
-                foreach (IList<Requirement> alt in _alts)
+                for (int i = 1; i < groups.Count; i++)
                 {
-                    for (int i = alt.Count - 1; i >= 0; i--)
+                    for (int j = groups[i].Count - 1; j >= 0; j--)
                     {
-                        if (alt[i] == requirement)
-                            alt.RemoveAt(i);
+                        if (groups[i][j] == requirement)
+                        {
+                            groups[i].RemoveAt(j);
+                            break;
+                        }
                     }
                 }
 
-                // the the core only contains an always true statement, remove it
-                if (_core.Count == 1 && IsTrue(_core[0]))
-                    _core.Clear();
-
                 // put one copy of the repeated requirement it in the core group
-                _core.Add(requirement);
+                groups[0].Add(requirement);
             }
         }
 
-        private void RemoveDuplicates(IList<Requirement> requirements)
+        private static void RemoveDuplicates(IList<RequirementEx> group, IList<RequirementEx> coreGroup)
         {
-            for (int i = 0; i < requirements.Count; i++)
+            for (int i = 0; i < group.Count; i++)
             {
-                for (int j = requirements.Count - 1; j > i; j--)
+                for (int j = group.Count - 1; j > i; j--)
                 {
-                    if (requirements[j] == requirements[i])
-                        requirements.RemoveAt(j);
+                    if (group[j] == group[i])
+                        group.RemoveAt(j);
+                }
+            }
+
+            if (coreGroup != null)
+            {
+                for (int i = 0; i < coreGroup.Count; i++)
+                {
+                    for (int j = group.Count - 1; j >= 0; j--)
+                    {
+                        if (group[j] == coreGroup[i])
+                        {
+                            // always_true has special meaning and shouldn't be eliminated if present in the core group
+                            if (group[j].Requirements.Count > 1 || !IsTrue(group[j].Requirements[0]))
+                                group.RemoveAt(j);
+                        }
+                    }
                 }
             }
         }
 
-        private void RemoveAltsAlreadyInCore(IList<Requirement> requirements)
+        private static void RemoveRedundancies(IList<RequirementEx> group, bool hasHitCount)
         {
-            for (int i = requirements.Count - 1; i >= 0; i--)
+            for (int i = group.Count - 1; i >= 0; i--)
             {
-                if (_core.Any(r => r == requirements[i]))
-                {
-                    requirements.RemoveAt(i);
-                    continue;
-                }
-            }
-        }
-
-        private static bool IsMultiClause(RequirementType type)
-        {
-            switch (type)
-            {
-                case RequirementType.AddSource:
-                case RequirementType.SubSource:
-                case RequirementType.AddHits:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
-        private void RemoveRedundancies(IList<Requirement> requirements)
-        {
-            var multiClauseConditions = new List<int>();
-            for (int i = 0; i < requirements.Count; i++)
-            {
-                if (IsMultiClause(requirements[i].Type))
-                {
-                    multiClauseConditions.Add(i);
-                    if (!multiClauseConditions.Contains(i + 1))
-                        multiClauseConditions.Add(i + 1);
-                }
-            }
-
-            for (int i = requirements.Count - 1; i >= 0; i--)
-            {
-                if (multiClauseConditions.Contains(i))
+                if (group[i].Requirements.Count > 1)
                     continue;
 
-                var requirement = requirements[i];
+                var requirement = group[i].Requirements[0];
 
                 // if one requirement is "X == N" and another is "ResetIf X != N", they can be merged.
                 if (requirement.HitCount == 0 && (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.None))
@@ -1261,10 +1275,10 @@ namespace RATools.Parser
                     bool merged = false;
                     for (int j = 0; j < i; j++)
                     {
-                        if (multiClauseConditions.Contains(j))
+                        if (group[j].Requirements.Count > 1)
                             continue;
 
-                        Requirement compareRequirement = requirements[j];
+                        Requirement compareRequirement = group[j].Requirements[0];
                         if (requirement.Type == compareRequirement.Type || compareRequirement.HitCount != 0)
                             continue;
                         if (compareRequirement.Type != RequirementType.ResetIf && compareRequirement.Type != RequirementType.None)
@@ -1276,12 +1290,11 @@ namespace RATools.Parser
                         if (compareRequirement.Operator == opposingOperator)
                         {
                             // if a HitCount exists, keep the ResetIf, otherwise keep the non-ResetIf
-                            bool hasHitCount = HasHitCount();
                             bool isResetIf = (requirement.Type == RequirementType.ResetIf);
                             if (hasHitCount == isResetIf)
-                                requirements[j] = requirement;
+                                group[j].Requirements[0] = requirement;
 
-                            requirements.RemoveAt(i);
+                            group.RemoveAt(i);
                             merged = true;
                             break;
                         }
@@ -1296,22 +1309,23 @@ namespace RATools.Parser
                 {
                     for (int j = 0; j < i; j++)
                     {
-                        if (multiClauseConditions.Contains(j))
+                        if (group[j].Requirements.Count > 1)
                             continue;
 
-                        Requirement merged;
-                        if (MergeRequirements(requirement, requirements[j], ConditionalOperation.And, out merged))
+                        RequirementEx merged;
+                        if (MergeRequirements(group[i], group[j], ConditionalOperation.And, out merged))
                         {
                             if (merged == null)
                             {
                                 // conflicting requirements, replace the entire requirement set with an always_false()
-                                requirements.Clear();
-                                requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                                group.Clear();
+                                group.Add(new RequirementEx());
+                                group.Last().Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
                                 return;
                             }
 
-                            requirements[j] = merged;
-                            requirements.RemoveAt(i);
+                            group[j] = merged;
+                            group.RemoveAt(i);
                             break;
                         }
                     }
@@ -1335,31 +1349,21 @@ namespace RATools.Parser
             return true;
         }
 
-        private void MergeBits(IList<Requirement> requirements)
+        private static void MergeBits(IList<RequirementEx> group)
         {
-            var mergableRequirements = new List<Requirement>();
+            var mergableRequirements = new List<RequirementEx>();
 
-            bool inMultiClause = false;
             var references = new TinyDictionary<uint, int>();
-            foreach (var requirement in requirements)
+            foreach (var requirementEx in group)
             {
-                if (IsMultiClause(requirement.Type))
-                {
-                    inMultiClause = true;
-                    continue;
-                }
-                else if (inMultiClause)
-                {
-                    inMultiClause = false;
-                    continue;
-                }
-
-                if (IsMergable(requirement))
-                    mergableRequirements.Add(requirement);
+                if (requirementEx.Requirements.Count == 1 && IsMergable(requirementEx.Requirements[0]))
+                    mergableRequirements.Add(requirementEx);
             }
 
-            foreach (var requirement in mergableRequirements)
+            foreach (var requirementEx in mergableRequirements)
             {
+                var requirement = requirementEx.Requirements[0];
+
                 int flags;
                 references.TryGetValue(requirement.Left.Value, out flags);
                 switch (requirement.Left.Size)
@@ -1425,28 +1429,28 @@ namespace RATools.Parser
             {
                 if ((kvp.Value & 0xFF) == 0xFF)
                 {
-                    MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.Byte, (kvp.Value >> 8) & 0xFF);
+                    MergeBits(group, mergableRequirements, kvp.Key, FieldSize.Byte, (kvp.Value >> 8) & 0xFF);
                 }
                 else
                 {
                     if ((kvp.Value & 0x0F) == 0x0F)
-                        MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.LowNibble, (kvp.Value >> 8) & 0x0F);
+                        MergeBits(group, mergableRequirements, kvp.Key, FieldSize.LowNibble, (kvp.Value >> 8) & 0x0F);
                     if ((kvp.Value & 0xF0) == 0xF0)
-                        MergeBits(requirements, mergableRequirements, kvp.Key, FieldSize.HighNibble, (kvp.Value >> 12) & 0x0F);
+                        MergeBits(group, mergableRequirements, kvp.Key, FieldSize.HighNibble, (kvp.Value >> 12) & 0x0F);
                 }
             }
         }
 
-        private static void MergeBits(IList<Requirement> requirements, ICollection<Requirement> mergableRequirements, uint address, FieldSize newSize, int newValue)
+        private static void MergeBits(IList<RequirementEx> group, ICollection<RequirementEx> mergableRequirements, uint address, FieldSize newSize, int newValue)
         {
             bool insert = true;
             int insertAt = 0;
-            for (int i = requirements.Count - 1; i >= 0; i--)
+            for (int i = group.Count - 1; i >= 0; i--)
             {
-                var requirement = requirements[i];
-                if (!mergableRequirements.Contains(requirement))
+                if (!mergableRequirements.Contains(group[i]))
                     continue;
 
+                var requirement = group[i].Requirements[0];
                 if (requirement.Left.Value != address)
                     continue;
 
@@ -1507,7 +1511,7 @@ namespace RATools.Parser
 
                 if (delete)
                 {
-                    requirements.RemoveAt(i);
+                    group.RemoveAt(i);
                     insertAt = i;
                     continue;
                 }
@@ -1519,61 +1523,190 @@ namespace RATools.Parser
                 requirement.Left = new Field { Size = newSize, Type = FieldType.MemoryAddress, Value = address };
                 requirement.Operator = RequirementOperator.Equal;
                 requirement.Right = new Field { Size = newSize, Type = FieldType.Value, Value = (uint)newValue };
-                requirements.Insert(insertAt, requirement);
+                var requirementEx = new RequirementEx();
+                requirementEx.Requirements.Add(requirement);
+                group.Insert(insertAt, requirementEx);
+            }
+        }
+
+        private class RequirementEx
+        {
+            public RequirementEx()
+            {
+                Requirements = new List<Requirement>();
+            }
+
+            public List<Requirement> Requirements { get; private set; }
+
+            public bool HasHitCount
+            {
+                get
+                {
+                    foreach (var requirement in Requirements)
+                    {
+                        if (requirement.HitCount > 0)
+                            return true;
+                    }
+
+                    return false;
+                }
+            }
+
+            public override string ToString()
+            {
+                var builder = new StringBuilder();
+                foreach (var requirement in Requirements)
+                    requirement.AppendString(builder, NumberFormat.Hexadecimal);
+
+                return builder.ToString();
+            }
+
+            public override bool Equals(object obj)
+            {
+                var that = obj as RequirementEx;
+                if (ReferenceEquals(that, null))
+                    return false;
+
+                if (that.Requirements.Count != Requirements.Count)
+                    return false;
+
+                for (int i = 0; i < Requirements.Count; i++)
+                {
+                    if (that.Requirements[i] != Requirements[i])
+                        return false;
+                }
+
+                return true;
+            }
+
+            public override int GetHashCode()
+            {
+                return base.GetHashCode();
+            }
+
+            public static bool operator ==(RequirementEx left, RequirementEx right)
+            {
+                if (ReferenceEquals(left, null))
+                    return ReferenceEquals(right, null);
+
+                return left.Equals(right);
+            }
+
+            public static bool operator !=(RequirementEx left, RequirementEx right)
+            {
+                if (ReferenceEquals(left, null))
+                    return !ReferenceEquals(right, null);
+
+                return !left.Equals(right);
+            }
+        }
+
+        private static List<RequirementEx> Process(ICollection<Requirement> requirements)
+        {
+            var group = new List<RequirementEx>();
+
+            bool combiningRequirement = false;
+            foreach (var requirement in requirements)
+            {
+                if (combiningRequirement)
+                    group.Last().Requirements.Add(requirement);
+
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        if (combiningRequirement)
+                            continue;
+
+                        combiningRequirement = true;
+                        break;
+
+                    default:
+                        if (combiningRequirement)
+                        {
+                            combiningRequirement = false;
+                            continue;
+                        }
+                        break;
+                }
+
+                group.Add(new RequirementEx());
+                group.Last().Requirements.Add(requirement);
+            }
+
+            return group;
+        }
+
+        private static void Unprocess(ICollection<Requirement> collection, List<RequirementEx> group)
+        {
+            collection.Clear();
+            foreach (var requirementEx in group)
+            {
+                foreach (var requirement in requirementEx.Requirements)
+                    collection.Add(requirement);
             }
         }
 
         public string Optimize()
         {
+            if (_core.Count == 0 && _alts.Count == 0)
+                return "No requirements found.";
+
+            // group complex expressions
+            var groups = new List<List<RequirementEx>>(_alts.Count + 1);
+            groups.Add(Process(_core));
+            for (int i = 0; i < _alts.Count; i++)
+                groups.Add(Process(_alts[i]));
+
             // normalize BitX() methods to compare against 1
-            NormalizeComparisons(_core);
-            if (_core.Count == 0)
-            {
-                if (_alts.Count > 0)
-                    return "Ambiguous logic clauses. Please put parentheses around all of the alt group clauses.";
-
-                return "No valid requirements found.";
-            }
-
-            for (int i = _alts.Count - 1; i >= 0; i--)
-            {
-                NormalizeComparisons(_alts[i]);
-                if (_alts[i].Count == 0)
-                    _alts.RemoveAt(i);
-            }
-            if (_alts.Count == 1)
-            {
-                _core.AddRange(_alts[0]);
-                _alts.Clear();
-            }
+            for (int i = groups.Count - 1; i >= 0; i--)
+                NormalizeComparisons(groups[i]);
 
             // convert ResetIfs and PauseIfs without HitCounts to standard requirements
-            NormalizeNonHitCountResetAndPauseIfs();
+            bool hasHitCount = HasHitCount(groups);
+            NormalizeNonHitCountResetAndPauseIfs(groups, hasHitCount);
 
             // remove duplicates within a set of requirements
-            RemoveDuplicates(_core);
-            foreach (IList<Requirement> alt in _alts)
+            RemoveDuplicates(groups[0], null);
+            for (int i = groups.Count - 1; i > 0; i--)
             {
-                RemoveDuplicates(alt);
-                RemoveAltsAlreadyInCore(alt);
+                RemoveDuplicates(groups[i], groups[0]);
+                if (groups[i].Count == 0)
+                    groups.RemoveAt(i);
             }
 
             // remove redundancies (i > 3 && i > 5) => (i > 5)
-            RemoveRedundancies(_core);
-            foreach (IList<Requirement> alt in _alts)
-                RemoveRedundancies(alt);
+            foreach (var group in groups)
+                RemoveRedundancies(group, hasHitCount);
 
             // bit1(x) && bit2(x) && bit3(x) && bit4(x) => low4(x)
-            MergeBits(_core);
-            foreach (IList<Requirement> alt in _alts)
-                MergeBits(alt);
+            foreach (var group in groups)
+                MergeBits(group);
 
             // merge duplicate alts
-            MergeDuplicateAlts();
+            MergeDuplicateAlts(groups);
 
-            // identify any item common to all alts and promote it to core
-            if (_alts.Count > 1)
-                PromoteCommonAltsToCore();
+            // identify any items common to all alts and promote them to core
+            PromoteCommonAltsToCore(groups);
+
+            // if the core group contains an always_true statement in addition to any other promoted statements, 
+            // remove the always_true statement
+            if (groups[0].Count > 1 && groups[0][0].Requirements.Count == 1 && IsTrue(groups[0][0].Requirements[0]))
+                groups[0].RemoveAt(0);
+
+            // convert back to flattened expressions
+            _core.Clear();
+            Unprocess(_core, groups[0]);
+
+            for (int i = 1; i < groups.Count; i++)
+            {
+                _alts[i - 1].Clear();
+                Unprocess(_alts[i - 1], groups[i]);
+            }
+
+            while (_alts.Count >= groups.Count)
+                _alts.RemoveAt(_alts.Count - 1);
 
             // success!
             return null;
