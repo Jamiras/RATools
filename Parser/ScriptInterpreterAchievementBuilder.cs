@@ -357,6 +357,51 @@ namespace RATools.Parser
             if (integerRight != null)
             {
                 int newValue = integerRight.Value;
+
+                // SubSource of a memory accessor may cause overflow - if comparing for less than,
+                // modifiers should not be merged into the compare target
+                if (_equalityModifiers.Count > 0 &&
+                    (op == RequirementOperator.LessThan || op == RequirementOperator.LessThanOrEqual))
+                {
+                    bool hasSubSource = false;
+                    for (int i = context.Trigger.Count - 2; i >= 0; i++)
+                    {
+                        var requirementType = context.Trigger.ElementAt(i).Type;
+                        if (requirementType == RequirementType.SubSource)
+                        {
+                            hasSubSource = true;
+                            break;
+                        }
+                        else if (requirementType != RequirementType.AddSource &&
+                            requirementType != RequirementType.AddHits)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (hasSubSource)
+                    {
+                        var last = context.Trigger.Last();
+                        context.Trigger.Remove(last);
+                        foreach (var modifier in _equalityModifiers)
+                        {
+                            if (modifier.Operation != MathematicOperation.Subtract && modifier.Operation != MathematicOperation.Add)
+                                return new ParseErrorExpression("Cannot normalize expression containing SubSource", left);
+
+                            context.Trigger.Add(new Requirement
+                            {
+                                Type = (modifier.Operation == MathematicOperation.Subtract) ? RequirementType.AddSource : RequirementType.SubSource,
+                                Left = new Field { Type = FieldType.Value, Value = (uint)modifier.Amount },
+                                Operator = RequirementOperator.None,
+                                Right = new Field()
+                            });
+                        }
+                        context.Trigger.Add(last);
+
+                        _equalityModifiers.Clear();
+                    }
+                }
+
                 while (_equalityModifiers.Count > 0)
                 {
                     var originalValue = newValue;

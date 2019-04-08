@@ -601,6 +601,25 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) == 3", "(byte(0x001234) - byte(0x001235)) == 2")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) != 3", "(byte(0x001234) - byte(0x001235)) != 2")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) >= 3", "(byte(0x001234) - byte(0x001235)) >= 2")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) >  3", "(byte(0x001234) - byte(0x001235)) > 2")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) <= 3", "(1 + byte(0x001234) - byte(0x001235)) <= 3")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) <  3", "(1 + byte(0x001234) - byte(0x001235)) < 3")]
+        public void TestSubSourceMemoryPreventsBalancing(string input, string expected)
+        {
+            // SubSource(mem) can cause wraparound, so if modifiers are present when doing a
+            // less than comparison, assume they're there to prevent the wraparound and don't
+            // transfer them to the right side.
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void TestTransitiveOrClause()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3");
