@@ -1,4 +1,5 @@
-﻿using Jamiras.DataModels;
+﻿using Jamiras.Commands;
+using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -45,6 +46,56 @@ namespace RATools.ViewModels
             }
 
             DialogResult = DialogResult.Ok;
+        }
+
+        public CommandBase ToggleSelectedForUpdateCommand
+        {
+            get { return new DelegateCommand(ExecuteToggleSelectedForUpdateCommand); }
+        }
+
+        private void ExecuteToggleSelectedForUpdateCommand()
+        {
+            if (_achievements.Any(a => !a.IsUpdated && a.CanUpdate))
+            {
+                foreach (var a in _achievements)
+                {
+                    if (a.CanUpdate)
+                        a.IsUpdated = true;
+                }
+            }
+            else
+            {
+                foreach (var a in _achievements)
+                {
+                    if (a.CanUpdate)
+                        a.IsUpdated = false;
+                }
+            }
+        }
+
+        public CommandBase ToggleSelectedForDeleteCommand
+        {
+            get { return new DelegateCommand(ExecuteToggleSelectedForDeleteCommand); }
+        }
+
+        private void ExecuteToggleSelectedForDeleteCommand()
+        {
+            if (_achievements.Any(a => !a.IsDeleted && a.CanDelete))
+            {
+                foreach (var a in _achievements)
+                {
+                    if (a.CanDelete)
+                        a.IsDeleted = true;
+                }
+            }
+            else
+            {
+                foreach (var a in _achievements)
+                {
+                    if (a.CanDelete)
+                        a.IsDeleted = false;
+                }
+            }
         }
 
         /// <summary>
