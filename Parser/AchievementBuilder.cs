@@ -88,7 +88,15 @@ namespace RATools.Parser
         /// </summary>
         public Achievement ToAchievement()
         {
-            var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = _core.ToArray(), Id = Id, BadgeName = BadgeName };
+            var core = _core.ToArray();
+
+            // if core is empty and any alts exist, add an always_true condition to the core for compatibility
+            // with legacy RetroArch parsing. duplicates functionality in SerializeRequirements so the 
+            // condition will appear in the editor
+            if (core.Length == 0 && _alts.Any())
+                core = new Requirement[] { AlwaysTrueFunction.CreateAlwaysTrueRequirement() };
+
+            var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = core, Id = Id, BadgeName = BadgeName };
             var alts = new Requirement[_alts.Count][];
             for (int i = 0; i < _alts.Count; i++)
                 alts[i] = _alts[i].ToArray();
@@ -241,7 +249,7 @@ namespace RATools.Parser
             return SerializeRequirements(achievement.CoreRequirements, achievement.AlternateRequirements);
         }
 
-        private static string SerializeRequirements(IEnumerable core, IEnumerable alts)
+        private static string SerializeRequirements(IEnumerable<Requirement> core, IEnumerable<IEnumerable<Requirement>> alts)
         {
             var builder = new StringBuilder();
 
@@ -252,12 +260,19 @@ namespace RATools.Parser
             }
 
             if (builder.Length > 0)
+            {
                 builder.Length--; // remove last _
+            }
+            else if (alts.Any())
+            {
+                // if core is empty and any alts exist, add an always_true condition to the core for compatibility
+                // with legacy RetroArch parsing
+                builder.Append("1=1");
+            }
 
             foreach (IEnumerable<Requirement> alt in alts)
             {
-                if (builder.Length > 0)
-                    builder.Append('S');
+                builder.Append('S');
 
                 foreach (Requirement requirement in alt)
                 {

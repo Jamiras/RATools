@@ -204,7 +204,10 @@ namespace RATools.Test.Parser
         [TestCase("3 == byte(0x000028)", "0xH000028=3")] // prefer constants on right
         [TestCase("high4(0x00616A) == 8", "0xU00616a=8")]
         [TestCase("word(0x000042) == 5786", "0x 000042=5786")]
-        [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000", "0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")]
+        [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000",
+                  "1=1S0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // no parentheses - && ties first condition to second, add always_true core
+        [TestCase("byte(0x000028) == 12 && (word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)",
+                  "0xH000028=12S0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // parenthesis ensure first condition separate from alts
         [TestCase("once(byte(0x000440) == 140)", "0xH000440=140.1.")]
         [TestCase("never(byte(0x000440) == 0)", "R:0xH000440=0")]
         [TestCase("unless(byte(0x000440) == 0)", "P:0xH000440=0")]
