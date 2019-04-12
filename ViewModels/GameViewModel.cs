@@ -158,8 +158,20 @@ namespace RATools.ViewModels
                 MergeLocal(GameId, editors);
             }
 
+            int nextLocalId = 111000001;
             foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            {
+                if (achievement.Local != null && achievement.Local.Id >= nextLocalId)
+                    nextLocalId = achievement.Local.Id + 1;
+            }
+
+            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            {
+                if (achievement.Local != null && achievement.Local.Id == 0)
+                    achievement.Local.Id = nextLocalId++;
+
                 achievement.UpdateCommonProperties(this);
+            }
 
             Editors = editors;
         }      
