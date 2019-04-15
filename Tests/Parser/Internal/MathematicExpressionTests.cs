@@ -191,6 +191,34 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestRebalanceAddString()
+        {
+            // "A" + B - C => "A" + (B - C)
+            var str = new StringConstantExpression("ban");
+            var exprLeft = new IntegerConstantExpression(6);
+            var exprRight = new IntegerConstantExpression(2);
+            var clause = new MathematicExpression(exprLeft, MathematicOperation.Subtract, exprRight);
+            var expr = new MathematicExpression(str, MathematicOperation.Add, clause);
+
+            var result = expr.Rebalance() as MathematicExpression;
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result.Left, Is.EqualTo(str));
+            Assert.That(result.Operation, Is.EqualTo(MathematicOperation.Add));
+            Assert.That(result.Right, Is.EqualTo(clause));
+
+            // A - B + "C" => (A - B) + "C"
+            clause = new MathematicExpression(exprRight, MathematicOperation.Add, str);
+            expr = new MathematicExpression(exprLeft, MathematicOperation.Subtract, clause);
+
+            result = expr.Rebalance() as MathematicExpression;
+            Assert.That(result, Is.Not.Null);
+            var expectedLeft = new MathematicExpression(exprLeft, MathematicOperation.Subtract, exprRight);
+            Assert.That(result.Left, Is.EqualTo(expectedLeft));
+            Assert.That(result.Operation, Is.EqualTo(MathematicOperation.Add));
+            Assert.That(result.Right, Is.EqualTo(str));
+        }
+
+        [Test]
         public void TestAdd()
         {
             var left = new IntegerConstantExpression(1);
@@ -277,6 +305,38 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)result).Value, Is.EqualTo("1ana"));
+        }
+
+        [Test]
+        public void TestAddStringExpression()
+        {
+            var left = new StringConstantExpression("ban");
+            var right1 = new IntegerConstantExpression(6);
+            var right2 = new IntegerConstantExpression(2);
+            var right = new MathematicExpression(right1, MathematicOperation.Subtract, right2);
+            var expr = new MathematicExpression(left, MathematicOperation.Add, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)result).Value, Is.EqualTo("ban4"));
+        }
+
+        [Test]
+        public void TestAddExpressionString()
+        {
+            var left1 = new IntegerConstantExpression(6);
+            var left2 = new IntegerConstantExpression(2);
+            var left = new MathematicExpression(left1, MathematicOperation.Subtract, left2);
+            var right = new StringConstantExpression("ana");
+            var expr = new MathematicExpression(left, MathematicOperation.Add, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)result).Value, Is.EqualTo("4ana"));
         }
 
         [Test]
