@@ -209,8 +209,27 @@ namespace RATools.ViewModels
             if (tokenizer.Match("<title>"))
             {
                 var title = tokenizer.ReadTo("</title>");
-                title = title.SubToken(24);
-                DialogTitle = "Game Stats - " +title.ToString();
+                var titleString = title.ToString();
+                var index = title.IndexOf("RetroAchievements", StringComparison.OrdinalIgnoreCase);
+                if (index != -1)
+                {
+                    var length = 17;
+                    if (index > 3 && title.SubToken(index - 3, 3) == " - ")
+                    {
+                        index -= 3;
+                        length += 3;
+                    }
+
+                    if (index + length < title.Length - 4 && title.SubToken(index + length, 4) == ".org")
+                        length += 4;
+
+                    if (index + length < title.Length - 3 && title.SubToken(index + length, 3) == " - ")
+                        length += 3;
+
+                    titleString = titleString.Substring(0, index) + titleString.Substring(index + length);
+                }
+
+                DialogTitle = "Game Stats - " + titleString;
             }
 
             AchievementStats mostWon = null;
