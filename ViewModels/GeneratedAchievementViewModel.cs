@@ -116,6 +116,8 @@ namespace RATools.ViewModels
                 Id = Core.Id;
             else if (Unofficial.Achievement != null)
                 Id = Unofficial.Id;
+            else if (Local.Achievement != null)
+                Id = Local.Id;
 
             UpdateModified();
         }
@@ -359,8 +361,8 @@ namespace RATools.ViewModels
         {
             var achievement = Generated.Achievement;
 
-            if (Local.Id > 0)
-                achievement.Id = Id;
+            if (achievement.Id == 0 && Local.Id > 0)
+                achievement.Id = Local.Id;
             if (!String.IsNullOrEmpty(Local.BadgeName))
                 achievement.BadgeName = Local.BadgeName;
 
