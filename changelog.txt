@@ -1,5 +1,21 @@
-v1.5.5 - TBD
-* ignore multi-clause conditions when optimizing
+v1.6.0 - 16 Apr 2019
+* upgrade to .NET 4.0
+* separate trigger clause evaluation from code generation
+* add bit(index, address) function
+* support for generating non-zero achievement IDs for updating achievements already on the server
+* update maximum length for rich presence and achievement data
+* improved optimization for complex conditions (AddSource/SubSource/AddHits)
+* don't combine integer constants when a SubSource is involved
+* ensure expression containing multiplication and division is evaluated left-to-right
+* support for integers on left side of comparisons
+* support for negative hexadecimal constants
+* support for ORs in never() and unless()
+* extract mathematic constants from prev() statements
+* better error message when attempting to multiply within a trigger
+* disable Update Local when local directory is not known
+* ability to select/deselect all in Update Local dialog
+* fix recent items list when directory in path starts with 'r' or 'n'
+* fix exceptions when replacing text with smaller amount of text (via paste/undo/redo)
 
 v1.5.4 - 26 Jan 2019
 * support for quoted strings in local achievements
