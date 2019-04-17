@@ -17,9 +17,18 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <TextBlock FontSize="10" Margin="6,0,0,0" Text="Achievement" />
-        <TextBlock Grid.Column="1" FontSize="10" Text="Update" HorizontalAlignment="Center" />
-        <TextBlock Grid.Column="2" FontSize="10" Text="Delete" HorizontalAlignment="Center" />
-        <ListView Grid.Row="1" Grid.ColumnSpan="4" ItemsSource="{Binding Achievements}" Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <TextBlock Grid.Column="1" FontSize="10" HorizontalAlignment="Center">
+            <Hyperlink Command="{Binding ToggleSelectedForUpdateCommand}">
+                <TextBlock Text="Update" />
+            </Hyperlink>
+        </TextBlock>
+        <TextBlock Grid.Column="2" FontSize="10" HorizontalAlignment="Center">
+            <Hyperlink Command="{Binding ToggleSelectedForDeleteCommand}">
+                <TextBlock Text="Delete" />
+            </Hyperlink>
+        </TextBlock>
+        <ListView Grid.Row="1" Grid.ColumnSpan="4" ItemsSource="{Binding Achievements}"
+                  Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>

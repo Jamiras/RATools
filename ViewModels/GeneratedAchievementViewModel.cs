@@ -379,9 +379,6 @@ namespace RATools.ViewModels
             owner.UpdateLocal(null, Local.Achievement);
 
             Local = new AchievementViewModel(owner, "Local");
-            if (Generated.Achievement != null)
-                Local.LoadAchievement(Generated.Achievement);
-
             OnPropertyChanged(() => Local);
             UpdateModified();
         }
