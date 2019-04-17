@@ -94,7 +94,7 @@ namespace RATools.Parser.Internal
             if (!Right.IsLogicalUnit)
             {
                 var mathematicRight = Right as MathematicExpression;
-                if (mathematicRight != null)
+                if (mathematicRight != null && !(Left is StringConstantExpression))
                 {
                     // multiply and divide should happen before add or subtract.
                     // at the same priority, they should happen left-to-right.
