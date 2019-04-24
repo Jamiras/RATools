@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Test.Parser
 {
@@ -20,7 +19,7 @@ namespace RATools.Test.Parser
             {
                 get
                 {
-                    var dir = Directory.GetCurrentDirectory();
+                    var dir = Path.GetDirectoryName(typeof(RegressionTestFactory).Assembly.Location);
                     do
                     {
                         var parent = Directory.GetParent(dir);

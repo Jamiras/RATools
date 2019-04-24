@@ -44,6 +44,20 @@ namespace RATools.Parser.Internal
             }
         }
 
+        internal static ComparisonOperation GetOppositeComparisonOperation(ComparisonOperation op)
+        {
+            switch (op)
+            {
+                case ComparisonOperation.Equal: return ComparisonOperation.NotEqual;
+                case ComparisonOperation.NotEqual: return ComparisonOperation.Equal;
+                case ComparisonOperation.LessThan: return ComparisonOperation.GreaterThanOrEqual;
+                case ComparisonOperation.LessThanOrEqual: return ComparisonOperation.GreaterThan;
+                case ComparisonOperation.GreaterThan: return ComparisonOperation.LessThanOrEqual;
+                case ComparisonOperation.GreaterThanOrEqual: return ComparisonOperation.LessThan;
+                default: return ComparisonOperation.None;
+            }
+        }
+
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>

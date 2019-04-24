@@ -152,6 +152,8 @@ namespace RATools.Test.Parser
             // inputs /output makes reading the tests and validating the behavior easier for humans.
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);
+            if (expression is ParseErrorExpression)
+                Assert.Fail(((ParseErrorExpression)expression).Message);
 
             var achievement = new ScriptInterpreterAchievementBuilder();
             var error = achievement.PopulateFromExpression(expression);
@@ -441,6 +443,56 @@ namespace RATools.Test.Parser
         {
             var achievement = CreateAchievement(input);
             achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
+        [Test]
+        // ==== Sanity Check ====
+        [TestCase("A == B", "A == B")]
+        // ==== NormalizeNots ====
+        [TestCase("!(A == B)", "A != B")]
+        [TestCase("!(A != B)", "A == B")]
+        [TestCase("!(A < B)", "A >= B")]
+        [TestCase("!(A <= B)", "A > B")]
+        [TestCase("!(A > B)", "A <= B")]
+        [TestCase("!(A >= B)", "A < B")]
+        [TestCase("!(A == 1 || B == 1)", "A != 1 && B != 1")]
+        [TestCase("!(A == 1 && B == 1)", "A != 1 || B != 1")]
+        [TestCase("!(!(A == B))", "A == B")]
+        [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
+        // ==== CrossMultiplyOrConditions ====
+        [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
+        [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
+        [TestCase("(A || B) && (A || C) && (B || C)",
+                  "(A && A && B) || (A && A && C) || (A && C && B) || (A && C && C) || " +
+                  "(B && A && B) || (B && A && C) || (B && C && B) || (B && C && C)")]
+        [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
+                  "(A && B && A && C) || (A && B && B && D) || (C && D && A && C) || (C && D && B && D)")]
+        [TestCase("(A || B || C) && (D || E || F)",
+                  "(A && D) || (A && E) || (A && F) || (B && D) || (B && E) || (B && F) || (C && D) || (C && E) || (C && F)")]
+        [TestCase("(A && (B || C)) && (D || E)",
+                  "A && ((B && D) || (B && E) || (C && D) || (C && E))")]
+        // ==== BubbleUpOrs ====
+        [TestCase("(((A || B) && C) || D) && (C || E)",
+                  "(A && C && C) || (A && C && E) || (B && C && C) || (B && C && E) || (D && C) || (D && E)")]
+        public void TestPopulateFromExpression(string input, string expected)
+        {
+            input = input.Replace("A", "byte(0x00000A)");
+            input = input.Replace("B", "byte(0x00000B)");
+            input = input.Replace("C", "byte(0x00000C)");
+            input = input.Replace("D", "byte(0x00000D)");
+            input = input.Replace("E", "byte(0x00000E)");
+            input = input.Replace("F", "byte(0x00000F)");
+
+            expected = expected.Replace("A", "byte(0x00000A)");
+            expected = expected.Replace("B", "byte(0x00000B)");
+            expected = expected.Replace("C", "byte(0x00000C)");
+            expected = expected.Replace("D", "byte(0x00000D)");
+            expected = expected.Replace("E", "byte(0x00000E)");
+            expected = expected.Replace("F", "byte(0x00000F)");
+
+            var achievement = CreateAchievement(input);
+            // NOTE: not optimized - that's tested separately in TestOptimize
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
         }
     }
