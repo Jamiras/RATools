@@ -151,7 +151,7 @@ namespace RATools.Parser
             // ...
 
             // first turn the OR trees into flat lists -- (A || (B || (C || D))) -> A, B, C, D
-            List<List<ExpressionBase>> flattenedClauses = new List<List<ExpressionBase>>();
+            var flattenedClauses = new List<List<ExpressionBase>>();
             foreach (var clause in orConditions)
             {
                 var flattened = new List<ExpressionBase>();

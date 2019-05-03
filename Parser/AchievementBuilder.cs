@@ -476,7 +476,7 @@ namespace RATools.Parser
 
         // ==== Optimize helpers ====
 
-        private static void NormalizeComparisons(ICollection<RequirementEx> requirements)
+        private static void NormalizeComparisons(IList<RequirementEx> requirements)
         {
             var alwaysTrue = new List<RequirementEx>();
             var alwaysFalse = new List<RequirementEx>();
@@ -628,8 +628,38 @@ namespace RATools.Parser
 
             if (alwaysFalse.Count > 0)
             {
-                // at least one requirement can never be true, replace the entire group with an always_false()
-                requirements.Clear();
+                // at least one requirement can never be true. replace the all non-PauseIf non-ResetIf conditions 
+                // with a single always_false()
+                for (int i = requirements.Count - 1; i >= 0; i--)
+                {
+                    var requirement = requirements[i];
+                    switch (requirement.Requirements.Last().Type)
+                    {
+                        case RequirementType.PauseIf:
+                            if (alwaysTrue.Contains(requirement))
+                            {
+                                // always True PauseIf ensures the group is always paused, so just replace the entire 
+                                // group with an always_false().
+                                requirements.Clear();
+                                i = 0;
+                            }
+                            else if (alwaysFalse.Contains(requirement))
+                            {
+                                requirements.RemoveAt(i);
+                            }
+                            break;
+
+                        case RequirementType.ResetIf:
+                            if (alwaysFalse.Contains(requirement))
+                                requirements.RemoveAt(i);
+                            break;
+
+                        default:
+                            requirements.RemoveAt(i);
+                            break;
+                    }
+                }
+
                 var requirementEx = new RequirementEx();
                 requirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
                 requirements.Add(requirementEx);
@@ -1672,13 +1702,13 @@ namespace RATools.Parser
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(Process(_alts[i]));
 
-            // normalize BitX() methods to compare against 1
-            for (int i = groups.Count - 1; i >= 0; i--)
-                NormalizeComparisons(groups[i]);
-
             // convert ResetIfs and PauseIfs without HitCounts to standard requirements
             bool hasHitCount = HasHitCount(groups);
             NormalizeNonHitCountResetAndPauseIfs(groups, hasHitCount);
+
+            // normalize BitX() methods to compare against 1
+            for (int i = groups.Count - 1; i >= 0; i--)
+                NormalizeComparisons(groups[i]);
 
             // remove duplicates within a set of requirements
             RemoveDuplicates(groups[0], null);
