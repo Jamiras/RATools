@@ -1148,6 +1148,7 @@ namespace RATools.Parser
             }
 
             // identify requirements present in all alt groups.
+            bool commonPauseIf = false;
             var requirementsFoundInAll = new List<RequirementEx>();
             for (int i = 0; i < groups[1].Count; i++)
             {
@@ -1173,36 +1174,33 @@ namespace RATools.Parser
                 }
 
                 if (foundInAll)
+                {
                     requirementsFoundInAll.Add(requirementI);
+
+                    if (requirementI.Requirements.Last().Type == RequirementType.PauseIf)
+                        commonPauseIf = true;
+                }
+            }
+
+            // PauseIf only affects the alt group that it's in, so it can only be promoted if the entire alt group is promoted
+            if (commonPauseIf)
+            {
+                bool canPromote = true;
+                for (int i = 1; i < groups.Count; i++)
+                {
+                    if (groups[i].Count != requirementsFoundInAll.Count)
+                    {
+                        canPromote = false;
+                        break;
+                    }
+                }
+
+                if (!canPromote)
+                    requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.PauseIf);
             }
 
             foreach (var requirement in requirementsFoundInAll)
             {
-                // PauseIf only affects the alt group that it's in, so it can only be promoted if all 
-                // the HitCounts in the alt group are also promoted
-                if (requirement.Requirements.Last().Type == RequirementType.PauseIf)
-                {
-                    bool canPromote = false;
-
-                    for (int i = 1; i < groups.Count; i++)
-                    {
-                        foreach (var requirementJ in groups[i])
-                        {
-                            if (requirementJ.Requirements.Last().HitCount > 0 && !requirementsFoundInAll.Contains(requirementJ))
-                            {
-                                canPromote = false;
-                                break;
-                            }
-                        }
-
-                        if (!canPromote)
-                            break;
-                    }
-
-                    if (!canPromote)
-                        continue;
-                }
-
                 // ResetIf or HitCount in an alt group may be disabled by a PauseIf, don't promote if
                 // any PauseIfs are not promoted
                 if (requirement.Requirements.Last().Type == RequirementType.ResetIf || 
