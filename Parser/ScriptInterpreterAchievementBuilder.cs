@@ -15,7 +15,6 @@ namespace RATools.Parser
         }
 
         private Stack<ValueModifier> _equalityModifiers;
-        private ConditionalExpression _delayedOrClause;
 
         /// <summary>
         /// Begins an new alt group.
@@ -29,6 +28,277 @@ namespace RATools.Parser
                 context.Trigger = newAlt;
                 AlternateRequirements.Add(newAlt);
             }
+        }
+
+        private static bool NormalizeNots(ref ExpressionBase expression, out ParseErrorExpression error)
+        {
+            error = null;
+
+            // not a condition - don't need to worry about it
+            var condition = expression as ConditionalExpression;
+            if (condition == null)
+                return true;
+
+            // not a not, just recurse
+            if (condition.Operation != ConditionalOperation.Not)
+            {
+                var left = condition.Left;
+                if (!NormalizeNots(ref left, out error))
+                    return false;
+
+                var right = condition.Right;
+                if (!NormalizeNots(ref right, out error))
+                    return false;
+
+                if (!ReferenceEquals(left, condition.Left) || !ReferenceEquals(right, condition.Right))
+                    expression = new ConditionalExpression(left, condition.Operation, right);
+
+                return true;
+            }
+
+            // found a not - eliminate it
+            var operand = ((ConditionalExpression)expression).Right;
+
+            // logical inversion
+            condition = operand as ConditionalExpression;
+            if (condition != null)
+            {
+                switch (condition.Operation)
+                {
+                    case ConditionalOperation.Not:
+                        // !(!A) => A
+                        expression = condition.Right;
+                        break;
+
+                    case ConditionalOperation.And:
+                        // !(A && B) => !A || !B
+                        expression = new ConditionalExpression(
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
+                            ConditionalOperation.Or,
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+                        break;
+
+                    case ConditionalOperation.Or:
+                        // !(A || B) => !A && !B
+                        expression = new ConditionalExpression(
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
+                            ConditionalOperation.And,
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+                        break;
+
+                    default:
+                        throw new NotImplementedException("Unsupported condition operation");
+                }
+
+                return NormalizeNots(ref expression, out error);
+            }
+
+            // comparative inversion
+            var comparison = operand as ComparisonExpression;
+            if (comparison != null)
+            {
+                // !(A == B) => A != B, !(A < B) => A >= B, ...
+                expression = new ComparisonExpression(
+                    comparison.Left,
+                    ComparisonExpression.GetOppositeComparisonOperation(comparison.Operation),
+                    comparison.Right);
+
+                return NormalizeNots(ref expression, out error);
+            }
+
+            // unsupported inversion
+            error = new ParseErrorExpression("! operator cannot be applied to " + operand.Type, operand);
+            return false;
+        }
+
+        private static void FlattenOrClause(ExpressionBase clause, List<ExpressionBase> flattened)
+        {
+            var condition = clause as ConditionalExpression;
+            if (condition != null && condition.Operation == ConditionalOperation.Or)
+            {
+                FlattenOrClause(condition.Left, flattened);
+                FlattenOrClause(condition.Right, flattened);
+            }
+            else
+            {
+                flattened.Add(clause);
+            }
+        }
+
+        private static ExpressionBase CrossMultiplyOrConditions(List<ExpressionBase> orConditions)
+        {
+            // This creates a combinatorial collection from one or more collections of OR'd conditions.
+            // Redundancies will be optimized out later.
+            //
+            // (A || B)                         => (A || B)
+            //
+            // (A || B) && C                    => (A && C) || (B && C)
+            //
+            // (A || B) && (C || D)             => (A && C) || (A && D) || (B && C) || (B && D)
+            //
+            // (A || B || C) && (D || E || F)   => (A && D) || (A && E) || (A && F) ||
+            //                                     (B && D) || (B && E) || (B && F) ||
+            //                                     (C && D) || (C && E) || (C && F)
+            //
+            // (A || B) && (C || D) && (E || F) => (A && C && E) ||
+            //                                     (A && C && F) ||
+            //                                     (A && D && E) ||
+            //                                     (A && D && F) ||
+            //                                     (B && C && E) ||
+            //                                     (B && C && F) ||
+            //                                     (B && D && E) ||
+            //                                     (B && D && F)
+            // ...
+
+            // first turn the OR trees into flat lists -- (A || (B || (C || D))) -> A, B, C, D
+            var flattenedClauses = new List<List<ExpressionBase>>();
+            foreach (var clause in orConditions)
+            {
+                var flattened = new List<ExpressionBase>();
+                FlattenOrClause(clause, flattened);
+                flattenedClauses.Add(flattened);
+            }
+
+            // then, create an alt group for every possible combination of items from each of the flattened lists
+            var numFlattendClauses = flattenedClauses.Count();
+            var partIndex = new int[numFlattendClauses];
+            var parts = new List<ExpressionBase>();
+            do
+            {
+                var andPart = flattenedClauses[numFlattendClauses - 1][partIndex[numFlattendClauses - 1]];
+                for (int clauseIndex = numFlattendClauses - 2; clauseIndex >= 0; clauseIndex--)
+                {
+                    var expression = flattenedClauses[clauseIndex][partIndex[clauseIndex]];
+                    andPart = new ConditionalExpression(expression, ConditionalOperation.And, andPart);
+                }
+
+                parts.Add(andPart);
+
+                int i = numFlattendClauses - 1;
+                do
+                {
+                    if (++partIndex[i] < flattenedClauses[i].Count)
+                        break;
+
+                    if (i == 0)
+                    {
+                        var orPart = parts[parts.Count - 1];
+                        for (i = parts.Count - 2; i >= 0; i--)
+                            orPart = new ConditionalExpression(parts[i], ConditionalOperation.Or, orPart);
+
+                        return orPart;
+                    }
+
+                    partIndex[i--] = 0;
+                } while (true);
+            } while (true);
+        }
+
+        private static ConditionalExpression BubbleUpOrs(ConditionalExpression condition)
+        {
+            bool modified = false;
+            bool hasChildOr = false;
+
+            ConditionalExpression left = condition.Left as ConditionalExpression;
+            if (left != null)
+            {
+                left = BubbleUpOrs(left);
+                modified |= !ReferenceEquals(left, condition.Left);
+                hasChildOr |= (left.Operation == ConditionalOperation.Or);
+            }
+
+            ConditionalExpression right = condition.Right as ConditionalExpression;
+            if (right != null)
+            {
+                right = BubbleUpOrs(right);
+                modified |= !ReferenceEquals(right, condition.Right);
+                hasChildOr |= (right.Operation == ConditionalOperation.Or);
+            }
+
+            if (modified)
+            {
+                var newCondition = new ConditionalExpression(
+                    left ?? condition.Left, condition.Operation, right ?? condition.Right);
+                condition.CopyLocation(newCondition);
+                condition = newCondition;
+            }
+
+            if (condition.Operation == ConditionalOperation.And && hasChildOr)
+            {
+                var orConditions = new List<ExpressionBase>();
+                orConditions.Add(left ?? condition.Left);
+                orConditions.Add(right ?? condition.Right);
+
+                var expression = CrossMultiplyOrConditions(orConditions);
+                return (ConditionalExpression)expression;
+            }
+
+            return condition;
+        }
+
+        private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ParseErrorExpression error)
+        {
+            var condition = expression as ConditionalExpression;
+            if (condition == null)
+            {
+                andedConditions.Add(expression);
+                error = null;
+                return true;
+            }
+
+            switch (condition.Operation)
+            {
+                case ConditionalOperation.And:
+                    if (!SortConditions(condition.Left, andedConditions, orConditions, out error))
+                        return false;
+                    if (!SortConditions(condition.Right, andedConditions, orConditions, out error))
+                        return false;
+                    break;
+
+                case ConditionalOperation.Or:
+                    condition = BubbleUpOrs(condition);
+                    orConditions.Add(condition);
+                    break;
+
+                default:
+                    error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
+                    return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+        internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
+        {
+            if (!NormalizeNots(ref expression, out error))
+                return false;
+
+            var andedConditions = new List<ExpressionBase>();
+            var orConditions = new List<ExpressionBase>();
+            if (!SortConditions(expression, andedConditions, orConditions, out error))
+                return false;
+
+            if (orConditions.Count() != 0)
+            {
+                var altPart = CrossMultiplyOrConditions(orConditions);
+                andedConditions.Add(altPart);
+            }
+
+            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
+            var innerScope = new InterpreterScope(scope) { Context = context };
+            foreach (var condition in andedConditions)
+            {
+                error = ExecuteAchievementExpression(condition, innerScope);
+                if (error != null)
+                {
+                    if (error.InnerError != null)
+                        error = new ParseErrorExpression(error.InnermostError.Message, error.Line, error.Column, error.EndLine, error.EndColumn);
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -50,37 +320,6 @@ namespace RATools.Parser
                 return error.Message;
 
             return null;
-        }
-
-        internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
-        {
-            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
-            var parentContext = scope.GetContext<TriggerBuilderContext>();
-            if (parentContext != null)
-                context.IsInNot = parentContext.IsInNot;
-
-            var innerScope = new InterpreterScope(scope) { Context = context };
-            error = ExecuteAchievementExpression(expression, innerScope);
-            if (error != null)
-            {
-                if (error.InnerError != null)
-                    error = new ParseErrorExpression(error.InnermostError.Message, error.Line, error.Column, error.EndLine, error.EndColumn);
-                return false;
-            }
-
-            if (_delayedOrClause != null)
-            {
-                BeginAlt(context);
-                error = ExecuteAchievementExpression(_delayedOrClause.Left, innerScope);
-                if (error != null)
-                    return false;
-                BeginAlt(context);
-                error = ExecuteAchievementExpression(_delayedOrClause.Right, innerScope);
-                if (error != null)
-                    return false;
-            }
-
-            return true;
         }
 
         private ParseErrorExpression ExecuteAchievementExpression(ExpressionBase expression, InterpreterScope scope)
@@ -109,21 +348,6 @@ namespace RATools.Parser
             }
 
             return new ParseErrorExpression("Cannot generate trigger from " + expression.Type, expression);
-        }
-
-        private ParseErrorExpression ExecuteAchievementExpressions(ICollection<ExpressionBase> expressions, InterpreterScope scope)
-        {
-            foreach (var expression in expressions)
-            {
-                var error = ExecuteAchievementExpression(expression, scope);
-                if (error != null)
-                    return error;
-
-                if (scope.IsComplete)
-                    break;
-            }
-
-            return null;
         }
 
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
@@ -259,48 +483,30 @@ namespace RATools.Parser
             switch (condition.Operation)
             {
                 case ConditionalOperation.Not:
-                    var innerScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext { Trigger = context.Trigger, IsInNot = !context.IsInNot } };
-                    error = ExecuteAchievementExpression(condition.Right, innerScope);
-                    if (error != null)
-                        return error;
-                    return null;
+                    return new ParseErrorExpression("! operator should have been normalized out", condition);
 
                 case ConditionalOperation.And:
-                    if (context.IsInNot)
-                        BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Left, scope);
                     if (error != null)
                         return error;
-                    if (context.IsInNot)
-                        BeginAlt(context);
+
                     error = ExecuteAchievementExpression(condition.Right, scope);
                     if (error != null)
                         return error;
+
                     return null;
 
                 case ConditionalOperation.Or:
-                    if (!context.IsInNot)
-                    {
-                        // make sure we have all the Core requirements defined before
-                        // we create the first alt group
-                        if (ReferenceEquals(context.Trigger, CoreRequirements))
-                        {
-                            if (_delayedOrClause != null)
-                                return new ParseErrorExpression("Multiple OR clauses cannot be ANDed together", condition);
-                            _delayedOrClause = condition;
-                            return null;
-                        }
-
-                        BeginAlt(context);
-                    }
+                    BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Left, scope);
                     if (error != null)
                         return error;
-                    if (!context.IsInNot)
-                        BeginAlt(context);
+
+                    BeginAlt(context);
                     error = ExecuteAchievementExpression(condition.Right, scope);
                     if (error != null)
                         return error;
+
                     return null;
             }
 
@@ -318,8 +524,6 @@ namespace RATools.Parser
             var right = comparison.Right;
 
             var op = GetRequirementOperator(comparison.Operation);
-            if (context.IsInNot)
-                op = GetOppositeRequirementOperator(op);
 
             if (left.Type == ExpressionType.IntegerConstant)
             {
@@ -501,20 +705,6 @@ namespace RATools.Parser
                 case ComparisonOperation.LessThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 case ComparisonOperation.GreaterThan: return RequirementOperator.GreaterThan;
                 case ComparisonOperation.GreaterThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
-                default: return RequirementOperator.None;
-            }
-        }
-
-        private static RequirementOperator GetOppositeRequirementOperator(RequirementOperator op)
-        {
-            switch (op)
-            {
-                case RequirementOperator.Equal: return RequirementOperator.NotEqual;
-                case RequirementOperator.NotEqual: return RequirementOperator.Equal;
-                case RequirementOperator.LessThan: return RequirementOperator.GreaterThanOrEqual;
-                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThan;
-                case RequirementOperator.GreaterThan: return RequirementOperator.LessThanOrEqual;
-                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThan;
                 default: return RequirementOperator.None;
             }
         }

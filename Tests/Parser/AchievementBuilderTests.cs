@@ -152,6 +152,8 @@ namespace RATools.Test.Parser
             // inputs /output makes reading the tests and validating the behavior easier for humans.
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);
+            if (expression is ParseErrorExpression)
+                Assert.Fail(((ParseErrorExpression)expression).Message);
 
             var achievement = new ScriptInterpreterAchievementBuilder();
             var error = achievement.PopulateFromExpression(expression);
@@ -330,6 +332,10 @@ namespace RATools.Test.Parser
         [TestCase("0 == 1", "0 == 1")] // always false
         [TestCase("1 == 1", "1 == 1")] // always true
         [TestCase("3 > 6", "0 == 1")] // always false
+        [TestCase("0 == 1 && byte(0x001234) == 1", "0 == 1")] // always false and anything is always false
+        [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
+        [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (0 == 1 && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
+                  "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && 0 == 1))")] // always_false paired with ResetIf does not eradicate the ResetIf
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
@@ -355,9 +361,9 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && never(byte(0x004568) == 0)) || (never(byte(0x004568) == 0) && once(byte(0x004569) == 1)))",
                   "byte(0x001234) == 1 && never(byte(0x004568) == 0) && (once(byte(0x004567) == 1) || once(byte(0x004569) == 1))")] // ResetIf in both alts is promoted to core
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))",
-                  "byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))")] // PauseIf in both alts is not promoted to core unless HitCounts are also promoted
+                  "byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))")] // PauseIf is not promoted if any part of group differs from other alts
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)))",
-                  "byte(0x001234) == 1 && unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)")] // PauseIf in both alts is promoted to core if all HitCounts are also promoted
+                  "byte(0x001234) == 1 && unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)")] // PauseIf in only promoted if entire group is duplicated in all alts
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) + byte(0x002346) == 2)) || (never(byte(0x002345) + byte(0x002347) == 2)))",
                   "once(byte(0x001234) == 1) && ((never((byte(0x002345) + byte(0x002346)) == 2)) || (never((byte(0x002345) + byte(0x002347)) == 2)))")] // partial AddSource cannot be promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
@@ -437,10 +443,63 @@ namespace RATools.Test.Parser
         // ==== Complex ====
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
+        [TestCase("0 == 1 && never(byte(0x001234) == 1)", "0 == 1")] // ResetIf without available HitCount inverted, then can be eliminated by always false
         public void TestOptimize(string input, string expected)
         {
             var achievement = CreateAchievement(input);
             achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
+        [Test]
+        // ==== Sanity Check ====
+        [TestCase("A == B", "A == B")]
+        // ==== NormalizeNots ====
+        [TestCase("!(A == B)", "A != B")]
+        [TestCase("!(A != B)", "A == B")]
+        [TestCase("!(A < B)", "A >= B")]
+        [TestCase("!(A <= B)", "A > B")]
+        [TestCase("!(A > B)", "A <= B")]
+        [TestCase("!(A >= B)", "A < B")]
+        [TestCase("!(A == 1 || B == 1)", "A != 1 && B != 1")]
+        [TestCase("!(A == 1 && B == 1)", "A != 1 || B != 1")]
+        [TestCase("!(!(A == B))", "A == B")]
+        [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
+        // ==== CrossMultiplyOrConditions ====
+        [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
+        [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
+        [TestCase("(A || B) && (A || C) && (B || C)",
+                  "(A && A && B) || (A && A && C) || (A && C && B) || (A && C && C) || " +
+                  "(B && A && B) || (B && A && C) || (B && C && B) || (B && C && C)")]
+        [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
+                  "(A && B && A && C) || (A && B && B && D) || (C && D && A && C) || (C && D && B && D)")]
+        [TestCase("(A || B || C) && (D || E || F)",
+                  "(A && D) || (A && E) || (A && F) || (B && D) || (B && E) || (B && F) || (C && D) || (C && E) || (C && F)")]
+        [TestCase("(A && (B || C)) && (D || E)",
+                  "A && ((B && D) || (B && E) || (C && D) || (C && E))")]
+        [TestCase("A && (B || (C && D)) && (E || F)",
+                  "A && ((B && E) || (B && F) || (C && D && E) || (C && D && F))")]
+        // ==== BubbleUpOrs ====
+        [TestCase("(((A || B) && C) || D) && (C || E)",
+                  "(A && C && C) || (A && C && E) || (B && C && C) || (B && C && E) || (D && C) || (D && E)")]
+        public void TestPopulateFromExpression(string input, string expected)
+        {
+            input = input.Replace("A", "byte(0x00000A)");
+            input = input.Replace("B", "byte(0x00000B)");
+            input = input.Replace("C", "byte(0x00000C)");
+            input = input.Replace("D", "byte(0x00000D)");
+            input = input.Replace("E", "byte(0x00000E)");
+            input = input.Replace("F", "byte(0x00000F)");
+
+            expected = expected.Replace("A", "byte(0x00000A)");
+            expected = expected.Replace("B", "byte(0x00000B)");
+            expected = expected.Replace("C", "byte(0x00000C)");
+            expected = expected.Replace("D", "byte(0x00000D)");
+            expected = expected.Replace("E", "byte(0x00000E)");
+            expected = expected.Replace("F", "byte(0x00000F)");
+
+            var achievement = CreateAchievement(input);
+            // NOTE: not optimized - that's tested separately in TestOptimize
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
         }
     }

@@ -23,11 +23,6 @@ namespace RATools.Parser
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether the trigger processing is currently within a NOT logical container.
-        /// </summary>
-        public bool IsInNot { get; set; }
-
-        /// <summary>
         /// Gets a serialized string for calculating a value from memory.
         /// </summary>
         /// <param name="expression">The expression to evaluate. May contain mathematic operations and memory accessors.</param>

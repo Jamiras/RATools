@@ -476,7 +476,7 @@ namespace RATools.Parser
 
         // ==== Optimize helpers ====
 
-        private static void NormalizeComparisons(ICollection<RequirementEx> requirements)
+        private static void NormalizeComparisons(IList<RequirementEx> requirements)
         {
             var alwaysTrue = new List<RequirementEx>();
             var alwaysFalse = new List<RequirementEx>();
@@ -628,8 +628,38 @@ namespace RATools.Parser
 
             if (alwaysFalse.Count > 0)
             {
-                // at least one requirement can never be true, replace the entire group with an always_false()
-                requirements.Clear();
+                // at least one requirement can never be true. replace the all non-PauseIf non-ResetIf conditions 
+                // with a single always_false()
+                for (int i = requirements.Count - 1; i >= 0; i--)
+                {
+                    var requirement = requirements[i];
+                    switch (requirement.Requirements.Last().Type)
+                    {
+                        case RequirementType.PauseIf:
+                            if (alwaysTrue.Contains(requirement))
+                            {
+                                // always True PauseIf ensures the group is always paused, so just replace the entire 
+                                // group with an always_false().
+                                requirements.Clear();
+                                i = 0;
+                            }
+                            else if (alwaysFalse.Contains(requirement))
+                            {
+                                requirements.RemoveAt(i);
+                            }
+                            break;
+
+                        case RequirementType.ResetIf:
+                            if (alwaysFalse.Contains(requirement))
+                                requirements.RemoveAt(i);
+                            break;
+
+                        default:
+                            requirements.RemoveAt(i);
+                            break;
+                    }
+                }
+
                 var requirementEx = new RequirementEx();
                 requirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
                 requirements.Add(requirementEx);
@@ -1148,6 +1178,7 @@ namespace RATools.Parser
             }
 
             // identify requirements present in all alt groups.
+            bool commonPauseIf = false;
             var requirementsFoundInAll = new List<RequirementEx>();
             for (int i = 0; i < groups[1].Count; i++)
             {
@@ -1173,36 +1204,33 @@ namespace RATools.Parser
                 }
 
                 if (foundInAll)
+                {
                     requirementsFoundInAll.Add(requirementI);
+
+                    if (requirementI.Requirements.Last().Type == RequirementType.PauseIf)
+                        commonPauseIf = true;
+                }
+            }
+
+            // PauseIf only affects the alt group that it's in, so it can only be promoted if the entire alt group is promoted
+            if (commonPauseIf)
+            {
+                bool canPromote = true;
+                for (int i = 1; i < groups.Count; i++)
+                {
+                    if (groups[i].Count != requirementsFoundInAll.Count)
+                    {
+                        canPromote = false;
+                        break;
+                    }
+                }
+
+                if (!canPromote)
+                    requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.PauseIf);
             }
 
             foreach (var requirement in requirementsFoundInAll)
             {
-                // PauseIf only affects the alt group that it's in, so it can only be promoted if all 
-                // the HitCounts in the alt group are also promoted
-                if (requirement.Requirements.Last().Type == RequirementType.PauseIf)
-                {
-                    bool canPromote = false;
-
-                    for (int i = 1; i < groups.Count; i++)
-                    {
-                        foreach (var requirementJ in groups[i])
-                        {
-                            if (requirementJ.Requirements.Last().HitCount > 0 && !requirementsFoundInAll.Contains(requirementJ))
-                            {
-                                canPromote = false;
-                                break;
-                            }
-                        }
-
-                        if (!canPromote)
-                            break;
-                    }
-
-                    if (!canPromote)
-                        continue;
-                }
-
                 // ResetIf or HitCount in an alt group may be disabled by a PauseIf, don't promote if
                 // any PauseIfs are not promoted
                 if (requirement.Requirements.Last().Type == RequirementType.ResetIf || 
@@ -1674,13 +1702,13 @@ namespace RATools.Parser
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(Process(_alts[i]));
 
-            // normalize BitX() methods to compare against 1
-            for (int i = groups.Count - 1; i >= 0; i--)
-                NormalizeComparisons(groups[i]);
-
             // convert ResetIfs and PauseIfs without HitCounts to standard requirements
             bool hasHitCount = HasHitCount(groups);
             NormalizeNonHitCountResetAndPauseIfs(groups, hasHitCount);
+
+            // normalize BitX() methods to compare against 1
+            for (int i = groups.Count - 1; i >= 0; i--)
+                NormalizeComparisons(groups[i]);
 
             // remove duplicates within a set of requirements
             RemoveDuplicates(groups[0], null);
