@@ -124,6 +124,8 @@ namespace RATools.Parser
                     requirement.Type = RequirementType.SubSource;
                 else if (tokenizer.Match("C:"))
                     requirement.Type = RequirementType.AddHits;
+                else if (tokenizer.Match("N:"))
+                    requirement.Type = RequirementType.AndNext;
 
                 requirement.Left = Field.Deserialize(tokenizer);
 
@@ -295,6 +297,7 @@ namespace RATools.Parser
                 case RequirementType.AddSource: builder.Append("A:"); break;
                 case RequirementType.SubSource: builder.Append("B:"); break;
                 case RequirementType.AddHits: builder.Append("C:"); break;
+                case RequirementType.AndNext: builder.Append("N:"); break;
             }
 
             requirement.Left.Serialize(builder);
@@ -321,7 +324,6 @@ namespace RATools.Parser
                     break;
             }
 
-
             if (requirement.HitCount > 0)
             {
                 builder.Append('.');
@@ -342,6 +344,7 @@ namespace RATools.Parser
                 var addSources = new StringBuilder();
                 var subSources = new StringBuilder();
                 var addHits = new StringBuilder();
+                var andNext = new StringBuilder();
                 bool isCombining = true;
                 do
                 {
@@ -362,6 +365,11 @@ namespace RATools.Parser
                             addHits.Append(" || ");
                             break;
 
+                        case RequirementType.AndNext:
+                            requirement.AppendString(andNext, NumberFormat.Decimal);
+                            andNext.Append(" && ");
+                            break;
+
                         default:
                             isCombining = false;
                             break;
@@ -380,7 +388,8 @@ namespace RATools.Parser
                 requirement.AppendString(definition, NumberFormat.Decimal,
                     addSources.Length > 0 ? addSources.ToString() : null,
                     subSources.Length > 0 ? subSources.ToString() : null,
-                    addHits.Length > 0 ? addHits.ToString() : null);
+                    addHits.Length > 0 ? addHits.ToString() : null,
+                    andNext.Length > 0 ? andNext.ToString() : null);
 
                 if (needsAmpersand)
                     builder.Append(" && ");
@@ -1659,6 +1668,7 @@ namespace RATools.Parser
                     case RequirementType.AddHits:
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
+                    case RequirementType.AndNext:
                         if (combiningRequirement)
                             continue;
 

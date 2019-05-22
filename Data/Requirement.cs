@@ -50,7 +50,7 @@ namespace RATools.Data
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null)
+            string addSources = null, string subSources = null, string addHits = null, string andNext = null)
         {
             if (HitCount == 1)
                 builder.Append("once(");
@@ -61,18 +61,18 @@ namespace RATools.Data
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 default:
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits);
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     break;
             }
 
@@ -81,7 +81,7 @@ namespace RATools.Data
         }
 
         internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null)
+            string addSources = null, string subSources = null, string addHits = null, string andNext = null)
         {
             if (!string.IsNullOrEmpty(addSources))
             {
@@ -95,6 +95,10 @@ namespace RATools.Data
             else if (!string.IsNullOrEmpty(addHits))
             {
                 builder.Append(addHits);
+            }
+            else if (!string.IsNullOrEmpty(andNext))
+            {
+                builder.Append(andNext);
             }
 
             switch (Type)
@@ -301,5 +305,10 @@ namespace RATools.Data
         /// Adds the HitsCounts from this requirement to the next requirement.
         /// </summary>
         AddHits,
+
+        /// <summary>
+        /// This requirement must also be true for the next requirement to be true.
+        /// </summary>
+        AndNext,
     }
 }
