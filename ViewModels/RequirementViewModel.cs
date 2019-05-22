@@ -17,29 +17,37 @@ namespace RATools.ViewModels
             {
                 UpdateDefinition(numberFormat);
 
-                if (!requirement.Right.IsMemoryReference ||
-                    (requirement.Left.IsMemoryReference && requirement.Left.Value == requirement.Right.Value))
+                if (requirement.Left.IsMemoryReference)
                 {
-                    string note;
-                    if (requirement.Left.IsMemoryReference && notes.TryGetValue((int)requirement.Left.Value, out note))
-                        Notes = note;
-                }
-                else
-                {
-                    var builder = new StringBuilder();
-
-                    string note;
-                    if (requirement.Left.Type != FieldType.Value && notes.TryGetValue((int)requirement.Left.Value, out note))
-                        builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
-
-                    if (requirement.Right.Type != FieldType.Value && notes.TryGetValue((int)requirement.Right.Value, out note))
+                    if (requirement.Right.IsMemoryReference && requirement.Left.Value != requirement.Right.Value)
                     {
-                        if (builder.Length > 0)
-                            builder.AppendLine();
-                        builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note);
-                    }
+                        var builder = new StringBuilder();
 
-                    Notes = builder.ToString();
+                        string note;
+                        if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
+
+                        if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                        {
+                            if (builder.Length > 0)
+                                builder.AppendLine();
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note);
+                        }
+
+                        Notes = builder.ToString();
+                    }
+                    else
+                    {
+                        string note;
+                        if (requirement.Left.IsMemoryReference && notes.TryGetValue((int)requirement.Left.Value, out note))
+                            Notes = note;
+                    }
+                }
+                else if (requirement.Right.IsMemoryReference)
+                {
+                    string note;
+                    if (requirement.Right.IsMemoryReference && notes.TryGetValue((int)requirement.Right.Value, out note))
+                        Notes = note;
                 }
             }
         }
