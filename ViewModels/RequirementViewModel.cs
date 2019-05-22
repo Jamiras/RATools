@@ -17,12 +17,11 @@ namespace RATools.ViewModels
             {
                 UpdateDefinition(numberFormat);
 
-                if (requirement.Right.Type == FieldType.Value ||
-                    requirement.Right.Type == FieldType.None ||
-                    (requirement.Right.Type == FieldType.PreviousValue && requirement.Right.Value == requirement.Left.Value))
+                if (!requirement.Right.IsMemoryReference ||
+                    (requirement.Left.IsMemoryReference && requirement.Left.Value == requirement.Right.Value))
                 {
                     string note;
-                    if (requirement.Left.Type != FieldType.Value && notes.TryGetValue((int)requirement.Left.Value, out note))
+                    if (requirement.Left.IsMemoryReference && notes.TryGetValue((int)requirement.Left.Value, out note))
                         Notes = note;
                 }
                 else
