@@ -39,14 +39,14 @@ namespace RATools.ViewModels
                     else
                     {
                         string note;
-                        if (requirement.Left.IsMemoryReference && notes.TryGetValue((int)requirement.Left.Value, out note))
+                        if (notes.TryGetValue((int)requirement.Left.Value, out note))
                             Notes = note;
                     }
                 }
                 else if (requirement.Right.IsMemoryReference)
                 {
                     string note;
-                    if (requirement.Right.IsMemoryReference && notes.TryGetValue((int)requirement.Right.Value, out note))
+                    if (notes.TryGetValue((int)requirement.Right.Value, out note))
                         Notes = note;
                 }
             }
