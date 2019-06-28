@@ -4,13 +4,17 @@ using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class PrevFunction : TriggerBuilderContext.FunctionDefinition
+    internal class PrevPriorFunction : TriggerBuilderContext.FunctionDefinition
     {
-        public PrevFunction()
-            : base("prev")
+        public PrevPriorFunction(string name, FieldType fieldType)
+            : base(name)
         {
+            _fieldType = fieldType;
+
             Parameters.Add(new VariableDefinitionExpression("accessor"));
         }
+
+        private readonly FieldType _fieldType;
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -77,7 +81,7 @@ namespace RATools.Parser.Functions
                 return error;
 
             var left = context.LastRequirement.Left;
-            context.LastRequirement.Left = new Field { Size = left.Size, Type = FieldType.PreviousValue, Value = left.Value };
+            context.LastRequirement.Left = new Field { Size = left.Size, Type = _fieldType, Value = left.Value };
             return null;
         }
     }

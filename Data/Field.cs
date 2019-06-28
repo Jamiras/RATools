@@ -95,10 +95,12 @@ namespace RATools.Data
 
             if (Type == FieldType.PreviousValue)
                 builder.Append("prev(");
+            else if (Type == FieldType.PriorValue)
+                builder.Append("prior(");
 
             AppendMemoryReference(builder, Value, Size);
 
-            if (Type == FieldType.PreviousValue)
+            if (Type == FieldType.PreviousValue || Type == FieldType.PriorValue)
                 builder.Append(')');
         }
 
@@ -145,6 +147,26 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets whether or not the field references memory.
+        /// </summary>
+        public bool IsMemoryReference
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case FieldType.MemoryAddress:
+                    case FieldType.PreviousValue:
+                    case FieldType.PriorValue:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Appends the serialized field to the <paramref name="builder"/>
         /// </summary>
         /// <remarks>
@@ -160,6 +182,8 @@ namespace RATools.Data
 
             if (Type == FieldType.PreviousValue)
                 builder.Append('d');
+            else if (Type == FieldType.PriorValue)
+                builder.Append('p');
 
             builder.Append("0x");
 
@@ -194,6 +218,11 @@ namespace RATools.Data
             if (tokenizer.NextChar == 'd')
             {
                 fieldType = FieldType.PreviousValue;
+                tokenizer.Advance();
+            }
+            else if (tokenizer.NextChar == 'p')
+            {
+                fieldType = FieldType.PriorValue;
                 tokenizer.Advance();
             }
 
@@ -384,6 +413,11 @@ namespace RATools.Data
         /// The previous value at a memory address.
         /// </summary>
         PreviousValue = 2, // Delta
+
+        /// <summary>
+        /// The last differing value at a memory address.
+        /// </summary>
+        PriorValue = 4, // Prior
     }
 
     /// <summary>

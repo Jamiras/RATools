@@ -128,14 +128,14 @@ namespace RATools.ViewModels
                         if (requirement.Requirement == null)
                             continue;
 
-                        if (requirement.Requirement.Left != null && (requirement.Requirement.Left.Type == FieldType.MemoryAddress || requirement.Requirement.Left.Type == FieldType.PreviousValue))
+                        if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
                         {
                             var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
                             if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
                                 dumpAchievement.MemoryAddresses.Add(memoryItem);
                         }
 
-                        if (requirement.Requirement.Right != null && (requirement.Requirement.Right.Type == FieldType.MemoryAddress || requirement.Requirement.Right.Type == FieldType.PreviousValue))
+                        if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
                         {
                             var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
                             if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))

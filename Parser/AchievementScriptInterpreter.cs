@@ -78,7 +78,8 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MemoryAccessorFunction("dword", FieldSize.DWord));
                 _globalScope.AddFunction(new BitFunction());
 
-                _globalScope.AddFunction(new PrevFunction());
+                _globalScope.AddFunction(new PrevPriorFunction("prev", FieldType.PreviousValue));
+                _globalScope.AddFunction(new PrevPriorFunction("prior", FieldType.PriorValue));
 
                 _globalScope.AddFunction(new OnceFunction());
                 _globalScope.AddFunction(new RepeatedFunction());

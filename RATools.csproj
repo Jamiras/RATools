@@ -69,7 +69,7 @@
     <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceDisplayFunction.cs" />
     <Compile Include="Parser\Functions\LeaderboardFunction.cs" />
-    <Compile Include="Parser\Functions\PrevFunction.cs" />
+    <Compile Include="Parser\Functions\PrevPriorFunction.cs" />
     <Compile Include="Parser\Functions\RepeatedFunction.cs" />
     <Compile Include="Parser\Functions\OnceFunction.cs" />
     <Compile Include="Parser\Functions\MemoryAccessorFunction.cs" />
