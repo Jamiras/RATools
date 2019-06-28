@@ -109,13 +109,26 @@ namespace RATools.ViewModels
 
         private void UpdateDefinition(NumberFormat numberFormat)
         {
+            Definition = BuildDefinition(Requirement, numberFormat);
+        }
+
+        protected static string BuildDefinition(Requirement requirement, NumberFormat numberFormat)
+        {
             var builder = new StringBuilder();
-            if (Requirement.Type == RequirementType.AddHits)
-                builder.Append("AddHits ");
+            switch (requirement.Type)
+            {
+                case RequirementType.AddHits:
+                    builder.Append("AddHits ");
+                    break;
 
-            Requirement.AppendString(builder, numberFormat);
+                case RequirementType.AndNext:
+                    builder.Append("AndNext ");
+                    break;
+            }
 
-            if (Requirement.Type == RequirementType.SubSource)
+            requirement.AppendString(builder, numberFormat);
+
+            if (requirement.Type == RequirementType.SubSource)
             {
                 // change " - " to "-" and add " + " to the end
                 builder.Remove(0, 1);
@@ -123,7 +136,7 @@ namespace RATools.ViewModels
                 builder.Append(" + ");
             }
 
-            Definition = builder.ToString();
+            return builder.ToString();
         }
     }
 }

@@ -51,9 +51,7 @@ namespace RATools.ViewModels
 
         private void UpdateOtherDefinition(NumberFormat numberFormat)
         {
-            var builder = new StringBuilder();
-            CompareRequirement.AppendString(builder, numberFormat);
-            OtherDefinition = builder.ToString();
+            OtherDefinition = BuildDefinition(CompareRequirement, numberFormat);
         }
     }
 }

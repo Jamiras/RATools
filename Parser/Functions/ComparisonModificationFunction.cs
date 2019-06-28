@@ -42,6 +42,16 @@ namespace RATools.Parser.Functions
             if (builder.AlternateRequirements.Count > 0)
                 return new ParseErrorExpression(Name.Name + " does not support ||'d conditions", condition);
 
+            if (builder.CoreRequirements.Count > 1)
+            {
+                var last = builder.CoreRequirements.Last();
+                foreach (var requirement in builder.CoreRequirements)
+                {
+                    if (requirement.Type == RequirementType.None && !ReferenceEquals(requirement, last))
+                        requirement.Type = RequirementType.AndNext;
+                }
+            }
+
             ParseErrorExpression error = ValidateSingleCondition(builder.CoreRequirements);
             if (error != null)
                 return new ParseErrorExpression(error, condition);
@@ -59,12 +69,13 @@ namespace RATools.Parser.Functions
         protected ParseErrorExpression ValidateSingleCondition(ICollection<Requirement> requirements)
         {
             if (requirements.Count == 0 ||
-                requirements.Last().Operator == RequirementOperator.None)
+                requirements.Last().Operator == RequirementOperator.None ||
+                requirements.Last().Type != RequirementType.None)
             {
                 return new ParseErrorExpression("comparison did not evaluate to a valid comparison");
             }
 
-            if (requirements.Count(r => r.Operator != RequirementOperator.None) != 1)
+            if (requirements.Count(r => r.Type == RequirementType.None) != 1)
                 return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
 
             return null;
