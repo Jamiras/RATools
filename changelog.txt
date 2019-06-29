@@ -1,3 +1,8 @@
+v1.6.1 - 28 Jun 2019
+* support for &&'d conditions inside once(), repeated(), never(), and unless() [AndNext]
+* add prior() function for memory access
+* support for multiple OR'd groups AND'd together
+
 v1.6.0 - 16 Apr 2019
 * upgrade to .NET 4.0
 * separate trigger clause evaluation from code generation
