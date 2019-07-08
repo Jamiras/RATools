@@ -73,13 +73,15 @@ namespace RATools.ViewModels
             int gameId = GameId.Value.GetValueOrDefault();
             foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
             {
-                var notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes.json");
+                var dataDirectory = Path.Combine(directory, "RACache", "Data");
+
+                var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
                 if (!File.Exists(notesFile))
-                    notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes2.txt");
+                    notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
 
                 if (File.Exists(notesFile))
                 {
-                    LoadGame(gameId, directory);
+                    LoadGame(gameId, dataDirectory);
                     return;
                 }
             }

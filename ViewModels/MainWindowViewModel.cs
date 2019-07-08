@@ -265,22 +265,16 @@ namespace RATools.ViewModels
 
             foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
             {
-                var notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes2.txt");
+                var dataDirectory = Path.Combine(directory, "RACache", "Data");
+
+                var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
+                if (!File.Exists(notesFile))
+                    notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
+
                 if (File.Exists(notesFile))
                 {
-                    logger.WriteVerbose("Found code notes in " + directory);
-
-                    viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
-                }
-                else
-                {
-                    notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes.json");
-                    if (File.Exists(notesFile))
-                    {
-                        logger.WriteVerbose("Found code notes in " + directory);
-
-                        viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
-                    }
+                    logger.WriteVerbose("Found code notes in " + dataDirectory);
+                    viewModel = new GameViewModel(gameId, gameTitle, dataDirectory);
                 }
             }
 
