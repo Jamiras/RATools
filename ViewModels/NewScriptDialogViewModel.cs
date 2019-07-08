@@ -84,7 +84,8 @@ namespace RATools.ViewModels
                 }
             }
 
-            MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+            MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId + ".\n\n" +
+                "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
             return;
         }
 
