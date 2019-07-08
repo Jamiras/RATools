@@ -332,6 +332,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) > 256", "always_false()")] // can never be true
         [TestCase("byte(0x001234) < 256", "always_true()")] // always true
         [TestCase("byte(0x001234) == prev(byte(0x001234))", "byte(0x001234) == prev(byte(0x001234))")] // non-deterministic
+        [TestCase("byte(0x001234) == word(0x001234)", "byte(0x001234) == word(0x001234)")] // non-deterministic
         [TestCase("byte(0x001234) == byte(0x001234)", "always_true()")] // always true
         [TestCase("byte(0x001234) != byte(0x001234)", "always_false()")] // never true
         [TestCase("byte(0x001234) <= byte(0x001234)", "always_true()")] // always true

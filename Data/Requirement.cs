@@ -170,10 +170,10 @@ namespace RATools.Data
 
             bool result = false;
 
-            if (Left.Type != FieldType.Value)
+            if (Left.IsMemoryReference)
             {
                 // memory reference - can only be equal or not equal to same memory reference
-                if (Left.Value != Right.Value)
+                if (Left.Value != Right.Value || Left.Size != Right.Size)
                     return null;
 
                 // same memory reference in the same frame is always equal
