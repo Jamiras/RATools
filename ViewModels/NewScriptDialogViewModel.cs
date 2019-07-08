@@ -684,14 +684,21 @@ namespace RATools.ViewModels
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
                     const int indent = 14; // "    trigger = ".length
-                    DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
+
+                    bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
+                    if (!isCoreEmpty)
+                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
+
                     first = true;
                     while (groupEnumerator.MoveNext())
                     {
                         if (first)
                         {
-                            stream.WriteLine(" &&");
-                            stream.Write(new string(' ', indent));
+                            if (!isCoreEmpty)
+                            {
+                                stream.WriteLine(" &&");
+                                stream.Write(new string(' ', indent));
+                            }
                             stream.Write("((");
                             first = false;
                         }
@@ -718,7 +725,7 @@ namespace RATools.ViewModels
         private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
             RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent)
         {
-            const int MaxWidth = 106; // 120 - "    trigger = ".Length
+            const int MaxWidth = 120;
 
             var definition = new StringBuilder();
             Parser.AchievementBuilder.AppendStringGroup(definition, 

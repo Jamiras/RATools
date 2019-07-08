@@ -90,12 +90,6 @@ namespace RATools.Parser
         {
             var core = _core.ToArray();
 
-            // if core is empty and any alts exist, add an always_true condition to the core for compatibility
-            // with legacy RetroArch parsing. duplicates functionality in SerializeRequirements so the 
-            // condition will appear in the editor
-            if (core.Length == 0 && _alts.Any())
-                core = new Requirement[] { AlwaysTrueFunction.CreateAlwaysTrueRequirement() };
-
             var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = core, Id = Id, BadgeName = BadgeName };
             var alts = new Requirement[_alts.Count][];
             for (int i = 0; i < _alts.Count; i++)
@@ -339,7 +333,7 @@ namespace RATools.Parser
             NumberFormat numberFormat, int wrapWidth, int indent = 14)
         {
             bool needsAmpersand = false;
-            int width = wrapWidth;
+            int width = wrapWidth - indent;
 
             var enumerator = group.GetEnumerator();
             while (enumerator.MoveNext())
@@ -430,14 +424,14 @@ namespace RATools.Parser
                     builder.AppendLine();
                     builder.Append(' ', indent);
                     definition.Remove(0, index);
-                    width = wrapWidth;
+                    width = wrapWidth - indent;
                 }
 
                 if (width - definition.Length < 0)
                 {
                     builder.AppendLine();
                     builder.Append(' ', indent);
-                    width = wrapWidth;
+                    width = wrapWidth - indent;
                 }
 
                 width -= definition.Length;
