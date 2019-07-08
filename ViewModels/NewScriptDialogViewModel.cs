@@ -590,6 +590,9 @@ namespace RATools.ViewModels
                         }
                         hadFunction = true;
 
+                        if (memoryItem.FunctionName.EndsWith("()"))
+                            memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
+
                         stream.Write("function ");
                         stream.Write(memoryItem.FunctionName);
                         stream.Write("() => ");
@@ -680,23 +683,26 @@ namespace RATools.ViewModels
                     var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
                     groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
-                    DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat);
+                    const int indent = 14; // "    trigger = ".length
+                    DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
                     first = true;
                     while (groupEnumerator.MoveNext())
                     {
                         if (first)
                         {
                             stream.WriteLine(" &&");
-                            stream.Write("              ((");
+                            stream.Write(new string(' ', indent));
+                            stream.Write("((");
                             first = false;
                         }
                         else
                         {
                             stream.WriteLine(" ||");
-                            stream.Write("               (");
+                            stream.Write(new string(' ', indent));
+                            stream.Write(" (");
                         }
 
-                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat);
+                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent + 2);
                         stream.Write(")");
                     }
                     if (!first)
@@ -710,99 +716,22 @@ namespace RATools.ViewModels
         }
 
         private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
-            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat)
+            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent)
         {
-            bool needsAmpersand = false;
             const int MaxWidth = 106; // 120 - "    trigger = ".Length
-            int width = MaxWidth;
 
-            var requirementEnumerator = requirementGroupViewModel.Requirements.GetEnumerator();
-            while (requirementEnumerator.MoveNext())
+            var definition = new StringBuilder();
+            Parser.AchievementBuilder.AppendStringGroup(definition, 
+                requirementGroupViewModel.Requirements.Select(r => r.Requirement), numberFormat, MaxWidth, indent);
+
+            foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
             {
-                if (String.IsNullOrEmpty(requirementEnumerator.Current.Definition))
-                    continue;
-
-                var addSources = new StringBuilder();
-                var subSources = new StringBuilder();
-                var addHits = new StringBuilder();
-                bool isCombining = true;
-                do
-                {
-                    switch (requirementEnumerator.Current.Requirement.Type)
-                    {
-                        case RequirementType.AddSource:
-                            requirementEnumerator.Current.Requirement.Left.AppendString(addSources, numberFormat);
-                            addSources.Append(" + ");
-                            break;
-
-                        case RequirementType.SubSource:
-                            subSources.Append(" - ");
-                            requirementEnumerator.Current.Requirement.Left.AppendString(subSources, numberFormat);
-                            break;
-
-                        case RequirementType.AddHits:
-                            requirementEnumerator.Current.Requirement.AppendString(addHits, numberFormat);
-                            addHits.Append(" || ");
-                            break;
-
-                        default:
-                            isCombining = false;
-                            break;
-                    }
-
-                    if (!isCombining)
-                        break;
-
-                    if (!requirementEnumerator.MoveNext())
-                        return;
-                } while (true);
-
-                var definition = new StringBuilder();
-                requirementEnumerator.Current.Requirement.AppendString(definition, numberFormat, 
-                    addSources.Length > 0 ? addSources.ToString() : null, 
-                    subSources.Length > 0 ? subSources.ToString() : null,
-                    addHits.Length > 0 ? addHits.ToString() : null);
-
-                foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
-                {
-                    var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                    var functionCall = memoryItem.FunctionName + "()";
-                    definition.Replace(memoryReference, functionCall);
-                }
-
-                if (needsAmpersand)
-                {
-                    stream.Write(" && ");
-                    width -= 4;
-                }
-                else
-                {
-                    needsAmpersand = true;
-                }
-
-                while (definition.Length > MaxWidth)
-                {
-                    var index = width;
-                    while (index > 0 && definition[index] != ' ')
-                        index--;
-
-                    stream.Write(definition.ToString().Substring(0, index));
-                    stream.WriteLine();
-                    stream.Write("              ");
-                    definition.Remove(0, index);
-                    width = MaxWidth;
-                }
-
-                if (width - definition.Length < 0)
-                {
-                    stream.WriteLine();
-                    stream.Write("              ");
-                    width = MaxWidth;
-                }
-
-                width -= definition.Length;
-                stream.Write(definition.ToString());
+                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                var functionCall = memoryItem.FunctionName + "()";
+                definition.Replace(memoryReference, functionCall);
             }
+
+            stream.Write(definition.ToString());
         }
     }
 }

@@ -157,6 +157,76 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Determines if the requirement always evaluates true or false.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if the requirement is always true, <c>false</c> if it's always false, or 
+        /// <c>null</c> if the result cannot be determined at this time.
+        /// </returns>
+        public bool? Evaluate()
+        {
+            if (Left.Type != Right.Type)
+                return null;
+
+            bool result = false;
+
+            if (Left.Type != FieldType.Value)
+            {
+                // memory reference - can only be equal or not equal to same memory reference
+                if (Left.Value != Right.Value)
+                    return null;
+
+                // same memory reference in the same frame is always equal
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                    case RequirementOperator.GreaterThanOrEqual:
+                    case RequirementOperator.LessThanOrEqual:
+                        result = true;
+                        break;
+
+                    default:
+                        result = false;
+                        break;
+                }
+            }
+            else
+            {
+                // comparing constants
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                        result = (Left.Value == Right.Value);
+                        break;
+                    case RequirementOperator.NotEqual:
+                        result = (Left.Value != Right.Value);
+                        break;
+                    case RequirementOperator.LessThan:
+                        result = (Left.Value < Right.Value);
+                        break;
+                    case RequirementOperator.LessThanOrEqual:
+                        result = (Left.Value <= Right.Value);
+                        break;
+                    case RequirementOperator.GreaterThan:
+                        result = (Left.Value > Right.Value);
+                        break;
+                    case RequirementOperator.GreaterThanOrEqual:
+                        result = (Left.Value >= Right.Value);
+                        break;
+                    default:
+                        result = false;
+                        break;
+                }
+            }
+
+            // even if the condition is always true, if there's a target hit count, it won't be true initially.
+            if (result && HitCount > 1)
+                return null;
+
+            return result;
+        }
+
+        /// <summary>
         /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
         /// <param name="obj">The <see cref="System.Object" /> to compare with this instance.</param>
