@@ -3,7 +3,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:RATools.Views"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>
@@ -17,7 +16,6 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -37,37 +35,5 @@
                 <TextBlock Text="{Binding SourceLink}" />
             </Hyperlink>
         </TextBlock>
-
-        <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,4,0,0">
-            <Border BorderThickness="1" Height="1" BorderBrush="LightGray" />
-            <TextBlock Text="Data Directories" FontSize="10" Foreground="Gray"/>
-            <ItemsControl ItemsSource="{Binding DataDirectories}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="16" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-                            <TextBlock HorizontalAlignment="Center" FontSize="10">
-                                <TextBlock.Style>
-                                    <Style TargetType="{x:Type TextBlock}">
-                                        <Setter Property="Foreground" Value="#00D040" />
-                                        <Setter Property="Text" Value="&#10003;" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding Id}" Value="0">
-                                                <Setter Property="Foreground" Value="#E04040" />
-                                                <Setter Property="Text" Value="&#10008;" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                            <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="10" Foreground="Gray" Margin="0,0,4,0"/>
-                        </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </StackPanel>
     </Grid>
 </UserControl>

@@ -71,11 +71,11 @@ namespace RATools.ViewModels
         private void Search()
         {
             int gameId = GameId.Value.GetValueOrDefault();
-            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
             {
-                var notesFile = Path.Combine(directory, gameId + "-Notes.json");
+                var notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes.json");
                 if (!File.Exists(notesFile))
-                    notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                    notesFile = Path.Combine(directory, "RACache", "Data", gameId + "-Notes2.txt");
 
                 if (File.Exists(notesFile))
                 {

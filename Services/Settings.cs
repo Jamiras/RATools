@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using Jamiras.IO;
 using Jamiras.Services;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -23,14 +24,30 @@ namespace RATools.Services
             var hexValues = persistance.GetValue("HexValues");
             _hexValues = (hexValues == "1");
 
-            DataDirectories = new string[0];
+            EmulatorDirectories = new string[0];
             UserName = "RATools";
 
             var file = new IniFile("RATools.ini");
             try
             {
                 var values = file.Read();
-                DataDirectories = values["RACacheDirectory"].Split(';');
+
+                string emulatorDirectories;
+                if (values.TryGetValue("EmulatorDirectories", out emulatorDirectories))
+                {
+                    EmulatorDirectories = new List<string>(emulatorDirectories.Split(';'));
+                }
+                else
+                {
+                    EmulatorDirectories = new List<string>();
+                    foreach (var path in values["RACacheDirectory"].Split(';'))
+                    {
+                        if (path.EndsWith("RACache\\Data", StringComparison.OrdinalIgnoreCase))
+                            EmulatorDirectories.Add(path.Substring(0, path.Length - 13));
+                        else
+                            EmulatorDirectories.Add(path);
+                    }
+                }
 
                 string user;
                 if (values.TryGetValue("User", out user) && user.Length > 0)
@@ -47,11 +64,37 @@ namespace RATools.Services
 
         private readonly IPersistantDataRepository _persistance;
 
-        public IEnumerable<string> DataDirectories { get; private set; }
+        public void Save()
+        {
+            var file = new IniFile("RATools.ini");
+            IDictionary<string, string> values;
+            try
+            {
+                values = file.Read();
+            }
+            catch (FileNotFoundException)
+            {
+                values = new Dictionary<string, string>();
+            }
 
-        public string UserName { get; private set; }
+            values["User"] = UserName;
+            values["ApiKey"] = ApiKey;
+            values["EmulatorDirectories"] = string.Join(";", EmulatorDirectories);
 
-        public string ApiKey { get; private set; }
+            values.Remove("RACacheDirectory");
+
+            file.Write(values);
+        }
+
+        public IList<string> EmulatorDirectories { get; private set; }
+        IEnumerable<string> ISettings.EmulatorDirectories
+        {
+            get { return EmulatorDirectories; }
+        }
+
+        public string UserName { get; set; }
+
+        public string ApiKey { get; set; }
 
         public bool HexValues
         {
@@ -65,6 +108,7 @@ namespace RATools.Services
                 }
             }
         }
+
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private bool _hexValues;
     }
