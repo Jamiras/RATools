@@ -24,7 +24,7 @@ namespace RATools.Services
             var hexValues = persistance.GetValue("HexValues");
             _hexValues = (hexValues == "1");
 
-            EmulatorDirectories = new string[0];
+            EmulatorDirectories = new List<string>();
             UserName = "RATools";
 
             var file = new IniFile("RATools.ini");
@@ -37,10 +37,9 @@ namespace RATools.Services
                 {
                     EmulatorDirectories = new List<string>(emulatorDirectories.Split(';'));
                 }
-                else
+                else if (values.TryGetValue("RACacheDirectory", out emulatorDirectories))
                 {
-                    EmulatorDirectories = new List<string>();
-                    foreach (var path in values["RACacheDirectory"].Split(';'))
+                    foreach (var path in emulatorDirectories.Split(';'))
                     {
                         if (path.EndsWith("RACache\\Data", StringComparison.OrdinalIgnoreCase))
                             EmulatorDirectories.Add(path.Substring(0, path.Length - 13));
@@ -78,8 +77,16 @@ namespace RATools.Services
             }
 
             values["User"] = UserName;
-            values["ApiKey"] = ApiKey;
-            values["EmulatorDirectories"] = string.Join(";", EmulatorDirectories);
+
+            if (String.IsNullOrEmpty(ApiKey))
+                values.Remove("ApiKey");
+            else
+                values["ApiKey"] = ApiKey;
+
+            if (EmulatorDirectories.Count == 0)
+                values.Remove("EmulatorDirectories");
+            else
+                values["EmulatorDirectories"] = string.Join(";", EmulatorDirectories);
 
             values.Remove("RACacheDirectory");
 
