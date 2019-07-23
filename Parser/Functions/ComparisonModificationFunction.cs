@@ -69,14 +69,30 @@ namespace RATools.Parser.Functions
         protected ParseErrorExpression ValidateSingleCondition(ICollection<Requirement> requirements)
         {
             if (requirements.Count == 0 ||
-                requirements.Last().Operator == RequirementOperator.None ||
-                requirements.Last().Type != RequirementType.None)
+                requirements.Last().Operator == RequirementOperator.None)
             {
                 return new ParseErrorExpression("comparison did not evaluate to a valid comparison");
             }
 
-            if (requirements.Count(r => r.Type == RequirementType.None) != 1)
-                return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
+            bool isCombining = true;
+            foreach (var requirement in requirements)
+            {
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                    case RequirementType.AndNext:
+                        isCombining = true;
+                        break;
+
+                    default:
+                        if (!isCombining)
+                            return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
+                        isCombining = false;
+                        break;
+                }
+            }
 
             return null;
         }

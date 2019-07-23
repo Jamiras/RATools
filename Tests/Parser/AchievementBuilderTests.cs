@@ -341,6 +341,8 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) > byte(0x001234)", "always_false()")] // never true
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, byte(0x001234) == byte(0x001234))")] // always true, but ignored for two frames
+        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
         [TestCase("0 < 256", "always_true()")] // always true
         [TestCase("0 == 1", "always_false()")] // always false
         [TestCase("1 == 1", "always_true()")] // always true

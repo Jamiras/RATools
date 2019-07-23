@@ -541,9 +541,10 @@ namespace RATools.Parser
 
                 if (requirement.Left.Type == FieldType.Value)
                 {
-                    if (requirement.Evaluate() == true)
+                    var result = requirement.Evaluate();
+                    if (result == true)
                         alwaysTrue.Add(requirementEx);
-                    else
+                    else if (result == false)
                         alwaysFalse.Add(requirementEx);
 
                     continue;
