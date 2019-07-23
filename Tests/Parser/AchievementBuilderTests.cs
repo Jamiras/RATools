@@ -449,6 +449,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
         [TestCase("0 == 1 && never(byte(0x001234) == 1)", "0 == 1")] // ResetIf without available HitCount inverted, then can be eliminated by always false
+        [TestCase("byte(0x001234) == 1 && never(repeated(2, 1 == 1))", "byte(0x001234) == 1 && repeated(2, never(1 == 1))")]
         public void TestOptimize(string input, string expected)
         {
             var achievement = CreateAchievement(input);

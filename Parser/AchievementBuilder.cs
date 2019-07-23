@@ -501,8 +501,12 @@ namespace RATools.Parser
 
                 if (requirement.Left.Type == FieldType.Value)
                 {
+
                     if (Evaluate(requirement))
-                        alwaysTrue.Add(requirementEx);
+                    {
+                        if (requirement.Type != RequirementType.ResetIf && requirement.Type != RequirementType.PauseIf)
+                            alwaysTrue.Add(requirementEx);
+                    }
                     else
                         alwaysFalse.Add(requirementEx);
 
@@ -675,6 +679,7 @@ namespace RATools.Parser
             }
             else if (alwaysTrue.Count > 0)
             {
+                var maxHitCount = alwaysTrue.Max(rEx => rEx.Requirements.Max(r => r.HitCount));
                 foreach (var requirementEx in alwaysTrue)
                     requirements.Remove(requirementEx);
 
@@ -682,6 +687,7 @@ namespace RATools.Parser
                 {
                     var requirementEx = new RequirementEx();
                     requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                    requirementEx.Requirements[0].HitCount = maxHitCount;
                     requirements.Add(requirementEx);
                 }
             }
