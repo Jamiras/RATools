@@ -52,32 +52,44 @@ namespace RATools.Data
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
             string addSources = null, string subSources = null, string addHits = null, string andNext = null)
         {
-            if (HitCount == 1)
-                builder.Append("once(");
-            else if (HitCount > 0)
-                builder.AppendFormat("repeated({0}, ", HitCount);
-
             switch (Type)
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 default:
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     break;
             }
+        }
 
-            if (HitCount != 0)
+        private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
+            string addSources, string subSources, string addHits, string andNext)
+        {
+            if (HitCount == 0)
+            {
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+            }
+            else
+            {
+                if (HitCount == 1)
+                    builder.Append("once(");
+                else
+                    builder.AppendFormat("repeated({0}, ", HitCount);
+
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+
                 builder.Append(')');
+            }
         }
 
         internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
