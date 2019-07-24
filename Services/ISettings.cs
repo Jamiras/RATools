@@ -7,7 +7,7 @@ namespace RATools.Services
         /// <summary>
         /// Gets the directories to search for cached RA data.
         /// </summary>
-        IEnumerable<string> DataDirectories { get; }
+        IEnumerable<string> EmulatorDirectories { get; }
 
         /// <summary>
         /// Gets the name of the user.

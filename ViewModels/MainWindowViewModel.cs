@@ -24,6 +24,7 @@ namespace RATools.ViewModels
             SaveScriptAsCommand = DisabledCommand.Instance;
             RefreshScriptCommand = DisabledCommand.Instance;
             OpenRecentCommand = new DelegateCommand<string>(OpenFile);
+            SettingsCommand = new DelegateCommand(OpenSettings);
             ExitCommand = new DelegateCommand(Exit);
 
             UpdateLocalCommand = DisabledCommand.Instance;
@@ -262,31 +263,26 @@ namespace RATools.ViewModels
             var gameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
             GameViewModel viewModel = null;
 
-            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
             {
-                var notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                var dataDirectory = Path.Combine(directory, "RACache", "Data");
+
+                var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
+                if (!File.Exists(notesFile))
+                    notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
+
                 if (File.Exists(notesFile))
                 {
-                    logger.WriteVerbose("Found code notes in " + directory);
-
-                    viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
-                }
-                else
-                {
-                    notesFile = Path.Combine(directory, gameId + "-Notes.json");
-                    if (File.Exists(notesFile))
-                    {
-                        logger.WriteVerbose("Found code notes in " + directory);
-
-                        viewModel = new GameViewModel(gameId, gameTitle, directory.ToString());
-                    }
+                    logger.WriteVerbose("Found code notes in " + dataDirectory);
+                    viewModel = new GameViewModel(gameId, gameTitle, dataDirectory);
                 }
             }
 
             if (viewModel == null)
             {
                 logger.WriteVerbose("Could not find code notes");
-                MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+                MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId + ".\n\n" +
+                    "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
 
                 viewModel = new GameViewModel(gameId, gameTitle);
             }
@@ -386,6 +382,14 @@ namespace RATools.ViewModels
             var dialog = new NewScriptDialogViewModel();
             if (dialog.ShowDialog() == DialogResult.Ok)
                 Game = dialog.Finalize();
+        }
+
+        public CommandBase SettingsCommand { get; private set; }
+        private void OpenSettings()
+        {
+            var vm = new OptionsDialogViewModel();
+            if (vm.ShowDialog() == DialogResult.Ok)
+                vm.ApplyChanges();
         }
 
         public CommandBase UpdateLocalCommand { get; private set; }

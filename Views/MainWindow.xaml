@@ -22,7 +22,7 @@
                 <MenuItem Header="_Save Script" Command="{Binding SaveScriptCommand}" 
                           controls:CommandBinding.InputGesture="Ctrl+S" />
                 <MenuItem Header="Save Script _As" Command="{Binding SaveScriptAsCommand}" />
-                <MenuItem Header="_Revert" Command="{Binding RefreshScriptCommand}" 
+                <MenuItem Header="Re_vert" Command="{Binding RefreshScriptCommand}" 
                           controls:CommandBinding.InputGesture="F5" />
                 <Separator />
                 <MenuItem Header="_Recent" ItemsSource="{Binding RecentFiles}">
@@ -33,7 +33,9 @@
                     </MenuItem.ItemTemplate>
                 </MenuItem>
                 <Separator />
-                <MenuItem Header="_Exit" Command="{Binding ExitCommand}" InputGestureText="Alt+F4" />
+                <MenuItem Header="S_ettings..." Command="{Binding SettingsCommand}" />
+                <Separator />
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" InputGestureText="Alt+F4" />
             </MenuItem>
             <MenuItem Header="_Edit">
                 <MenuItem Header="_Goto Line" Command="{Binding Game.SelectedEditor.Editor.GotoLineCommand, FallbackValue={x:Static commands:DisabledCommand.Instance}}" InputGestureText="Ctrl+G" />

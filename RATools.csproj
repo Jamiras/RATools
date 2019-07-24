@@ -91,8 +91,12 @@
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
+    <Compile Include="ViewModels\OptionsDialogViewModel.cs" />
     <Compile Include="ViewModels\ScriptViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
+    <Compile Include="Views\OptionsDialog.xaml.cs">
+      <DependentUpon>OptionsDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\UpdateLocalDialog.xaml.cs">
       <DependentUpon>UpdateLocalDialog.xaml</DependentUpon>
     </Compile>
@@ -140,6 +144,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\OptionsDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\ScriptViewer.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

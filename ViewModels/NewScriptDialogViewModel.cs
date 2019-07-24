@@ -71,20 +71,23 @@ namespace RATools.ViewModels
         private void Search()
         {
             int gameId = GameId.Value.GetValueOrDefault();
-            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
+            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
             {
-                var notesFile = Path.Combine(directory, gameId + "-Notes.json");
+                var dataDirectory = Path.Combine(directory, "RACache", "Data");
+
+                var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
                 if (!File.Exists(notesFile))
-                    notesFile = Path.Combine(directory, gameId + "-Notes2.txt");
+                    notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
 
                 if (File.Exists(notesFile))
                 {
-                    LoadGame(gameId, directory);
+                    LoadGame(gameId, dataDirectory);
                     return;
                 }
             }
 
-            MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId);
+            MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId + ".\n\n" +
+                "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
             return;
         }
 

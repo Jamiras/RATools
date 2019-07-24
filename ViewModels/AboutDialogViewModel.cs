@@ -1,11 +1,7 @@
 ﻿using Jamiras.Commands;
-using Jamiras.Components;
 using Jamiras.ViewModels;
-using RATools.Services;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Reflection;
 
 namespace RATools.ViewModels
@@ -17,12 +13,6 @@ namespace RATools.ViewModels
             DialogTitle = "About";
             SourceLinkCommand = new DelegateCommand(OpenSourceLink);
             CancelButtonText = null;
-
-            var directories = new List<LookupItem>();
-            foreach (var path in ServiceRepository.Instance.FindService<ISettings>().DataDirectories)
-                directories.Add(new LookupItem(Directory.Exists(path) ? 1 : 0, path));
-
-            DataDirectories = directories;
         }
 
         public string ProductVersion
@@ -72,7 +62,5 @@ namespace RATools.ViewModels
         {
             Process.Start(SourceLink);
         }
-
-        public IEnumerable<LookupItem> DataDirectories { get; private set; }
     }
 }
