@@ -81,6 +81,12 @@ namespace RATools.Parser.Functions
                 var positionalTokenColumn = tokenizer.Column;
                 tokenizer.Advance();
                 var index = tokenizer.ReadNumber();
+                if (index.IsEmpty)
+                {
+                    return new ParseErrorExpression("Empty parameter index",
+                                                    stringExpression.Line, stringExpression.Column + positionalTokenColumn,
+                                                    stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
+                }
                 if (tokenizer.NextChar != '}')
                 {
                     return new ParseErrorExpression("Invalid positional token", 
@@ -89,15 +95,19 @@ namespace RATools.Parser.Functions
                 }
                 tokenizer.Advance();
 
-                var parameterIndex = Int32.Parse(index.ToString());
-                if (parameterIndex >= varargs.Entries.Count)
+                Int32 parameterIndex;
+                if (!Int32.TryParse(index.ToString(), out parameterIndex)
+                    || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
                 {
-                    return new ParseErrorExpression("Invalid parameter index: " + parameterIndex,
+                    return new ParseErrorExpression("Invalid parameter index: " + index.ToString(),
                                                     stringExpression.Line, stringExpression.Column + positionalTokenColumn,
                                                     stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
                 }
 
                 var functionCall = varargs.Entries[parameterIndex] as FunctionCallExpression;
+                if (functionCall == null)
+                    return new ParseErrorExpression("Invalid parameter, expected function call",
+                                                    varargs.Entries[parameterIndex]);
 
                 var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
                 if (functionDefinition == null)

@@ -52,7 +52,9 @@ namespace RATools.Parser.Functions
             if (value == null)
                 return (ParseErrorExpression)result;
 
-            context.RichPresence.AddLookupField(name.Value, dictionary);
+            var error = context.RichPresence.AddLookupField(name.Value, dictionary);
+            if (error != null)
+                return error;
 
             context.DisplayString.Append('@');
             context.DisplayString.Append(name.Value);
