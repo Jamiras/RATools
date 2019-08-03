@@ -305,12 +305,12 @@ namespace RATools.Test.Parser
         [TestCase("bit0(0x001234) != 1", "bit0(0x001234) == 0")] // bit not equal to one must be 0
         [TestCase("bit0(0x001234) < 1", "bit0(0x001234) == 0")] // bit less than one must be 0
         [TestCase("byte(0x001234) < 1", "byte(0x001234) == 0")] // byte less than one must be 0
-        [TestCase("byte(0x001234) == 1 && byte(0x004567) < 0", "0 == 1")] // less than 0 can never be true, replace with always_false
-        [TestCase("byte(0x001234) == 1 && low4(0x004567) > 15", "0 == 1")] // nibble cannot be greater than 15, replace with always_false
-        [TestCase("byte(0x001234) == 1 && high4(0x004567) > 15", "0 == 1")] // nibble cannot be greater than 15, replace with always_false
-        [TestCase("byte(0x001234) == 1 && byte(0x004567) > 255", "0 == 1")] // byte cannot be greater than 255, replace with always_false
-        [TestCase("byte(0x001234) == 1 && word(0x004567) > 65535", "0 == 1")] // word cannot be greater than 255, replace with always_false
-        [TestCase("byte(0x001234) == 1 && dword(0x004567) > 4294967295", "0 == 1")] // dword cannot be greater than 4294967295, replace with always_false
+        [TestCase("byte(0x001234) == 1 && byte(0x004567) < 0", "always_false()")] // less than 0 can never be true, replace with always_false
+        [TestCase("byte(0x001234) == 1 && low4(0x004567) > 15", "always_false()")] // nibble cannot be greater than 15, replace with always_false
+        [TestCase("byte(0x001234) == 1 && high4(0x004567) > 15", "always_false()")] // nibble cannot be greater than 15, replace with always_false
+        [TestCase("byte(0x001234) == 1 && byte(0x004567) > 255", "always_false()")] // byte cannot be greater than 255, replace with always_false
+        [TestCase("byte(0x001234) == 1 && word(0x004567) > 65535", "always_false()")] // word cannot be greater than 255, replace with always_false
+        [TestCase("byte(0x001234) == 1 && dword(0x004567) > 4294967295", "always_false()")] // dword cannot be greater than 4294967295, replace with always_false
         [TestCase("byte(0x001234) == 1 && low4(0x004567) >= 15", "byte(0x001234) == 1 && low4(0x004567) == 15")] // nibble cannot be greater than 15, change to equals
         [TestCase("byte(0x001234) == 1 && high4(0x004567) >= 15", "byte(0x001234) == 1 && high4(0x004567) == 15")] // nibble cannot be greater than 15, change to equals
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 255", "byte(0x001234) == 1 && byte(0x004567) == 255")] // byte cannot be greater than 255, change to equals
@@ -328,17 +328,29 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && word(0x004567) < 65535", "byte(0x001234) == 1 && word(0x004567) != 65535")] // word cannot be greater than 255, change to not equals
         [TestCase("byte(0x001234) == 1 && dword(0x004567) < 4294967295", "byte(0x001234) == 1 && dword(0x004567) != 4294967295")] // dword cannot be greater than 4294967295, change to not equals
         [TestCase("bit0(0x001234) + bit1(0x001234) == 2", "(bit0(0x001234) + bit1(0x001234)) == 2")] // addition can exceed max size of source
-        [TestCase("byte(0x001234) == 1000", "0 == 1")] // can never be true
-        [TestCase("byte(0x001234) > 256", "0 == 1")] // can never be true
-        [TestCase("byte(0x001234) < 256", "1 == 1")] // always true
-        [TestCase("0 < 256", "1 == 1")] // always true
-        [TestCase("0 == 1", "0 == 1")] // always false
-        [TestCase("1 == 1", "1 == 1")] // always true
-        [TestCase("3 > 6", "0 == 1")] // always false
-        [TestCase("0 == 1 && byte(0x001234) == 1", "0 == 1")] // always false and anything is always false
+        [TestCase("byte(0x001234) == 1000", "always_false()")] // can never be true
+        [TestCase("byte(0x001234) > 256", "always_false()")] // can never be true
+        [TestCase("byte(0x001234) < 256", "always_true()")] // always true
+        [TestCase("byte(0x001234) == prev(byte(0x001234))", "byte(0x001234) == prev(byte(0x001234))")] // non-deterministic
+        [TestCase("byte(0x001234) == word(0x001234)", "byte(0x001234) == word(0x001234)")] // non-deterministic
+        [TestCase("byte(0x001234) == byte(0x001234)", "always_true()")] // always true
+        [TestCase("byte(0x001234) != byte(0x001234)", "always_false()")] // never true
+        [TestCase("byte(0x001234) <= byte(0x001234)", "always_true()")] // always true
+        [TestCase("byte(0x001234) < byte(0x001234)", "always_false()")] // never true
+        [TestCase("byte(0x001234) >= byte(0x001234)", "always_true()")] // always true
+        [TestCase("byte(0x001234) > byte(0x001234)", "always_false()")] // never true
+        [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
+        [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, byte(0x001234) == byte(0x001234))")] // always true, but ignored for two frames
+        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
+        [TestCase("0 < 256", "always_true()")] // always true
+        [TestCase("0 == 1", "always_false()")] // always false
+        [TestCase("1 == 1", "always_true()")] // always true
+        [TestCase("3 > 6", "always_false()")] // always false
+        [TestCase("0 == 1 && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
         [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
-        [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (0 == 1 && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
-                  "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && 0 == 1))")] // always_false paired with ResetIf does not eradicate the ResetIf
+        [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (always_false() && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
+                  "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && always_false()))")] // always_false paired with ResetIf does not eradicate the ResetIf
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
@@ -398,13 +410,13 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) != 3 && byte(0x001234) == 2", "byte(0x001234) == 2")] // =2 is implicitly !=3
         [TestCase("byte(0x001234) == 3 && byte(0x001234) != 2", "byte(0x001234) == 3")] // =3 is implicitly !=2
         [TestCase("byte(0x001234) == 3 && byte(0x001234) == 3", "byte(0x001234) == 3")] // redundant
-        [TestCase("byte(0x001234) > 3 && byte(0x001234) < 2", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) > 2 && byte(0x001234) < 2", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 2", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 3", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) >= 3 && byte(0x001234) <= 2", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 3", "0 == 1")] // cannot both be true
-        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 2", "0 == 1")] // cannot both be true
+        [TestCase("byte(0x001234) > 3 && byte(0x001234) < 2", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) > 2 && byte(0x001234) < 2", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 2", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 3", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) >= 3 && byte(0x001234) <= 2", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 3", "always_false()")] // cannot both be true
+        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 2", "always_false()")] // cannot both be true
         [TestCase("byte(0x001234) - prev(byte(0x001234)) == 1 && byte(0x001234) == 2", "(byte(0x001234) - prev(byte(0x001234))) == 1 && byte(0x001234) == 2")] // conflict with part of a SubSource clause should not be treated as wholly conflicting
         [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 2", "byte(0x001234) == 2")] // only overlap is the one value
         [TestCase("byte(0x001234) >= 2 && byte(0x001234) <= 2", "byte(0x001234) == 2")] // only overlap is the one value
@@ -437,10 +449,10 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 2", "byte(0x001234) <= 2 || byte(0x001234) >= 2")] // always true, can't really collapse
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "byte(0x001234) >= 2 || byte(0x001234) <= 2")] // always true, can't really collapse
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
-        [TestCase("always_false() || byte(0x001234) == 2", "0 == 1 || byte(0x001234) == 2")] // minimum of two alts
-        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "1 == 1")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
+        [TestCase("always_false() || byte(0x001234) == 2", "always_false() || byte(0x001234) == 2")] // minimum of two alts
+        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
-            "1 == 1 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
+            "always_true() || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
         // ==== MergeBits ====
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
@@ -448,7 +460,7 @@ namespace RATools.Test.Parser
         // ==== Complex ====
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
-        [TestCase("0 == 1 && never(byte(0x001234) == 1)", "0 == 1")] // ResetIf without available HitCount inverted, then can be eliminated by always false
+        [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
         public void TestOptimize(string input, string expected)
         {
             var achievement = CreateAchievement(input);

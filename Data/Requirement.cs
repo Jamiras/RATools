@@ -52,32 +52,44 @@ namespace RATools.Data
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
             string addSources = null, string subSources = null, string addHits = null, string andNext = null)
         {
-            if (HitCount == 1)
-                builder.Append("once(");
-            else if (HitCount > 0)
-                builder.AppendFormat("repeated({0}, ", HitCount);
-
             switch (Type)
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     builder.Append(')');
                     break;
 
                 default:
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     break;
             }
+        }
 
-            if (HitCount != 0)
+        private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
+            string addSources, string subSources, string addHits, string andNext)
+        {
+            if (HitCount == 0)
+            {
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+            }
+            else
+            {
+                if (HitCount == 1)
+                    builder.Append("once(");
+                else
+                    builder.AppendFormat("repeated({0}, ", HitCount);
+
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+
                 builder.Append(')');
+            }
         }
 
         internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
@@ -154,6 +166,76 @@ namespace RATools.Data
             }
 
             Right.AppendString(builder, numberFormat);
+        }
+
+        /// <summary>
+        /// Determines if the requirement always evaluates true or false.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if the requirement is always true, <c>false</c> if it's always false, or 
+        /// <c>null</c> if the result cannot be determined at this time.
+        /// </returns>
+        public bool? Evaluate()
+        {
+            if (Left.Type != Right.Type)
+                return null;
+
+            bool result = false;
+
+            if (Left.IsMemoryReference)
+            {
+                // memory reference - can only be equal or not equal to same memory reference
+                if (Left.Value != Right.Value || Left.Size != Right.Size)
+                    return null;
+
+                // same memory reference in the same frame is always equal
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                    case RequirementOperator.GreaterThanOrEqual:
+                    case RequirementOperator.LessThanOrEqual:
+                        result = true;
+                        break;
+
+                    default:
+                        result = false;
+                        break;
+                }
+            }
+            else
+            {
+                // comparing constants
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                        result = (Left.Value == Right.Value);
+                        break;
+                    case RequirementOperator.NotEqual:
+                        result = (Left.Value != Right.Value);
+                        break;
+                    case RequirementOperator.LessThan:
+                        result = (Left.Value < Right.Value);
+                        break;
+                    case RequirementOperator.LessThanOrEqual:
+                        result = (Left.Value <= Right.Value);
+                        break;
+                    case RequirementOperator.GreaterThan:
+                        result = (Left.Value > Right.Value);
+                        break;
+                    case RequirementOperator.GreaterThanOrEqual:
+                        result = (Left.Value >= Right.Value);
+                        break;
+                    default:
+                        result = false;
+                        break;
+                }
+            }
+
+            // even if the condition is always true, if there's a target hit count, it won't be true initially.
+            if (result && HitCount > 1)
+                return null;
+
+            return result;
         }
 
         /// <summary>

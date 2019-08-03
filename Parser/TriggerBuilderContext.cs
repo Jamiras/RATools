@@ -202,11 +202,15 @@ namespace RATools.Parser
                 return false;
             }
 
-            var message = achievement.Optimize();
-            if (message != null)
+            // only optimize at the outermost level
+            if (ReferenceEquals(scope.GetOutermostContext<TriggerBuilderContext>(), scope.GetContext<TriggerBuilderContext>()))
             {
-                result = new ParseErrorExpression(message, expression);
-                return false;
+                var message = achievement.Optimize();
+                if (message != null)
+                {
+                    result = new ParseErrorExpression(message, expression);
+                    return false;
+                }
             }
 
             result = null;

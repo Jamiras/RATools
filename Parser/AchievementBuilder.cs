@@ -90,12 +90,6 @@ namespace RATools.Parser
         {
             var core = _core.ToArray();
 
-            // if core is empty and any alts exist, add an always_true condition to the core for compatibility
-            // with legacy RetroArch parsing. duplicates functionality in SerializeRequirements so the 
-            // condition will appear in the editor
-            if (core.Length == 0 && _alts.Any())
-                core = new Requirement[] { AlwaysTrueFunction.CreateAlwaysTrueRequirement() };
-
             var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = core, Id = Id, BadgeName = BadgeName };
             var alts = new Requirement[_alts.Count][];
             for (int i = 0; i < _alts.Count; i++)
@@ -112,53 +106,56 @@ namespace RATools.Parser
             var current = _core;
             do
             {
-                var requirement = new Requirement();
-
-                if (tokenizer.Match("R:"))
-                    requirement.Type = RequirementType.ResetIf;
-                else if (tokenizer.Match("P:"))
-                    requirement.Type = RequirementType.PauseIf;
-                else if (tokenizer.Match("A:"))
-                    requirement.Type = RequirementType.AddSource;
-                else if (tokenizer.Match("B:"))
-                    requirement.Type = RequirementType.SubSource;
-                else if (tokenizer.Match("C:"))
-                    requirement.Type = RequirementType.AddHits;
-                else if (tokenizer.Match("N:"))
-                    requirement.Type = RequirementType.AndNext;
-
-                requirement.Left = Field.Deserialize(tokenizer);
-
-                requirement.Operator = ReadOperator(tokenizer);
-                requirement.Right = Field.Deserialize(tokenizer);
-
-                switch (requirement.Type)
+                if (tokenizer.NextChar != 'S')
                 {
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                        requirement.Operator = RequirementOperator.None;
-                        requirement.Right = new Field();
-                        break;
+                    var requirement = new Requirement();
 
-                    default:
-                        if (requirement.Right.Size == FieldSize.None)
-                            requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
-                        break;
-                }
+                    if (tokenizer.Match("R:"))
+                        requirement.Type = RequirementType.ResetIf;
+                    else if (tokenizer.Match("P:"))
+                        requirement.Type = RequirementType.PauseIf;
+                    else if (tokenizer.Match("A:"))
+                        requirement.Type = RequirementType.AddSource;
+                    else if (tokenizer.Match("B:"))
+                        requirement.Type = RequirementType.SubSource;
+                    else if (tokenizer.Match("C:"))
+                        requirement.Type = RequirementType.AddHits;
+                    else if (tokenizer.Match("N:"))
+                        requirement.Type = RequirementType.AndNext;
 
-                current.Add(requirement);
+                    requirement.Left = Field.Deserialize(tokenizer);
 
-                if (tokenizer.NextChar == '.')
-                {
-                    tokenizer.Advance(); // first period
-                    requirement.HitCount = (ushort)ReadNumber(tokenizer);
-                    tokenizer.Advance(); // second period
-                }
-                else if (tokenizer.NextChar == '(') // old format
-                {
-                    tokenizer.Advance(); // '('
-                    requirement.HitCount = (ushort)ReadNumber(tokenizer);
-                    tokenizer.Advance(); // ')'
+                    requirement.Operator = ReadOperator(tokenizer);
+                    requirement.Right = Field.Deserialize(tokenizer);
+
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.AddSource:
+                        case RequirementType.SubSource:
+                            requirement.Operator = RequirementOperator.None;
+                            requirement.Right = new Field();
+                            break;
+
+                        default:
+                            if (requirement.Right.Size == FieldSize.None)
+                                requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
+                            break;
+                    }
+
+                    if (tokenizer.NextChar == '.')
+                    {
+                        tokenizer.Advance(); // first period
+                        requirement.HitCount = (ushort)ReadNumber(tokenizer);
+                        tokenizer.Advance(); // second period
+                    }
+                    else if (tokenizer.NextChar == '(') // old format
+                    {
+                        tokenizer.Advance(); // '('
+                        requirement.HitCount = (ushort)ReadNumber(tokenizer);
+                        tokenizer.Advance(); // ')'
+                    }
+
+                    current.Add(requirement);
                 }
 
                 switch (tokenizer.NextChar)
@@ -332,9 +329,11 @@ namespace RATools.Parser
             }
         }
 
-        static void AppendDebugStringGroup(StringBuilder builder, ICollection<Requirement> group)
+        public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group, 
+            NumberFormat numberFormat, int wrapWidth, int indent = 14)
         {
             bool needsAmpersand = false;
+            int width = wrapWidth - indent;
 
             var enumerator = group.GetEnumerator();
             while (enumerator.MoveNext())
@@ -351,22 +350,22 @@ namespace RATools.Parser
                     switch (requirement.Type)
                     {
                         case RequirementType.AddSource:
-                            requirement.Left.AppendString(addSources, NumberFormat.Decimal);
+                            requirement.Left.AppendString(addSources, numberFormat);
                             addSources.Append(" + ");
                             break;
 
                         case RequirementType.SubSource:
                             subSources.Append(" - ");
-                            requirement.Left.AppendString(subSources, NumberFormat.Decimal);
+                            requirement.Left.AppendString(subSources, numberFormat);
                             break;
 
                         case RequirementType.AddHits:
-                            requirement.AppendString(addHits, NumberFormat.Decimal);
+                            requirement.AppendString(addHits, numberFormat);
                             addHits.Append(" || ");
                             break;
 
                         case RequirementType.AndNext:
-                            requirement.AppendString(andNext, NumberFormat.Decimal);
+                            requirement.AppendString(andNext, numberFormat);
                             andNext.Append(" && ");
                             break;
 
@@ -385,16 +384,57 @@ namespace RATools.Parser
                 } while (true);
 
                 var definition = new StringBuilder();
-                requirement.AppendString(definition, NumberFormat.Decimal,
-                    addSources.Length > 0 ? addSources.ToString() : null,
-                    subSources.Length > 0 ? subSources.ToString() : null,
-                    addHits.Length > 0 ? addHits.ToString() : null,
-                    andNext.Length > 0 ? andNext.ToString() : null);
+
+                if (addSources.Length == 0 && subSources.Length == 0 && addHits.Length == 0 && andNext.Length == 0)
+                {
+                    var result = requirement.Evaluate();
+                    if (result == true)
+                        definition.Append("always_true()");
+                    else if (result == false)
+                        definition.Append("always_false()");
+                    else
+                        requirement.AppendString(definition, numberFormat);
+                }
+                else
+                {
+                    requirement.AppendString(definition, numberFormat,
+                        addSources.Length > 0 ? addSources.ToString() : null,
+                        subSources.Length > 0 ? subSources.ToString() : null,
+                        addHits.Length > 0 ? addHits.ToString() : null,
+                        andNext.Length > 0 ? andNext.ToString() : null);
+                }
 
                 if (needsAmpersand)
+                {
                     builder.Append(" && ");
+                    width -= 4;
+                }
                 else
+                {
                     needsAmpersand = true;
+                }
+
+                while (definition.Length > wrapWidth)
+                {
+                    var index = width;
+                    while (index > 0 && definition[index] != ' ')
+                        index--;
+
+                    builder.Append(definition.ToString(), 0, index);
+                    builder.AppendLine();
+                    builder.Append(' ', indent);
+                    definition.Remove(0, index);
+                    width = wrapWidth - indent;
+                }
+
+                if (width - definition.Length < 0)
+                {
+                    builder.AppendLine();
+                    builder.Append(' ', indent);
+                    width = wrapWidth - indent;
+                }
+
+                width -= definition.Length;
 
                 builder.Append(definition.ToString());
             }
@@ -408,7 +448,7 @@ namespace RATools.Parser
             get
             {
                 var builder = new StringBuilder();
-                AppendDebugStringGroup(builder, CoreRequirements);
+                AppendStringGroup(builder, CoreRequirements, NumberFormat.Decimal, Int32.MaxValue);
 
                 if (AlternateRequirements.Count > 0)
                 {
@@ -420,7 +460,7 @@ namespace RATools.Parser
                         if (altGroup.Count > 1)
                             builder.Append('(');
 
-                        AppendDebugStringGroup(builder, altGroup);
+                        AppendStringGroup(builder, altGroup, NumberFormat.Decimal, Int32.MaxValue);
 
                         if (altGroup.Count > 1)
                             builder.Append(')');
@@ -501,9 +541,10 @@ namespace RATools.Parser
 
                 if (requirement.Left.Type == FieldType.Value)
                 {
-                    if (Evaluate(requirement))
+                    var result = requirement.Evaluate();
+                    if (result == true)
                         alwaysTrue.Add(requirementEx);
-                    else
+                    else if (result == false)
                         alwaysFalse.Add(requirementEx);
 
                     continue;
@@ -1012,43 +1053,6 @@ namespace RATools.Parser
             return false;
         }
 
-        protected static bool Evaluate(Requirement requirement)
-        {
-            switch (requirement.Operator)
-            {
-                case RequirementOperator.Equal:
-                    return (requirement.Left.Value == requirement.Right.Value);
-                case RequirementOperator.NotEqual:
-                    return (requirement.Left.Value != requirement.Right.Value);
-                case RequirementOperator.LessThan:
-                    return (requirement.Left.Value < requirement.Right.Value);
-                case RequirementOperator.LessThanOrEqual:
-                    return (requirement.Left.Value <= requirement.Right.Value);
-                case RequirementOperator.GreaterThan:
-                    return (requirement.Left.Value > requirement.Right.Value);
-                case RequirementOperator.GreaterThanOrEqual:
-                    return (requirement.Left.Value >= requirement.Right.Value);
-                default:
-                    return false;
-            }
-        }
-
-        private static bool IsTrue(Requirement requirement)
-        {
-            if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
-                return Evaluate(requirement);
-
-            return false;
-        }
-
-        private static bool IsFalse(Requirement requirement)
-        {
-            if (requirement.Left.Type == FieldType.Value && requirement.Right.Type == FieldType.Value)
-                return !Evaluate(requirement);
-
-            return false;
-        }
-
         private static void MergeDuplicateAlts(List<List<RequirementEx>> groups)
         {
             // if two alt groups are exactly identical, or can otherwise be represented by merging their
@@ -1106,7 +1110,8 @@ namespace RATools.Parser
                 {
                     if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1)
                     {
-                        if (IsFalse(groups[j][0].Requirements[0]))
+                        var result = groups[j][0].Requirements[0].Evaluate();
+                        if (result == false)
                         {
                             // an always_false alt group is used for two cases:
                             // 1) building an alt group list (safe to remove)
@@ -1114,7 +1119,7 @@ namespace RATools.Parser
                             if (groups.Count > 3)
                                 groups.RemoveAt(j);
                         }
-                        else if (IsTrue(groups[j][0].Requirements[0]))
+                        else if (result == true)
                         {
                             // an always_true alt group supercedes all other alt groups.
                             // if we see one, keep track of that and we'll process it later.
@@ -1128,7 +1133,7 @@ namespace RATools.Parser
                 {
                     for (int j = groups.Count - 1; j >= 1; j--)
                     {
-                        if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1 && IsTrue(groups[j][0].Requirements[0]))
+                        if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1 && groups[j][0].Requirements[0].Evaluate() == true)
                             continue;
 
                         bool hasPauseIf = false;
@@ -1304,7 +1309,7 @@ namespace RATools.Parser
                         if (group[j] == coreGroup[i])
                         {
                             // always_true has special meaning and shouldn't be eliminated if present in the core group
-                            if (group[j].Requirements.Count > 1 || !IsTrue(group[j].Requirements[0]))
+                            if (group[j].Requirements.Count > 1 || group[j].Requirements[0].Evaluate() != true)
                                 group.RemoveAt(j);
                         }
                     }
@@ -1745,7 +1750,7 @@ namespace RATools.Parser
 
             // if the core group contains an always_true statement in addition to any other promoted statements, 
             // remove the always_true statement
-            if (groups[0].Count > 1 && groups[0][0].Requirements.Count == 1 && IsTrue(groups[0][0].Requirements[0]))
+            if (groups[0].Count > 1 && groups[0][0].Requirements.Count == 1 && groups[0][0].Requirements[0].Evaluate() == true)
                 groups[0].RemoveAt(0);
 
             // convert back to flattened expressions

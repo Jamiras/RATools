@@ -537,7 +537,7 @@ namespace RATools.Parser
                         Right = new Field { Type = FieldType.Value, Value = (uint)((IntegerConstantExpression)right).Value },
                     };
 
-                    if (Evaluate(requirement))
+                    if (requirement.Evaluate() == true)
                         context.Trigger.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
                     else
                         context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
