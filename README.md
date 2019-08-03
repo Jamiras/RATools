@@ -1,17 +1,8 @@
 # RATools
-Script interpreter for writing achievements for retroachievements.org
+A script interpreter for writing achievements for retroachievements.org
+Also contains some analysis tools for examining site data
 
 
-### Build instructions (RATools only):
-1) Download the latest Core dll from [Core releases](https://github.com/Jamiras/Core/releases) and unzip 
-   into a "lib" directory under the RATools checkout.
-2) Download the [nUnit and Moq dlls](https://github.com/Jamiras/Core/wiki/files/nUnit.3.11.zip) and extract them to a "lib" subdirectory under the RATools checkout.
-3) Open the "RATools.sln" project.
-4) Compile.
+The 'RATools.sln' solution requires the Core submodule to be initialized, and is the solution most users should be using.
 
-### Build instructions (RATools + Core):
-1) Ensure your [Core](https://github.com/Jamiras/Core) checkout is in a directory beside the RATools checkout.
-2) Download the [nUnit and Moq dlls](https://github.com/Jamiras/Core/wiki/files/nUnit.3.11.zip) and extract them to a "libs" directory beside the RATools checkout.
-    * you should now have three directories at the top level: Core, libs, RATools
-3) Open the "RATools + Core.sln" project.
-4) Compile.
+The 'RATools + Core.sln' solution looks for the Core repository to be checked out next to the RATools repository and is used when making changes to both projects.

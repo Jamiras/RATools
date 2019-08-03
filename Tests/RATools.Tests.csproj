@@ -76,27 +76,27 @@
     </Reference>
   </ItemGroup>
   <Choose>
-    <When Condition="Exists('..\lib\moq-4.3\net40\Moq.dll')">
+    <When Condition="Exists('$(SolutionDir)..\libs\moq-4.3\net40\Moq.dll')">
       <ItemGroup>
         <Reference Include="Moq">
-          <HintPath>..\lib\moq-4.3\net40\Moq.dll</HintPath>
+          <HintPath>$(SolutionDir)..\libs\moq-4.3\net40\Moq.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
     <Otherwise>
       <ItemGroup>
         <Reference Include="Moq">
-          <HintPath>..\..\libs\moq-4.3\net40\Moq.dll</HintPath>
+          <HintPath>$(SolutionDir)lib\moq-4.3\net40\Moq.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
   </Choose>
   <Choose>
-    <When Condition="Exists('..\lib\nUnit-3.11\net40\nunit.framework.dll')">
+    <When Condition="Exists('$(SolutionDir)..\libs\nUnit-3.11\net40\nunit.framework.dll')">
       <ItemGroup>
         <Reference Include="nunit.framework, Version=4.0.30319, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
           <SpecificVersion>False</SpecificVersion>
-          <HintPath>..\lib\nUnit-3.11\net40\nunit.framework.dll</HintPath>
+          <HintPath>$(SolutionDir)..\libs\nUnit-3.11\net40\nunit.framework.dll</HintPath>
         </Reference>
       </ItemGroup>
     </When>
@@ -104,7 +104,7 @@
       <ItemGroup>
         <Reference Include="nunit.framework, Version=4.0.30319, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
           <SpecificVersion>False</SpecificVersion>
-          <HintPath>..\..\libs\nUnit-3.11\net40\nunit.framework.dll</HintPath>
+          <HintPath>$(SolutionDir)lib\nUnit-3.11\net40\nunit.framework.dll</HintPath>
         </Reference>
       </ItemGroup>
     </Otherwise>
@@ -153,10 +153,10 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <Reference Include="Jamiras.Core.dll">
-          <HintPath>..\lib\Jamiras.Core.dll</HintPath>
-          <Name>Jamiras.Core.dll</Name>
-        </Reference>
+        <ProjectReference Include="..\Core\Jamiras.Core.csproj">
+          <Project>{4141f2ae-9e32-4a93-9fea-360a7dc7d97f}</Project>
+          <Name>Jamiras.Core</Name>
+        </ProjectReference>
       </ItemGroup>
     </Otherwise>
   </Choose>
@@ -164,6 +164,10 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Core\Tests\Jamiras.Core.Tests.csproj">
+      <Project>{8f415f4b-4184-429f-80a2-58da15afb26e}</Project>
+      <Name>Jamiras.Core.Tests</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RATools.csproj">
       <Project>{965d9b5a-9070-40e5-9eaa-edc581f0f000}</Project>
       <Name>RATools</Name>

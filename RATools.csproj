@@ -254,10 +254,10 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <Reference Include="Jamiras.Core.dll">
-          <HintPath>lib\Jamiras.Core.dll</HintPath>
-          <Name>Jamiras.Core.dll</Name>
-        </Reference>
+        <ProjectReference Include="Core\Jamiras.Core.csproj">
+          <Project>{4141f2ae-9e32-4a93-9fea-360a7dc7d97f}</Project>
+          <Name>Jamiras.Core</Name>
+        </ProjectReference>
       </ItemGroup>
     </Otherwise>
   </Choose>
