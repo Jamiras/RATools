@@ -126,7 +126,7 @@ namespace RATools.Test.Parser
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test");
+            achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
             Assert.That(output, Is.EqualTo("0.099\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
@@ -154,7 +154,7 @@ namespace RATools.Test.Parser
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test");
+            achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
             Assert.That(output, Is.EqualTo("0.030\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));

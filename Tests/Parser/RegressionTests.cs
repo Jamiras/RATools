@@ -64,7 +64,7 @@ namespace RATools.Test.Parser
             localAchievements.Title = Path.GetFileNameWithoutExtension(scriptFileName);
             foreach (var achievement in interpreter.Achievements)
                 localAchievements.Replace(null, achievement);
-            localAchievements.Commit("Author");
+            localAchievements.Commit("Author", null, null);
 
             if (interpreter.Leaderboards.Any())
             {

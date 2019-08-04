@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -37,13 +38,23 @@ namespace RATools.ViewModels
 
         protected override void ExecuteOkCommand()
         {
+            var warning = new StringBuilder();
+
             foreach (var achievement in _achievements)
             {
                 if (achievement.IsUpdated)
-                    achievement.Achievement.UpdateLocalCommand.Execute();
+                {
+                    warning.Clear();
+                    achievement.Achievement.UpdateLocal(warning, true);
+                }
                 else if (achievement.IsDeleted)
+                {
                     achievement.Achievement.DeleteLocalCommand.Execute();
+                }
             }
+
+            if (warning.Length > 0)
+                MessageBoxViewModel.ShowMessage(warning.ToString());
 
             DialogResult = DialogResult.Ok;
         }

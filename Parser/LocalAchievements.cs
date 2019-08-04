@@ -1,6 +1,5 @@
 ﻿using Jamiras.Components;
 using Jamiras.Services;
-using Jamiras.ViewModels;
 using RATools.Data;
 using System;
 using System.Collections.Generic;
@@ -198,10 +197,8 @@ namespace RATools.Parser
         /// <summary>
         /// Commits the achivement list back to the 'XXX-User.txt' file.
         /// </summary>
-        public void Commit(string author)
+        public void Commit(string author, StringBuilder warning, Achievement achievementToValidate)
         {
-            var warning = new StringBuilder();
-
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
                 writer.WriteLine(_version);
@@ -213,7 +210,7 @@ namespace RATools.Parser
                     writer.Write(":\"");
 
                     var requirements = AchievementBuilder.SerializeRequirements(achievement);
-                    if (requirements.Length > AchievementMaxLength)
+                    if (requirements.Length > AchievementMaxLength && warning != null && (achievementToValidate == null || ReferenceEquals(achievementToValidate, achievement)))
                     {
                         warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit ({1}/{2})", achievement.Title, requirements.Length, AchievementMaxLength);
                         warning.AppendLine();
@@ -242,9 +239,6 @@ namespace RATools.Parser
                     writer.WriteLine();
                 }
             }
-
-            if (warning.Length > 0)
-                MessageBoxViewModel.ShowMessage(warning.ToString());
         }
     }
 }

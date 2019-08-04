@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Windows.Media;
 
 namespace RATools.ViewModels
@@ -38,8 +39,8 @@ namespace RATools.ViewModels
             }
             else
             {
-                UpdateLocalCommand = new DelegateCommand(() => UpdateLocal(owner));
-                DeleteLocalCommand = new DelegateCommand(() => DeleteLocal(owner));
+                UpdateLocalCommand = new DelegateCommand(UpdateLocal);
+                DeleteLocalCommand = new DelegateCommand(DeleteLocal);
             }
         }
 
@@ -357,7 +358,16 @@ namespace RATools.ViewModels
             yield return Core;
         }
 
-        private void UpdateLocal(GameViewModel owner)
+        private void UpdateLocal()
+        {
+            StringBuilder warning = new StringBuilder();
+            UpdateLocal(warning, false);
+
+            if (warning.Length > 0)
+                MessageBoxViewModel.ShowMessage(warning.ToString());
+        }
+
+        internal void UpdateLocal(StringBuilder warning, bool validateAll)
         {
             var achievement = Generated.Achievement;
 
@@ -366,9 +376,9 @@ namespace RATools.ViewModels
             if (!String.IsNullOrEmpty(Local.BadgeName))
                 achievement.BadgeName = Local.BadgeName;
 
-            owner.UpdateLocal(achievement, Local.Achievement);
+            _owner.UpdateLocal(achievement, Local.Achievement, warning, validateAll);
 
-            Local = new AchievementViewModel(owner, "Local");
+            Local = new AchievementViewModel(_owner, "Local");
             Local.LoadAchievement(achievement);
 
             OnPropertyChanged(() => Local);
@@ -376,11 +386,11 @@ namespace RATools.ViewModels
         }
 
         public CommandBase DeleteLocalCommand { get; protected set; }
-        private void DeleteLocal(GameViewModel owner)
+        private void DeleteLocal()
         {
-            owner.UpdateLocal(null, Local.Achievement);
+            _owner.UpdateLocal(null, Local.Achievement, null, false);
 
-            Local = new AchievementViewModel(owner, "Local");
+            Local = new AchievementViewModel(_owner, "Local");
             OnPropertyChanged(() => Local);
             UpdateModified();
         }

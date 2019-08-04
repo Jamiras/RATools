@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -198,7 +199,7 @@ namespace RATools.ViewModels
             set { SetValue(SelectedEditorProperty, value); }
         }
 
-        internal void UpdateLocal(Achievement achievement, Achievement localAchievement)
+        internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)
         {
             if (achievement == null)
             {
@@ -231,7 +232,7 @@ namespace RATools.ViewModels
                 }
             }
 
-            _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName);
+            _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
         }
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Title", typeof(string), String.Empty);
