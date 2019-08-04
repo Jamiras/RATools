@@ -126,6 +126,27 @@ namespace RATools.Data
                     break;
 
                 default:
+                    if (Operator != RequirementOperator.None)
+                    {
+                        var clone = new Requirement
+                        {
+                            Left = this.Left,
+                            Operator = this.Operator,
+                            Right = this.Right
+                        };
+                        var result = clone.Evaluate();
+                        if (result == true)
+                        {
+                            builder.Append("always_true()");
+                            return;
+                        }
+                        else if (result == false)
+                        {
+                            builder.Append("always_false()");
+                            return;
+                        }
+                    }
+
                     Left.AppendString(builder, numberFormat);
                     break;
             }
@@ -307,6 +328,23 @@ namespace RATools.Data
                 case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThan;
                 case RequirementOperator.GreaterThan: return RequirementOperator.LessThanOrEqual;
                 case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThan;
+                default: return RequirementOperator.None;
+            }
+        }
+
+        /// <summary>
+        /// Gets the equivalent operator if the operands are switched.
+        /// </summary>
+        public static RequirementOperator GetReversedRequirementOperator(RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.Equal: return RequirementOperator.Equal;
+                case RequirementOperator.NotEqual: return RequirementOperator.NotEqual;
+                case RequirementOperator.LessThan: return RequirementOperator.GreaterThan;
+                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
+                case RequirementOperator.GreaterThan: return RequirementOperator.LessThan;
+                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 default: return RequirementOperator.None;
             }
         }

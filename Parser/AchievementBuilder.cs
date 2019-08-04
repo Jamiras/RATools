@@ -536,18 +536,59 @@ namespace RATools.Parser
                     continue;
 
                 var requirement = requirementEx.Requirements[0];
-                if (requirement.Right.Type != FieldType.Value)
-                    continue;
+                if (requirement.HitCount > 1)
+                {
+                    // any condition with a HitCount cannot be always true or false, evaluate the condition 
+                    // without the HitCount, and if that is always true or false, replace with the equivalent
+                    var clone = new Requirement
+                    {
+                        Left = requirement.Left,
+                        Operator = requirement.Operator,
+                        Right = requirement.Right,
+                    };
 
-                if (requirement.Left.Type == FieldType.Value)
+                    var result = clone.Evaluate();
+                    if (result == true)
+                    {
+                        var alwaysTrueRequirement = AlwaysTrueFunction.CreateAlwaysTrueRequirement();
+                        requirement.Left = alwaysTrueRequirement.Left;
+                        requirement.Operator = alwaysTrueRequirement.Operator;
+                        requirement.Right = alwaysTrueRequirement.Right;
+                    }
+                    else if (result == false)
+                    {
+                        var alwaysFalseRequirement = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
+                        requirement.Left = alwaysFalseRequirement.Left;
+                        requirement.Operator = alwaysFalseRequirement.Operator;
+                        requirement.Right = alwaysFalseRequirement.Right;
+                    }
+                }
+                else
                 {
                     var result = requirement.Evaluate();
                     if (result == true)
+                    {
                         alwaysTrue.Add(requirementEx);
+                        continue;
+                    }
                     else if (result == false)
+                    {
                         alwaysFalse.Add(requirementEx);
+                        continue;
+                    }
+                }
 
-                    continue;
+                if (requirement.Right.Type != FieldType.Value)
+                {
+                    // if the comparison is between two memory addresses, we cannot determine the relationship of the values
+                    if (requirement.Left.Type != FieldType.Value)
+                        continue;
+
+                    // normalize the comparison so the value is on the right.
+                    var value = requirement.Left;
+                    requirement.Left = requirement.Right;
+                    requirement.Right = value;
+                    requirement.Operator = Requirement.GetReversedRequirementOperator(requirement.Operator);
                 }
 
                 if (requirement.Right.Value == 0)
@@ -777,6 +818,17 @@ namespace RATools.Parser
             }
         }
 
+        private static RequirementEx MergeRequirements(RequirementEx into, RequirementEx from)
+        {
+            for (int i = 0; i < into.Requirements.Count; i++)
+            {
+                if (into.Requirements[i].HitCount > 0 && from.Requirements[i].HitCount > into.Requirements[i].HitCount)
+                    into.Requirements[i].HitCount = from.Requirements[i].HitCount;
+            }
+
+            return into;
+        }
+
         private static bool MergeRequirements(RequirementEx first, RequirementEx second, ConditionalOperation condition, out RequirementEx merged)
         {
             merged = null;
@@ -791,7 +843,7 @@ namespace RATools.Parser
                 if (left.Type != right.Type)
                     return false;
 
-                if (left.HitCount != right.HitCount)
+                if (left.HitCount != right.HitCount && (left.HitCount == 0 || right.HitCount == 0))
                     return false;
 
                 if (left.Left != right.Left)
@@ -803,7 +855,7 @@ namespace RATools.Parser
             right = second.Requirements[second.Requirements.Count - 1];
             if (left.Operator == right.Operator && left.Right == right.Right)
             {
-                merged = first;
+                merged = MergeRequirements(first, second);
                 return true;
             }
 
@@ -1011,19 +1063,19 @@ namespace RATools.Parser
             {
                 if (useRight)
                 {
-                    merged = second;
+                    merged = MergeRequirements(second, first);
                     return true;
                 }
 
                 if (useLeft)
                 {
-                    merged = first;
+                    merged = MergeRequirements(first, second);
                     return true;
                 }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = first;
+                    merged = MergeRequirements(first, second);
                     merged.Requirements.Last().Operator = newOperator;
                     return true;
                 }
@@ -1032,19 +1084,19 @@ namespace RATools.Parser
             {
                 if (useRight)
                 {
-                    merged = first;
+                    merged = MergeRequirements(first, second);
                     return true;
                 }
 
                 if (useLeft)
                 {
-                    merged = second;
+                    merged = MergeRequirements(second, first);
                     return true;
                 }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = first;
+                    merged = MergeRequirements(first, second);
                     merged.Requirements.Last().Operator = RequirementOperator.Equal;
                     return true;
                 }
