@@ -86,8 +86,16 @@ namespace RATools.ViewModels
         {
             using (var file = new StreamWriter(ServiceRepository.Instance.FindService<IFileSystemService>().CreateFile(filename)))
             {
-                foreach (var line in Editor.Lines)
-                    file.WriteLine(line.Text);
+                var enumerator = Editor.Lines.GetEnumerator();
+                if (enumerator.MoveNext())
+                {
+                    file.Write(enumerator.Current.Text);
+                    while (enumerator.MoveNext())
+                    {
+                        file.WriteLine();
+                        file.Write(enumerator.Current.Text);
+                    }
+                }
             }
 
             DeleteBackup();
