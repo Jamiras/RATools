@@ -91,10 +91,37 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        public void TestExpression()
+        [TestCase("byte(0x1234)", "0xH001234")]
+        [TestCase("byte(0x1234) + 1", "0xH001234_v1")]
+        [TestCase("byte(0x1234) - 1", "0xH001234_v-1")]
+        [TestCase("byte(0x1234) * 2", "0xH001234*2")]
+        [TestCase("byte(0x1234) / 2", "0xH001234*0.5")]
+        [TestCase("byte(0x1234) * 100 / 2", "0xH001234*50")]
+        [TestCase("byte(0x1234) * 2 / 100", "0xH001234*0.02")]
+        [TestCase("byte(0x1234) + 100 - 2", "0xH001234_v98")]
+        [TestCase("byte(0x1234) + 1 - 1", "0xH001234")]
+        [TestCase("byte(0x1234) * 2 + 1", "0xH001234*2_v1")]
+        [TestCase("byte(0x1234) * 2 - 1", "0xH001234*2_v-1")]
+        [TestCase("byte(0x1234) * 256 + byte(0x2345) + 1", "0xH001234*256_0xH002345_v1")]
+        [TestCase("1", "v1")]
+        [TestCase("1 + 7", "v8")]
+        [TestCase("1 + 3 * 2", "v7")]
+        [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
+        public void TestValueExpressions(string input, string expected)
         {
-            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234) * 256 + byte(0x2345) + 1)");
-            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(0xH001234*256_0xH002345_v1)\r\n"));
+            var rp = Evaluate("rich_presence_value(\"Name\", " + input + ")");
+            var rpString = rp.ToString();
+            var index = rpString.IndexOf("@Name(");
+            if (index == -1)
+            {
+                Assert.Fail("Could not find Name macro");
+            }
+            else
+            {
+                var index2 = rpString.LastIndexOf(")");
+                var subString = rpString.Substring(index + 6, index2 - index - 6);
+                Assert.That(subString, Is.EqualTo(expected));
+            }
         }
 
         [Test]

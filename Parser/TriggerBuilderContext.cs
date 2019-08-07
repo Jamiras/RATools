@@ -31,54 +31,144 @@ namespace RATools.Parser
         /// <returns>The string if successful, <c>null</c> if not.</returns>
         public static string GetValueString(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
-            var builder = new StringBuilder();
-            if (!ProcessValueExpression(expression, scope, builder, out result))
+            var terms = new List<Term>();
+            terms.Add(new Term { multiplier = 1.0 });
+
+            if (!ProcessValueExpression(expression, scope, terms, out result))
                 return null;
+
+            var context = new TriggerBuilderContext() { Trigger = new List<Requirement>() };
+
+            var builder = new StringBuilder();
+            foreach (var term in terms)
+            {
+                if (term.multiplier == 0.0)
+                    continue;
+
+                if (builder.Length > 0)
+                    builder.Append('_');
+
+                switch (term.field.Type)
+                {
+                    case FieldType.Value:
+                        if (term.field.Value == 0)
+                        {
+                            builder.Length--;
+                            break;
+                        }
+
+                        builder.Append('v');
+                        var value = term.field.Value * term.multiplier;
+                        if ((value % 1) == 0)
+                        {
+                            // value is a whole number, just output it
+                            builder.Append((int)value);
+                        }
+                        else
+                        {
+                            // value is a complex number, output the parts
+                            builder.Append(term.field.Value);
+                            builder.Append('*');
+                            builder.Append(term.multiplier);
+                        }
+                        break;
+
+                    default:
+                        term.field.Serialize(builder);
+                        if (term.multiplier != 1.0)
+                        {
+                            builder.Append('*');
+                            builder.Append(term.multiplier);
+                        }
+                        break;
+                }
+            }
 
             return builder.ToString();
         }
 
-        private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, StringBuilder builder, out ExpressionBase result)
+        private class Term
         {
-            IntegerConstantExpression integer;
+            public Field field;
+            public double multiplier;
+        }
+
+        private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, List<Term> terms, out ExpressionBase result)
+        {
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                var requirements = new List<Requirement>();
+                var context = new TriggerBuilderContext() { Trigger = requirements };
+                var error = context.CallFunction(functionCall, scope);
+                if (error != null)
+                {
+                    result = error;
+                    return false;
+                }
+
+                if (requirements.Count > 1)
+                {
+                    result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                    return false;
+                }
+
+                terms.Last().field = requirements[0].Left;
+                result = null;
+                return true;
+            }
+
+            IntegerConstantExpression integer = expression as IntegerConstantExpression;
+            if (integer != null)
+            {
+                terms.Last().field = new Field { Type = FieldType.Value, Value = (uint)integer.Value };
+                result = null;
+                return true;
+            }
 
             var mathematic = expression as MathematicExpression;
             if (mathematic != null)
             {
-                if (!ProcessValueExpression(mathematic.Left, scope, builder, out result))
+                if (!ProcessValueExpression(mathematic.Left, scope, terms, out result))
                     return false;
 
                 integer = mathematic.Right as IntegerConstantExpression;
                 switch (mathematic.Operation)
                 {
                     case MathematicOperation.Add:
-                        builder.Append('_');
-
                         if (integer != null)
                         {
-                            builder.Append('v');
-                            builder.Append(integer.Value);
-                            return true;
+                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
+                            {
+                                terms.Last().field.Value += (uint)integer.Value;
+                                return true;
+                            }
                         }
 
-                        return ProcessValueExpression(mathematic.Right, scope, builder, out result);
+                        terms.Add(new Term { multiplier = 1.0 });
+                        return ProcessValueExpression(mathematic.Right, scope, terms, out result);
 
                     case MathematicOperation.Subtract:
                         if (integer != null)
                         {
-                            builder.Append("_v-");
-                            builder.Append(integer.Value);
-                            return true;
+                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
+                            {
+                                terms.Last().field.Value -= (uint)integer.Value;
+                                return true;
+                            }
                         }
 
-                        result = new ParseErrorExpression("Value being subtracted must be an integer constant", mathematic.Right);
-                        return false;
+                        terms.Add(new Term { multiplier = -1.0 });
+                        return ProcessValueExpression(mathematic.Right, scope, terms, out result);
 
                     case MathematicOperation.Multiply:
                         if (integer != null)
                         {
-                            builder.Append('*');
-                            builder.Append(integer.Value);
+                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
+                                terms.Last().field.Value *= (uint)integer.Value;
+                            else
+                                terms.Last().multiplier *= integer.Value;
+
                             return true;
                         }
 
@@ -88,9 +178,10 @@ namespace RATools.Parser
                     case MathematicOperation.Divide:
                         if (integer != null)
                         {
-                            builder.Append('*');
-                            var inverted = 1 / (double)integer.Value;
-                            builder.Append(inverted);
+                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0 && (terms.Last().field.Value % integer.Value) == 0)
+                                terms.Last().field.Value /= (uint)integer.Value;
+                            else
+                                terms.Last().multiplier /= integer.Value;
                             return true;
                         }
 
@@ -99,35 +190,8 @@ namespace RATools.Parser
                 }
             }
 
-            integer = expression as IntegerConstantExpression;
-            if (integer != null)
-            {
-                result = new ParseErrorExpression("value cannot start with integer constant", integer);
-                return false;
-            }
-
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall == null)
-            {
-                result = new ParseErrorExpression("value can only contain memory accessors or arithmetic expressions", expression);
-                return false;
-            }
-
-            var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext { Trigger = requirements };
-            var innerScope = new InterpreterScope(scope) { Context = context };
-            result = context.CallFunction(functionCall, innerScope);
-            if (result != null)
-                return false;
-
-            if (requirements.Count != 1 || requirements[0].Operator != RequirementOperator.None)
-            {
-                result = new ParseErrorExpression(functionCall.FunctionName.Name + " did not evaluate to a memory accessor", functionCall.FunctionName);
-                return false;
-            }
-
-            requirements[0].Left.Serialize(builder);
-            return true;
+            result = new ParseErrorExpression("value must be a constant or a memory accessor", expression);
+            return false;
         }
 
         internal abstract class FunctionDefinition : FunctionDefinitionExpression
