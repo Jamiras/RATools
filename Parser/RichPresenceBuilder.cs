@@ -52,29 +52,27 @@ namespace RATools.Parser
             _lookupFields[name] = new Lookup(dict, fallback);
         }
 
-        internal ParseErrorExpression AddLookupField(string name, DictionaryExpression dict)
+        internal ParseErrorExpression AddLookupField(string name, DictionaryExpression dict, ExpressionBase fallback)
         {
             var tinyDict = new TinyDictionary<int, string>();
-            string fallback = null;
             foreach (var entry in dict.Entries)
             {
+                var key = entry.Key as IntegerConstantExpression;
+                if (key == null)
+                    return new ParseErrorExpression("key is not an integer", entry.Key);
+
                 var value = entry.Value as StringConstantExpression;
                 if (value == null)
                     return new ParseErrorExpression("value is not a string", entry.Value);
 
-                var key = entry.Key as IntegerConstantExpression;
-                if (key != null)
-                    tinyDict[key.Value] = value.Value;
-                else
-                {
-                    var strKey = entry.Key as StringConstantExpression;
-                    if (strKey == null || strKey.Value != "*")
-                        return new ParseErrorExpression("key is not an integer or \"*\"", entry.Key);
-                    fallback = value.Value;
-                }
+                tinyDict[key.Value] = value.Value;
             }
 
-            AddLookupField(name, tinyDict, fallback);
+            var fallbackValue = fallback as StringConstantExpression;
+            if (fallbackValue == null)
+                return new ParseErrorExpression("Fallback value is not a string", fallback);
+
+            AddLookupField(name, tinyDict, fallbackValue.Value);
             return null;
         }
 
@@ -100,7 +98,7 @@ namespace RATools.Parser
                     builder.AppendLine(lookup.Value.Dict[key]);
                 }
 
-                if (lookup.Value.Fallback != null)
+                if (lookup.Value.Fallback.Length > 0)
                 {
                     builder.Append("*=");
                     builder.AppendLine(lookup.Value.Fallback);
