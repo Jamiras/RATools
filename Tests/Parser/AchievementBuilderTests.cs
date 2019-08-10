@@ -305,6 +305,7 @@ namespace RATools.Test.Parser
         [TestCase("bit0(0x001234) != 1", "bit0(0x001234) == 0")] // bit not equal to one must be 0
         [TestCase("bit0(0x001234) < 1", "bit0(0x001234) == 0")] // bit less than one must be 0
         [TestCase("byte(0x001234) < 1", "byte(0x001234) == 0")] // byte less than one must be 0
+        [TestCase("8 > byte(0x001234)", "byte(0x001234) < 8")] // prefer value on the right
         [TestCase("byte(0x001234) == 1 && byte(0x004567) < 0", "always_false()")] // less than 0 can never be true, replace with always_false
         [TestCase("byte(0x001234) == 1 && low4(0x004567) > 15", "always_false()")] // nibble cannot be greater than 15, replace with always_false
         [TestCase("byte(0x001234) == 1 && high4(0x004567) > 15", "always_false()")] // nibble cannot be greater than 15, replace with always_false
@@ -340,9 +341,10 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) >= byte(0x001234)", "always_true()")] // always true
         [TestCase("byte(0x001234) > byte(0x001234)", "always_false()")] // never true
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
-        [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, byte(0x001234) == byte(0x001234))")] // always true, but ignored for two frames
-        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
-        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, 1 == 1))")] // always true, but ignored for two frames
+        [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
+        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("repeated(3, byte(0x001234) != byte(0x001234))", "always_false()")] // always false will never be true, regardless of how many frames it's false
         [TestCase("0 < 256", "always_true()")] // always true
         [TestCase("0 == 1", "always_false()")] // always false
         [TestCase("1 == 1", "always_true()")] // always true
@@ -389,6 +391,7 @@ namespace RATools.Test.Parser
                   "byte(0x001234) == 1 && (byte(0x002345) == 1 || byte(0x002345) == 2)")] // core "1=1" should be removed by promotion of another condition
         // ==== RemoveDuplicates ====
         [TestCase("byte(0x001234) == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")]
+        [TestCase("byte(0x001234) < 8 && 8 >= byte(0x001234)", "byte(0x001234) < 8")] // prefer value on the right
         [TestCase("prev(byte(0x001234)) == 1 && prev(byte(0x001234)) == 1", "prev(byte(0x001234)) == 1")]
         [TestCase("once(byte(0x001234) == 1) && once(byte(0x001234) == 1)", "once(byte(0x001234) == 1)")]
         [TestCase("never(byte(0x001234) != prev(byte(0x001234))) && never(byte(0x001234) != prev(byte(0x001234)))", "byte(0x001234) == prev(byte(0x001234))")]
@@ -427,6 +430,10 @@ namespace RATools.Test.Parser
         [TestCase("never(byte(0x001234) == 2) && byte(0x001234) != 2 && once(byte(0x001235) == 3)", "never(byte(0x001234) == 2) && once(byte(0x001235) == 3)")] // hitcount, only keep resetif
         [TestCase("byte(0x001234) == 2 && never(byte(0x001234) != 2) && once(byte(0x001235) == 3)", "never(byte(0x001234) != 2) && once(byte(0x001235) == 3)")] // hitcount, only keep resetif
         [TestCase("never(byte(0x001234) < 2) && repeated(10, byte(0x001234) >= 2)", "never(byte(0x001234) < 2) && repeated(10, byte(0x001234) >= 2)")] // HitCount on same field as ResetIf should not be optimized away
+        [TestCase("once(byte(0x1234) == 6) && repeated(5, byte(0x1234) == 6)", "repeated(5, byte(0x001234) == 6)")] // same condition with different hitcounts only honors higher hitcount
+        [TestCase("repeated(5, byte(0x1234) == 6) && once(byte(0x1234) == 6)", "repeated(5, byte(0x001234) == 6)")] // same condition with different hitcounts only honors higher hitcount
+        [TestCase("byte(0x1234) == 6 && repeated(5, byte(0x1234) == 6)", "byte(0x001234) == 6 && repeated(5, byte(0x001234) == 6)")] // without hitcount, cannot be merged
+        [TestCase("once(byte(0x1234) == byte(0x1234)) && repeated(5, byte(0x2345) == byte(0x2345))", "repeated(5, always_true())")] // different conditions evaluate to always true, only capture higher hitcount
         // ==== MergeDuplicateAlts ====
         [TestCase("byte(0x001234) > 1 || byte(0x001234) > 2", "byte(0x001234) > 1")] // >1 || >2 is only >1
         [TestCase("byte(0x001234) > 1 || byte(0x001235) > 2", "byte(0x001234) > 1 || byte(0x001235) > 2")] // different addresses

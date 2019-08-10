@@ -550,7 +550,7 @@ namespace RATools.Parser
                 left = right;
                 right = temp;
 
-                op = GetReversedRequirementOperator(op);
+                op = Requirement.GetReversedRequirementOperator(op);
             }
 
             var error = ExecuteAchievementExpression(left, scope);
@@ -705,20 +705,6 @@ namespace RATools.Parser
                 case ComparisonOperation.LessThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 case ComparisonOperation.GreaterThan: return RequirementOperator.GreaterThan;
                 case ComparisonOperation.GreaterThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
-                default: return RequirementOperator.None;
-            }
-        }
-
-        private static RequirementOperator GetReversedRequirementOperator(RequirementOperator op)
-        {
-            switch (op)
-            {
-                case RequirementOperator.Equal: return RequirementOperator.Equal;
-                case RequirementOperator.NotEqual: return RequirementOperator.NotEqual;
-                case RequirementOperator.LessThan: return RequirementOperator.GreaterThan;
-                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
-                case RequirementOperator.GreaterThan: return RequirementOperator.LessThan;
-                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 default: return RequirementOperator.None;
             }
         }
