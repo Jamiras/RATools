@@ -11,6 +11,9 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("name"));
             Parameters.Add(new VariableDefinitionExpression("expression"));
             Parameters.Add(new VariableDefinitionExpression("dictionary"));
+
+            Parameters.Add(new VariableDefinitionExpression("fallback"));
+            DefaultParameters["fallback"] = new StringConstantExpression("");
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
@@ -37,7 +40,11 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, dictionary });
+            var fallback = GetParameter(scope, "fallback", out result);
+            if (fallback == null)
+                return false;
+
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, dictionary, fallback });
             return true;
         }
 
@@ -46,13 +53,14 @@ namespace RATools.Parser.Functions
             var name = (StringConstantExpression)functionCall.Parameters.First();
             var expression = functionCall.Parameters.ElementAt(1);
             var dictionary = (DictionaryExpression)functionCall.Parameters.ElementAt(2);
+            var fallback = functionCall.Parameters.ElementAt(3);
 
             ExpressionBase result;
             var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
                 return (ParseErrorExpression)result;
 
-            var error = context.RichPresence.AddLookupField(name.Value, dictionary);
+            var error = context.RichPresence.AddLookupField(name.Value, dictionary, fallback);
             if (error != null)
                 return error;
 
