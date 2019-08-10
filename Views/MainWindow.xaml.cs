@@ -24,6 +24,7 @@ namespace RATools.Views
             CoreServices.RegisterServices();
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
+            dialogService.DefaultWindowTitle = "RA Tools";
 
             var windowSettingsRepository = ServiceRepository.Instance.FindService<IWindowSettingsRepository>();
             windowSettingsRepository.RestoreSettings(this);
@@ -35,22 +36,11 @@ namespace RATools.Views
             dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());
             dialogService.RegisterDialogHandler(typeof(AboutDialogViewModel), vm => new OkCancelView(new AboutDialog()));
 
-            dialogService.RegisterDialogHandler(typeof(MessageBoxViewModel), CreateMessageBoxView);
-
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
             DataContext = viewModel;
 
             base.OnInitialized(e);
-        }
-
-        private FrameworkElement CreateMessageBoxView(DialogViewModelBase viewModel)
-        {
-            var textBlock = new FormattedTextBlock();
-            textBlock.Margin = new Thickness(4);
-            textBlock.SetBinding(FormattedTextBlock.TextProperty, "Message");
-            textBlock.TextWrapping = TextWrapping.Wrap;
-            return new OkCancelView(textBlock);
         }
 
         protected override void OnClosing(CancelEventArgs e)
