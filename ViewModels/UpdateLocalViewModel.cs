@@ -54,7 +54,7 @@ namespace RATools.ViewModels
             }
 
             if (warning.Length > 0)
-                MessageBoxViewModel.ShowMessage(warning.ToString());
+                TaskDialogViewModel.ShowWarningMessage("Your achievements may not function as expected.", warning.ToString());
 
             DialogResult = DialogResult.Ok;
         }

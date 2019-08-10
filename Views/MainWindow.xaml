@@ -14,8 +14,8 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
-    <DockPanel Background="#F0F0F0">
-        <Menu DockPanel.Dock="Top">
+    <DockPanel Background="#F0F0F0" controls:CommandBinding.FileDropCommand="{Binding DragDropScriptCommand}" >
+        <Menu DockPanel.Dock="Top" AllowDrop="False">
             <MenuItem Header="_File">
                 <MenuItem Header="_New Script" Command="{Binding NewScriptCommand}" />
                 <MenuItem Header="_Open Script" Command="{Binding OpenScriptCommand}" />

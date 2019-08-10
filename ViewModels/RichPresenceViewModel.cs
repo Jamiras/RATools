@@ -216,7 +216,10 @@ namespace RATools.ViewModels
                     ServiceRepository.Instance.FindService<IClipboardService>().SetData(_richPresence);
 
                     if (_richPresence.Length > RichPresenceMaxLength)
-                        MessageBoxViewModel.ShowMessage("Rich Presence exceeds maximum length of " + RichPresenceMaxLength + " characters (" + _richPresence.Length + ")");
+                    {
+                        TaskDialogViewModel.ShowWarningMessage("Your Rich Presence may not function as expected.", 
+                            "Rich Presence exceeds maximum length of " + RichPresenceMaxLength + " characters (" + _richPresence.Length + ")");
+                    }
                 });
             }
         }

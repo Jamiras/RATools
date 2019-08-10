@@ -11,16 +11,28 @@ namespace RATools.Parser
     [DebuggerDisplay("{DisplayString}")]
     public class RichPresenceBuilder
     {
+        private class Lookup
+        {
+            public Lookup(IDictionary<int, string> dict, string fallback)
+            {
+                Dict = dict;
+                Fallback = fallback;
+            }
+
+            public IDictionary<int, string> Dict { get; private set; }
+            public string Fallback { get; private set; }
+        };
+
         public RichPresenceBuilder()
         {
             _valueFields = new TinyDictionary<string, ValueFormat>();
-            _lookupFields = new TinyDictionary<string, IDictionary<int, string>>();
+            _lookupFields = new TinyDictionary<string, Lookup>();
             _conditionalDisplayStrings = new List<string>();
         }
 
         private List<string> _conditionalDisplayStrings;
         private TinyDictionary<string, ValueFormat> _valueFields;
-        private TinyDictionary<string, IDictionary<int, string>> _lookupFields;
+        private TinyDictionary<string, Lookup> _lookupFields;
 
         public string DisplayString { get; set; }
         public int Line { get; set; }
@@ -35,12 +47,12 @@ namespace RATools.Parser
             _valueFields[name] = format;
         }
 
-        public void AddLookupField(string name, IDictionary<int, string> dict)
+        public void AddLookupField(string name, IDictionary<int, string> dict, string fallback)
         {
-            _lookupFields[name] = dict;
+            _lookupFields[name] = new Lookup(dict, fallback);
         }
 
-        internal ParseErrorExpression AddLookupField(string name, DictionaryExpression dict)
+        internal ParseErrorExpression AddLookupField(string name, DictionaryExpression dict, ExpressionBase fallback)
         {
             var tinyDict = new TinyDictionary<int, string>();
             foreach (var entry in dict.Entries)
@@ -56,7 +68,11 @@ namespace RATools.Parser
                 tinyDict[key.Value] = value.Value;
             }
 
-            AddLookupField(name, tinyDict);
+            var fallbackValue = fallback as StringConstantExpression;
+            if (fallbackValue == null)
+                return new ParseErrorExpression("Fallback value is not a string", fallback);
+
+            AddLookupField(name, tinyDict, fallbackValue.Value);
             return null;
         }
 
@@ -72,14 +88,20 @@ namespace RATools.Parser
                 builder.Append("Lookup:");
                 builder.AppendLine(lookup.Key);
 
-                var list = new List<int>(lookup.Value.Keys);
+                var list = new List<int>(lookup.Value.Dict.Keys);
                 list.Sort();
 
                 foreach (var key in list)
                 {
                     builder.Append(key);
                     builder.Append('=');
-                    builder.AppendLine(lookup.Value[key]);
+                    builder.AppendLine(lookup.Value.Dict[key]);
+                }
+
+                if (lookup.Value.Fallback.Length > 0)
+                {
+                    builder.Append("*=");
+                    builder.AppendLine(lookup.Value.Fallback);
                 }
 
                 builder.AppendLine();

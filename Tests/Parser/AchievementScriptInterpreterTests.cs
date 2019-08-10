@@ -721,6 +721,22 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestRichPresenceLookupFallback()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, \"Maybe\"))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n*=Maybe\r\n\r\nDisplay:\r\nvalue @Test(0xH001234) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupInvalidFallback()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, 1))", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 Fallback value is not a string"));
+        }
+
+        [Test]
         public void TestLeaderboard()
         {
             var parser = Parse("leaderboard(\"T\", \"D\", byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567))");

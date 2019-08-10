@@ -364,7 +364,7 @@ namespace RATools.ViewModels
             UpdateLocal(warning, false);
 
             if (warning.Length > 0)
-                MessageBoxViewModel.ShowMessage(warning.ToString());
+                TaskDialogViewModel.ShowWarningMessage("Your achievement may not function as expected.", warning.ToString());
         }
 
         internal void UpdateLocal(StringBuilder warning, bool validateAll)

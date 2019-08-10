@@ -27,6 +27,7 @@ namespace RATools.ViewModels
             SettingsCommand = new DelegateCommand(OpenSettings);
             ExitCommand = new DelegateCommand(Exit);
 
+            DragDropScriptCommand = new DelegateCommand<string[]>(DragDropFile, CanDragDropFile);
             UpdateLocalCommand = DisabledCommand.Instance;
 
             GameStatsCommand = new DelegateCommand(GameStats);
@@ -105,6 +106,21 @@ namespace RATools.ViewModels
                 OpenFile(vm.FileNames[0]);
         }
 
+        public CommandBase<string[]> DragDropScriptCommand { get; private set; }
+        private bool CanDragDropFile(string[] files)
+        {
+            if (files.Length != 1)
+                return false;
+
+            var ext = Path.GetExtension(files[0]);
+            return (String.Compare(ext, ".rascript", StringComparison.OrdinalIgnoreCase) == 0) ||
+                (String.Compare(ext, ".txt", StringComparison.OrdinalIgnoreCase) == 0);
+        }
+        private void DragDropFile(string[] files)
+        {
+            OpenFile(files[0]);
+        }
+
         public CommandBase SaveScriptCommand { get; private set; }
         public CommandBase SaveScriptAsCommand { get; private set; }
 
@@ -153,8 +169,7 @@ namespace RATools.ViewModels
             if (Game == null || Game.Script.CompareState != GeneratedCompareState.LocalDiffers)
                 return true;
 
-            var vm = new MessageBoxViewModel("Save changes to " + Game.Script.Title + "?");
-            switch (vm.ShowYesNoCancelDialog())
+            switch (TaskDialogViewModel.ShowWarningPrompt("Save changes to " + Game.Script.Title + "?", "", TaskDialogViewModel.Buttons.YesNoCancel))
             {
                 case DialogResult.Yes:
                     return SaveScript();
@@ -174,7 +189,7 @@ namespace RATools.ViewModels
         {
             if (!File.Exists(filename))
             {
-                MessageBoxViewModel.ShowMessage("Could not open " + filename);
+                TaskDialogViewModel.ShowErrorMessage("Could not open " + Path.GetFileName(filename), filename + " was not found");
                 return;
             }
 
@@ -185,9 +200,7 @@ namespace RATools.ViewModels
             {
                 if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
                 {
-                    var vm = new MessageBoxViewModel("Revert to the last saved state? Your changes will be lost.");
-                    vm.DialogTitle = "Revert Script";
-                    if (vm.ShowOkCancelDialog() == DialogResult.Cancel)
+                    if (TaskDialogViewModel.ShowWarningPrompt("Revert to the last saved state?", "Your changes will be lost.") == DialogResult.No)
                         return;
                 }
 
@@ -205,9 +218,9 @@ namespace RATools.ViewModels
             bool usingBackup = false;
             if (File.Exists(backupFilename))
             {
-                var vm2 = new MessageBoxViewModel("Found an autosave file from " + File.GetLastWriteTime(backupFilename) + ".\nDo you want to open it instead?");
-                vm2.DialogTitle = Path.GetFileName(filename);
-                switch (vm2.ShowYesNoCancelDialog())
+                switch (TaskDialogViewModel.ShowWarningPrompt("Open autosave file?", 
+                    "An autosave file from " + File.GetLastWriteTime(backupFilename) + " was found for " + Path.GetFileName(filename) + ".", 
+                    TaskDialogViewModel.Buttons.YesNoCancel))
                 {
                     case DialogResult.Cancel:
                         return;
@@ -232,7 +245,7 @@ namespace RATools.ViewModels
             }
             catch (IOException ex)
             {
-                MessageBoxViewModel.ShowMessage(ex.Message);
+                TaskDialogViewModel.ShowErrorMessage("Unable to read " + Path.GetFileName(filename), ex.Message);
                 return;
             }
 
@@ -251,7 +264,7 @@ namespace RATools.ViewModels
             if (gameId == 0)
             {
                 logger.WriteVerbose("Could not find game ID");
-                MessageBoxViewModel.ShowMessage("Could not find game id");
+                TaskDialogViewModel.ShowWarningMessage("Could not find game ID", "The loaded file did not contain an #ID comment indicating which game the script is associated to.");
                 return;
             }
 
@@ -281,7 +294,7 @@ namespace RATools.ViewModels
             if (viewModel == null)
             {
                 logger.WriteVerbose("Could not find code notes");
-                MessageBoxViewModel.ShowMessage("Could not locate notes file for game " + gameId + ".\n\n" +
+                TaskDialogViewModel.ShowWarningMessage("Could not locate code notes for game " + gameId,
                     "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
 
                 viewModel = new GameViewModel(gameId, gameTitle);
@@ -398,20 +411,20 @@ namespace RATools.ViewModels
             var game = Game;
             if (game == null)
             {
-                MessageBoxViewModel.ShowMessage("No game loaded");
+                TaskDialogViewModel.ShowErrorMessage("No game loaded", "Local data cannot be written without an associated game.");
                 return;
             }
 
             if (game.Script.Editor.ErrorsToolWindow.References.Count > 0)
             {
-                MessageBoxViewModel.ShowMessage("Cannot update while errors exist.");
                 game.Script.Editor.ErrorsToolWindow.IsVisible = true;
+                TaskDialogViewModel.ShowErrorMessage("Errors exist in script", "Local data cannot be updated until errors are resolved.");
                 return;
             }
 
             if (String.IsNullOrEmpty(game.RACacheDirectory))
             {
-                MessageBoxViewModel.ShowMessage("Could not identify local directory.");
+                TaskDialogViewModel.ShowErrorMessage("Could not identify emulator directory.", "Local data cannot be updated if the emulator directory for the game is not known.");
                 return;
             }
 
