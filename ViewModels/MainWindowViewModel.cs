@@ -27,6 +27,7 @@ namespace RATools.ViewModels
             SettingsCommand = new DelegateCommand(OpenSettings);
             ExitCommand = new DelegateCommand(Exit);
 
+            DragDropScriptCommand = new DelegateCommand<string[]>(DragDropFile, CanDragDropFile);
             UpdateLocalCommand = DisabledCommand.Instance;
 
             GameStatsCommand = new DelegateCommand(GameStats);
@@ -103,6 +104,21 @@ namespace RATools.ViewModels
 
             if (vm.ShowOpenFileDialog() == DialogResult.Ok)
                 OpenFile(vm.FileNames[0]);
+        }
+
+        public CommandBase<string[]> DragDropScriptCommand { get; private set; }
+        private bool CanDragDropFile(string[] files)
+        {
+            if (files.Length != 1)
+                return false;
+
+            var ext = Path.GetExtension(files[0]);
+            return (String.Compare(ext, ".rascript", StringComparison.OrdinalIgnoreCase) == 0) ||
+                (String.Compare(ext, ".txt", StringComparison.OrdinalIgnoreCase) == 0);
+        }
+        private void DragDropFile(string[] files)
+        {
+            OpenFile(files[0]);
         }
 
         public CommandBase SaveScriptCommand { get; private set; }
