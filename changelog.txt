@@ -1,3 +1,13 @@
+v1.6.2 - 10 Aug 2019
+* add Settings dialog
+* support for specifying fallback to be used in rich_presence_lookup() when no other items match
+* support for opening files via drag/drop
+* normalize generated conditions so constants are on the right
+* fix generating achievement from string with no core group
+* fix newline at end of content not appearing in editor
+* fix repeated warning when achievement exceeds length limit
+* fix to no longer remove 'repeated(n, always_true())' when optimizing
+
 v1.6.1 - 28 Jun 2019
 * support for &&'d conditions inside once(), repeated(), never(), and unless() [AndNext]
 * add prior() function for memory access
