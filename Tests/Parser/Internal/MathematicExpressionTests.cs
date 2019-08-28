@@ -499,5 +499,68 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result.ToString(), Is.EqualTo(new IntegerConstantExpression(0).ToString()));
         }
+
+        private MathematicOperation GetOperation(char c)
+        {
+            switch (c)
+            {
+                case '+': return MathematicOperation.Add;
+                case '-': return MathematicOperation.Subtract;
+                case '*': return MathematicOperation.Multiply;
+                case '/': return MathematicOperation.Divide;
+                default: return MathematicOperation.None;
+            }
+        }
+
+        [Test]
+        [TestCase("+3+1", "+4")]
+        [TestCase("+3-1", "+2")]
+        [TestCase("+1-3", "-2")]
+        [TestCase("+3-3", "")]
+        [TestCase("-3-1", "-4")]
+        [TestCase("-3+1", "-2")]
+        [TestCase("-1+3", "+2")]
+        [TestCase("-3+3", "")]
+        [TestCase("*4*2", "*8")]
+        [TestCase("*4/2", "*2")]
+        [TestCase("*2/4", "*2/4")]
+        [TestCase("*3/3", "")]
+        [TestCase("/4/2", "/8")]
+        [TestCase("/4*2", "/4*2")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("/2*4", "/2*4")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("/3*3", "/3*3")] // divide followed by multiply removes the modulus portion, cannot combine
+        public void TestCombining(string modifiers, string expectedModifiers)
+        {
+            var operation1 = GetOperation(modifiers[0]);
+            var value1 = modifiers[1] - '0';
+            var operation2 = GetOperation(modifiers[2]);
+            var value2 = modifiers[3] - '0';
+
+            var mem = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
+            var left = new MathematicExpression(mem, operation1, new IntegerConstantExpression(value1));
+            var expr = new MathematicExpression(left, operation2, new IntegerConstantExpression(value2));
+            var scope = new InterpreterScope();
+            scope.Context = new TriggerBuilderContext();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+
+            if (expectedModifiers.Length == 0)
+            {
+                Assert.That(result.ToString(), Is.EqualTo(mem.ToString()));
+            }
+            else if (expectedModifiers == modifiers)
+            {
+                Assert.That(result.ToString(), Is.EqualTo(expr.ToString()));
+            }
+            else
+            {
+                var expectedOperation = GetOperation(expectedModifiers[0]);
+                var expectedValue = expectedModifiers[1] - '0';
+                var expected = new MathematicExpression(mem, expectedOperation, new IntegerConstantExpression(expectedValue));
+                Assert.That(result.ToString(), Is.EqualTo(expected.ToString()));
+            }
+        }
     }
 }

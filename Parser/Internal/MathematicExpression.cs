@@ -196,6 +196,43 @@ namespace RATools.Parser.Internal
                             result = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
                             return true;
                         }
+
+                        var mathematicLeft = left as MathematicExpression;
+                        if (mathematicLeft != null)
+                        {
+                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
+                            if (integerLeft != null)
+                            {
+                                if (mathematicLeft.Operation == MathematicOperation.Add)
+                                {
+                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+
+                                if (mathematicLeft.Operation == MathematicOperation.Subtract)
+                                {
+                                    if (integerLeft.Value == integerRight.Value)
+                                    {
+                                        result = mathematicLeft.Left;
+                                        return true;
+                                    }
+
+                                    if (integerLeft.Value > integerRight.Value)
+                                    {
+                                        mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                                    }
+                                    else
+                                    {
+                                        mathematicLeft.Right = new IntegerConstantExpression(integerRight.Value - integerLeft.Value);
+                                        mathematicLeft.Operation = MathematicOperation.Add;
+                                    }
+
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+                            }
+                        }
                     }
                     break;
 
@@ -213,8 +250,44 @@ namespace RATools.Parser.Internal
                             result = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
                             return true;
                         }
-                    }
 
+                        var mathematicLeft = left as MathematicExpression;
+                        if (mathematicLeft != null)
+                        {
+                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
+                            if (integerLeft != null)
+                            {
+                                if (mathematicLeft.Operation == MathematicOperation.Subtract)
+                                {
+                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+
+                                if (mathematicLeft.Operation == MathematicOperation.Add)
+                                {
+                                    if (integerLeft.Value == integerRight.Value)
+                                    {
+                                        result = mathematicLeft.Left;
+                                        return true;
+                                    }
+
+                                    if (integerLeft.Value > integerRight.Value)
+                                    {
+                                        mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                                    }
+                                    else
+                                    {
+                                        mathematicLeft.Right = new IntegerConstantExpression(integerRight.Value - integerLeft.Value);
+                                        mathematicLeft.Operation = MathematicOperation.Subtract;
+                                    }
+
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
                     break;
 
                 case MathematicOperation.Multiply:
@@ -247,6 +320,21 @@ namespace RATools.Parser.Internal
                             result = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
                             return true;
                         }
+
+                        var mathematicLeft = left as MathematicExpression;
+                        if (mathematicLeft != null)
+                        {
+                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
+                            if (integerLeft != null)
+                            {
+                                if (mathematicLeft.Operation == MathematicOperation.Multiply)
+                                {
+                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+                            }
+                        }
                     }
                     break;
 
@@ -269,6 +357,34 @@ namespace RATools.Parser.Internal
                         {
                             result = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
                             return true;
+                        }
+
+                        var mathematicLeft = left as MathematicExpression;
+                        if (mathematicLeft != null)
+                        {
+                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
+                            if (integerLeft != null)
+                            {
+                                if (mathematicLeft.Operation == MathematicOperation.Divide)
+                                {
+                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+
+                                if (mathematicLeft.Operation == MathematicOperation.Multiply && (integerLeft.Value % integerRight.Value == 0))
+                                {
+                                    if (integerLeft.Value == integerRight.Value)
+                                    {
+                                        result = mathematicLeft.Left;
+                                        return true;
+                                    }
+
+                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
+                                    result = mathematicLeft;
+                                    return true;
+                                }
+                            }
                         }
                     }
                     break;
