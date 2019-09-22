@@ -513,12 +513,94 @@ namespace RATools.Parser
             return new ParseErrorExpression("Unsupported conditional", condition);
         }
 
+        private bool RebalanceMathematicComparison(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
+        {
+            var mathematic = (MathematicExpression)comparisonExpression.Left;
+
+            // can only apply transitive property to integer constants
+            var integer = mathematic.Right as IntegerConstantExpression;
+            if (integer == null)
+            {
+                result = comparisonExpression;
+                return true;
+            }
+
+            // apply the inverse of the mathematical operation to generate a new right side
+            var operation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
+            var right = new MathematicExpression(comparisonExpression.Right, operation, mathematic.Right);
+            if (!right.ReplaceVariables(scope, out result))
+                return false;
+
+            var newRight = result;
+            var comparisonOperation = comparisonExpression.Operation;
+
+            // multiplication is converted to division. if the division is not exact, modify the comparison 
+            // so its still logically valid (if possible).
+            if (operation == MathematicOperation.Divide && newRight is IntegerConstantExpression)
+            {
+                var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematic.Right);
+                if (!reversed.ReplaceVariables(scope, out result))
+                    return false;
+
+                if (comparisonExpression.Right != result)
+                {
+                    // division was not exact
+                    switch (comparisonOperation)
+                    {
+                        case ComparisonOperation.Equal:
+                            // a * 10 == 9999 can never be true
+                            result = new ParseErrorExpression("Result can never be true using integer math", comparisonExpression);
+                            return false;
+
+                        case ComparisonOperation.NotEqual:
+                            // a * 10 != 9999 is always true
+                            result = new ParseErrorExpression("Result is always true using integer math", comparisonExpression);
+                            return false;
+
+                        case ComparisonOperation.LessThan:
+                            // a * 10 < 9999 becomes a < 999
+                            break;
+
+                        case ComparisonOperation.LessThanOrEqual:
+                            // a * 10 <= 9999 becomes a <= 999
+                            break;
+
+                        case ComparisonOperation.GreaterThan:
+                            // a * 10 > 9999 becomes a > 999
+                            break;
+
+                        case ComparisonOperation.GreaterThanOrEqual:
+                            // a * 10 >= 9999 becomes a > 999
+                            comparisonOperation = ComparisonOperation.GreaterThan;
+                            break;
+                    }
+                }
+            }
+
+            // construct the new equation and recurse if applicable
+            var newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
+            if (newRoot.Left.Type == ExpressionType.Mathematic)
+                return RebalanceMathematicComparison(newRoot, scope, out result);
+
+            result = newRoot;
+            return true;
+        }
+
         private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
         {
             _equalityModifiers.Clear();
 
             var context = scope.GetContext<TriggerBuilderContext>();
             var insertIndex = context.Trigger.Count;
+
+            if (comparison.Left.Type == ExpressionType.Mathematic)
+            {
+                ExpressionBase result;
+                if (!RebalanceMathematicComparison(comparison, scope, out result))
+                    return (ParseErrorExpression)result;
+
+                comparison = (ComparisonExpression)result;
+            }
 
             var left = comparison.Left;
             var right = comparison.Right;
