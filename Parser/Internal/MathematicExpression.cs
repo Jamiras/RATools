@@ -155,12 +155,14 @@ namespace RATools.Parser.Internal
                         if (stringRight != null)
                         {
                             result = new StringConstantExpression(stringLeft.Value + stringRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
 
                         if (integerRight != null)
                         {
                             result = new StringConstantExpression(stringLeft.Value + integerRight.Value.ToString());
+                            CopyLocation(result);
                             return true;
                         }
                     }
@@ -169,6 +171,7 @@ namespace RATools.Parser.Internal
                         if (integerLeft != null)
                         {
                             result = new StringConstantExpression(integerLeft.Value.ToString() + stringRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
                     }
@@ -194,6 +197,7 @@ namespace RATools.Parser.Internal
                         if (integerLeft != null)
                         {
                             result = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
 
@@ -205,8 +209,9 @@ namespace RATools.Parser.Internal
                             {
                                 if (mathematicLeft.Operation == MathematicOperation.Add)
                                 {
-                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
-                                    result = mathematicLeft;
+                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add, 
+                                        new IntegerConstantExpression(integerLeft.Value + integerRight.Value));
+                                    CopyLocation(result);
                                     return true;
                                 }
 
@@ -220,15 +225,16 @@ namespace RATools.Parser.Internal
 
                                     if (integerLeft.Value > integerRight.Value)
                                     {
-                                        mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
+                                            new IntegerConstantExpression(integerLeft.Value - integerRight.Value));
                                     }
                                     else
                                     {
-                                        mathematicLeft.Right = new IntegerConstantExpression(integerRight.Value - integerLeft.Value);
-                                        mathematicLeft.Operation = MathematicOperation.Add;
+                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add,
+                                            new IntegerConstantExpression(integerRight.Value - integerLeft.Value));
                                     }
 
-                                    result = mathematicLeft;
+                                    CopyLocation(result);
                                     return true;
                                 }
                             }
@@ -248,6 +254,7 @@ namespace RATools.Parser.Internal
                         if (integerLeft != null)
                         {
                             result = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
 
@@ -259,8 +266,9 @@ namespace RATools.Parser.Internal
                             {
                                 if (mathematicLeft.Operation == MathematicOperation.Subtract)
                                 {
-                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
-                                    result = mathematicLeft;
+                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
+                                        new IntegerConstantExpression(integerLeft.Value + integerRight.Value));
+                                    CopyLocation(result);
                                     return true;
                                 }
 
@@ -274,15 +282,16 @@ namespace RATools.Parser.Internal
 
                                     if (integerLeft.Value > integerRight.Value)
                                     {
-                                        mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
+                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add,
+                                            new IntegerConstantExpression(integerLeft.Value - integerRight.Value));
                                     }
                                     else
                                     {
-                                        mathematicLeft.Right = new IntegerConstantExpression(integerRight.Value - integerLeft.Value);
-                                        mathematicLeft.Operation = MathematicOperation.Subtract;
+                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
+                                            new IntegerConstantExpression(integerRight.Value - integerLeft.Value));
                                     }
 
-                                    result = mathematicLeft;
+                                    CopyLocation(result);
                                     return true;
                                 }
                             }
@@ -318,6 +327,7 @@ namespace RATools.Parser.Internal
                         if (integerLeft != null)
                         {
                             result = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
 
@@ -329,8 +339,9 @@ namespace RATools.Parser.Internal
                             {
                                 if (mathematicLeft.Operation == MathematicOperation.Multiply)
                                 {
-                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
-                                    result = mathematicLeft;
+                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Multiply,
+                                        new IntegerConstantExpression(integerLeft.Value * integerRight.Value));
+                                    CopyLocation(result);
                                     return true;
                                 }
                             }
@@ -356,6 +367,7 @@ namespace RATools.Parser.Internal
                         if (integerLeft != null)
                         {
                             result = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
 
@@ -367,8 +379,9 @@ namespace RATools.Parser.Internal
                             {
                                 if (mathematicLeft.Operation == MathematicOperation.Divide)
                                 {
-                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
-                                    result = mathematicLeft;
+                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Divide,
+                                       new IntegerConstantExpression(integerLeft.Value * integerRight.Value));
+                                    CopyLocation(result);
                                     return true;
                                 }
 
@@ -380,8 +393,9 @@ namespace RATools.Parser.Internal
                                         return true;
                                     }
 
-                                    mathematicLeft.Right = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
-                                    result = mathematicLeft;
+                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Multiply,
+                                        new IntegerConstantExpression(integerLeft.Value / integerRight.Value));
+                                    CopyLocation(result);
                                     return true;
                                 }
                             }
@@ -401,22 +415,22 @@ namespace RATools.Parser.Internal
                         if (integerRight.Value == 1) // anything modulus 1 is 0
                         {
                             result = new IntegerConstantExpression(0);
+                            CopyLocation(result);
                             return true;
                         }
 
                         if (integerLeft != null)
                         {
                             result = new IntegerConstantExpression(integerLeft.Value % integerRight.Value);
+                            CopyLocation(result);
                             return true;
                         }
                     }
                     break;
             }
 
-            var mathematic = new MathematicExpression(left, Operation, right);
-            mathematic.Line = Line;
-            mathematic.Column = Column;
-            result = mathematic;
+            result = new MathematicExpression(left, Operation, right);
+            CopyLocation(result);
             return true;
         }
 

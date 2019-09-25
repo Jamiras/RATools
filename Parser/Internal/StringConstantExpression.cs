@@ -25,6 +25,13 @@ namespace RATools.Parser.Internal
             builder.Append('"');
         }
 
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            result = new StringConstantExpression(Value);
+            CopyLocation(result);
+            return true;
+        }
+
         /// <summary>
         /// Determines whether the specified <see cref="StringConstantExpression" /> is equal to this instance.
         /// </summary>

@@ -582,6 +582,7 @@ namespace RATools.Parser
             if (newRoot.Left.Type == ExpressionType.Mathematic)
                 return RebalanceMathematicComparison(newRoot, scope, out result);
 
+            comparisonExpression.CopyLocation(newRoot);
             result = newRoot;
             return true;
         }

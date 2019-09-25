@@ -501,8 +501,6 @@ namespace RATools.Parser.Internal
 
                     SkipWhitespace(tokenizer);
 
-                    var commaLine = tokenizer.Line;
-                    var commaColumn = tokenizer.Column;
                     if (tokenizer.NextChar != ',')
                         break;
 

@@ -79,10 +79,8 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            var condition = new ConditionalExpression(left, Operation, right);
-            condition.Line = Line;
-            condition.Column = Column;
-            result = condition;
+            result = new ConditionalExpression(left, Operation, right);
+            CopyLocation(result);
             return true;
         }
 

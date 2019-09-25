@@ -41,6 +41,7 @@ namespace RATools.Parser.Functions
                 return false;
 
             result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, format });
+            CopyLocation(result);
             return true;
         }
 

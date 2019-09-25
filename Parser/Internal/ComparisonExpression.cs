@@ -82,9 +82,8 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            var comparison = new ComparisonExpression(left, Operation, right);
-            CopyLocation(comparison);
-            result = comparison;
+            result = new ComparisonExpression(left, Operation, right);
+            CopyLocation(result);
             return true;
         }
 
