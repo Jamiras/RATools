@@ -34,6 +34,7 @@ namespace RATools.Parser.Functions
                 right = result;
 
                 result = new ConditionalExpression(left, ConditionalOperation.And, right);
+                CopyLocation(result);
                 return true;
             }
 

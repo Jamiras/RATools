@@ -48,7 +48,8 @@ namespace RATools.Parser.Internal
         {
             if (Entries.Count == 0)
             {
-                result = this;
+                result = new ArrayExpression { Entries = new List<ExpressionBase>() };
+                CopyLocation(result);
                 return true;
             }
 
@@ -70,6 +71,7 @@ namespace RATools.Parser.Internal
             }
 
             result = new ArrayExpression { Entries = entries };
+            CopyLocation(result);
             return true;
         }
 

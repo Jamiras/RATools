@@ -95,7 +95,8 @@ namespace RATools.Parser.Internal
         {
             if (Entries.Count == 0)
             {
-                result = this;
+                result = new DictionaryExpression { Entries = new List<DictionaryEntry>() };
+                CopyLocation(result);
                 return true;
             }
 
@@ -161,6 +162,7 @@ namespace RATools.Parser.Internal
             }
 
             result = new DictionaryExpression { Entries = entries };
+            CopyLocation(result);
             return true;
         }
 

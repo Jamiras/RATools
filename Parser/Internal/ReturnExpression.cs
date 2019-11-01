@@ -62,6 +62,7 @@ namespace RATools.Parser.Internal
             }
 
             result = new ReturnExpression(value);
+            CopyLocation(result);
             return true;
         }
 

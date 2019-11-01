@@ -51,6 +51,7 @@ namespace RATools.Parser.Functions
                 }
 
                 result = new MathematicExpression(left, mathematic.Operation, right);
+                CopyLocation(result);
                 return true;
             }
 
@@ -70,6 +71,7 @@ namespace RATools.Parser.Functions
             }
 
             result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { functionCall });
+            CopyLocation(result);
             return true;
         }
 

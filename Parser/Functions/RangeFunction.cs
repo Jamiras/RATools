@@ -62,6 +62,7 @@ namespace RATools.Parser.Functions
             }
 
             result = array;
+            CopyLocation(result);
             return true;
         }
     }
