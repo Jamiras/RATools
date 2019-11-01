@@ -9,12 +9,12 @@ namespace RATools.Parser.Functions
         public MemoryAccessorFunction(string name, FieldSize size)
             : base(name)
         {
-            _size = size;
+            Size = size;
 
             Parameters.Add(new VariableDefinitionExpression("address"));
         }
 
-        private readonly FieldSize _size;
+        public FieldSize Size { get; private set; }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -34,7 +34,7 @@ namespace RATools.Parser.Functions
         {
             var requirement = new Requirement();
             var address = (IntegerConstantExpression)functionCall.Parameters.First();
-            requirement.Left = new Field { Size = _size, Type = FieldType.MemoryAddress, Value = (uint)address.Value };
+            requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)address.Value };
             context.Trigger.Add(requirement);
             return null;
         }

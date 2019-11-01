@@ -147,6 +147,38 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets the maximum value representable by the specified size.
+        /// </summary>
+        public static uint GetMaxValue(FieldSize size)
+        {
+            switch (size)
+            {
+                case FieldSize.Bit0:
+                case FieldSize.Bit1:
+                case FieldSize.Bit2:
+                case FieldSize.Bit3:
+                case FieldSize.Bit4:
+                case FieldSize.Bit5:
+                case FieldSize.Bit6:
+                case FieldSize.Bit7:
+                    return 1;
+
+                case FieldSize.LowNibble:
+                case FieldSize.HighNibble:
+                    return 15;
+
+                case FieldSize.Byte:
+                    return 255;
+
+                case FieldSize.Word:
+                    return 65535;
+
+                default:
+                    return uint.MaxValue;
+            }
+        }
+
+        /// <summary>
         /// Gets whether or not the field references memory.
         /// </summary>
         public bool IsMemoryReference
