@@ -687,6 +687,7 @@ namespace RATools.Parser
                     if (underflowAdjustment != 0 &&
                         (comparison.Operation == ComparisonOperation.LessThan || comparison.Operation == ComparisonOperation.LessThanOrEqual))
                     {
+                        // if the user has specified an underflow adjustment, keep it, regardless of the calculated value
                         if (mathematic.Right is IntegerConstantExpression)
                             underflowAdjustment = ((IntegerConstantExpression)mathematic.Right).Value;
                     }

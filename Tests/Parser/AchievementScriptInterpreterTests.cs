@@ -141,6 +141,11 @@ namespace RATools.Test.Parser
         [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) - bit4(0x1234)", "(bit1(0x001234) + bit2(0x001234) + bit4(0x001234)) > bit3(0x001234)")]
         [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) + bit4(0x1234) + 1", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 3")]
         [TestCase("bit1(0x1234) + bit2(0x1234) + 3 > bit3(0x1234) + bit4(0x1234) + 5", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 4")]
+        [TestCase("bit1(0x1234) + bit2(0x1234) < bit3(0x1234) + bit4(0x1234) + 1", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 3")]
+        [TestCase("bit1(0x1234) + bit2(0x1234) - bit3(0x1234) - bit4(0x1234) < 1", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 3")]
+        [TestCase("bit1(0x1234) + bit2(0x1234) + 2 - bit3(0x1234) - bit4(0x1234) < 3", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 3")]
+        [TestCase("byte(0x1234) + 1 - byte(0x2345) >= 2", "(255 + byte(0x001234) - byte(0x002345)) >= 256")] // 254 added to both sides to prevent underflow
+        [TestCase("byte(0x1234) + 1 - byte(0x2345) < 2", "(1 + byte(0x001234) - byte(0x002345)) < 2")]
         public void TestTransitiveCondition(string trigger, string expectedRequirement)
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, " + trigger + ")");
