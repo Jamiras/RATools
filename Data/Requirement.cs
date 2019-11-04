@@ -66,6 +66,12 @@ namespace RATools.Data
                     builder.Append(')');
                     break;
 
+                case RequirementType.Measured:
+                    builder.Append("measured(");
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    builder.Append(')');
+                    break;
+
                 default:
                     AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
                     break;
@@ -430,5 +436,10 @@ namespace RATools.Data
         /// This requirement must also be true for the next requirement to be true.
         /// </summary>
         AndNext,
+
+        /// <summary>
+        /// Meta-flag indicating that this condition tracks progress.
+        /// </summary>
+        Measured,
     }
 }

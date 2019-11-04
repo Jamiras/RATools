@@ -121,6 +121,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.AddHits;
                     else if (tokenizer.Match("N:"))
                         requirement.Type = RequirementType.AndNext;
+                    else if (tokenizer.Match("M:"))
+                        requirement.Type = RequirementType.Measured;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -294,6 +296,7 @@ namespace RATools.Parser
                 case RequirementType.SubSource: builder.Append("B:"); break;
                 case RequirementType.AddHits: builder.Append("C:"); break;
                 case RequirementType.AndNext: builder.Append("N:"); break;
+                case RequirementType.Measured: builder.Append("M:"); break;
             }
 
             requirement.Left.Serialize(builder);
@@ -1816,6 +1819,20 @@ namespace RATools.Parser
 
             while (_alts.Count >= groups.Count)
                 _alts.RemoveAt(_alts.Count - 1);
+
+            // ensure only one condition is being Measured
+            int numMeasured = _core.Count(r => r.Type == RequirementType.Measured);
+            if (numMeasured < 2)
+            {
+                foreach (var alt in _alts)
+                {
+                    numMeasured += alt.Count(r => r.Type == RequirementType.Measured);
+                    if (numMeasured > 1)
+                        break;
+                }
+            }
+            if (numMeasured > 1)
+                return "Multiple measured() conditions are not supported.";
 
             // success!
             return null;

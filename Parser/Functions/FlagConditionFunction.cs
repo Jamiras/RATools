@@ -43,7 +43,11 @@ namespace RATools.Parser.Functions
 
         protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
-            builder.CoreRequirements.Last().Type = _type;
+            var lastCondition = builder.CoreRequirements.Last();
+            if (lastCondition.Type != RequirementType.None)
+                return new ParseErrorExpression(string.Format("Cannot apply '%s', another flag is already set."));
+
+            lastCondition.Type = _type;
             return null;
         }
     }
