@@ -11,10 +11,7 @@ namespace RATools.Parser
     {
         public ScriptInterpreterAchievementBuilder() : base()
         {
-            _equalityModifiers = new Stack<ValueModifier>();
         }
-
-        private Stack<ValueModifier> _equalityModifiers;
 
         /// <summary>
         /// Begins an new alt group.
@@ -352,8 +349,11 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
-            var left = mathematic.Left;
             var operation = mathematic.Operation;
+            if (operation != MathematicOperation.Add && operation != MathematicOperation.Subtract)
+                return new ParseErrorExpression("Cannot normalize expression to eliminate " + MathematicExpression.GetOperatorType(operation), mathematic);
+
+            var left = mathematic.Left;
             var context = scope.GetContext<TriggerBuilderContext>();
             ParseErrorExpression error;
 
@@ -361,20 +361,27 @@ namespace RATools.Parser
             if (!mathematic.Right.ReplaceVariables(scope, out right))
                 return (ParseErrorExpression)right;
 
+            var integerOperand = right as IntegerConstantExpression;
+            if (integerOperand != null)
+            {
+                context.Trigger.Add(new Requirement
+                {
+                    Type = (operation == MathematicOperation.Add) ? RequirementType.AddSource : RequirementType.SubSource,
+                    Left = new Field { Type = FieldType.Value, Value = (uint)integerOperand.Value },
+                    Operator = RequirementOperator.None,
+                    Right = new Field()
+                });
+            }
+
             if (operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression))
             {
                 // if subtracting a non-integer, swap the order to perform a SubSource
-                var newEqualityModifiers = new Stack<ValueModifier>();
-                var oldEqualityModifiers = _equalityModifiers;
-                _equalityModifiers = newEqualityModifiers;
-
                 var requirements = new List<Requirement>();
                 var innerContext = new TriggerBuilderContext() { Trigger = requirements };
                 var innerScope = new InterpreterScope(scope) { Context = innerContext };
 
                 // generate the condition for the right side
                 error = ExecuteAchievementExpression(right, innerScope);
-                _equalityModifiers = oldEqualityModifiers;
                 if (error != null)
                     return error;
 
@@ -396,21 +403,6 @@ namespace RATools.Parser
                     context.Trigger.Add(requirement);
                 }
 
-                foreach (var modifier in newEqualityModifiers)
-                {
-                    switch (modifier.Operation)
-                    {
-                        case MathematicOperation.Add:
-                            _equalityModifiers.Push(new ValueModifier(MathematicOperation.Subtract, modifier.Amount));
-                            break;
-                        case MathematicOperation.Subtract:
-                            _equalityModifiers.Push(new ValueModifier(MathematicOperation.Add, modifier.Amount));
-                            break;
-                        default:
-                            return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
-                    }
-                }
-
                 right = mathematic.Left;
                 operation = MathematicOperation.Add;
             }
@@ -422,39 +414,11 @@ namespace RATools.Parser
                     return error;
             }
 
-            var integerOperand = right as IntegerConstantExpression;
             if (integerOperand != null)
-            {
-                var oppositeOperation = MathematicExpression.GetOppositeOperation(operation);
-                if (oppositeOperation == MathematicOperation.None)
-                    return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
-
-                var priority = MathematicExpression.GetPriority(mathematic.Operation);
-                if (priority != MathematicPriority.Add)
-                {
-                    if (context.Trigger.Count > 1)
-                    {
-                        var previousRequirementType = context.Trigger.ElementAt(context.Trigger.Count - 2).Type;
-                        if (previousRequirementType == RequirementType.AddSource || previousRequirementType == RequirementType.SubSource)
-                            return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
-                    }
-
-                    if (_equalityModifiers.Any(e => MathematicExpression.GetPriority(e.Operation) != priority))
-                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
-                }
-
-                _equalityModifiers.Push(new ValueModifier(oppositeOperation, integerOperand.Value));
                 return null;
-            }
 
             if (operation == MathematicOperation.Add)
             {
-                foreach (var modifier in _equalityModifiers)
-                {
-                    if (MathematicExpression.GetPriority(modifier.Operation) != MathematicPriority.Add)
-                        return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(MathematicExpression.GetOppositeOperation(modifier.Operation))), mathematic);
-                }
-
                 // adding two memory accessors - make sure previous is AddSource or SubSource
                 if (context.LastRequirement.Type != RequirementType.SubSource)
                 {
@@ -513,11 +477,13 @@ namespace RATools.Parser
             return new ParseErrorExpression("Unsupported conditional", condition);
         }
 
-        private bool RebalanceMathematicComparison(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
+        private bool MoveConstantsToRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
         {
+            ComparisonExpression newRoot;
             var mathematic = (MathematicExpression)comparisonExpression.Left;
 
-            // can only apply transitive property to integer constants
+            // if the rightmost expression of the left side of the comparison is an integer, shift it to the 
+            // right side of the equation and attempt to merge it with whatever is already there.
             var integer = mathematic.Right as IntegerConstantExpression;
             if (integer == null)
             {
@@ -578,29 +544,205 @@ namespace RATools.Parser
             }
 
             // construct the new equation and recurse if applicable
-            var newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
+            newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
             if (newRoot.Left.Type == ExpressionType.Mathematic)
-                return RebalanceMathematicComparison(newRoot, scope, out result);
+                return MoveConstantsToRightHandSide(newRoot, scope, out result);
 
             comparisonExpression.CopyLocation(newRoot);
             result = newRoot;
             return true;
         }
 
+        private bool EnsureSingleExpressionOnRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, ref int underflowAdjustment, out ExpressionBase result)
+        {
+            MathematicExpression newLeft;
+            ComparisonExpression newRoot;
+
+            // if the right hand side of the comparison is a mathematic, shift part of it to the left hand side so 
+            // the right hand side eventually has a single value/address
+            var mathematic = (MathematicExpression)comparisonExpression.Right;
+            bool moveLeft = true;
+
+            switch (mathematic.Operation)
+            {
+                case MathematicOperation.Add:
+                    // the leftmost part of the right side will be moved to the left side as a subtraction.
+                    // when subtracting a memory accessor, the result could be negative. since we're using
+                    // unsigned values, this could result in a very high positive number. if not doing an exact
+                    // comparison, check for potential underflow and offset total calculation to prevent it.
+                    if (comparisonExpression.Operation != ComparisonOperation.Equal && comparisonExpression.Operation != ComparisonOperation.NotEqual)
+                    {
+                        var functionCall = mathematic.Left as FunctionCallExpression;
+                        if (functionCall != null)
+                        {
+                            var memoryAccessor = scope.GetFunction(functionCall.FunctionName.Name) as MemoryAccessorFunction;
+                            if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
+                                underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size);
+                        }
+                    }
+
+                    if (mathematic.Right is IntegerConstantExpression)
+                        moveLeft = false;
+                    break;
+
+                case MathematicOperation.Subtract:
+                    // the rightmost part of the right side will be moved to the left side as an addition
+                    moveLeft = false;
+                    break;
+
+                default:
+                    result = new ParseErrorExpression("Cannot eliminate " + MathematicExpression.GetOperatorType(mathematic.Operation) +
+                        " from right side of comparison", comparisonExpression);
+                    return false;
+            }
+
+            if (moveLeft)
+            {
+                // left side is implicitly added on the right, so explicitly subtract it on the left
+                newLeft = new MathematicExpression(comparisonExpression.Left, MathematicOperation.Subtract, mathematic.Left);
+                newRoot = new ComparisonExpression(newLeft, comparisonExpression.Operation, mathematic.Right);
+            }
+            else
+            {
+                // invert the operation when moving the right side to the left
+                newLeft = new MathematicExpression(comparisonExpression.Left, MathematicExpression.GetOppositeOperation(mathematic.Operation), mathematic.Right);
+                newRoot = new ComparisonExpression(newLeft, comparisonExpression.Operation, mathematic.Left);
+            }
+
+            // ensure the IntegerConstant is the rightmost element of the left side
+            mathematic = comparisonExpression.Left as MathematicExpression;
+            if (mathematic != null && mathematic.Right is IntegerConstantExpression)
+            {
+                newLeft.Left = mathematic.Left;
+                mathematic.Left = newLeft;
+                newRoot.Left = mathematic;
+            }
+
+            // recurse if necessary
+            if (newRoot.Right is MathematicExpression)
+                return EnsureSingleExpressionOnRightHandSide(newRoot, scope, ref underflowAdjustment, out result);
+
+            result = newRoot;
+            return true;
+        }
+
+        private static int CalculateUnderflow(MathematicExpression mathematic, InterpreterScope scope, bool invert, bool hasSubtract)
+        {
+            int underflowAdjustment = 0;
+
+            var subsourceOperation = invert ? MathematicOperation.Add : MathematicOperation.Subtract;
+            if (mathematic.Operation == subsourceOperation)
+            {
+                var functionCall = mathematic.Right as FunctionCallExpression;
+                if (functionCall != null)
+                {
+                    var memoryAccessor = scope.GetFunction(functionCall.FunctionName.Name) as MemoryAccessorFunction;
+                    if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
+                        underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size);
+                }
+            }
+            else if (hasSubtract)
+            {
+                var functionCall = mathematic.Left as FunctionCallExpression;
+                if (functionCall != null)
+                {
+                    var memoryAccessor = scope.GetFunction(functionCall.FunctionName.Name) as MemoryAccessorFunction;
+                    if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
+                        underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size);
+                }
+            }
+
+            var mathematicLeft = mathematic.Left as MathematicExpression;
+            if (mathematicLeft != null)
+                underflowAdjustment += CalculateUnderflow(mathematicLeft, scope, invert, hasSubtract);
+
+            var mathematicRight = mathematic.Right as MathematicExpression;
+            if (mathematicRight != null)
+            {
+                if (mathematic.Operation == MathematicOperation.Subtract)
+                    underflowAdjustment += CalculateUnderflow(mathematicRight, scope, !invert, true);
+                else
+                    underflowAdjustment += CalculateUnderflow(mathematicRight, scope, invert, hasSubtract);
+            }
+
+            return underflowAdjustment;
+        }
+
         private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
         {
-            _equalityModifiers.Clear();
-
             var context = scope.GetContext<TriggerBuilderContext>();
             var insertIndex = context.Trigger.Count;
+            int underflowAdjustment = 0;
 
             if (comparison.Left.Type == ExpressionType.Mathematic)
             {
+                var mathematic = (MathematicExpression)comparison.Left;
+                comparison.Left = mathematic = MathematicExpression.BubbleUpIntegerConstant(mathematic);
+
+                // if comparison is not direct equality/inequality, need to check for underflow
+                if (comparison.Operation != ComparisonOperation.Equal && comparison.Operation != ComparisonOperation.NotEqual)
+                {
+                    underflowAdjustment = CalculateUnderflow((MathematicExpression)comparison.Left, scope, false, false);
+
+                    if (underflowAdjustment != 0 &&
+                        (comparison.Operation == ComparisonOperation.LessThan || comparison.Operation == ComparisonOperation.LessThanOrEqual))
+                    {
+                        // if the user has specified an underflow adjustment, keep it, regardless of the calculated value
+                        if (mathematic.Right is IntegerConstantExpression)
+                            underflowAdjustment = ((IntegerConstantExpression)mathematic.Right).Value;
+                    }
+                }
+
                 ExpressionBase result;
-                if (!RebalanceMathematicComparison(comparison, scope, out result))
+                if (!MoveConstantsToRightHandSide(comparison, scope, out result))
                     return (ParseErrorExpression)result;
 
                 comparison = (ComparisonExpression)result;
+            }
+
+            if (comparison.Right.Type == ExpressionType.Mathematic)
+            {
+                ExpressionBase result;
+                if (!EnsureSingleExpressionOnRightHandSide(comparison, scope, ref underflowAdjustment, out result))
+                    return (ParseErrorExpression)result;
+
+                comparison = (ComparisonExpression)result;
+            }
+
+            if (underflowAdjustment > 0)
+            {
+                // add a dummy variable to the right side and rebalance again to move the existing right hand side to the left hand side
+                var newRight = new MathematicExpression(comparison.Right, MathematicOperation.Add, new VariableExpression("unused"));
+                comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
+
+                ExpressionBase result;
+                if (!EnsureSingleExpressionOnRightHandSide(comparison, scope, ref underflowAdjustment, out result))
+                    return (ParseErrorExpression)result;
+
+                comparison = (ComparisonExpression)result;
+                System.Diagnostics.Debug.Assert(comparison.Right is VariableExpression);
+
+                // add the new underflow to both sides of the comparison
+                MathematicExpression newLeft = comparison.Left as MathematicExpression;
+                if (newLeft != null && newLeft.Right is IntegerConstantExpression)
+                {
+                    var value = ((IntegerConstantExpression)newLeft.Right).Value;
+                    if (newLeft.Operation == MathematicOperation.Add)
+                    {
+                        newLeft.Right = new IntegerConstantExpression(value + underflowAdjustment);
+                        comparison = new ComparisonExpression(newLeft, comparison.Operation, new IntegerConstantExpression(underflowAdjustment));
+                    }
+                    else if (newLeft.Operation == MathematicOperation.Subtract)
+                    {
+                        newLeft = new MathematicExpression(newLeft.Left, MathematicOperation.Add, new IntegerConstantExpression(underflowAdjustment));
+                        comparison = new ComparisonExpression(newLeft, comparison.Operation, new IntegerConstantExpression(underflowAdjustment + value));
+                    }
+                }
+                else
+                {
+                    newLeft = new MathematicExpression(comparison.Left, MathematicOperation.Add, new IntegerConstantExpression(underflowAdjustment));
+                    comparison = new ComparisonExpression(newLeft, comparison.Operation, new IntegerConstantExpression(underflowAdjustment));
+                }
             }
 
             var left = comparison.Left;
@@ -645,124 +787,15 @@ namespace RATools.Parser
             {
                 int newValue = integerRight.Value;
 
-                // SubSource of a memory accessor may cause overflow - if comparing for less than,
-                // modifiers should not be merged into the compare target
-                if (_equalityModifiers.Count > 0 &&
-                    (op == RequirementOperator.LessThan || op == RequirementOperator.LessThanOrEqual))
-                {
-                    bool hasSubSource = false;
-                    for (int i = context.Trigger.Count - 2; i >= 0; i++)
-                    {
-                        var requirementType = context.Trigger.ElementAt(i).Type;
-                        if (requirementType == RequirementType.SubSource)
-                        {
-                            hasSubSource = true;
-                            break;
-                        }
-                        else if (requirementType != RequirementType.AddSource &&
-                            requirementType != RequirementType.AddHits)
-                        {
-                            break;
-                        }
-                    }
-
-                    if (hasSubSource)
-                    {
-                        var last = context.Trigger.Last();
-                        context.Trigger.Remove(last);
-                        foreach (var modifier in _equalityModifiers)
-                        {
-                            if (modifier.Operation != MathematicOperation.Subtract && modifier.Operation != MathematicOperation.Add)
-                                return new ParseErrorExpression("Cannot normalize expression containing SubSource", left);
-
-                            context.Trigger.Add(new Requirement
-                            {
-                                Type = (modifier.Operation == MathematicOperation.Subtract) ? RequirementType.AddSource : RequirementType.SubSource,
-                                Left = new Field { Type = FieldType.Value, Value = (uint)modifier.Amount },
-                                Operator = RequirementOperator.None,
-                                Right = new Field()
-                            });
-                        }
-                        context.Trigger.Add(last);
-
-                        _equalityModifiers.Clear();
-                    }
-                }
-
-                while (_equalityModifiers.Count > 0)
-                {
-                    var originalValue = newValue;
-                    var modifier = _equalityModifiers.Pop();
-                    newValue = modifier.Apply(newValue);
-
-                    var restoredValue = modifier.Remove(newValue);
-                    switch (op)
-                    {
-                        case RequirementOperator.Equal:
-                            if (restoredValue != originalValue)
-                                return new ParseErrorExpression("Result can never be true using integer math", comparison);
-                            break;
-
-                        case RequirementOperator.NotEqual:
-                            if (restoredValue != originalValue)
-                                return new ParseErrorExpression("Result is always true using integer math", comparison);
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            if (restoredValue != originalValue)
-                                op = RequirementOperator.GreaterThan;
-                            break;
-                    }
-                }
-
                 var requirement = context.LastRequirement;
                 requirement.Operator = op;
                 requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
             }
             else
             {
-                var leftModifiers = new Stack<ValueModifier>(_equalityModifiers.Reverse());
-                _equalityModifiers.Clear();
-
                 error = ExecuteAchievementExpression(right, scope);
                 if (error != null)
                     return error;
-
-                if (leftModifiers.Count > 0 || _equalityModifiers.Count > 0)
-                {
-                    var rightValue = 1234567;
-                    var leftValue = rightValue;
-                    while (leftModifiers.Count > 0)
-                    {
-                        var modifier = leftModifiers.Pop();
-                        leftValue = ValueModifier.Apply(leftValue, MathematicExpression.GetOppositeOperation(modifier.Operation), modifier.Amount);
-                    }
-
-                    while (_equalityModifiers.Count > 0)
-                    {
-                        var modifier = _equalityModifiers.Pop();
-                        rightValue = ValueModifier.Apply(rightValue, MathematicExpression.GetOppositeOperation(modifier.Operation), modifier.Amount);
-                    }
-
-                    var diff = leftValue - rightValue;
-                    if (diff != 0)
-                    {
-                        var modifier = new Requirement();
-
-                        if (diff < 0)
-                        {
-                            modifier.Left = new Field { Type = FieldType.Value, Value = (uint)(-diff) };
-                            modifier.Type = RequirementType.SubSource;
-                        }
-                        else
-                        {
-                            modifier.Left = new Field { Type = FieldType.Value, Value = (uint)diff };
-                            modifier.Type = RequirementType.AddSource;
-                        }
-
-                        ((IList<Requirement>)context.Trigger).Insert(insertIndex, modifier);
-                    }
-                }
 
                 var extraRequirement = context.LastRequirement;
                 context.Trigger.Remove(extraRequirement);

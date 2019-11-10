@@ -142,6 +142,11 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
+            return MergeOperands(left, right, out result);
+        }
+
+        private bool MergeOperands(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        { 
             var integerLeft = left as IntegerConstantExpression;
             var integerRight = right as IntegerConstantExpression;
 
@@ -432,6 +437,78 @@ namespace RATools.Parser.Internal
             result = new MathematicExpression(left, Operation, right);
             CopyLocation(result);
             return true;
+        }
+
+        /// <summary>
+        /// Moves the IntegerConstant (if present) to be the Right operand of the root node.
+        /// </summary>
+        /// <remarks>Combines nodes where possible.</remarks>
+        internal static MathematicExpression BubbleUpIntegerConstant(MathematicExpression mathematic)
+        { 
+            var priority = GetPriority(mathematic.Operation);
+
+            var mathematicLeft = mathematic.Left as MathematicExpression;
+            if (mathematicLeft != null)
+            {
+                if (GetPriority(mathematicLeft.Operation) == priority)
+                {
+                    mathematic.Left = mathematicLeft = BubbleUpIntegerConstant(mathematicLeft);
+                    if (mathematicLeft.Right is IntegerConstantExpression)
+                    {
+                        mathematic.Left = mathematicLeft.Left;
+                        mathematicLeft.Left = BubbleUpIntegerConstant(mathematic);
+                        mathematic = mathematicLeft;
+                    }
+                }
+            }
+
+            var mathematicRight = mathematic.Right as MathematicExpression;
+            if (mathematicRight != null)
+            {
+                if (GetPriority(mathematicRight.Operation) == priority)
+                {
+                    mathematic.Right = mathematicRight = BubbleUpIntegerConstant(mathematicRight);
+                    if (mathematicRight.Right is IntegerConstantExpression)
+                    {
+                        if (mathematic.Operation == MathematicOperation.Add)
+                        {
+                            mathematic.Right = mathematicRight.Left;
+                            mathematicRight.Left = BubbleUpIntegerConstant(mathematic);
+                            mathematic = mathematicRight;
+                        }
+                        else if (mathematic.Operation == MathematicOperation.Subtract)
+                        {
+                            mathematic.Right = mathematicRight.Left;
+                            mathematicRight.Left = BubbleUpIntegerConstant(mathematic);
+                            mathematicRight.Right = new IntegerConstantExpression(-((IntegerConstantExpression)mathematicRight.Right).Value);
+                            mathematic = mathematicRight;
+                        }
+                    }
+                }
+            }
+
+            if (mathematic.Right is IntegerConstantExpression)
+            {
+                mathematicLeft = mathematic.Left as MathematicExpression;
+                if (mathematicLeft != null && GetPriority(mathematicLeft.Operation) == priority &&
+                    mathematicLeft.Right is IntegerConstantExpression)
+                {
+                    ExpressionBase result;
+
+                    mathematic.Left = mathematicLeft.Right;
+                    if (mathematic.MergeOperands(mathematic.Left, mathematic.Right, out result))
+                    {
+                        mathematicLeft.Right = result;
+
+                        if (mathematicLeft.MergeOperands(mathematicLeft.Left, mathematicLeft.Right, out result))
+                            mathematicLeft = (MathematicExpression)result;
+
+                        mathematic = mathematicLeft;
+                    }
+                }
+            }
+
+            return mathematic;
         }
 
         /// <summary>

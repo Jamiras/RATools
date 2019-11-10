@@ -619,62 +619,31 @@ namespace RATools.Parser
                     continue;
                 }
 
-                uint max;
-
-                switch (requirement.Left.Size)
+                uint max = Field.GetMaxValue(requirement.Left.Size);
+                if (max == 1)
                 {
-                    case FieldSize.Bit0:
-                    case FieldSize.Bit1:
-                    case FieldSize.Bit2:
-                    case FieldSize.Bit3:
-                    case FieldSize.Bit4:
-                    case FieldSize.Bit5:
-                    case FieldSize.Bit6:
-                    case FieldSize.Bit7:
-                        max = 1;
-
-                        if (requirement.Right.Value == 0)
+                    if (requirement.Right.Value == 0)
+                    {
+                        switch (requirement.Operator)
                         {
-                            switch (requirement.Operator)
-                            {
-                                case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
-                                case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
-                                    requirement.Operator = RequirementOperator.Equal;
-                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                                    continue;
-                            }
+                            case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
+                            case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
+                                requirement.Operator = RequirementOperator.Equal;
+                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                                continue;
                         }
-                        else
+                    }
+                    else
+                    {
+                        switch (requirement.Operator)
                         {
-                            switch (requirement.Operator)
-                            {
-                                case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
-                                case RequirementOperator.LessThan: // bit < 1 -> bit == 0
-                                    requirement.Operator = RequirementOperator.Equal;
-                                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                    continue;
-                            }
+                            case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                            case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                                requirement.Operator = RequirementOperator.Equal;
+                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                                continue;
                         }
-
-                        break;
-
-                    case FieldSize.LowNibble:
-                    case FieldSize.HighNibble:
-                        max = 15;
-                        break;
-
-                    case FieldSize.Byte:
-                        max = 255;
-                        break;
-
-                    case FieldSize.Word:
-                        max = 65535;
-                        break;
-
-                    default:
-                    case FieldSize.DWord:
-                        max = uint.MaxValue;
-                        break;
+                    }
                 }
 
                 if (requirement.Right.Value >= max)
