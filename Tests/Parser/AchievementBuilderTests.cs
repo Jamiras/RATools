@@ -360,12 +360,14 @@ namespace RATools.Test.Parser
         [TestCase("never(byte(0x001234) > 5)", "byte(0x001234) <= 5")]
         [TestCase("never(byte(0x001234) <= 5)", "byte(0x001234) > 5")]
         [TestCase("never(byte(0x001234) < 5)", "byte(0x001234) >= 5")]
+        [TestCase("never(byte(0x001234) != 1 && byte(0x002345) == 2)", "never(byte(0x001234) != 1 && byte(0x002345) == 2)")] // cannot invert AndNext
         [TestCase("unless(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("unless(byte(0x001234) == 5)", "byte(0x001234) != 5")]
         [TestCase("unless(byte(0x001234) >= 5)", "byte(0x001234) < 5")]
         [TestCase("unless(byte(0x001234) > 5)", "byte(0x001234) <= 5")]
         [TestCase("unless(byte(0x001234) <= 5)", "byte(0x001234) > 5")]
         [TestCase("unless(byte(0x001234) < 5)", "byte(0x001234) >= 5")]
+        [TestCase("unless(byte(0x001234) != 1 && byte(0x002345) == 2)", "unless(byte(0x001234) != 1 && byte(0x002345) == 2)")] // cannot invert AndNext
         [TestCase("unless(byte(0x001234) == 5) && byte(0x002345) == 1", "byte(0x001234) != 5 && byte(0x002345) == 1")] // unless without HitCount should be inverted to a requirement
         [TestCase("byte(0x001234) == 5 && never(byte(0x001234) != 5)", "byte(0x001234) == 5")] // common pattern in older achievements to fix HitCount at 0, the ResetIf is functionally redundant
         [TestCase("(byte(0x002345) == 5 && never(byte(0x001234) == 6)) || (byte(0x002345) == 6 && never(byte(0x001235) == 3))", 

@@ -779,8 +779,17 @@ namespace RATools.Parser
 
                     if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
                     {
-                        requirement.Type = RequirementType.None;
-                        requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
+                        if (requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext))
+                        {
+                            // the inverse of an AndNext is OrNext, which isn't currently possible. and we've already
+                            // expanded all of the OR clauses into alt groups, so another round of expansion at this time
+                            // is unreasonable. just leave the resetif/pauseif.
+                        }
+                        else
+                        {
+                            requirement.Type = RequirementType.None;
+                            requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
+                        }
                     }
                 }
             }
