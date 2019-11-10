@@ -630,6 +630,33 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestMeasured()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 120)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("measured(byte(0x001234) == 120)"));
+        }
+
+        [Test]
+        public void TestMeasuredRepeatedAddSource()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(10, byte(0x1234) + byte(0x2345) == 1))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("measured(repeated(10, (byte(0x001234) + byte(0x002345)) == 1))"));
+        }
+
+        [Test]
+        public void TestMeasuredMultiple()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1)", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions are not supported."));
+        }
+
+        [Test]
         public void TestTransitiveOrClause()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3");
