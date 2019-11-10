@@ -71,6 +71,12 @@ namespace RATools.Data
                 case "MILLISECS":
                     return ValueFormat.TimeMillisecs;
 
+                case "MINUTES":
+                    return ValueFormat.TimeMinutes;
+
+                case "SECS_AS_MINS":
+                    return ValueFormat.TimeSecsAsMins;
+
                 case "OTHER":
                     return ValueFormat.Other;
 
@@ -124,6 +130,16 @@ namespace RATools.Data
         /// Zero-padded value - %06d
         /// </summary>
         Other,
+
+        /// <summary>
+        /// Convert the value (in minutes) to hours/minutes - %dh%02d
+        /// </summary>
+        TimeMinutes,
+
+        /// <summary>
+        /// Convert the value (in seconds) to hours/minutes - %dh%02d
+        /// </summary>
+        TimeSecsAsMins,
     }
 
 }

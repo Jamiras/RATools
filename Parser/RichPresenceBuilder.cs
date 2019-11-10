@@ -135,6 +135,14 @@ namespace RATools.Parser
                         builder.AppendLine("FRAMES");
                         break;
 
+                    case ValueFormat.TimeMinutes:
+                        builder.AppendLine("MINUTES");
+                        break;
+
+                    case ValueFormat.TimeSecsAsMins:
+                        builder.AppendLine("SECS_AS_MINS");
+                        break;
+
                     case ValueFormat.Other:
                         builder.AppendLine("OTHER");
                         break;
