@@ -84,6 +84,10 @@ namespace RATools.Data
                             builder.AppendFormat("{0:X4}", Value);
                             break;
 
+                        case FieldSize.TByte:
+                            builder.AppendFormat("{0:X6}", Value);
+                            break;
+
                         case FieldSize.DWord:
                             builder.AppendFormat("{0:X8}", Value);
                             break;
@@ -141,6 +145,7 @@ namespace RATools.Data
                 case FieldSize.HighNibble: return "high4";
                 case FieldSize.Byte: return "byte";
                 case FieldSize.Word: return "word";
+                case FieldSize.TByte: return "tbyte";
                 case FieldSize.DWord: return "dword";
                 default: return size.ToString();
             }
@@ -233,6 +238,7 @@ namespace RATools.Data
                 case FieldSize.HighNibble: builder.Append('U'); break;
                 case FieldSize.Byte: builder.Append('H'); break;
                 case FieldSize.Word: builder.Append(' ');  break;
+                case FieldSize.TByte: builder.Append('W'); break;
                 case FieldSize.DWord: builder.Append('X'); break;
             }
 
@@ -275,6 +281,7 @@ namespace RATools.Data
                 case 'L': size = FieldSize.LowNibble; tokenizer.Advance(); break;
                 case 'U': size = FieldSize.HighNibble; tokenizer.Advance(); break;
                 case 'H': size = FieldSize.Byte; tokenizer.Advance(); break;
+                case 'W': size = FieldSize.TByte; tokenizer.Advance(); break;
                 case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
                 case '0':
                 case '1':
@@ -521,6 +528,11 @@ namespace RATools.Data
         /// Two bytes (16-bit). Read from memory in little-endian mode.
         /// </summary>
         Word,
+
+        /// <summary>
+        /// Three bytes (24-bit). Read from memory in little-endian mode.
+        /// </summary>
+        TByte,
 
         /// <summary>
         /// Four bytes (32-bit). Read from memory in little-endian mode.

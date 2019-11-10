@@ -75,6 +75,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MemoryAccessorFunction("low4", FieldSize.LowNibble));
                 _globalScope.AddFunction(new MemoryAccessorFunction("high4", FieldSize.HighNibble));
                 _globalScope.AddFunction(new MemoryAccessorFunction("word", FieldSize.Word));
+                _globalScope.AddFunction(new MemoryAccessorFunction("tbyte", FieldSize.TByte));
                 _globalScope.AddFunction(new MemoryAccessorFunction("dword", FieldSize.DWord));
                 _globalScope.AddFunction(new BitFunction());
 
