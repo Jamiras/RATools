@@ -21,7 +21,7 @@ namespace RATools.Parser.Functions
             if (!IsInTriggerClause(scope, out result))
                 return false;
 
-            var address = GetIntegerParameter(scope, "address", out result);
+            var address = GetParameter(scope, "address", out result);
             if (address == null)
                 return false;
 
@@ -33,10 +33,62 @@ namespace RATools.Parser.Functions
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var requirement = new Requirement();
-            var address = (IntegerConstantExpression)functionCall.Parameters.First();
-            requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)address.Value };
-            context.Trigger.Add(requirement);
-            return null;
+            var address = functionCall.Parameters.First();
+
+            var integerConstant = address as IntegerConstantExpression;
+            if (integerConstant != null)
+            {
+                requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)integerConstant.Value };
+                context.Trigger.Add(requirement);
+                return null;
+            }
+
+            var funcCall = address as FunctionCallExpression;
+            if (funcCall != null)
+            {
+                // a memory reference without an offset has to be generated with a 0 offset.
+                integerConstant = new IntegerConstantExpression(0);
+            }
+            else
+            {
+                var mathematic = address as MathematicExpression;
+                if (mathematic != null && mathematic.Operation == MathematicOperation.Add)
+                {
+                    integerConstant = mathematic.Right as IntegerConstantExpression;
+                    if (integerConstant != null)
+                    {
+                        funcCall = mathematic.Left as FunctionCallExpression;
+                    }
+                    else
+                    {
+                        integerConstant = mathematic.Left as IntegerConstantExpression;
+                        if (integerConstant != null)
+                            funcCall = mathematic.Right as FunctionCallExpression;
+                    }
+                }
+            }
+
+            if (funcCall != null)
+            {
+                var funcDef = scope.GetFunction(funcCall.FunctionName.Name) as TriggerBuilderContext.FunctionDefinition;
+                if (funcDef != null)
+                {
+                    if (funcDef is MemoryAccessorFunction || funcDef is PrevPriorFunction)
+                    {
+                        var error = funcDef.BuildTrigger(context, scope, funcCall);
+                        if (error != null)
+                            return error;
+
+                        context.Trigger.Last().Type = RequirementType.AddAddress;
+
+                        requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)integerConstant.Value };
+                        context.Trigger.Add(requirement);
+                        return null;
+                    }
+                }
+            }
+
+            return new ParseErrorExpression("Cannot convert to an address", address);
         }
     }
 }

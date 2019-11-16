@@ -123,6 +123,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.AndNext;
                     else if (tokenizer.Match("M:"))
                         requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("I:"))
+                        requirement.Type = RequirementType.AddAddress;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -133,6 +135,7 @@ namespace RATools.Parser
                     {
                         case RequirementType.AddSource:
                         case RequirementType.SubSource:
+                        case RequirementType.AddAddress:
                             requirement.Operator = RequirementOperator.None;
                             requirement.Right = new Field();
                             break;
@@ -297,6 +300,7 @@ namespace RATools.Parser
                 case RequirementType.AddHits: builder.Append("C:"); break;
                 case RequirementType.AndNext: builder.Append("N:"); break;
                 case RequirementType.Measured: builder.Append("M:"); break;
+                case RequirementType.AddAddress: builder.Append("I:"); break;
             }
 
             requirement.Left.Serialize(builder);
@@ -305,6 +309,7 @@ namespace RATools.Parser
             {
                 case RequirementType.AddSource:
                 case RequirementType.SubSource:
+                case RequirementType.AddAddress:
                     builder.Append("=0");
                     break;
 
@@ -332,7 +337,7 @@ namespace RATools.Parser
         }
 
         public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group, 
-            NumberFormat numberFormat, int wrapWidth, int indent = 14)
+            NumberFormat numberFormat, int wrapWidth = Int32.MaxValue, int indent = 14)
         {
             bool needsAmpersand = false;
             int width = wrapWidth - indent;
@@ -346,6 +351,7 @@ namespace RATools.Parser
                 var subSources = new StringBuilder();
                 var addHits = new StringBuilder();
                 var andNext = new StringBuilder();
+                var addAddress = new StringBuilder();
                 bool isCombining = true;
                 do
                 {
@@ -371,6 +377,20 @@ namespace RATools.Parser
                             andNext.Append(" && ");
                             break;
 
+                        case RequirementType.AddAddress:
+                            if (addAddress.Length > 0)
+                            {
+                                var builder2 = new StringBuilder();
+                                requirement.Left.AppendString(builder2, numberFormat, addAddress.ToString());
+                                addAddress = builder2;
+                            }
+                            else
+                            {
+                                requirement.Left.AppendString(addAddress, numberFormat);
+                            }
+                            addAddress.Append(" + ");
+                            break;
+
                         default:
                             isCombining = false;
                             break;
@@ -387,7 +407,8 @@ namespace RATools.Parser
 
                 var definition = new StringBuilder();
 
-                if (addSources.Length == 0 && subSources.Length == 0 && addHits.Length == 0 && andNext.Length == 0)
+                if (addSources.Length == 0 && subSources.Length == 0 && addHits.Length == 0 && 
+                    andNext.Length == 0 && addAddress.Length == 0)
                 {
                     var result = requirement.Evaluate();
                     if (result == true)
@@ -403,7 +424,8 @@ namespace RATools.Parser
                         addSources.Length > 0 ? addSources.ToString() : null,
                         subSources.Length > 0 ? subSources.ToString() : null,
                         addHits.Length > 0 ? addHits.ToString() : null,
-                        andNext.Length > 0 ? andNext.ToString() : null);
+                        andNext.Length > 0 ? andNext.ToString() : null,
+                        addAddress.Length > 0 ? addAddress.ToString() : null);
                 }
 
                 if (needsAmpersand)

@@ -50,40 +50,48 @@ namespace RATools.Data
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null, string andNext = null)
+            string addSources = null, string subSources = null, string addHits = null, 
+            string andNext = null, string addAddress = null)
         {
             switch (Type)
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
                     builder.Append(')');
                     break;
 
                 case RequirementType.Measured:
                     builder.Append("measured(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
                     builder.Append(')');
                     break;
 
+                case RequirementType.AddAddress:
+                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
+                    builder.Append("addaddress(");
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    builder.Append(") ->");
+                    break;
+
                 default:
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
                     break;
             }
         }
 
         private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
-            string addSources, string subSources, string addHits, string andNext)
+            string addSources, string subSources, string addHits, string andNext, string addAddress)
         {
             if (HitCount == 0)
             {
-                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
             }
             else
             {
@@ -92,14 +100,15 @@ namespace RATools.Data
                 else
                     builder.AppendFormat("repeated({0}, ", HitCount);
 
-                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext);
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
 
                 builder.Append(')');
             }
         }
 
         internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null, string andNext = null)
+            string addSources = null, string subSources = null, string addHits = null, 
+            string andNext = null, string addAddress = null)
         {
             if (!string.IsNullOrEmpty(addSources))
             {
@@ -153,7 +162,7 @@ namespace RATools.Data
                         }
                     }
 
-                    Left.AppendString(builder, numberFormat);
+                    Left.AppendString(builder, numberFormat, addAddress);
                     break;
             }
 
@@ -192,7 +201,7 @@ namespace RATools.Data
                     return;
             }
 
-            Right.AppendString(builder, numberFormat);
+            Right.AppendString(builder, numberFormat, addAddress);
         }
 
         /// <summary>
@@ -441,5 +450,10 @@ namespace RATools.Data
         /// Meta-flag indicating that this condition tracks progress.
         /// </summary>
         Measured,
+
+        /// <summary>
+        /// Adds the Left part of the requirement to the addresses in the next requirement.
+        /// </summary>
+        AddAddress,
     }
 }

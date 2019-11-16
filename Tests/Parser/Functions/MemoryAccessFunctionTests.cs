@@ -6,6 +6,7 @@ using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Test.Parser.Functions
 {
@@ -142,7 +143,37 @@ namespace RATools.Test.Parser.Functions
             requirements = Evaluate("bit(31, 0x1234)");
             Assert.That(requirements[0].Left.ToString(), Is.EqualTo("bit7(0x001237)"));
 
-            requirements = Evaluate("bit(32, 0x1234)", "index must be between 0 and 31");
+            Evaluate("bit(32, 0x1234)", "index must be between 0 and 31");
+        }
+
+        [Test]
+        [TestCase("byte(word(0x1234))", "byte(word(0x001234) + 0x000000)")] // direct pointer
+        [TestCase("byte(word(0x1234) + 10)", "byte(word(0x001234) + 0x00000A)")] // indirect pointer
+        [TestCase("byte(10 + word(0x1234))", "byte(word(0x001234) + 0x00000A)")] // indirect pointer
+        [TestCase("byte(0x1234 + word(0x2345))", "byte(word(0x002345) + 0x001234)")] // array index
+        [TestCase("byte(word(word(0x1234)))", "byte(word(word(0x001234) + 0x000000) + 0x000000)")] // double direct pointer
+        [TestCase("byte(0x1234 + word(word(0x2345) + 10))", "byte(word(word(0x002345) + 0x00000A) + 0x001234)")] // double indirect pointer
+        [TestCase("byte(prev(word(0x1234)))", "byte(prev(word(0x001234)) + 0x000000)")] // direct pointer using prev data
+        public void TestAddAddress(string input, string expected)
+        {
+            var requirements = Evaluate(input);
+
+            var builder = new StringBuilder();
+            AchievementBuilder.AppendStringGroup(builder, requirements, NumberFormat.Hexadecimal);
+
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("byte(word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))")] // cannot add two lookups to a single address
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
+        [TestCase("byte(repeated(4, word(0x1234) == 3))")] // repeated condition is not an address
+        public void TestInvalidAddAddress(string input)
+        {
+            Evaluate(input, "Cannot convert to an address");
         }
     }
 }
