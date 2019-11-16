@@ -79,7 +79,7 @@ namespace RATools.Parser.Functions
                         if (error != null)
                             return error;
 
-                        context.Trigger.Last().Type = RequirementType.AddAddress;
+                        context.LastRequirement.Type = RequirementType.AddAddress;
 
                         requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)integerConstant.Value };
                         context.Trigger.Add(requirement);

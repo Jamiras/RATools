@@ -93,7 +93,6 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestSizes()
         {
-            var scope = AchievementScriptInterpreter.GetGlobalScope();
             var sizes = new Dictionary<string, FieldSize>
             {
                 {"byte(0x1234)", FieldSize.Byte },
