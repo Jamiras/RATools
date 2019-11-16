@@ -168,6 +168,11 @@ namespace RATools.ViewModels
                 {
                     size = FieldSize.DWord;
                 }
+                else if (token.Contains("24-bit", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("24 bit", StringComparison.OrdinalIgnoreCase))
+                {
+                    size = FieldSize.TByte;
+                }
 
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });
             }

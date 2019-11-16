@@ -107,6 +107,7 @@ namespace RATools.Test.Parser.Functions
                 {"low4(0x1234)", FieldSize.LowNibble },
                 {"high4(0x1234)", FieldSize.HighNibble },
                 {"word(0x1234)", FieldSize.Word },
+                {"tbyte(0x1234)", FieldSize.TByte },
                 {"dword(0x1234)", FieldSize.DWord },
                 {"bit(0,0x1234)", FieldSize.Bit0 },
                 {"bit(1,0x1234)", FieldSize.Bit1 },
