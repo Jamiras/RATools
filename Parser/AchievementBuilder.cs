@@ -1738,6 +1738,26 @@ namespace RATools.Parser
             }
         }
 
+        private static string CheckForMultipleMeasuredTargets(IEnumerable<Requirement> requirements, ref uint measuredTarget)
+        {
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.Measured)
+                {
+                    uint conditionTarget = requirement.HitCount;
+                    if (conditionTarget == 0)
+                        conditionTarget = requirement.Right.Value;
+
+                    if (measuredTarget == 0)
+                        measuredTarget = conditionTarget;
+                    else if (measuredTarget != conditionTarget)
+                        return "Multiple measured() conditions must have the same target.";
+                }
+            }
+
+            return null;
+        }
+
         public string Optimize()
         {
             if (_core.Count == 0 && _alts.Count == 0)
@@ -1798,19 +1818,18 @@ namespace RATools.Parser
             while (_alts.Count >= groups.Count)
                 _alts.RemoveAt(_alts.Count - 1);
 
-            // ensure only one condition is being Measured
-            int numMeasured = _core.Count(r => r.Type == RequirementType.Measured);
-            if (numMeasured < 2)
+            // ensure only one Measured target exists
+            uint measuredTarget = 0;
+            string measuredError = CheckForMultipleMeasuredTargets(_core, ref measuredTarget);
+            if (measuredError != null)
+                return measuredError;
+
+            foreach (var group in _alts)
             {
-                foreach (var alt in _alts)
-                {
-                    numMeasured += alt.Count(r => r.Type == RequirementType.Measured);
-                    if (numMeasured > 1)
-                        break;
-                }
+                measuredError = CheckForMultipleMeasuredTargets(group, ref measuredTarget);
+                if (measuredError != null)
+                    return measuredError;
             }
-            if (numMeasured > 1)
-                return "Multiple measured() conditions are not supported.";
 
             // success!
             return null;
