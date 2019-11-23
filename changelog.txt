@@ -1,3 +1,12 @@
+v1.6.3 - 23 Nov 2019
+* new functions: measured() and tbyte()
+* support for indirect addressing: byte(0x1234 + byte(0x1233))
+* support for MINUTES and SECS_AS_MINS formats
+* improve logic for normalizing comparisons
+* fix highlighting of function parameters used as parameters to nested function calls
+* automatic underflow prevention when subtracting memory references in non-equality comparisons
+* fix inversion of multi-clause never()/unless() when no hit targets are present
+
 v1.6.2 - 10 Aug 2019
 * add Settings dialog
 * support for specifying fallback to be used in rich_presence_lookup() when no other items match
