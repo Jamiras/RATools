@@ -84,6 +84,7 @@ namespace RATools.Parser.Functions
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
                     case RequirementType.AndNext:
+                    case RequirementType.AddAddress:
                         isCombining = true;
                         break;
 

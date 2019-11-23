@@ -803,6 +803,28 @@ namespace RATools.Parser
                 var requirement = context.LastRequirement;
                 if (requirement != null)
                 {
+                    if (requirement.Type == RequirementType.AddAddress)
+                    {
+                        var addAddressRequirements = new List<Requirement>();
+                        do
+                        {
+                            addAddressRequirements.Add(requirement);
+                            ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);
+
+                            requirement = context.LastRequirement;
+                        } while (requirement.Type == RequirementType.AddAddress);
+
+                        if (context.Trigger.Count <= addAddressRequirements.Count)
+                            return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison", comparison);
+
+                        for (int i = 0; i < addAddressRequirements.Count; i++)
+                        {
+                            var previousRequirement = context.Trigger.ElementAt(context.Trigger.Count - addAddressRequirements.Count - 1 + i);
+                            if (previousRequirement != addAddressRequirements[i])
+                                return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison", comparison);
+                        }
+                    }
+
                     requirement.Operator = op;
                     requirement.Right = extraRequirement.Left;
                 }

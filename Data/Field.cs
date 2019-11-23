@@ -40,7 +40,7 @@ namespace RATools.Data
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
-        internal void AppendString(StringBuilder builder, NumberFormat numberFormat)
+        internal void AppendString(StringBuilder builder, NumberFormat numberFormat, string addAddress = null)
         {
             if (Type == FieldType.None)
             {
@@ -102,7 +102,7 @@ namespace RATools.Data
             else if (Type == FieldType.PriorValue)
                 builder.Append("prior(");
 
-            AppendMemoryReference(builder, Value, Size);
+            AppendMemoryReference(builder, Value, Size, addAddress);
 
             if (Type == FieldType.PreviousValue || Type == FieldType.PriorValue)
                 builder.Append(')');
@@ -118,10 +118,15 @@ namespace RATools.Data
             return builder.ToString();
         }
 
-        private static void AppendMemoryReference(StringBuilder builder, uint address, FieldSize size)
+        private static void AppendMemoryReference(StringBuilder builder, uint address, FieldSize size, string addAddress = null)
         {
             builder.Append(GetSizeFunction(size));
-            builder.Append("(0x");
+            builder.Append('(');
+
+            if (!string.IsNullOrEmpty(addAddress))
+                builder.Append(addAddress);
+
+            builder.Append("0x");
             builder.AppendFormat("{0:X6}", address);
             builder.Append(')');
         }

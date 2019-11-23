@@ -145,7 +145,7 @@ namespace RATools.Test.Parser
             Assert.That(requirement.Right, Is.EqualTo(value4));
         }
 
-        private static AchievementBuilder CreateAchievement(string input)
+        private static AchievementBuilder CreateAchievement(string input, string expectedError = null)
         {
             // NOTE: these are integration tests as they rely on ExpressionBase.Parse and 
             // AchievementScriptInterpreter.ScriptInterpreterAchievementBuilder, but using string 
@@ -157,7 +157,10 @@ namespace RATools.Test.Parser
 
             var achievement = new ScriptInterpreterAchievementBuilder();
             var error = achievement.PopulateFromExpression(expression);
-            Assert.That(error, Is.Null.Or.Empty);
+            if (expectedError != null)
+                Assert.That(error, Is.EqualTo(expectedError));
+            else
+                Assert.That(error, Is.Null.Or.Empty);
 
             return achievement;
         }
@@ -527,6 +530,22 @@ namespace RATools.Test.Parser
             var achievement = CreateAchievement(input);
             // NOTE: not optimized - that's tested separately in TestOptimize
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestAddAddressAcrossCondition()
+        {
+            var achievement = CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x1234) + 10))");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(word(0x001234) + 0x00000A) > prev(byte(word(0x001234) + 0x00000A))"));
+        }
+
+        [Test]
+        public void TestAddAddressAcrossConditionMismatch()
+        {
+            var achievement = CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x1234) + 11))");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(word(0x001234) + 0x00000A) > prev(byte(word(0x001234) + 0x00000B))"));
+
+            CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x2345) + 10))", "Indirect memory addresses must match on both sides of a comparison");
         }
     }
 }
