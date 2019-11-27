@@ -236,6 +236,26 @@ namespace RATools.Parser
             return RequirementOperator.None;
         }
 
+        private static bool HasNewFeatures(IEnumerable<Requirement> requirements)
+        {
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.AddAddress ||
+                    requirement.Type == RequirementType.Measured)
+                {
+                    return true;
+                }
+
+                if (requirement.Left.Size == FieldSize.TByte ||
+                    requirement.Right.Size == FieldSize.TByte)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Creates a serialized requirements string from the core and alt groups.
         /// </summary>
@@ -252,13 +272,27 @@ namespace RATools.Parser
             return SerializeRequirements(achievement.CoreRequirements, achievement.AlternateRequirements);
         }
 
-        private static string SerializeRequirements(IEnumerable<Requirement> core, IEnumerable<IEnumerable<Requirement>> alts)
+        internal static string SerializeRequirements(IEnumerable<Requirement> core, IEnumerable<IEnumerable<Requirement>> alts)
         {
             var builder = new StringBuilder();
 
+            // if no new features are found, prefer the legacy format for greatest compatibility with older versions of RetroArch
+            bool preferLegacyFormat = !HasNewFeatures(core);
+            if (preferLegacyFormat)
+            {
+                foreach (var group in alts)
+                {
+                    if (HasNewFeatures(core))
+                    {
+                        preferLegacyFormat = false;
+                        break;
+                    }
+                }
+            }
+
             foreach (Requirement requirement in core)
             {
-                SerializeRequirement(requirement, builder);
+                SerializeRequirement(requirement, builder, preferLegacyFormat);
                 builder.Append('_');
             }
 
@@ -279,7 +313,7 @@ namespace RATools.Parser
 
                 foreach (Requirement requirement in alt)
                 {
-                    SerializeRequirement(requirement, builder);
+                    SerializeRequirement(requirement, builder, preferLegacyFormat);
                     builder.Append('_');
                 }
 
@@ -289,7 +323,7 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private static void SerializeRequirement(Requirement requirement, StringBuilder builder)
+        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, bool preferLegacyFormat)
         {
             switch (requirement.Type)
             {
@@ -310,7 +344,8 @@ namespace RATools.Parser
                 case RequirementType.AddSource:
                 case RequirementType.SubSource:
                 case RequirementType.AddAddress:
-                    builder.Append("=0");
+                    if (preferLegacyFormat)
+                        builder.Append("=0");
                     break;
 
                 default:
@@ -322,6 +357,7 @@ namespace RATools.Parser
                         case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
                         case RequirementOperator.GreaterThan: builder.Append('>'); break;
                         case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                        case RequirementOperator.None: return;
                     }
 
                     requirement.Right.Serialize(builder);
@@ -1722,25 +1758,17 @@ namespace RATools.Parser
                 if (combiningRequirement)
                     group.Last().Requirements.Add(requirement);
 
-                switch (requirement.Type)
+                if (requirement.IsCombining)
                 {
-                    case RequirementType.AddHits:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                    case RequirementType.AndNext:
-                        if (combiningRequirement)
-                            continue;
+                    if (combiningRequirement)
+                        continue;
 
-                        combiningRequirement = true;
-                        break;
-
-                    default:
-                        if (combiningRequirement)
-                        {
-                            combiningRequirement = false;
-                            continue;
-                        }
-                        break;
+                    combiningRequirement = true;
+                }
+                else if (combiningRequirement)
+                {
+                    combiningRequirement = false;
+                    continue;
                 }
 
                 group.Add(new RequirementEx());
