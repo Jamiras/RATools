@@ -27,7 +27,7 @@ namespace RATools.Services
             EmulatorDirectories = new List<string>();
             UserName = "RATools";
 
-            var file = new IniFile("RATools.ini");
+            var file = new IniFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RATools.ini"));
             try
             {
                 var values = file.Read();
@@ -65,7 +65,7 @@ namespace RATools.Services
 
         public void Save()
         {
-            var file = new IniFile("RATools.ini");
+            var file = new IniFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RATools.ini"));
             IDictionary<string, string> values;
             try
             {
