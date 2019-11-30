@@ -60,23 +60,32 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private bool MoveConstantsToRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
+        private static ComparisonOperation InvertComparisonOperation(ComparisonOperation op)
+        {
+            switch (op)
+            {
+                case ComparisonOperation.LessThan: return ComparisonOperation.GreaterThan;
+                case ComparisonOperation.LessThanOrEqual: return ComparisonOperation.GreaterThanOrEqual;
+                case ComparisonOperation.GreaterThan: return ComparisonOperation.LessThan;
+                case ComparisonOperation.GreaterThanOrEqual: return ComparisonOperation.LessThanOrEqual;
+                default: return op;
+            }
+        }
+
+        private static bool MoveConstantsToRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
         {
             ComparisonExpression newRoot;
-            var mathematic = (MathematicExpression)comparisonExpression.Left;
 
-            // if the rightmost expression of the left side of the comparison is an integer, shift it to the 
-            // right side of the equation and attempt to merge it with whatever is already there.
-            var integer = mathematic.Right as IntegerConstantExpression;
-            if (integer == null)
+            // if left side is not mathematic, we can't move anything
+            var mathematicLeft = comparisonExpression.Left as MathematicExpression;
+            if (mathematicLeft == null)
             {
                 result = comparisonExpression;
                 return true;
             }
 
             var mathematicRight = comparisonExpression.Right as MathematicExpression;
-            var mathematicLeft = comparisonExpression.Left as MathematicExpression;
-            if (mathematicLeft != null && mathematicRight != null &&
+            if (mathematicRight != null &&
                 mathematicLeft.Operation == mathematicRight.Operation &&
                 mathematicLeft.Right == mathematicRight.Right)
             {
@@ -85,9 +94,16 @@ namespace RATools.Parser.Internal
             }
             else
             {
-                // apply the inverse of the mathematical operation to generate a new right side
-                var operation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
-                var right = new MathematicExpression(comparisonExpression.Right, operation, mathematic.Right);
+                // if it's not an integer, we can't merge it, so don't move it
+                if (mathematicLeft.Right.Type != ExpressionType.IntegerConstant)
+                {
+                    result = comparisonExpression;
+                    return true;
+                }
+
+                // move it to the other side by applying the inverse of the mathematical operation
+                var operation = MathematicExpression.GetOppositeOperation(mathematicLeft.Operation);
+                var right = new MathematicExpression(comparisonExpression.Right, operation, mathematicLeft.Right);
                 if (!right.ReplaceVariables(scope, out result))
                     return false;
 
@@ -98,7 +114,7 @@ namespace RATools.Parser.Internal
                 // so its still logically valid (if possible).
                 if (operation == MathematicOperation.Divide && newRight is IntegerConstantExpression)
                 {
-                    var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematic.Right);
+                    var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematicLeft.Right);
                     if (!reversed.ReplaceVariables(scope, out result))
                         return false;
 
@@ -138,7 +154,7 @@ namespace RATools.Parser.Internal
                 }
 
                 // construct the new equation
-                newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
+                newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
             }
 
             // recurse if applicable
@@ -163,6 +179,24 @@ namespace RATools.Parser.Internal
             switch (mathematic.Operation)
             {
                 case MathematicOperation.Add:
+                    if (mathematic.Right.Type == ExpressionType.IntegerConstant)
+                    {
+                        if (mathematic.Left.Type == ExpressionType.Mathematic)
+                        {
+                            var temp = new ComparisonExpression(comparisonExpression.Left, comparisonExpression.Operation, mathematic.Left);
+                            if (!EnsureSingleExpressionOnRightHandSide(temp, scope, ref underflowAdjustment, out result))
+                                return false;
+
+                            temp = (ComparisonExpression)result;
+                            mathematic = new MathematicExpression(temp.Right, MathematicOperation.Add, mathematic.Right);
+                            comparisonExpression = new ComparisonExpression(temp.Left, temp.Operation, mathematic);
+                        }
+
+                        // prefer to move the IntegerConstant unless a MemoryAccessor can be moved
+                        // note: prev() hides the memory accessor, so the IntegerConstant is given preference
+                        moveLeft = false;
+                    }
+
                     // the leftmost part of the right side will be moved to the left side as a subtraction.
                     // when subtracting a memory accessor, the result could be negative. since we're using
                     // unsigned values, this could result in a very high positive number. if not doing an exact
@@ -174,12 +208,12 @@ namespace RATools.Parser.Internal
                         {
                             var memoryAccessor = scope.GetFunction(functionCall.FunctionName.Name) as MemoryAccessorFunction;
                             if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
+                            {
                                 underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size);
+                                moveLeft = true;
+                            }
                         }
                     }
-
-                    if (mathematic.Right is IntegerConstantExpression)
-                        moveLeft = false;
                     break;
 
                 case MathematicOperation.Subtract:
@@ -346,6 +380,54 @@ namespace RATools.Parser.Internal
             return false;
         }
 
+        private ExpressionBase ToggleAddSubtract(ExpressionBase expression)
+        {
+            var mathematic = expression as MathematicExpression;
+            if (mathematic == null)
+                return expression;
+
+            MathematicOperation newOperation;
+            switch (mathematic.Operation)
+            {
+                case MathematicOperation.Add:
+                    newOperation = MathematicOperation.Subtract;
+                    break;
+
+                case MathematicOperation.Subtract:
+                    if (mathematic.Left.Type == ExpressionType.IntegerConstant &&
+                        ((IntegerConstantExpression)mathematic.Left).Value == 0)
+                    {
+                        // -(0-a) => (a)
+                        return mathematic.Right;
+                    }
+
+                    if (mathematic.Left.Type != ExpressionType.Mathematic &&
+                        mathematic.Right.Type != ExpressionType.Mathematic)
+                    {
+                        // -(a-b) => (b-a)
+                        return new MathematicExpression(mathematic.Right, MathematicOperation.Subtract, mathematic.Left);
+                    }
+
+                    newOperation = MathematicOperation.Add;
+                    break;
+
+                default:
+                    return null;
+            }
+
+            var newLeft = ToggleAddSubtract(mathematic.Left);
+            if (newLeft == null)
+                return null;
+            if (newLeft.Type == ExpressionType.FunctionCall)
+                newLeft = new MathematicExpression(new IntegerConstantExpression(0), MathematicOperation.Subtract, newLeft);
+
+            var newRight = ToggleAddSubtract(mathematic.Right);
+            if (newRight == null)
+                return null;
+
+            return new MathematicExpression(newLeft, newOperation, newRight);
+        }
+
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
@@ -398,6 +480,19 @@ namespace RATools.Parser.Internal
                 left = newLeft;
             }
 
+            // if the right side is a negative constant, move it to the left before calculating the underflow
+            if (right.Type == ExpressionType.IntegerConstant)
+            {
+                var value = ((IntegerConstantExpression)right).Value;
+                if (value < 0)
+                {
+                    right = new IntegerConstantExpression(0);
+                    var newLeft = new MathematicExpression(left, MathematicOperation.Add, new IntegerConstantExpression(-value));
+                    left = MathematicExpression.BubbleUpIntegerConstant(newLeft);
+                    leftConstant += -value;
+                }
+            }
+
             // if the comparison is not direct equality/inequality, need to check for underflow
             int underflowAdjustment = 0;
             if (Operation != ComparisonOperation.Equal && Operation != ComparisonOperation.NotEqual)
@@ -430,8 +525,20 @@ namespace RATools.Parser.Internal
                 {
                     if (HasSubtract(comparison.Left))
                     {
-                        // if the left side has a subtraction, the result could be negative, adjust it up to zero
-                        underflowAdjustment += -value;
+                        // if the left side has a subtraction, the result could be negative
+                        var inverted = (underflowAdjustment < leftConstant) ? ToggleAddSubtract(comparison.Left) : null;
+                        if (inverted != null)
+                        {
+                            // ToggleAddSubstract only returns an exprsesion if the left side is only adds and subtracts. 
+                            // multiple both sides by -1 to make the right side positive (and invert the comparison)
+                            comparison = new ComparisonExpression(inverted, InvertComparisonOperation(Operation), new IntegerConstantExpression(-value));
+                            underflowAdjustment = 0;
+                        }
+                        else
+                        {
+                            // adjust the right side to 0
+                            underflowAdjustment += -value;
+                        }
                     }
                     else if (HasDword(comparison.Left, scope))
                     {
@@ -450,8 +557,8 @@ namespace RATools.Parser.Internal
             // incorporate the underflow adjustment
             if (underflowAdjustment > 0)
             {
-                // if an adjustment is necessary for a less than comparison, and the user has already provided one, use it.                if (Operation == ComparisonOperation.LessThan || Operation == ComparisonOperation.LessThanOrEqual)
-                if (leftConstant != 0 && (Operation == ComparisonOperation.LessThan || Operation == ComparisonOperation.LessThanOrEqual))
+                // if an adjustment is necessary for a less than comparison, and the user has already provided one, use it.
+                if (leftConstant != 0 && (comparison.Operation == ComparisonOperation.LessThan || comparison.Operation == ComparisonOperation.LessThanOrEqual))
                     underflowAdjustment = leftConstant;
 
                 // add a dummy variable to the right side and rebalance again to move the existing right hand side to the left hand side
