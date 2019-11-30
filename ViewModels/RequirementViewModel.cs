@@ -1,6 +1,8 @@
-﻿using Jamiras.DataModels;
+﻿using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using RATools.Data;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -112,7 +114,7 @@ namespace RATools.ViewModels
             Definition = BuildDefinition(Requirement, numberFormat);
         }
 
-        protected static string BuildDefinition(Requirement requirement, NumberFormat numberFormat)
+        protected string BuildDefinition(Requirement requirement, NumberFormat numberFormat)
         {
             var builder = new StringBuilder();
             switch (requirement.Type)
@@ -126,7 +128,25 @@ namespace RATools.ViewModels
                     break;
             }
 
-            requirement.AppendString(builder, numberFormat);
+            if (IsValueDependentOnPreviousRequirement)
+            {
+                var builder2 = new StringBuilder();
+                requirement.AppendString(builder2, numberFormat, "~", "~");
+                builder2.Remove(0, 2); // remove "(~"
+                for (int i = 0; i < builder2.Length; i++)
+                {
+                    if (builder2[i] == '~')
+                    {
+                        builder2.Remove(i, 2); // remove "~)"
+                        break;
+                    }
+                }
+                builder.Append(builder2);
+            }
+            else
+            {
+                requirement.AppendString(builder, numberFormat);
+            }
 
             if (requirement.Type == RequirementType.SubSource)
             {
@@ -137,6 +157,19 @@ namespace RATools.ViewModels
             }
 
             return builder.ToString();
+        }
+
+        public static readonly ModelProperty IsValueDependentOnPreviousRequirementProperty = ModelProperty.Register(typeof(RequirementViewModel), "IsValueDependentOnPreviousRequirement", typeof(bool), false, OnIsValueDependentOnPreviousRequirementChanged);
+        public bool IsValueDependentOnPreviousRequirement
+        {
+            get { return (bool)GetValue(IsValueDependentOnPreviousRequirementProperty); }
+            set { SetValue(IsValueDependentOnPreviousRequirementProperty, value); }
+        }
+
+        private static void OnIsValueDependentOnPreviousRequirementChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+            ((RequirementViewModel)sender).UpdateDefinition(numberFormat);
         }
     }
 }

@@ -163,7 +163,8 @@ namespace RATools.Data
                     break;
 
                 default:
-                    if (Operator != RequirementOperator.None)
+                    if (Operator != RequirementOperator.None &&
+                        string.IsNullOrEmpty(subSources) && string.IsNullOrEmpty(addSources))
                     {
                         var clone = new Requirement
                         {

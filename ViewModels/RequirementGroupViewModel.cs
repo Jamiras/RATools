@@ -11,9 +11,28 @@ namespace RATools.ViewModels
         {
             Label = label;
 
+            bool isValueDependentOnPreviousRequirement = false;
             var list = new List<RequirementViewModel>();
             foreach (var requirement in requirements)
-                list.Add(new RequirementViewModel(requirement, numberFormat, notes));
+            {
+                var requirementViewModel = new RequirementViewModel(requirement, numberFormat, notes);
+                requirementViewModel.IsValueDependentOnPreviousRequirement = isValueDependentOnPreviousRequirement;
+
+                list.Add(requirementViewModel);
+
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddAddress:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        isValueDependentOnPreviousRequirement = true;
+                        break;
+
+                    default:
+                        isValueDependentOnPreviousRequirement = false;
+                        break;
+                }
+            }
 
             Requirements = list;
         }

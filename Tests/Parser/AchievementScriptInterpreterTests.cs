@@ -618,6 +618,8 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234) + 1 - byte(0x1235) >  3", "(255 + byte(0x001234) - byte(0x001235)) > 257")]
         [TestCase("byte(0x1234) + 1 - byte(0x1235) <= 3", "(1 + byte(0x001234) - byte(0x001235)) <= 3")]
         [TestCase("byte(0x1234) + 1 - byte(0x1235) <  3", "(1 + byte(0x001234) - byte(0x001235)) < 3")]
+        [TestCase("5 - byte(0x1234) < 2", "(5 - byte(0x001234)) < 2")]
+        [TestCase("5 - byte(0x1234) == 2", "(3 - byte(0x001234)) == 0")]
         public void TestUnderflowAdjustment(string input, string expected)
         {
             // SubSource(mem) can cause wraparound, so if modifiers are present when doing a
@@ -628,6 +630,15 @@ namespace RATools.Test.Parser
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestUnderflowAdjustmentImpossible()
+        {
+            var input = "5 + byte(0x1234) == 2";
+
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Expression can never be true"));
         }
 
         [Test]
