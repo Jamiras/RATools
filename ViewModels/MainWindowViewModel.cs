@@ -54,11 +54,13 @@ namespace RATools.ViewModels
                 RecentFiles = list.ToArray();
             }
 
+            var basePath = AppDomain.CurrentDomain.BaseDirectory;
+
             var logService = ServiceRepository.Instance.FindService<ILogService>();
             FileLogger logger = null;
             for (int i = 1; i < 10; i++)
             {
-                var fileName = (i == 1) ? "RATools.log" : "RATools" + i + ".log";
+                var fileName = Path.Combine(basePath, (i == 1) ? "RATools.log" : "RATools" + i + ".log");
                 try
                 {
                     logger = new FileLogger(fileName);
