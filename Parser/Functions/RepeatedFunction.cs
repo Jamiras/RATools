@@ -74,9 +74,20 @@ namespace RATools.Parser.Functions
             ExpressionBase result;
 
             var builder = new ScriptInterpreterAchievementBuilder();
-            builder.CoreRequirements.Add(new Requirement()); // empty core requirement required for optimize call, we'll ignore it
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return (ParseErrorExpression)result;
+
+            // core requirements have to be injected into each subclause as a series of AndNext's
+            foreach (var requirement in builder.CoreRequirements)
+            {
+                if (requirement.Type != RequirementType.None)
+                {
+                    if (requirement == builder.CoreRequirements.Last() || requirement.Type != RequirementType.AndNext)
+                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                }
+
+                requirement.Type = RequirementType.AndNext;
+            }
 
             var requirements = new List<ICollection<Requirement>>();
             foreach (var altGroup in builder.AlternateRequirements)
@@ -98,7 +109,16 @@ namespace RATools.Parser.Functions
                         return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
                 }
 
-                requirements.Add(altGroup);
+                if (builder.CoreRequirements.Any())
+                {
+                    var merged = new List<Requirement>(builder.CoreRequirements);
+                    merged.AddRange(altGroup);
+                    requirements.Add(merged);
+                }
+                else
+                {
+                    requirements.Add(altGroup);
+                }
             }
 
             // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
