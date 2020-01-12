@@ -78,39 +78,43 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return (ParseErrorExpression)result;
 
-            var requirements = new List<Requirement>();
+            var requirements = new List<ICollection<Requirement>>();
             foreach (var altGroup in builder.AlternateRequirements)
             {
-                var error = ValidateSingleCondition(altGroup);
-                if (error != null)
-                    return error;
-
-                var requirement = altGroup.First();
+                int i = altGroup.Count - 1;
+                var requirement = altGroup.ElementAt(i);
                 if (requirement.Type != RequirementType.None)
                     return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
 
-                requirements.Add(requirement);
+                // all but the last clause need to be converted to AddHits
+                requirement.Type = RequirementType.AddHits;
+
+                while (i > 0)
+                {
+                    --i;
+                    if (altGroup.ElementAt(i).Type == RequirementType.None)
+                        altGroup.ElementAt(i).Type = RequirementType.AndNext;
+                    else if (altGroup.ElementAt(i).Type != RequirementType.AndNext)
+                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                }
+
+                requirements.Add(altGroup);
             }
 
             // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
             // if necessary, find one without a HitCount and make it the last. 
             int index = requirements.Count - 1;
-            if (requirements[index].HitCount > 0)
+            if (requirements[index].Last().HitCount > 0)
             {
                 do
                 {
                     index--;
-                } while (index >= 0 && requirements[index].HitCount > 0);
+                } while (index >= 0 && requirements[index].Last().HitCount > 0);
                     
                 if (index == -1)
                 {
                     // all requirements had HitCount limits, add a dummy item that's never true for the total HitCount
-                    requirements.Add(new Requirement
-                    {
-                        Left = new Field { Type = FieldType.Value, Value = 1 },
-                        Operator = RequirementOperator.Equal,
-                        Right = new Field { Type = FieldType.Value, Value = 0 }
-                    });
+                    requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
                 }
                 else
                 {
@@ -121,13 +125,15 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            // everything but the last becomes an AddHits
-            for (int i = 0; i < requirements.Count - 1; i++)
-                requirements[i].Type = RequirementType.AddHits;
+            // everything was converted to an AddHits. convert the last back
+            requirements.Last().Last().Type = RequirementType.None;
 
             // load the requirements into the trigger
             foreach (var requirement in requirements)
-                context.Trigger.Add(requirement);
+            {
+                foreach (var clause in requirement)
+                    context.Trigger.Add(clause);
+            }
 
             return null;
         }
