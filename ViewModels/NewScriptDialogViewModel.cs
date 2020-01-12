@@ -645,15 +645,29 @@ namespace RATools.ViewModels
                                     stream.Write("//               ");
 
                                 var line = lines[i].Trim();
+                                if (line.Length == 0)
+                                {
+                                    stream.WriteLine("");
+                                    continue;
+                                }
+
                                 while (line.Length > MaxLength)
                                 {
                                     var index = line.LastIndexOf(' ', MaxLength - 1);
-                                    var front = line.Substring(0, index).Trim();
-                                    stream.WriteLine(front);
-                                    line = line.Substring(index + 1).Trim();
+                                    if (index < 0)
+                                    {
+                                        stream.WriteLine(line);
+                                        line = "";
+                                    }
+                                    else
+                                    {
+                                        var front = line.Substring(0, index).Trim();
+                                        stream.WriteLine(front);
+                                        line = line.Substring(index + 1).Trim();
 
-                                    if (line.Length > 0)
-                                        stream.Write("//               ");
+                                        if (line.Length > 0)
+                                            stream.Write("//               ");
+                                    }
                                 }
 
                                 if (line.Length > 0)
