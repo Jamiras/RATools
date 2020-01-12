@@ -396,6 +396,11 @@ namespace RATools.Parser
                         case RequirementType.SubSource:
                             requirement.Type = RequirementType.AddSource;
                             break;
+                        case RequirementType.AddAddress:
+                            // AddAddress is allowed as long as it's not the last requirement
+                            if (ReferenceEquals(requirement, requirements.Last()))
+                                return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
+                            break;
                         default:
                             return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
                     }
