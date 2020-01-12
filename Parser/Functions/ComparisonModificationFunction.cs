@@ -78,21 +78,15 @@ namespace RATools.Parser.Functions
             bool isCombining = true;
             foreach (var requirement in requirements)
             {
-                switch (requirement.Type)
+                if (requirement.IsCombining)
                 {
-                    case RequirementType.AddHits:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                    case RequirementType.AndNext:
-                    case RequirementType.AddAddress:
-                        isCombining = true;
-                        break;
-
-                    default:
-                        if (!isCombining)
-                            return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
-                        isCombining = false;
-                        break;
+                    isCombining = true;
+                }
+                else
+                {
+                    if (!isCombining)
+                        return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
+                    isCombining = false;
                 }
             }
 

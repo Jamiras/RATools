@@ -163,5 +163,29 @@ namespace RATools.Tests.Data
             Assert.That(requirement1 != requirement2);
             Assert.That(!requirement1.Equals(requirement2));
         }
+
+        [Test]
+        public void TestIsCombining()
+        {
+            foreach (RequirementType e in System.Enum.GetValues(typeof(RequirementType)))
+            {
+                var requirement = new Requirement { Type = e };
+
+                // validate non-combining to invert logic and catch new items
+                switch (e)
+                {
+                    case RequirementType.None:
+                    case RequirementType.Measured:
+                    case RequirementType.PauseIf:
+                    case RequirementType.ResetIf:
+                        Assert.IsFalse(requirement.IsCombining, e.ToString());
+                        break;
+
+                    default:
+                        Assert.IsTrue(requirement.IsCombining, e.ToString());
+                        break;
+                }
+            }
+        }
     }
 }

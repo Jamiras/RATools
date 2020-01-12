@@ -23,6 +23,28 @@ namespace RATools.Data
         public RequirementType Type { get; set; }
 
         /// <summary>
+        /// Gets whether or not the requirement affects the following requirement.
+        /// </summary>
+        public bool IsCombining
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                    case RequirementType.AndNext:
+                    case RequirementType.AddAddress:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the requirement operator.
         /// </summary>
         public RequirementOperator Operator { get; set; }

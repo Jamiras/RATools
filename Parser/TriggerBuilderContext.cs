@@ -1,5 +1,4 @@
 ﻿using RATools.Data;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,8 +36,6 @@ namespace RATools.Parser
             if (!ProcessValueExpression(expression, scope, terms, out result))
                 return null;
 
-            var context = new TriggerBuilderContext() { Trigger = new List<Requirement>() };
-
             var builder = new StringBuilder();
             foreach (var term in terms)
             {
@@ -47,6 +44,12 @@ namespace RATools.Parser
 
                 if (builder.Length > 0)
                     builder.Append('_');
+
+                if (term.measured != null)
+                {
+                    builder.Append(AchievementBuilder.SerializeRequirements(term.measured, new Requirement[0][]));
+                    continue;
+                }
 
                 switch (term.field.Type)
                 {
@@ -90,6 +93,7 @@ namespace RATools.Parser
         private class Term
         {
             public Field field;
+            public IEnumerable<Requirement> measured;
             public double multiplier;
         }
 
@@ -109,11 +113,31 @@ namespace RATools.Parser
 
                 if (requirements.Count > 1)
                 {
-                    result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                    return false;
+                    for (int i = 0; i < requirements.Count - 1; i++)
+                    {
+                        if (!requirements[i].IsCombining)
+                        {
+                            result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                            return false;
+                        }
+
+                        requirements[i].Operator = RequirementOperator.None;
+                    }
+
+                    if (requirements[requirements.Count - 1].Type != RequirementType.None)
+                    {
+                        result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                        return false;
+                    }
+
+                    requirements[requirements.Count - 1].Type = RequirementType.Measured;
+                    terms.Last().measured = requirements;
+                }
+                else
+                {
+                    terms.Last().field = requirements[0].Left;
                 }
 
-                terms.Last().field = requirements[0].Left;
                 result = null;
                 return true;
             }
