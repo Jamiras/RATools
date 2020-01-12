@@ -491,60 +491,74 @@ namespace RATools.Parser
                 return true;
             }
 
-            // apply the inverse of the mathematical operation to generate a new right side
-            var operation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
-            var right = new MathematicExpression(comparisonExpression.Right, operation, mathematic.Right);
-            if (!right.ReplaceVariables(scope, out result))
-                return false;
-
-            var newRight = result;
-            var comparisonOperation = comparisonExpression.Operation;
-
-            // multiplication is converted to division. if the division is not exact, modify the comparison 
-            // so its still logically valid (if possible).
-            if (operation == MathematicOperation.Divide && newRight is IntegerConstantExpression)
+            var mathematicRight = comparisonExpression.Right as MathematicExpression;
+            var mathematicLeft = comparisonExpression.Left as MathematicExpression;
+            if (mathematicLeft != null && mathematicRight != null &&
+                mathematicLeft.Operation == mathematicRight.Operation &&
+                mathematicLeft.Right == mathematicRight.Right)
             {
-                var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematic.Right);
-                if (!reversed.ReplaceVariables(scope, out result))
+                // same operation being applied to both sides, just cancel it out
+                newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonExpression.Operation, mathematicRight.Left);
+            }
+            else
+            {
+                // apply the inverse of the mathematical operation to generate a new right side
+                var operation = MathematicExpression.GetOppositeOperation(mathematic.Operation);
+                var right = new MathematicExpression(comparisonExpression.Right, operation, mathematic.Right);
+                if (!right.ReplaceVariables(scope, out result))
                     return false;
 
-                if (comparisonExpression.Right != result)
+                var newRight = result;
+                var comparisonOperation = comparisonExpression.Operation;
+
+                // multiplication is converted to division. if the division is not exact, modify the comparison 
+                // so its still logically valid (if possible).
+                if (operation == MathematicOperation.Divide && newRight is IntegerConstantExpression)
                 {
-                    // division was not exact
-                    switch (comparisonOperation)
+                    var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematic.Right);
+                    if (!reversed.ReplaceVariables(scope, out result))
+                        return false;
+
+                    if (comparisonExpression.Right != result)
                     {
-                        case ComparisonOperation.Equal:
-                            // a * 10 == 9999 can never be true
-                            result = new ParseErrorExpression("Result can never be true using integer math", comparisonExpression);
-                            return false;
+                        // division was not exact
+                        switch (comparisonOperation)
+                        {
+                            case ComparisonOperation.Equal:
+                                // a * 10 == 9999 can never be true
+                                result = new ParseErrorExpression("Result can never be true using integer math", comparisonExpression);
+                                return false;
 
-                        case ComparisonOperation.NotEqual:
-                            // a * 10 != 9999 is always true
-                            result = new ParseErrorExpression("Result is always true using integer math", comparisonExpression);
-                            return false;
+                            case ComparisonOperation.NotEqual:
+                                // a * 10 != 9999 is always true
+                                result = new ParseErrorExpression("Result is always true using integer math", comparisonExpression);
+                                return false;
 
-                        case ComparisonOperation.LessThan:
-                            // a * 10 < 9999 becomes a < 999
-                            break;
+                            case ComparisonOperation.LessThan:
+                                // a * 10 < 9999 becomes a < 999
+                                break;
 
-                        case ComparisonOperation.LessThanOrEqual:
-                            // a * 10 <= 9999 becomes a <= 999
-                            break;
+                            case ComparisonOperation.LessThanOrEqual:
+                                // a * 10 <= 9999 becomes a <= 999
+                                break;
 
-                        case ComparisonOperation.GreaterThan:
-                            // a * 10 > 9999 becomes a > 999
-                            break;
+                            case ComparisonOperation.GreaterThan:
+                                // a * 10 > 9999 becomes a > 999
+                                break;
 
-                        case ComparisonOperation.GreaterThanOrEqual:
-                            // a * 10 >= 9999 becomes a > 999
-                            comparisonOperation = ComparisonOperation.GreaterThan;
-                            break;
+                            case ComparisonOperation.GreaterThanOrEqual:
+                                // a * 10 >= 9999 becomes a > 999
+                                comparisonOperation = ComparisonOperation.GreaterThan;
+                                break;
+                        }
                     }
                 }
+
+                // construct the new equation
+                newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
             }
 
-            // construct the new equation and recurse if applicable
-            newRoot = new ComparisonExpression(mathematic.Left, comparisonOperation, newRight);
+            // recurse if applicable
             if (newRoot.Left.Type == ExpressionType.Mathematic)
                 return MoveConstantsToRightHandSide(newRoot, scope, out result);
 

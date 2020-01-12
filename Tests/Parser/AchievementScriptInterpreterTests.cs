@@ -137,6 +137,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234) - prev(byte(0x1234)) == 3", "(byte(0x001234) - prev(byte(0x001234))) == 3")] // value increases by 3
         [TestCase("byte(0x1234) + 1 == byte(0x4321) - 1", "(2 + byte(0x001234)) == byte(0x004321)")] // modifiers on different addresses
         [TestCase("(word(0x1234) - 1) * 4 > (prev(word(0x1234)) - 1) * 4", "word(0x001234) > prev(word(0x001234))")]
+        [TestCase("(word(0x1234) - 1) / 4 > (prev(word(0x1234)) - 1) / 4", "word(0x001234) > prev(word(0x001234))")]
         [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) + bit4(0x1234)", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 2")]
         [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) - bit4(0x1234)", "(bit1(0x001234) + bit2(0x001234) + bit4(0x001234)) > bit3(0x001234)")]
         [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) + bit4(0x1234) + 1", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 3")]
