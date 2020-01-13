@@ -15,7 +15,7 @@ namespace RATools.Parser
     [DebuggerDisplay("LocalAchievements: {Title}")]
     public class LocalAchievements
     {
-        const int AchievementMaxLength = 16384;
+        const int AchievementMaxLength = 65535;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LocalAchievements"/> class.
