@@ -493,8 +493,10 @@ namespace RATools.Parser
                     builder.Append(' ', indent);
                     width = wrapWidth - indent;
                 }
-
-                width -= definition.Length;
+                else
+                {
+                    width -= definition.Length;
+                }
 
                 builder.Append(definition.ToString());
             }

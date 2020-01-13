@@ -721,8 +721,16 @@ namespace RATools.ViewModels
                                 stream.WriteLine(" &&");
                                 stream.Write(new string(' ', indent));
                             }
-                            stream.Write("((");
+                            stream.Write('(');
                             first = false;
+
+                            if (achievementViewModel.RequirementGroups.Count() == 2)
+                            {
+                                // only core and one alt, inject an always_false clause to prevent the compiler from joining them
+                                stream.Write("always_false() || ");
+                            }
+
+                            stream.Write('(');
                         }
                         else
                         {
