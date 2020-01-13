@@ -1379,6 +1379,40 @@ namespace RATools.Parser
             }
         }
 
+        private static void RemoveAlwaysFalseAlts(List<List<RequirementEx>> groups)
+        {
+            bool alwaysFalse = false;
+
+            Predicate<List<RequirementEx>> isAlwaysFalse = group =>
+               (group.Count == 1 && group[0].Requirements.Count == 1 && group[0].Requirements[0].Evaluate() == false);
+
+            if (isAlwaysFalse(groups[0]))
+            {
+                // core is always_false; the entire trigger is always_false
+                alwaysFalse = true;
+            }
+            else if (groups.Count > 1)
+            {
+                for (int i = groups.Count - 1; i > 0; i--)
+                {
+                    if (isAlwaysFalse(groups[i]))
+                        groups.RemoveAt(i);
+                }
+
+                // only always_false alt groups were found, the entire trigger is always_false
+                if (groups.Count == 1)
+                    alwaysFalse = true;
+            }
+
+            if (alwaysFalse)
+            {
+                groups.Clear();
+                groups.Add(new List<RequirementEx>());
+                groups[0].Add(new RequirementEx());
+                groups[0][0].Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+            }
+        }
+
         private static void RemoveDuplicates(IList<RequirementEx> group, IList<RequirementEx> coreGroup)
         {
             for (int i = 0; i < group.Count; i++)
@@ -1788,6 +1822,7 @@ namespace RATools.Parser
             }
         }
 
+
         private static string CheckForMultipleMeasuredTargets(IEnumerable<Requirement> requirements, ref uint measuredTarget)
         {
             foreach (var requirement in requirements)
@@ -1854,6 +1889,10 @@ namespace RATools.Parser
             // remove the always_true statement
             if (groups[0].Count > 1 && groups[0][0].Requirements.Count == 1 && groups[0][0].Requirements[0].Evaluate() == true)
                 groups[0].RemoveAt(0);
+
+            // if core is always_false, or all alts are always_false, the entire trigger is always_false.
+            // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
+            RemoveAlwaysFalseAlts(groups);
 
             // convert back to flattened expressions
             _core.Clear();

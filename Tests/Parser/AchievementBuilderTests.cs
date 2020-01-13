@@ -353,7 +353,9 @@ namespace RATools.Test.Parser
         [TestCase("1 == 1", "always_true()")] // always true
         [TestCase("3 > 6", "always_false()")] // always false
         [TestCase("0 == 1 && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
+        [TestCase("0 == 1 && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
         [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
+        [TestCase("1 == 1 && (1 == 2 || 1 == 3)", "always_false()")] // if all alts are false, entire trigger is false
         [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (always_false() && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
                   "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && always_false()))")] // always_false paired with ResetIf does not eradicate the ResetIf
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
@@ -461,7 +463,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 2", "byte(0x001234) <= 2 || byte(0x001234) >= 2")] // always true, can't really collapse
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "byte(0x001234) >= 2 || byte(0x001234) <= 2")] // always true, can't really collapse
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
-        [TestCase("always_false() || byte(0x001234) == 2", "always_false() || byte(0x001234) == 2")] // minimum of two alts
+        [TestCase("always_false() || byte(0x001234) == 2", "byte(0x001234) == 2")] // always_false group can be removed
         [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
             "always_true() || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
@@ -546,6 +548,16 @@ namespace RATools.Test.Parser
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(word(0x001234) + 0x00000A) > prev(byte(word(0x001234) + 0x00000B))"));
 
             CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x2345) + 10))", "Indirect memory addresses must match on both sides of a comparison");
+        }
+
+        [Test]
+        public void TestAlwaysFalseAltGroupIsUnnecessary()
+        {
+            // without the once, the never gets eliminated
+            // without the never, the pauseif get promoted to core
+            var achievement = CreateAchievement("once(byte(0x001234) == 1) && never(byte(0x001111) == 1) && (always_false() || unless(byte(0x002345) == 2))");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(), Is.EqualTo("0xH001234=1.1._R:0xH001111=1SP:0xH002345=2"));
         }
     }
 }

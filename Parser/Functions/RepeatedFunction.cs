@@ -74,7 +74,6 @@ namespace RATools.Parser.Functions
             ExpressionBase result;
 
             var builder = new ScriptInterpreterAchievementBuilder();
-            builder.CoreRequirements.Add(new Requirement()); // empty core requirement required for optimize call, we'll ignore it
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return (ParseErrorExpression)result;
 
