@@ -508,6 +508,33 @@ namespace RATools.Parser.Internal
                 }
             }
 
+            var integer = mathematic.Left as IntegerConstantExpression;
+            if (integer != null)
+            {
+                switch (mathematic.Operation)
+                {
+                    case MathematicOperation.Add:
+                    case MathematicOperation.Multiply:
+                        // switch the order so the constant is on the right
+                        mathematic = new MathematicExpression(mathematic.Right, mathematic.Operation, mathematic.Left);
+                        break;
+
+                    case MathematicOperation.Subtract:
+                        if (integer.Value == 0)
+                            break;
+
+                        // change "N - func" to "0 - func + N" so N is on the right. the 0 will be optimized out later
+                        mathematic = new MathematicExpression(
+                            new MathematicExpression(new IntegerConstantExpression(0), MathematicOperation.Subtract, mathematic.Right),
+                            MathematicOperation.Add,
+                            integer);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
             return mathematic;
         }
 

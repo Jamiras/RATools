@@ -612,12 +612,20 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) == 3", "(byte(0x001234) - byte(0x001235)) == 2")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) == 3", "(byte(0x001234) - byte(0x001235)) == 2")] // no underflow on direct comparison
         [TestCase("byte(0x1234) + 1 - byte(0x1235) != 3", "(byte(0x001234) - byte(0x001235)) != 2")]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) >= 3", "(255 + byte(0x001234) - byte(0x001235)) >= 257")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) >= 3", "(255 + byte(0x001234) - byte(0x001235)) >= 257")] // potential underflow of 255, move +1 to other side and adjust both
         [TestCase("byte(0x1234) + 1 - byte(0x1235) >  3", "(255 + byte(0x001234) - byte(0x001235)) > 257")]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) <= 3", "(1 + byte(0x001234) - byte(0x001235)) <= 3")]
+        [TestCase("byte(0x1234) + 1 - byte(0x1235) <= 3", "(1 + byte(0x001234) - byte(0x001235)) <= 3")] // explicit offset supercedes underflow for less than comparisons
         [TestCase("byte(0x1234) + 1 - byte(0x1235) <  3", "(1 + byte(0x001234) - byte(0x001235)) < 3")]
+        [TestCase("byte(0x1234) - byte(0x1235) <= 3", "(255 + byte(0x001234) - byte(0x001235)) <= 258")] // potential underflow of 255, no offset
+        [TestCase("byte(0x1234) - byte(0x1235) <  3", "(255 + byte(0x001234) - byte(0x001235)) < 258")]
+        [TestCase("5 - byte(0x1234) < 2", "(5 - byte(0x001234)) < 2")] // only 4 and 5 are valid values - don't modify the expression
+        [TestCase("5 - byte(0x1234) == 2", "byte(0x001234) == 3")] // only 3 is a valid value, automatically normalize the expression
+        [TestCase("300 - byte(0x1234) < 100", "byte(0x001234) > 200")] // no underflow, expression can be inverted
+        [TestCase("byte(0x1234) - byte(0x2345) - byte(0x3456) < 100", "(510 + byte(0x001234) - byte(0x003456) - byte(0x002345)) < 610")] // double underflow - add 255*2 to both sides
+        [TestCase("700 + byte(0x1234) - byte(0x2345) - byte(0x3456) < 100", "(byte(0x002345) + byte(0x003456) - byte(0x001234)) > 600")] // suffient modifier to prevent underflow, just rearrange the operations
+        [TestCase("byte(0x1234) - byte(0x2345) - byte(0x3456) < -600", "(byte(0x002345) + byte(0x003456) - byte(0x001234)) > 600")] // comparison to negative, underflow 
         public void TestUnderflowAdjustment(string input, string expected)
         {
             // SubSource(mem) can cause wraparound, so if modifiers are present when doing a
@@ -628,6 +636,15 @@ namespace RATools.Test.Parser
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestUnderflowAdjustmentImpossible()
+        {
+            var input = "5 + byte(0x1234) == 2";
+
+            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Expression can never be true"));
         }
 
         [Test]
