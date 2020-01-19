@@ -258,6 +258,34 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestAddHitsAndNextCommonClause()
+        {
+            // NOTE: common clause will always appear first in resulting output
+            var requirements = Evaluate("repeated(4, (byte(0x1234) == 56 && byte(0x2345) == 67) || (byte(0x1234) == 34 && byte(0x2345) == 67))");
+            Assert.That(requirements.Count, Is.EqualTo(4));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("34"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
         public void TestAddHitsRestrictedAndNext()
         {
             // NOTE: this logic is invalid as it's impossible to actually get four hits if every subclause is limited to capturing one.
