@@ -77,6 +77,9 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return (ParseErrorExpression)result;
 
+            if (builder.AlternateRequirements.Count == 0)
+                return BuildTriggerCondition(context, scope, condition);
+
             // core requirements have to be injected into each subclause as a series of AndNext's
             foreach (var requirement in builder.CoreRequirements)
             {
@@ -103,10 +106,24 @@ namespace RATools.Parser.Functions
                 while (i > 0)
                 {
                     --i;
-                    if (altGroup.ElementAt(i).Type == RequirementType.None)
-                        altGroup.ElementAt(i).Type = RequirementType.AndNext;
-                    else if (altGroup.ElementAt(i).Type != RequirementType.AndNext)
-                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                    switch (altGroup.ElementAt(i).Type)
+                    {
+                        case RequirementType.None:
+                            // convert a chain of normal conditions into AndNexts so they're grouped within the AddHits
+                            altGroup.ElementAt(i).Type = RequirementType.AndNext;
+                            break;
+
+                        case RequirementType.AddAddress:
+                        case RequirementType.AndNext:
+                        case RequirementType.AddSource:
+                        case RequirementType.SubSource:
+                            // these are used to construct conditions and therefore can exist inside an AddHits clause.
+                            break;
+
+                        default:
+                            // non-constructing conditions are not allowed within the AddHits clause
+                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                    }
                 }
 
                 if (builder.CoreRequirements.Any())

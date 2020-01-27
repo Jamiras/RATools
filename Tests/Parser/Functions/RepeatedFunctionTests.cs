@@ -346,5 +346,55 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.None));
             Assert.That(requirements[3].HitCount, Is.EqualTo(4));
         }
+
+        [Test]
+        public void TestAddHitsAddAddress()
+        {
+            var requirements = Evaluate("repeated(4, byte(0x1234 + byte(0x2345)) == 56 || byte(0x1234 + byte(0x2345)) == 34)");
+            Assert.That(requirements.Count, Is.EqualTo(4));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddAddress));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.AddAddress));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("34"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestAddHitsAddSourceSubSource()
+        {
+            var requirements = Evaluate("repeated(4, byte(0x1234) + byte(0x2345) == 56 || byte(0x1234) - byte(0x2345) == 34)");
+            Assert.That(requirements.Count, Is.EqualTo(4));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddSource));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.SubSource));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("34"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestAddHitsUnsupportedFlags()
+        {
+            var errorMessage = "modifier not allowed in multi-condition repeated clause";
+            Evaluate("repeated(4, never(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
+            Evaluate("repeated(4, unless(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
+            Evaluate("repeated(4, repeated(6, byte(0x1234) == 5 || byte(0x2345) == 6) || byte(0x1234) == 34)", errorMessage);
+            Evaluate("repeated(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", errorMessage);
+        }
     }
 }
