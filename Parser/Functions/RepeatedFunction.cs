@@ -113,16 +113,15 @@ namespace RATools.Parser.Functions
                             altGroup.ElementAt(i).Type = RequirementType.AndNext;
                             break;
 
-                        case RequirementType.AddAddress:
-                        case RequirementType.AndNext:
-                        case RequirementType.AddSource:
-                        case RequirementType.SubSource:
-                            // these are used to construct conditions and therefore can exist inside an AddHits clause.
-                            break;
+                        case RequirementType.AddHits:
+                            // AddHits is a combining flag, but cannot be nested in another AddHits
+                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
 
                         default:
                             // non-constructing conditions are not allowed within the AddHits clause
-                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                            if (!altGroup.ElementAt(i).IsCombining)
+                                return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                            break;
                     }
                 }
 
