@@ -2,7 +2,6 @@
 using RATools.Data;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -20,8 +19,16 @@ namespace RATools.ViewModels
                 CompareRequirement = compareRequirement;
                 UpdateOtherDefinition(numberFormat);
 
-                if (!compareRequirement.Equals(requirement))
+                if (requirement == null)
+                {
                     IsModified = true;
+                }
+                else if (!compareRequirement.Equals(requirement))
+                {
+                    var evaluation = requirement.Evaluate();
+                    if (evaluation == null || compareRequirement.Evaluate() != evaluation)
+                        IsModified = true;
+                }
             }
         }
 
