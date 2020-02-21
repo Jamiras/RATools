@@ -153,15 +153,27 @@ namespace RATools.ViewModels
                 var text = GetText(expression.Line, expression.Column, expression.EndLine, expression.EndColumn + 1);
                 var builder = new StringBuilder();
                 bool lastCharWasWhitespace = true;
+                bool inComment = false;
                 foreach (var c in text)
                 {
-                    if (Char.IsWhiteSpace(c))
+                    if (inComment)
+                    {
+                        inComment = (c != '\n');
+                    }
+                    else if (Char.IsWhiteSpace(c))
                     {
                         if (lastCharWasWhitespace)
                             continue;
 
                         builder.Append(' ');
                         lastCharWasWhitespace = true;
+                    }
+                    else if (c == '/' && (builder.Length > 0 && builder[builder.Length - 1] == '/'))
+                    {
+                        inComment = true;
+                        builder.Length--;
+
+                        lastCharWasWhitespace = (builder.Length == 0 || builder[builder.Length - 1] == ' ');
                     }
                     else
                     {
