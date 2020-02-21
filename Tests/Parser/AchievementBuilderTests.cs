@@ -380,6 +380,8 @@ namespace RATools.Test.Parser
                   "(byte(0x002345) == 5 && byte(0x001234) != 6) || (byte(0x002345) == 6 && byte(0x001235) != 3)")] // same logic applies to alt groups
         [TestCase("once(byte(0x002345) == 5) && never(byte(0x001234) != 5)", "once(byte(0x002345) == 5) && never(byte(0x001234) != 5)")] // if there's a HitCount, leave the ResetIf alone
         [TestCase("never(byte(0x001234) != 5) && (byte(0x002345) == 6 || once(byte(0x002345) == 7))", "never(byte(0x001234) != 5) && (byte(0x002345) == 6 || once(byte(0x002345) == 7))")] // if there's a HitCount anywhere, leave the ResetIf alone
+        [TestCase("(measured(byte(0x1234) < 100) && unless(byte(0x1235) == 1)) || (measured(byte(0x1236) < 100) && unless(byte(0x1235) == 2))",
+                  "(measured(byte(0x001234) < 100) && unless(byte(0x001235) == 1)) || (measured(byte(0x001236) < 100) && unless(byte(0x001235) == 2))")] // measured should prevent unless from being inverted
         // ==== PromoteCommonAltsToCore ====
         [TestCase("byte(0x001234) == 1 && ((byte(0x004567) == 1 && byte(0x004568) == 0) || (byte(0x004568) == 0 && byte(0x004569) == 1))", 
                   "byte(0x001234) == 1 && byte(0x004568) == 0 && (byte(0x004567) == 1 || byte(0x004569) == 1)")] // memory check in both alts is promoted to core

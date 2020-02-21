@@ -836,11 +836,14 @@ namespace RATools.Parser
             // if no hit counts are found, then invert any PauseIfs or ResetIfs.
             foreach (var group in groups)
             {
+                // PauseIf may be protecting a Measured, if found don't invert PauseIf
+                bool hasMeasured = group.Any(g => g.Requirements.Any(r => r.Type == RequirementType.Measured));
+
                 foreach (var requirementEx in group)
                 {
                     var requirement = requirementEx.Requirements.Last();
-
-                    if (requirement.Type == RequirementType.PauseIf || requirement.Type == RequirementType.ResetIf)
+                    if ((requirement.Type == RequirementType.PauseIf && !hasMeasured) ||
+                        requirement.Type == RequirementType.ResetIf)
                     {
                         if (requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext))
                         {
