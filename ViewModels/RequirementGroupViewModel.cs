@@ -72,6 +72,21 @@ namespace RATools.ViewModels
                 for (var i = 0; i < unmatchedRequirements.Count; i++)
                 {
                     var requirement = unmatchedRequirements[i];
+                    var evaluation = requirement.Evaluate();
+                    if (evaluation != null)
+                    {
+                        for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
+                        {
+                            if (unmatchedCompareRequirements[j].Evaluate() == evaluation)
+                            {
+                                bestScore = 1000;
+                                matchIndex = i;
+                                compareIndex = j;
+                                break;
+                            }
+                        }
+                    }
+
                     for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
                     {
                         var test = unmatchedCompareRequirements[j];
@@ -143,6 +158,16 @@ namespace RATools.ViewModels
                 list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
             }
 
+            // allow an always_true() group to match an empty group
+            if (list.Count == 0 &&
+                unmatchedCompareRequirements.Count == 1 &&
+                unmatchedCompareRequirements[0].Evaluate() == true)
+            {
+                list.Add(new RequirementComparisonViewModel(unmatchedCompareRequirements[0], unmatchedCompareRequirements[0], numberFormat, notes));
+                unmatchedCompareRequirements.Clear();
+            }
+
+            // any remaining unmatched items still need to be added
             foreach (var requirement in unmatchedCompareRequirements)
                 list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
 
