@@ -538,6 +538,27 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestNotAlwaysFalse()
+        {
+            var achievement = CreateAchievement("!always_false()");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("always_true()"));
+        }
+
+        [Test]
+        public void TestNotAlwaysTrue()
+        {
+            var achievement = CreateAchievement("!always_true()");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("always_false()"));
+        }
+
+        [Test]
+        public void TestNotAlwaysFalseChain()
+        {
+            var achievement = CreateAchievement("!(always_false() || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("always_true() && byte(0x001234) != 2 && byte(0x001234) != 5"));
+        }
+
+        [Test]
         public void TestAddAddressAcrossCondition()
         {
             var achievement = CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x1234) + 10))");
