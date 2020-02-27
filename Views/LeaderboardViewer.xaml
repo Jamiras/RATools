@@ -46,9 +46,38 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel>
+                                    <StackPanel.Style>
+                                        <Style TargetType="{x:Type StackPanel}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
+                                                    <Setter Property="Margin" Value="8,-4,0,0" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </StackPanel.Style>
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" VerticalAlignment="Bottom" />
+                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontWeight="DemiBold" VerticalAlignment="Bottom">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Setter Property="FontSize" Value="16" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
+                                                            <Setter Property="FontSize" Value="14" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                         <TextBlock FontSize="10" VerticalAlignment="Bottom" Margin="8,0,0,2">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
                                             <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
                                                 <TextBlock Text="Copy to Clipboard" />
                                             </Hyperlink>

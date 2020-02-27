@@ -1,11 +1,11 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.Services;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Services;
 using System.Collections.Generic;
-using Jamiras.DataModels;
 
 namespace RATools.ViewModels
 {
@@ -21,26 +21,47 @@ namespace RATools.ViewModels
 
             var groups = new List<LeaderboardGroupViewModel>();
 
-            var achievement = new AchievementBuilder();
-            achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Start));
-            groups.Add(new LeaderboardGroupViewModel("Start Conditions", achievement.ToAchievement().CoreRequirements, owner.Notes)
+            var achievementBuilder = new AchievementBuilder();
+            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Start));
+            var achievement = achievementBuilder.ToAchievement();
+            groups.Add(new LeaderboardGroupViewModel("Start Conditions", achievement.CoreRequirements, owner.Notes)
             {
                 CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Start))
             });
+            var i = 1;
+            foreach (var alt in achievement.AlternateRequirements)
+            {
+                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
+                i++;
+            }
 
-            achievement = new AchievementBuilder();
-            achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Cancel));
-            groups.Add(new LeaderboardGroupViewModel("Cancel Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
+            achievementBuilder = new AchievementBuilder();
+            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Cancel));
+            achievement = achievementBuilder.ToAchievement();
+            groups.Add(new LeaderboardGroupViewModel("Cancel Condition", achievement.CoreRequirements, owner.Notes)
             {
                 CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Cancel))
             });
+            i = 1;
+            foreach (var alt in achievement.AlternateRequirements)
+            {
+                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
+                i++;
+            }
 
-            achievement = new AchievementBuilder();
-            achievement.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Submit));
-            groups.Add(new LeaderboardGroupViewModel("Submit Condition", achievement.ToAchievement().CoreRequirements, owner.Notes)
+            achievementBuilder = new AchievementBuilder();
+            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Submit));
+            achievement = achievementBuilder.ToAchievement();
+            groups.Add(new LeaderboardGroupViewModel("Submit Condition", achievement.CoreRequirements, owner.Notes)
             {
                 CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Submit))
             });
+            i = 1;
+            foreach (var alt in achievement.AlternateRequirements)
+            {
+                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
+                i++;
+            }
 
             groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
             {
