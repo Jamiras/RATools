@@ -38,7 +38,7 @@ namespace RATools.Parser.Functions
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
-                return (ParseErrorExpression)result;
+                return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
 
             if (builder.AlternateRequirements.Count > 0)
                 return new ParseErrorExpression(Name.Name + " does not support ||'d conditions", condition);
