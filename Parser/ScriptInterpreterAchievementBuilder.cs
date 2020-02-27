@@ -103,6 +103,22 @@ namespace RATools.Parser
                 return NormalizeNots(ref expression, out error);
             }
 
+            var function = operand as FunctionCallExpression;
+            if (function != null)
+            {
+                if (function.FunctionName.Name == "always_true")
+                {
+                    expression = new FunctionCallExpression("always_false", function.Parameters);
+                    return true;
+                }
+
+                if (function.FunctionName.Name == "always_false")
+                {
+                    expression = new FunctionCallExpression("always_true", function.Parameters);
+                    return true;
+                }
+            }
+
             // unsupported inversion
             error = new ParseErrorExpression("! operator cannot be applied to " + operand.Type, operand);
             return false;
