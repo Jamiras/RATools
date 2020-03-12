@@ -108,6 +108,7 @@ namespace RATools.Test.Parser.Functions
         [TestCase("1 + 3 * 2", "v7")]
         [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
         [TestCase("byte(0x1234 + byte(0x2345))", "I:0xH002345_M:0xH001234")]
+        [TestCase("measured(byte(0x1234) != prev(byte(0x1234))", "M:0xH001234!=d0xH001234")]
         public void TestValueExpressions(string input, string expected)
         {
             var rp = Evaluate("rich_presence_value(\"Name\", " + input + ")");
