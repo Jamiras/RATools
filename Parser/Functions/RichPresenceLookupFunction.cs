@@ -1,5 +1,5 @@
 ﻿using RATools.Parser.Internal;
-using System.Linq;
+using System;
 
 namespace RATools.Parser.Functions
 {
@@ -49,28 +49,37 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override ParseErrorExpression BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
-            var name = (StringConstantExpression)functionCall.Parameters.First();
-            var expression = functionCall.Parameters.ElementAt(1);
-            var dictionary = (DictionaryExpression)functionCall.Parameters.ElementAt(2);
-            var fallback = functionCall.Parameters.ElementAt(3);
+            var name = GetStringParameter(scope, "name", out result);
+            if (name == null)
+                return false;
 
-            ExpressionBase result;
+            var expression = GetParameter(scope, "expression", out result);
+            if (expression == null)
+                return false;
+
+            var dictionary = GetParameter(scope, "dictionary", out result) as DictionaryExpression;
+            if (dictionary == null)
+                return false;
+
+            var fallback = GetParameter(scope, "fallback", out result);
+            if (fallback == null)
+                return false;
+
             var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
-                return (ParseErrorExpression)result;
+                return false;
 
             var error = context.RichPresence.AddLookupField(name.Value, dictionary, fallback);
             if (error != null)
-                return error;
+            {
+                result = error;
+                return false;
+            }
 
-            context.DisplayString.Append('@');
-            context.DisplayString.Append(name.Value);
-            context.DisplayString.Append('(');
-            context.DisplayString.Append(value);
-            context.DisplayString.Append(')');
-            return null;
+            result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));
+            return true;
         }
     }
 }
