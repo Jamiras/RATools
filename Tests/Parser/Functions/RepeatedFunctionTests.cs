@@ -121,7 +121,7 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestNonConditionConstant()
         {
-            Evaluate("repeated(4, 6+2)", "Cannot generate trigger from IntegerConstant");
+            Evaluate("repeated(4, 6+2)", "comparison did not evaluate to a valid comparison");
         }
 
         [Test]

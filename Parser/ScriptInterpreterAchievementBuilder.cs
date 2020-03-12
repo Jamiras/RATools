@@ -302,7 +302,8 @@ namespace RATools.Parser
             var innerScope = new InterpreterScope(scope) { Context = context };
             foreach (var condition in andedConditions)
             {
-                error = ExecuteAchievementExpression(condition, innerScope);
+                error = ExecuteAchievementClause(condition, innerScope);
+
                 if (error != null)
                 {
                     if (error.InnerError != null)
@@ -361,6 +362,19 @@ namespace RATools.Parser
             }
 
             return new ParseErrorExpression("Cannot generate trigger from " + expression.Type, expression);
+        }
+
+        private ParseErrorExpression ExecuteAchievementClause(ExpressionBase expression, InterpreterScope scope)
+        {
+            var error = ExecuteAchievementExpression(expression, scope);
+            if (error != null)
+                return error;
+
+            var context = scope.GetContext<TriggerBuilderContext>();
+            if (context.LastRequirement.Operator == RequirementOperator.None)
+                return new ParseErrorExpression("Incomplete trigger condition", expression);
+
+            return null;
         }
 
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
@@ -484,11 +498,11 @@ namespace RATools.Parser
                     return new ParseErrorExpression("! operator should have been normalized out", condition);
 
                 case ConditionalOperation.And:
-                    error = ExecuteAchievementExpression(condition.Left, scope);
+                    error = ExecuteAchievementClause(condition.Left, scope);
                     if (error != null)
                         return error;
 
-                    error = ExecuteAchievementExpression(condition.Right, scope);
+                    error = ExecuteAchievementClause(condition.Right, scope);
                     if (error != null)
                         return error;
 
@@ -496,12 +510,12 @@ namespace RATools.Parser
 
                 case ConditionalOperation.Or:
                     BeginAlt(context);
-                    error = ExecuteAchievementExpression(condition.Left, scope);
+                    error = ExecuteAchievementClause(condition.Left, scope);
                     if (error != null)
                         return error;
 
                     BeginAlt(context);
-                    error = ExecuteAchievementExpression(condition.Right, scope);
+                    error = ExecuteAchievementClause(condition.Right, scope);
                     if (error != null)
                         return error;
 

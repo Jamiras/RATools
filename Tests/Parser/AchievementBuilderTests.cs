@@ -486,9 +486,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        // ==== Sanity Check ====
         [TestCase("A == B", "A == B")]
-        // ==== NormalizeNots ====
         [TestCase("!(A == B)", "A != B")]
         [TestCase("!(A != B)", "A == B")]
         [TestCase("!(A < B)", "A >= B")]
@@ -499,6 +497,22 @@ namespace RATools.Test.Parser
         [TestCase("!(A == 1 && B == 1)", "A != 1 || B != 1")]
         [TestCase("!(!(A == B))", "A == B")]
         [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
+        public void TestNormalizeNots(string input, string expected)
+        {
+            input = input.Replace("A", "byte(0x00000A)");
+            input = input.Replace("B", "byte(0x00000B)");
+            input = input.Replace("C", "byte(0x00000C)");
+
+            expected = expected.Replace("A", "byte(0x00000A)");
+            expected = expected.Replace("B", "byte(0x00000B)");
+            expected = expected.Replace("C", "byte(0x00000C)");
+
+            var achievement = CreateAchievement(input);
+            // NOTE: not optimized - that's tested separately in TestOptimize
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
+        [Test]
         // ==== CrossMultiplyOrConditions ====
         [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
         [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
@@ -516,21 +530,21 @@ namespace RATools.Test.Parser
         // ==== BubbleUpOrs ====
         [TestCase("(((A || B) && C) || D) && (C || E)",
                   "(A && C && C) || (A && C && E) || (B && C && C) || (B && C && E) || (D && C) || (D && E)")]
-        public void TestPopulateFromExpression(string input, string expected)
+        public void TestOrExpansion(string input, string expected)
         {
-            input = input.Replace("A", "byte(0x00000A)");
-            input = input.Replace("B", "byte(0x00000B)");
-            input = input.Replace("C", "byte(0x00000C)");
-            input = input.Replace("D", "byte(0x00000D)");
-            input = input.Replace("E", "byte(0x00000E)");
-            input = input.Replace("F", "byte(0x00000F)");
+            input = input.Replace("A", "byte(0x00000A) == 1");
+            input = input.Replace("B", "byte(0x00000B) == 1");
+            input = input.Replace("C", "byte(0x00000C) == 1");
+            input = input.Replace("D", "byte(0x00000D) == 1");
+            input = input.Replace("E", "byte(0x00000E) == 1");
+            input = input.Replace("F", "byte(0x00000F) == 1");
 
-            expected = expected.Replace("A", "byte(0x00000A)");
-            expected = expected.Replace("B", "byte(0x00000B)");
-            expected = expected.Replace("C", "byte(0x00000C)");
-            expected = expected.Replace("D", "byte(0x00000D)");
-            expected = expected.Replace("E", "byte(0x00000E)");
-            expected = expected.Replace("F", "byte(0x00000F)");
+            expected = expected.Replace("A", "byte(0x00000A) == 1");
+            expected = expected.Replace("B", "byte(0x00000B) == 1");
+            expected = expected.Replace("C", "byte(0x00000C) == 1");
+            expected = expected.Replace("D", "byte(0x00000D) == 1");
+            expected = expected.Replace("E", "byte(0x00000E) == 1");
+            expected = expected.Replace("F", "byte(0x00000F) == 1");
 
             var achievement = CreateAchievement(input);
             // NOTE: not optimized - that's tested separately in TestOptimize
@@ -582,6 +596,16 @@ namespace RATools.Test.Parser
             var achievement = CreateAchievement("once(byte(0x001234) == 1) && never(byte(0x001111) == 1) && (always_false() || unless(byte(0x002345) == 2))");
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(), Is.EqualTo("0xH001234=1.1._R:0xH001111=1SP:0xH002345=2"));
+        }
+
+        [Test]
+        public void TestMemoryReferenceWithoutComparison()
+        {
+            CreateAchievement("byte(0x1234)", "Incomplete trigger condition");
+            CreateAchievement("byte(0x1234) && byte(0x2345) == 1", "Incomplete trigger condition");
+            CreateAchievement("byte(0x1234) == 1 && byte(0x2345)", "Incomplete trigger condition");
+            CreateAchievement("byte(0x1234) || byte(0x2345) == 1", "Incomplete trigger condition");
+            CreateAchievement("byte(0x1234) == 1 || byte(0x2345)", "Incomplete trigger condition");
         }
     }
 }
