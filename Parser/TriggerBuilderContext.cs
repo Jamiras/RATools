@@ -111,7 +111,7 @@ namespace RATools.Parser
                     return false;
                 }
 
-                if (requirements.Count > 1)
+                if (requirements.Count > 1 || requirements[0].Type == RequirementType.Measured)
                 {
                     for (int i = 0; i < requirements.Count - 1; i++)
                     {
@@ -124,13 +124,16 @@ namespace RATools.Parser
                         requirements[i].Operator = RequirementOperator.None;
                     }
 
-                    if (requirements[requirements.Count - 1].Type != RequirementType.None)
+                    if (requirements[requirements.Count - 1].Type == RequirementType.None)
+                    {
+                        requirements[requirements.Count - 1].Type = RequirementType.Measured;
+                    }
+                    else if (requirements[requirements.Count - 1].Type != RequirementType.Measured)
                     {
                         result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
                         return false;
                     }
 
-                    requirements[requirements.Count - 1].Type = RequirementType.Measured;
                     terms.Last().measured = requirements;
                 }
                 else
