@@ -63,10 +63,30 @@ namespace RATools.ViewModels
                 i++;
             }
 
-            groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
+            if (_leaderboard.Value.Length > 2 && _leaderboard.Value[1] == ':')
             {
-                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
-            });
+                achievementBuilder = new AchievementBuilder();
+                achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Value));
+                achievement = achievementBuilder.ToAchievement();
+
+                groups.Add(new LeaderboardGroupViewModel("Value", achievement.CoreRequirements, owner.Notes)
+                {
+                    CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
+                });
+                i = 1;
+                foreach (var alt in achievement.AlternateRequirements)
+                {
+                    groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
+                    i++;
+                }
+            }
+            else
+            {
+                groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
+                {
+                    CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
+                });
+            }
 
             Groups = groups;
 
