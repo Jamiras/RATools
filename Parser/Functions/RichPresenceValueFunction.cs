@@ -1,6 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System.Linq;
+using System;
 
 namespace RATools.Parser.Functions
 {
@@ -45,26 +45,29 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override ParseErrorExpression BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
-            var name = (StringConstantExpression)functionCall.Parameters.First();
-            var expression = functionCall.Parameters.ElementAt(1);
-            var format = (StringConstantExpression)functionCall.Parameters.ElementAt(2);
-            var valueFormat = Leaderboard.ParseFormat(format.Value);
+            var name = GetStringParameter(scope, "name", out result);
+            if (name == null)
+                return false;
 
-            ExpressionBase result;
+            var format = GetStringParameter(scope, "format", out result);
+            if (format == null)
+                return false;
+
+            var expression = GetParameter(scope, "expression", out result);
+            if (expression == null)
+                return false;
+
             var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
-                return (ParseErrorExpression)result;
+                return false;
 
+            var valueFormat = Leaderboard.ParseFormat(format.Value);
             context.RichPresence.AddValueField(name.Value, valueFormat);
 
-            context.DisplayString.Append('@');
-            context.DisplayString.Append(name.Value);
-            context.DisplayString.Append('(');
-            context.DisplayString.Append(value);
-            context.DisplayString.Append(')');
-            return null;
+            result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));
+            return true;
         }
     }
 }

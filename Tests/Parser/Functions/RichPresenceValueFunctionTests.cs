@@ -27,7 +27,6 @@ namespace RATools.Test.Parser.Functions
 
         private RichPresenceBuilder Evaluate(string input, string expectedError = null)
         {
-            var requirements = new List<Requirement>();
             var funcDef = new RichPresenceValueFunction();
 
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
@@ -49,19 +48,20 @@ namespace RATools.Test.Parser.Functions
                 return context.RichPresence;
             }
 
+            ExpressionBase result;
             Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
             if (expectedError == null)
             {
-                Assert.That(funcDef.BuildMacro(context, scope, (FunctionCallExpression)evaluated), Is.Null);
+                Assert.That(funcDef.BuildMacro(context, scope, out result), Is.True);
+                context.RichPresence.DisplayString = ((StringConstantExpression)result).Value;
             }
             else
             {
-                var parseError = funcDef.BuildMacro(context, scope, (FunctionCallExpression)evaluated);
-                Assert.That(parseError, Is.Not.Null);
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
+                Assert.That(funcDef.BuildMacro(context, scope, out result), Is.False);
+                Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo(expectedError));
             }
 
-            context.RichPresence.DisplayString = context.DisplayString.ToString();
             return context.RichPresence;
         }
 

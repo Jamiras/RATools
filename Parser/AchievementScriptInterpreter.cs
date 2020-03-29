@@ -100,6 +100,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new AlwaysFalseFunction());
 
                 _globalScope.AddFunction(new RangeFunction());
+                _globalScope.AddFunction(new FormatFunction());
             }
 
             return _globalScope;
