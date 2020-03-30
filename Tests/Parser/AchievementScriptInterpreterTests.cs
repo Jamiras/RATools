@@ -911,5 +911,37 @@ namespace RATools.Test.Parser
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1 && (byte(0x002345) == 3 || byte(0x002345) == 4)"));
         }
+
+        [Test]
+        public void TestNeverRepeatedNestedAlwaysFalse()
+        {
+            var parser = Parse("function trigger(i) => always_false() || byte(0x1233 + i) == i\n" +
+                               "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) || trigger(2))))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("never(repeated(2, byte(0x001234) == 1 || byte(0x001235) == 2))"));
+        }
+
+        [Test]
+        public void TestNeverRepeatedAlwaysFalse()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, never(repeated(2, always_false() || byte(0x1233 + 1) == 1 || always_false() || byte(0x1233 + 2) == 2)))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("never(repeated(2, byte(0x001234) == 1 || byte(0x001235) == 2))"));
+        }
+
+        [Test]
+        public void TestNeverRepeatedNestedAlwaysTrue()
+        {
+            var parser = Parse("function trigger(i) => always_true() && byte(0x1233 + i) == i\n" +
+                               "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) && trigger(2))))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("never(repeated(2, byte(0x001234) == 1 && byte(0x001235) == 2))"));
+        }
     }
 }

@@ -173,13 +173,13 @@ namespace RATools.Parser
             }
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
-            var numFlattendClauses = flattenedClauses.Count();
-            var partIndex = new int[numFlattendClauses];
+            var numFlattenedClauses = flattenedClauses.Count();
+            var partIndex = new int[numFlattenedClauses];
             var parts = new List<ExpressionBase>();
             do
             {
-                var andPart = flattenedClauses[numFlattendClauses - 1][partIndex[numFlattendClauses - 1]];
-                for (int clauseIndex = numFlattendClauses - 2; clauseIndex >= 0; clauseIndex--)
+                var andPart = flattenedClauses[numFlattenedClauses - 1][partIndex[numFlattenedClauses - 1]];
+                for (int clauseIndex = numFlattenedClauses - 2; clauseIndex >= 0; clauseIndex--)
                 {
                     var expression = flattenedClauses[clauseIndex][partIndex[clauseIndex]];
                     andPart = new ConditionalExpression(expression, ConditionalOperation.And, andPart);
@@ -187,7 +187,7 @@ namespace RATools.Parser
 
                 parts.Add(andPart);
 
-                int i = numFlattendClauses - 1;
+                int i = numFlattenedClauses - 1;
                 do
                 {
                     if (++partIndex[i] < flattenedClauses[i].Count)
