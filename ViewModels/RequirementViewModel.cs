@@ -132,14 +132,24 @@ namespace RATools.ViewModels
             {
                 var builder2 = new StringBuilder();
                 requirement.AppendString(builder2, numberFormat, "~", "~");
-                builder2.Remove(0, 2); // remove "(~"
-                for (int i = 0; i < builder2.Length; i++)
+                var i = 0;
+                while (i < builder2.Length - 1)
                 {
-                    if (builder2[i] == '~')
+                    if (builder2[i+1] == '~' && builder2[i] == '(')
+                    {
+                        builder2.Remove(i, 2); // remove "(~"
+                        break;
+                    }
+                    i++;
+                }
+                while (i < builder2.Length)
+                {
+                    if (builder2[i] == '~' && builder2[i + 1] == ')')
                     {
                         builder2.Remove(i, 2); // remove "~)"
                         break;
                     }
+                    i++;
                 }
                 builder.Append(builder2);
             }
