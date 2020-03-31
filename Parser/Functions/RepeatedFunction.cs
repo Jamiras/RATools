@@ -77,7 +77,7 @@ namespace RATools.Parser.Functions
                 return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
 
             // all but the last clause need to be converted to AddHits.
-            // we'll change it back after we've merged all the clauses.
+            // we'll change the last one back after we've processed all the clauses.
             requirement.Type = RequirementType.AddHits;
 
             while (i > 0)
@@ -123,7 +123,7 @@ namespace RATools.Parser.Functions
                 if (error != null)
                     return error;
 
-                // core requirements have to be injected into each subclass as a series of AndNext's
+                // core requirements have to be injected into each subclause as a series of AndNext's
                 builder.CoreRequirements.Last().Type = RequirementType.AndNext;
             }
 
