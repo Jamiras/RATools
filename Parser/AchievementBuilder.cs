@@ -443,26 +443,12 @@ namespace RATools.Parser
 
                 var definition = new StringBuilder();
 
-                if (addSources.Length == 0 && subSources.Length == 0 && addHits.Length == 0 && 
-                    andNext.Length == 0 && addAddress.Length == 0)
-                {
-                    var result = requirement.Evaluate();
-                    if (result == true)
-                        definition.Append("always_true()");
-                    else if (result == false)
-                        definition.Append("always_false()");
-                    else
-                        requirement.AppendString(definition, numberFormat);
-                }
-                else
-                {
-                    requirement.AppendString(definition, numberFormat,
-                        addSources.Length > 0 ? addSources.ToString() : null,
-                        subSources.Length > 0 ? subSources.ToString() : null,
-                        addHits.Length > 0 ? addHits.ToString() : null,
-                        andNext.Length > 0 ? andNext.ToString() : null,
-                        addAddress.Length > 0 ? addAddress.ToString() : null);
-                }
+                requirement.AppendString(definition, numberFormat,
+                    addSources.Length > 0 ? addSources.ToString() : null,
+                    subSources.Length > 0 ? subSources.ToString() : null,
+                    addHits.Length > 0 ? addHits.ToString() : null,
+                    andNext.Length > 0 ? andNext.ToString() : null,
+                    addAddress.Length > 0 ? addAddress.ToString() : null);
 
                 if (needsAmpersand)
                 {
@@ -630,12 +616,40 @@ namespace RATools.Parser
                     var result = requirement.Evaluate();
                     if (result == true)
                     {
+                        if (requirement.Type == RequirementType.PauseIf)
+                        {
+                            // a PauseIf for a condition that is always true will permanently disable the group.
+                            // replace the entire group with an always_false() clause
+                            var newRequirementEx = new RequirementEx();
+                            newRequirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                            requirements.Clear();
+                            requirements.Add(newRequirementEx);
+                            return;
+                        }
+                        else if (requirement.Type == RequirementType.ResetIf)
+                        {
+                            // a ResetIf for a condition that is always true will invalidate the trigger (not just the group).
+                            // since we can't fully invalidate the trigger from here, replace the entire group with a ResetIf(always_true())
+                            var newRequirementEx = new RequirementEx();
+                            newRequirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                            newRequirementEx.Requirements[0].Type = RequirementType.ResetIf;
+                            requirements.Clear();
+                            requirements.Add(newRequirementEx);
+                            return;
+                        }
+
                         alwaysTrue.Add(requirementEx);
                         continue;
                     }
                     else if (result == false)
                     {
-                        alwaysFalse.Add(requirementEx);
+                        // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
+                        // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
+                        if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
+                            alwaysTrue.Add(requirementEx);
+                        else
+                            alwaysFalse.Add(requirementEx);
+
                         continue;
                     }
                 }
@@ -758,19 +772,6 @@ namespace RATools.Parser
                     switch (requirement.Requirements.Last().Type)
                     {
                         case RequirementType.PauseIf:
-                            if (alwaysTrue.Contains(requirement))
-                            {
-                                // always True PauseIf ensures the group is always paused, so just replace the entire 
-                                // group with an always_false().
-                                requirements.Clear();
-                                i = 0;
-                            }
-                            else if (alwaysFalse.Contains(requirement))
-                            {
-                                requirements.RemoveAt(i);
-                            }
-                            break;
-
                         case RequirementType.ResetIf:
                             if (alwaysFalse.Contains(requirement))
                                 requirements.RemoveAt(i);
