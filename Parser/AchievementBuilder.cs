@@ -404,7 +404,25 @@ namespace RATools.Parser
                             break;
 
                         case RequirementType.AddHits:
-                            requirement.AppendString(addHits, numberFormat);
+                            if (andNext.Length > 0 || addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
+                            {
+                                addHits.Append('(');
+                                requirement.AppendString(addHits, numberFormat,
+                                    addSources.Length > 0 ? addSources.ToString() : null,
+                                    subSources.Length > 0 ? subSources.ToString() : null,
+                                    null,
+                                    andNext.Length > 0 ? andNext.ToString() : null,
+                                    addAddress.Length > 0 ? addAddress.ToString() : null);
+                                addHits.Append(')');
+                                andNext.Clear();
+                                addSources.Clear();
+                                subSources.Clear();
+                                addAddress.Clear();
+                            }
+                            else
+                            {
+                                requirement.AppendString(addHits, numberFormat);
+                            }
                             addHits.Append(" || ");
                             break;
 
@@ -861,45 +879,51 @@ namespace RATools.Parser
             }
         }
 
-        private static RequirementEx MergeRequirements(RequirementEx into, RequirementEx from)
-        {
-            for (int i = 0; i < into.Requirements.Count; i++)
-            {
-                if (into.Requirements[i].HitCount > 0 && from.Requirements[i].HitCount > into.Requirements[i].HitCount)
-                    into.Requirements[i].HitCount = from.Requirements[i].HitCount;
-            }
-
-            return into;
-        }
-
-        private static bool MergeRequirements(RequirementEx first, RequirementEx second, ConditionalOperation condition, out RequirementEx merged)
+        private static bool MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
         {
             merged = null;
-            Requirement left, right;
 
-            // make sure all the lefts are the same
-            for (int i = 0; i < first.Requirements.Count; i++)
+            if (left.Type != right.Type)
+                return false;
+
+            if (left.Left != right.Left)
+                return false;
+
+            if (left.Operator == RequirementOperator.None)
             {
-                left = first.Requirements[i];
-                right = second.Requirements[i];
-
-                if (left.Type != right.Type)
-                    return false;
-
-                if (left.HitCount != right.HitCount && (left.HitCount == 0 || right.HitCount == 0))
-                    return false;
-
-                if (left.Left != right.Left)
-                    return false;
+                // AddSource, SubSource, and AddAddress don't have a right side or hit counts
+                merged = left;
+                return true;
             }
 
-            // if the operator and the final right are the same, we have an exact match
-            left = first.Requirements[first.Requirements.Count - 1];
-            right = second.Requirements[second.Requirements.Count - 1];
-            if (left.Operator == right.Operator && left.Right == right.Right)
+            if (left.Operator == right.Operator && left.HitCount == right.HitCount && left.Right == right.Right)
             {
-                merged = MergeRequirements(first, second);
+                // 100% match, use it
+                merged = left;
                 return true;
+            }
+
+            // create a copy that we can modify
+            merged = new Requirement
+            {
+                Type = left.Type,
+                Left = left.Left,
+                Operator = left.Operator,
+                Right = left.Right,
+                HitCount = left.HitCount
+            };
+
+            // merge hit counts
+            if (left.HitCount != right.HitCount)
+            {
+                // cannot merge hit counts if one of them is infinite
+                if (left.HitCount == 0 || right.HitCount == 0)
+                    return false;
+
+                merged.HitCount = Math.Max(left.HitCount, right.HitCount);
+
+                if (left.Operator == right.Operator && left.Right == right.Right)
+                    return true;
             }
 
             // if either right is not a value field, we can't merge
@@ -1106,46 +1130,75 @@ namespace RATools.Parser
             {
                 if (useRight)
                 {
-                    merged = MergeRequirements(second, first);
+                    merged.Operator = right.Operator;
+                    merged.Right = right.Right;
                     return true;
                 }
 
                 if (useLeft)
-                {
-                    merged = MergeRequirements(first, second);
                     return true;
-                }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = MergeRequirements(first, second);
-                    merged.Requirements.Last().Operator = newOperator;
+                    merged.Operator = newOperator;
                     return true;
                 }
             }
             else
             {
                 if (useRight)
-                {
-                    merged = MergeRequirements(first, second);
                     return true;
-                }
 
                 if (useLeft)
                 {
-                    merged = MergeRequirements(second, first);
+                    merged.Operator = right.Operator;
+                    merged.Right = right.Right;
                     return true;
                 }
 
                 if (newOperator != RequirementOperator.None)
                 {
-                    merged = MergeRequirements(first, second);
-                    merged.Requirements.Last().Operator = RequirementOperator.Equal;
+                    merged.Operator = newOperator;
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private static bool MergeRequirements(RequirementEx first, RequirementEx second, ConditionalOperation condition, out RequirementEx merged)
+        {
+            if (first.Requirements.Count != second.Requirements.Count)
+            {
+                merged = null;
+                return false;
+            }
+
+            merged = new RequirementEx();
+            for (int i = 0; i < first.Requirements.Count; i++)
+            {
+                var left = first.Requirements[i];
+                var right = second.Requirements[i];
+
+                Requirement mergedRequirement;
+                if (!MergeRequirements(left, right, condition, out mergedRequirement))
+                {
+                    merged = null;
+                    return false;
+                }
+
+                if (mergedRequirement == null)
+                {
+                    // conflicting requirements, replace the entire requirement set with an always_false()
+                    merged.Requirements.Clear();
+                    merged.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                    return true;
+                }
+
+                merged.Requirements.Add(mergedRequirement);
+            }
+
+            return true;
         }
 
         private static void MergeDuplicateAlts(List<List<RequirementEx>> groups)
@@ -1501,15 +1554,6 @@ namespace RATools.Parser
                         RequirementEx merged;
                         if (MergeRequirements(group[i], group[j], ConditionalOperation.And, out merged))
                         {
-                            if (merged == null)
-                            {
-                                // conflicting requirements, replace the entire requirement set with an always_false()
-                                group.Clear();
-                                group.Add(new RequirementEx());
-                                group.Last().Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-                                return;
-                            }
-
                             group[j] = merged;
                             group.RemoveAt(i);
                             break;
