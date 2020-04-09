@@ -474,6 +474,8 @@ namespace RATools.Test.Parser
         [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
             "always_true() || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
+        [TestCase("repeated(2, once(byte(0x1111) == 1 && byte(0x2222) == 0) || once(byte(0x1111) == 2 && byte(0x2222) == 0))",
+            "repeated(2, (once(byte(0x001111) == 1 && byte(0x002222) == 0)) || (once(byte(0x001111) == 2 && byte(0x002222) == 0)) || always_false())")]
         // ==== MergeBits ====
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
