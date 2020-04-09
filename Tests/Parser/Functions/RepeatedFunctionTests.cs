@@ -368,6 +368,34 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestAddHitsAddAddressCommonClause()
+        {
+            var requirements = Evaluate("repeated(3, (byte(byte(0x9999)) == 9 && byte(0x1111) == 1) || (byte(byte(0x9999)) == 9 && byte(0x1111) == 2))");
+            Assert.That(requirements.Count, Is.EqualTo(6));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x009999)"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddAddress));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x000000)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("9"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x001111)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x009999)"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.AddAddress));
+            Assert.That(requirements[4].Left.ToString(), Is.EqualTo("byte(0x000000)"));
+            Assert.That(requirements[4].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[4].Right.ToString(), Is.EqualTo("9"));
+            Assert.That(requirements[4].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[5].Left.ToString(), Is.EqualTo("byte(0x001111)"));
+            Assert.That(requirements[5].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[5].Right.ToString(), Is.EqualTo("2"));
+            Assert.That(requirements[5].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[5].HitCount, Is.EqualTo(3));
+        }
+
+        [Test]
         public void TestAddHitsAddSourceSubSource()
         {
             var requirements = Evaluate("repeated(4, byte(0x1234) + byte(0x2345) == 56 || byte(0x1234) - byte(0x2345) == 34)");
