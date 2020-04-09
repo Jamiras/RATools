@@ -599,6 +599,8 @@ namespace RATools.Test.Parser
         {
             var achievement = CreateAchievement("byte(word(0x1234)) == word(0x2345)");
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo("((byte(word(0x001234) + 0x000000)) + 0) == word(0x002345)"));
+
+            CreateAchievement("byte(word(0x1234)) == byte(word(0x2345))", "Indirect memory addresses must match on both sides of a comparison");
         }
 
         [Test]

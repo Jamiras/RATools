@@ -581,7 +581,7 @@ namespace RATools.Parser
                     return error;
 
                 var extraRequirement = context.LastRequirement;
-                context.Trigger.Remove(extraRequirement);
+                ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);
 
                 var requirement = context.LastRequirement;
                 if (requirement != null)
