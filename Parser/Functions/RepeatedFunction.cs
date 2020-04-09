@@ -69,6 +69,43 @@ namespace RATools.Parser.Functions
             return null;
         }
 
+        private static ParseErrorExpression ProcessAddHitsSubClause(ICollection<Requirement> requirements)
+        {
+            int i = requirements.Count - 1;
+            var requirement = requirements.ElementAt(i);
+            if (requirement.Type != RequirementType.None)
+                return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+
+            // all but the last clause need to be converted to AddHits.
+            // we'll change the last one back after we've processed all the clauses.
+            requirement.Type = RequirementType.AddHits;
+
+            while (i > 0)
+            {
+                --i;
+                requirement = requirements.ElementAt(i);
+                switch (requirement.Type)
+                {
+                    case RequirementType.None:
+                        // convert a chain of normal conditions into AndNexts so they're grouped within the AddHits
+                        requirement.Type = RequirementType.AndNext;
+                        break;
+
+                    case RequirementType.AddHits:
+                        // AddHits is a combining flag, but cannot be nested in another AddHits
+                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+
+                    default:
+                        // non-constructing conditions are not allowed within the AddHits clause
+                        if (!requirement.IsCombining)
+                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                        break;
+                }
+            }
+
+            return null;
+        }
+
         private ParseErrorExpression EvaluateAddHits(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
         {
             ExpressionBase result;
@@ -80,50 +117,22 @@ namespace RATools.Parser.Functions
             if (builder.AlternateRequirements.Count == 0)
                 return BuildTriggerCondition(context, scope, condition);
 
-            // core requirements have to be injected into each subclause as a series of AndNext's
-            foreach (var requirement in builder.CoreRequirements)
+            if (builder.CoreRequirements.Any())
             {
-                if (requirement.Type != RequirementType.None)
-                {
-                    if (requirement == builder.CoreRequirements.Last() || requirement.Type != RequirementType.AndNext)
-                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
-                }
+                var error = ProcessAddHitsSubClause(builder.CoreRequirements);
+                if (error != null)
+                    return error;
 
-                requirement.Type = RequirementType.AndNext;
+                // core requirements have to be injected into each subclause as a series of AndNext's
+                builder.CoreRequirements.Last().Type = RequirementType.AndNext;
             }
 
             var requirements = new List<ICollection<Requirement>>();
             foreach (var altGroup in builder.AlternateRequirements)
             {
-                int i = altGroup.Count - 1;
-                var requirement = altGroup.ElementAt(i);
-                if (requirement.Type != RequirementType.None)
-                    return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
-
-                // all but the last clause need to be converted to AddHits
-                requirement.Type = RequirementType.AddHits;
-
-                while (i > 0)
-                {
-                    --i;
-                    switch (altGroup.ElementAt(i).Type)
-                    {
-                        case RequirementType.None:
-                            // convert a chain of normal conditions into AndNexts so they're grouped within the AddHits
-                            altGroup.ElementAt(i).Type = RequirementType.AndNext;
-                            break;
-
-                        case RequirementType.AddHits:
-                            // AddHits is a combining flag, but cannot be nested in another AddHits
-                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
-
-                        default:
-                            // non-constructing conditions are not allowed within the AddHits clause
-                            if (!altGroup.ElementAt(i).IsCombining)
-                                return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
-                            break;
-                    }
-                }
+                var error = ProcessAddHitsSubClause(altGroup);
+                if (error != null)
+                    return error;
 
                 if (builder.CoreRequirements.Any())
                 {

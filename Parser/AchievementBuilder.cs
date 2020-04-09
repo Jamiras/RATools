@@ -1795,24 +1795,26 @@ namespace RATools.Parser
             bool combiningRequirement = false;
             foreach (var requirement in requirements)
             {
-                if (combiningRequirement)
-                    group.Last().Requirements.Add(requirement);
-
-                if (requirement.IsCombining)
+                switch (requirement.Type)
                 {
-                    if (combiningRequirement)
-                        continue;
+                    case RequirementType.AddHits:
+                        // an always_false() condition will never generate a hit
+                        if (requirement.Evaluate() == false)
+                            continue;
+                        break;
 
-                    combiningRequirement = true;
-                }
-                else if (combiningRequirement)
-                {
-                    combiningRequirement = false;
-                    continue;
+                    case RequirementType.AndNext:
+                        // an always_true() condition will not affect the next condition
+                        if (requirement.Evaluate() == true)
+                            continue;
+                        break;
                 }
 
-                group.Add(new RequirementEx());
+                if (!combiningRequirement)
+                    group.Add(new RequirementEx());
+
                 group.Last().Requirements.Add(requirement);
+                combiningRequirement = requirement.IsCombining;
             }
 
             return group;
