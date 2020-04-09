@@ -391,46 +391,13 @@ namespace RATools.Parser
                 bool isCombining = true;
                 do
                 {
+                    // precedence is AddAddress
+                    //             > AddSource/SubSource
+                    //             > AddHits
+                    //             > AndNext
+                    //             > ResetIf/PauseIf
                     switch (requirement.Type)
                     {
-                        case RequirementType.AddSource:
-                            requirement.Left.AppendString(addSources, numberFormat);
-                            addSources.Append(" + ");
-                            break;
-
-                        case RequirementType.SubSource:
-                            subSources.Append(" - ");
-                            requirement.Left.AppendString(subSources, numberFormat);
-                            break;
-
-                        case RequirementType.AddHits:
-                            if (andNext.Length > 0 || addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
-                            {
-                                addHits.Append('(');
-                                requirement.AppendString(addHits, numberFormat,
-                                    addSources.Length > 0 ? addSources.ToString() : null,
-                                    subSources.Length > 0 ? subSources.ToString() : null,
-                                    null,
-                                    andNext.Length > 0 ? andNext.ToString() : null,
-                                    addAddress.Length > 0 ? addAddress.ToString() : null);
-                                addHits.Append(')');
-                                andNext.Clear();
-                                addSources.Clear();
-                                subSources.Clear();
-                                addAddress.Clear();
-                            }
-                            else
-                            {
-                                requirement.AppendString(addHits, numberFormat);
-                            }
-                            addHits.Append(" || ");
-                            break;
-
-                        case RequirementType.AndNext:
-                            requirement.AppendString(andNext, numberFormat);
-                            andNext.Append(" && ");
-                            break;
-
                         case RequirementType.AddAddress:
                             if (addAddress.Length > 0)
                             {
@@ -443,6 +410,88 @@ namespace RATools.Parser
                                 requirement.Left.AppendString(addAddress, numberFormat);
                             }
                             addAddress.Append(" + ");
+                            break;
+
+                        case RequirementType.AddSource:
+                            if (addAddress.Length > 0)
+                            {
+                                addSources.Append('(');
+                                requirement.Left.AppendString(addSources, numberFormat, addAddress.ToString());
+                                addSources.Append(')');
+
+                                addAddress.Clear();
+                            }
+                            else
+                            {
+                                requirement.Left.AppendString(addSources, numberFormat);
+                            }
+
+                            addSources.Append(" + ");
+                            break;
+
+                        case RequirementType.SubSource:
+                            subSources.Append(" - ");
+                            if (addAddress.Length > 0)
+                            {
+                                subSources.Append('(');
+                                requirement.Left.AppendString(subSources, numberFormat, addAddress.ToString());
+                                subSources.Append(')');
+
+                                addAddress.Clear();
+                            }
+                            else
+                            {
+                                requirement.Left.AppendString(subSources, numberFormat);
+                            }
+                            break;
+
+                        case RequirementType.AndNext:
+                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
+                            {
+                                andNext.Append('(');
+                                requirement.AppendString(andNext, numberFormat,
+                                    addSources.Length > 0 ? addSources.ToString() : null,
+                                    subSources.Length > 0 ? subSources.ToString() : null,
+                                    null,
+                                    null,
+                                    addAddress.Length > 0 ? addAddress.ToString() : null);
+                                andNext.Append(')');
+
+                                addAddress.Clear();
+                                addSources.Clear();
+                                subSources.Clear();
+                            }
+                            else
+                            {
+                                requirement.AppendString(andNext, numberFormat);
+                            }
+
+                            andNext.Append(" && ");
+                            break;
+
+                        case RequirementType.AddHits:
+                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
+                            {
+                                addHits.Append('(');
+                                requirement.AppendString(addHits, numberFormat,
+                                    addSources.Length > 0 ? addSources.ToString() : null,
+                                    subSources.Length > 0 ? subSources.ToString() : null,
+                                    null,
+                                    andNext.Length > 0 ? andNext.ToString() : null,
+                                    addAddress.Length > 0 ? addAddress.ToString() : null);
+                                addHits.Append(')');
+
+                                addAddress.Clear();
+                                addSources.Clear();
+                                subSources.Clear();
+                                andNext.Clear();
+                            }
+                            else
+                            {
+                                requirement.AppendString(addHits, numberFormat);
+                            }
+
+                            addHits.Append(" || ");
                             break;
 
                         default:

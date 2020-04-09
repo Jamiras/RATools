@@ -595,6 +595,13 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestAddAddressCompareToAddress()
+        {
+            var achievement = CreateAchievement("byte(word(0x1234)) == word(0x2345)");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("((byte(word(0x001234) + 0x000000)) + 0) == word(0x002345)"));
+        }
+
+        [Test]
         public void TestAlwaysFalseAltGroupIsUnnecessary()
         {
             // without the once, the never gets eliminated
