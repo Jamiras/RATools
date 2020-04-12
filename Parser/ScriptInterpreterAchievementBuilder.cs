@@ -581,13 +581,14 @@ namespace RATools.Parser
                     return error;
 
                 var extraRequirement = context.LastRequirement;
-                context.Trigger.Remove(extraRequirement);
+                ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);
 
                 var requirement = context.LastRequirement;
                 if (requirement != null)
                 {
                     if (requirement.Type == RequirementType.AddAddress)
                     {
+                        // if right side is an AddAddress chain, it must match the left side
                         var addAddressRequirements = new List<Requirement>();
                         do
                         {
@@ -606,10 +607,28 @@ namespace RATools.Parser
                             if (previousRequirement != addAddressRequirements[i])
                                 return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison", comparison);
                         }
-                    }
 
-                    requirement.Operator = op;
-                    requirement.Right = extraRequirement.Left;
+                        // AddAddress chains match, merge the conditions
+                        requirement.Operator = op;
+                        requirement.Right = extraRequirement.Left;
+                    }
+                    else if (context.Trigger.Count > 1 && context.Trigger.ElementAt(context.Trigger.Count - 2).Type == RequirementType.AddAddress)
+                    {
+                        // if left side is an AddAddress chain, but right side is a not, we have to keep the
+                        // dummy condition to prevent the AddAddress from modifying the memory address on the
+                        // right side. integers are handled above.
+                        requirement.Type = RequirementType.AddSource;
+                        extraRequirement.Right = extraRequirement.Left;
+                        extraRequirement.Left = new Field { Type = FieldType.Value, Value = 0 };
+                        extraRequirement.Operator = op;
+                        context.Trigger.Add(extraRequirement);
+                    }
+                    else
+                    {
+                        // no AddAddress on either side, just merge the conditions
+                        requirement.Operator = op;
+                        requirement.Right = extraRequirement.Left;
+                    }
                 }
             }
 
