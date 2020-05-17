@@ -403,6 +403,10 @@ namespace RATools.Test.Parser
                   "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (once(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))")] // item with hitcount cannot be promoted if pauseif is present
         [TestCase("1 == 1 && ((byte(0x001234) == 1 && byte(0x002345) == 1) || (byte(0x001234) == 1 && byte(0x002345) == 2))",
                   "byte(0x001234) == 1 && (byte(0x002345) == 1 || byte(0x002345) == 2)")] // core "1=1" should be removed by promotion of another condition
+        [TestCase("measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345) == 7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2345) == 7)",
+                  "(measured(repeated(6, byte(0x001234) == 10), when=byte(0x002345) == 7)) || (measured(repeated(6, byte(0x002345) == 4), when=byte(0x002345) == 7))")] // measured_if must stay with measured
+        [TestCase("measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345) == 7) || measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345) == 7)",
+                  "measured(repeated(6, byte(0x001234) == 10), when=byte(0x002345) == 7)")] // measured_if must stay with measured
         // ==== RemoveDuplicates ====
         [TestCase("byte(0x001234) == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")]
         [TestCase("byte(0x001234) < 8 && 8 >= byte(0x001234)", "byte(0x001234) < 8")] // prefer value on the right

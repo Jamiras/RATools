@@ -375,8 +375,9 @@ namespace RATools.Parser
         public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group,
             NumberFormat numberFormat, int wrapWidth = Int32.MaxValue, int indent = 14)
         {
-            if (group.Any(r => r.Type == RequirementType.MeasuredIf))
+            if (group.Any(r => r.Type == RequirementType.MeasuredIf) && group.Any(r => r.Type == RequirementType.Measured))
             {
+                // if both a Measured and MeasuredIf exist in the group, merge the MeasuredIf into the when parameter of the measured() call
                 var measuredIfBuilder = new StringBuilder();
                 var other = new List<Requirement>();
 
@@ -1434,7 +1435,6 @@ namespace RATools.Parser
             }
 
             // identify requirements present in all alt groups.
-            bool commonPauseIf = false;
             var requirementsFoundInAll = new List<RequirementEx>();
             for (int i = 0; i < groups[1].Count; i++)
             {
@@ -1460,16 +1460,11 @@ namespace RATools.Parser
                 }
 
                 if (foundInAll)
-                {
                     requirementsFoundInAll.Add(requirementI);
-
-                    if (requirementI.Requirements.Last().Type == RequirementType.PauseIf)
-                        commonPauseIf = true;
-                }
             }
 
             // PauseIf only affects the alt group that it's in, so it can only be promoted if the entire alt group is promoted
-            if (commonPauseIf)
+            if (requirementsFoundInAll.Any(r=> r.Requirements.Last().Type == RequirementType.PauseIf))
             {
                 bool canPromote = true;
                 for (int i = 1; i < groups.Count; i++)
@@ -1483,6 +1478,34 @@ namespace RATools.Parser
 
                 if (!canPromote)
                     requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.PauseIf);
+            }
+
+            // Measured and MeasuredIf cannot be separated. If any Measured or MeasuredIf items
+            // remain in one of the alt groups (or exist in the core), don't promote any of the others.
+            if (requirementsFoundInAll.Any(r => r.Requirements.Last().Type == RequirementType.Measured || r.Requirements.Last().Type == RequirementType.MeasuredIf))
+            {
+                foreach (var group in groups)
+                {
+                    bool allPromoted = true;
+                    foreach (var requirementEx in group)
+                    {
+                        var type = requirementEx.Requirements.Last().Type;
+                        if (type == RequirementType.Measured || type == RequirementType.MeasuredIf)
+                        {
+                            if (!requirementsFoundInAll.Contains(requirementEx))
+                            {
+                                allPromoted = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!allPromoted)
+                    {
+                        requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.Measured || r.Requirements.Last().Type == RequirementType.MeasuredIf);
+                        break;
+                    }
+                }
             }
 
             foreach (var requirement in requirementsFoundInAll)
