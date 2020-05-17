@@ -114,6 +114,7 @@
     <Compile Include="Data\FieldTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />
     <Compile Include="Parser\AchievementScriptInterpreterTests.cs" />
+    <Compile Include="Parser\Functions\MeasuredFunctionTests.cs" />
     <Compile Include="Parser\Functions\MemoryAccessFunctionTests.cs" />
     <Compile Include="Parser\Functions\FormatFunctionTests.cs" />
     <Compile Include="Parser\Functions\RichPresenceValueFunctionTests.cs" />

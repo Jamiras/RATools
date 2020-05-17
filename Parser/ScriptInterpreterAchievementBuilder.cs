@@ -651,8 +651,18 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementFunction(FunctionCallExpression functionCall, InterpreterScope scope)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
-            return context.CallFunction(functionCall, scope);
+            ExpressionBase evaluated;
+            if (!functionCall.ReplaceVariables(scope, out evaluated))
+                return (ParseErrorExpression)evaluated;
+
+            functionCall = evaluated as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                var context = scope.GetContext<TriggerBuilderContext>();
+                return context.CallFunction(functionCall, scope);
+            }
+
+            return ExecuteAchievementClause(evaluated, scope);
         }
     }
 }

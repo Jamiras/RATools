@@ -73,7 +73,7 @@ namespace RATools.Data
         /// </summary>
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
             string addSources = null, string subSources = null, string addHits = null, 
-            string andNext = null, string addAddress = null)
+            string andNext = null, string addAddress = null, string measuredIf = null)
         {
             switch (Type)
             {
@@ -91,6 +91,18 @@ namespace RATools.Data
 
                 case RequirementType.Measured:
                     builder.Append("measured(");
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    if (measuredIf != null)
+                    {
+                        builder.Append(", when=");
+                        builder.Append(measuredIf);
+                    }
+                    builder.Append(')');
+                    break;
+
+                case RequirementType.MeasuredIf:
+                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
+                    builder.Append("measured_if(");
                     AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
                     builder.Append(')');
                     break;
@@ -473,6 +485,11 @@ namespace RATools.Data
         /// Meta-flag indicating that this condition tracks progress.
         /// </summary>
         Measured,
+
+        /// <summary>
+        /// Meta-flag indicating that this condition must be true to track progress.
+        /// </summary>
+        MeasuredIf,
 
         /// <summary>
         /// Adds the Left part of the requirement to the addresses in the next requirement.

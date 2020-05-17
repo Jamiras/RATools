@@ -648,26 +648,6 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestMeasured()
-        {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 120)");
-            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
-
-            var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo("measured(byte(0x001234) == 120)"));
-        }
-
-        [Test]
-        public void TestMeasuredRepeatedAddSource()
-        {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(10, byte(0x1234) + byte(0x2345) == 1))");
-            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
-
-            var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo("measured(repeated(10, (byte(0x001234) + byte(0x002345)) == 1))"));
-        }
-
-        [Test]
         public void TestMeasuredMultipleValue()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) || measured(byte(0x2345) == 10)");
@@ -692,6 +672,16 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1)", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions must have the same target."));
+        }
+
+        [Test]
+        public void TestMeasuredMultipleHitsWhen()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345)==7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2346)==7)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("(measured(repeated(6, byte(0x001234) == 10), when=byte(0x002345) == 7)) || (measured(repeated(6, byte(0x002345) == 4), when=byte(0x002346) == 7))"));
         }
 
         [Test]

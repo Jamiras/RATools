@@ -372,8 +372,51 @@ namespace RATools.Parser
             }
         }
 
-        public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group, 
+        public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group,
             NumberFormat numberFormat, int wrapWidth = Int32.MaxValue, int indent = 14)
+        {
+            if (group.Any(r => r.Type == RequirementType.MeasuredIf))
+            {
+                var measuredIfBuilder = new StringBuilder();
+                var other = new List<Requirement>();
+
+                var combining = new List<Requirement>();
+
+                foreach (var requirement in group)
+                {
+                    combining.Add(requirement);
+                    if (requirement.IsCombining)
+                        continue;
+
+                    if (requirement.Type == RequirementType.MeasuredIf)
+                    {
+                        if (measuredIfBuilder.Length > 0)
+                            measuredIfBuilder.Append(" && ");
+
+                        AppendStringGroup(measuredIfBuilder, combining, numberFormat, wrapWidth, indent, null);
+
+                        // remove "measured_if(" psuedo-function call
+                        measuredIfBuilder.Remove(0, 12);
+                        measuredIfBuilder.Length--;
+                    }
+                    else
+                    {
+                        other.AddRange(combining);
+                    }
+
+                    combining.Clear();
+                }
+
+                AppendStringGroup(builder, other, numberFormat, wrapWidth, indent, measuredIfBuilder.ToString());
+            }
+            else
+            {
+                AppendStringGroup(builder, group, numberFormat, wrapWidth, indent, null);
+            }
+        }
+
+        private static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group,
+            NumberFormat numberFormat, int wrapWidth, int indent, string measuredIf)
         {
             bool needsAmpersand = false;
             int width = wrapWidth - indent;
@@ -515,7 +558,8 @@ namespace RATools.Parser
                     subSources.Length > 0 ? subSources.ToString() : null,
                     addHits.Length > 0 ? addHits.ToString() : null,
                     andNext.Length > 0 ? andNext.ToString() : null,
-                    addAddress.Length > 0 ? addAddress.ToString() : null);
+                    addAddress.Length > 0 ? addAddress.ToString() : null,
+                    measuredIf);
 
                 if (needsAmpersand)
                 {
