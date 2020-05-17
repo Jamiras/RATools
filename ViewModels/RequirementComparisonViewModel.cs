@@ -23,8 +23,14 @@ namespace RATools.ViewModels
                 {
                     IsModified = true;
                 }
+                else if (requirement.HitCount != compareRequirement.HitCount)
+                {
+                    // if the HitCounts differ, mark modified regardless of whether the evaluations are the same
+                    IsModified = true;
+                }
                 else if (!compareRequirement.Equals(requirement))
                 {
+                    // not identical. check to see if they evaluate to the same value
                     var evaluation = requirement.Evaluate();
                     if (evaluation == null || compareRequirement.Evaluate() != evaluation)
                         IsModified = true;

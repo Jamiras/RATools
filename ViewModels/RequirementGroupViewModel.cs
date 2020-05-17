@@ -37,47 +37,206 @@ namespace RATools.ViewModels
             Requirements = list;
         }
 
-        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, NumberFormat numberFormat, IDictionary<int, string> notes)
+        private const int MinimumMatchingScore = 12;
+
+        private static int CalculateScore(Requirement left, Requirement right)
         {
-            Label = label;
+            var score = 0;
 
-            var unmatchedCompareRequirements = new List<Requirement>(compareRequirements);
-            var matches = new Dictionary<Requirement, Requirement>();
-            var unmatchedRequirements = new List<Requirement>();
+            if (left.Type == right.Type)
+                score++;
+            else
+                score--;
 
-            foreach (var requirement in requirements)
+            if (left.Operator == right.Operator)
+                score += 3;
+            else
+                score--;
+
+            if (left.HitCount == right.HitCount)
+                score += 2;
+            else
+                score--;
+
+            if (left.Left.Type == right.Left.Type)
+                score += 5;
+            else
+                score--;
+
+            if (left.Left.Size == right.Left.Size)
+                score += 3;
+            else
+                score--;
+
+            if (left.Left.Value == right.Left.Value)
+                score += 8;
+
+            if (left.Right.Type == right.Right.Type)
+                score += 5;
+            else
+                score--;
+
+            if (left.Right.Size == right.Right.Size)
+                score += 3;
+            else
+                score--;
+
+            if (left.Right.Value == right.Right.Value)
+                score += 8;
+
+            return score;
+        }
+
+        private static int CalculateScore(RequirementEx left, RequirementEx right)
+        {
+            var score = 0;
+            var unmatchedRequirements = new List<Requirement>(left.Requirements);
+            foreach (var requirement in right.Requirements)
             {
                 bool matched = false;
-                for (int i = 0; i < unmatchedCompareRequirements.Count; i++)
+                for (int i = 0; i < unmatchedRequirements.Count; i++)
                 {
-                    if (unmatchedCompareRequirements[i] == requirement)
+                    if (unmatchedRequirements[i] == requirement)
                     {
-                        matches[requirement] = unmatchedCompareRequirements[i];
-                        unmatchedCompareRequirements.RemoveAt(i);
+                        unmatchedRequirements.RemoveAt(i);
+                        score += 40;
                         matched = true;
                         break;
                     }
                 }
 
                 if (!matched)
-                    unmatchedRequirements.Add(requirement);
+                    score -= 10;
             }
 
-            while (unmatchedRequirements.Count > 0)
+            score -= unmatchedRequirements.Count * 10;
+
+            return score;
+        }
+
+        private void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<int, string> notes)
+        {
+            if (right == null)
+            {
+                foreach (var requirement in left.Requirements)
+                    list.Add(new RequirementComparisonViewModel(requirement, null, numberFormat, notes));
+            }
+            else if (left.Requirements.Count == right.Requirements.Count)
+            {
+                for (int i = 0; i < left.Requirements.Count; ++i)
+                    list.Add(new RequirementComparisonViewModel(left.Requirements[i], right.Requirements[i], numberFormat, notes));
+            }
+            else
+            {
+                var unmatchedCompareRequirements = new List<Requirement>(right.Requirements);
+                var matches = new Dictionary<Requirement, Requirement>();
+                var unmatchedRequirements = new List<Requirement>();
+
+                foreach (var requirement in left.Requirements)
+                {
+                    bool matched = false;
+                    for (var i = 0; i < unmatchedCompareRequirements.Count; i++)
+                    {
+                        if (unmatchedCompareRequirements[i] == requirement)
+                        {
+                            matches[requirement] = unmatchedCompareRequirements[i];
+                            unmatchedCompareRequirements.RemoveAt(i);
+                            matched = true;
+                            break;
+                        }
+                    }
+
+                    if (!matched)
+                        unmatchedRequirements.Add(requirement);
+                }
+
+                while (unmatchedRequirements.Count > 0)
+                {
+                    var bestScore = 0;
+                    var matchIndex = -1;
+                    var compareIndex = -1;
+
+                    for (var i = 0; i < unmatchedRequirements.Count; i++)
+                    {
+                        var requirement = unmatchedRequirements[i];
+
+                        for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
+                        {
+                            var test = unmatchedCompareRequirements[j];
+                            var score = CalculateScore(requirement, unmatchedCompareRequirements[j]); 
+                            if (score > bestScore)
+                            {
+                                bestScore = score;
+                                matchIndex = i;
+                                compareIndex = j;
+                            }
+                        }
+                    }
+
+                    if (bestScore < MinimumMatchingScore)
+                        break;
+
+                    matches[unmatchedRequirements[matchIndex]] = unmatchedCompareRequirements[compareIndex];
+                    unmatchedRequirements.RemoveAt(matchIndex);
+                    unmatchedCompareRequirements.RemoveAt(compareIndex);
+                }
+
+                foreach (var requirement in left.Requirements)
+                {
+                    Requirement match;
+                    matches.TryGetValue(requirement, out match);
+                    list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
+                }
+
+                foreach (var requirement in unmatchedCompareRequirements)
+                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
+            }
+        }
+
+        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, NumberFormat numberFormat, IDictionary<int, string> notes)
+        {
+            Label = label;
+
+            var requirementExs = RequirementEx.Combine(requirements);
+            var compareRequirementExs = RequirementEx.Combine(compareRequirements);
+
+            var unmatchedCompareRequirementExs = new List<RequirementEx>(compareRequirementExs);
+            var matches = new Dictionary<RequirementEx, RequirementEx>();
+            var unmatchedRequirementExs = new List<RequirementEx>();
+
+            foreach (var requirementEx in requirementExs)
+            {
+                bool matched = false;
+                for (int i = 0; i < unmatchedCompareRequirementExs.Count; i++)
+                {
+                    if (unmatchedCompareRequirementExs[i] == requirementEx)
+                    {
+                        matches[requirementEx] = unmatchedCompareRequirementExs[i];
+                        unmatchedCompareRequirementExs.RemoveAt(i);
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched)
+                    unmatchedRequirementExs.Add(requirementEx);
+            }
+
+            while (unmatchedRequirementExs.Count > 0)
             {
                 var bestScore = 0;
                 var matchIndex = -1;
                 var compareIndex = -1;
 
-                for (var i = 0; i < unmatchedRequirements.Count; i++)
+                for (var i = 0; i < unmatchedRequirementExs.Count; i++)
                 {
-                    var requirement = unmatchedRequirements[i];
-                    var evaluation = requirement.Evaluate();
+                    var requirementEx = unmatchedRequirementExs[i];
+                    var evaluation = requirementEx.Evaluate();
                     if (evaluation != null)
                     {
-                        for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
+                        for (var j = 0; j < unmatchedCompareRequirementExs.Count; j++)
                         {
-                            if (unmatchedCompareRequirements[j].Evaluate() == evaluation)
+                            if (unmatchedCompareRequirementExs[j].Evaluate() == evaluation)
                             {
                                 bestScore = 1000;
                                 matchIndex = i;
@@ -87,52 +246,9 @@ namespace RATools.ViewModels
                         }
                     }
 
-                    for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
+                    for (var j = 0; j < unmatchedCompareRequirementExs.Count; j++)
                     {
-                        var test = unmatchedCompareRequirements[j];
-                        var score = 0;
-
-                        if (test.Type == requirement.Type)
-                            score++;
-                        else
-                            score--;
-
-                        if (test.Operator == requirement.Operator)
-                            score += 3;
-                        else
-                            score--;
-
-                        if (test.HitCount == requirement.HitCount)
-                            score += 2;
-                        else
-                            score--;
-
-                        if (test.Left.Type == requirement.Left.Type)
-                            score += 5;
-                        else
-                            score--;
-
-                        if (test.Left.Size == requirement.Left.Size)
-                            score += 3;
-                        else
-                            score--;
-
-                        if (test.Left.Value == requirement.Left.Value)
-                            score += 8;
-
-                        if (test.Right.Type == requirement.Right.Type)
-                            score += 5;
-                        else
-                            score--;
-
-                        if (test.Right.Size == requirement.Right.Size)
-                            score += 3;
-                        else
-                            score--;
-
-                        if (test.Right.Value == requirement.Right.Value)
-                            score += 8;
-
+                        var score = CalculateScore(requirementEx, unmatchedCompareRequirementExs[j]);
                         if (score > bestScore)
                         {
                             bestScore = score;
@@ -142,34 +258,34 @@ namespace RATools.ViewModels
                     }
                 }
 
-                if (bestScore < 12)
+                if (bestScore < MinimumMatchingScore)
                     break;
 
-                matches[unmatchedRequirements[matchIndex]] = unmatchedCompareRequirements[compareIndex];
-                unmatchedRequirements.RemoveAt(matchIndex);
-                unmatchedCompareRequirements.RemoveAt(compareIndex);
+                matches[unmatchedRequirementExs[matchIndex]] = unmatchedCompareRequirementExs[compareIndex];
+                unmatchedRequirementExs.RemoveAt(matchIndex);
+                unmatchedCompareRequirementExs.RemoveAt(compareIndex);
             }
 
             var list = new List<RequirementViewModel>();
-            foreach (var requirement in requirements)
+            foreach (var requirementEx in requirementExs)
             {
-                Requirement match;
-                matches.TryGetValue(requirement, out match);
-                list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
+                RequirementEx match;
+                matches.TryGetValue(requirementEx, out match);
+                AppendRequirements(list, requirementEx, match, numberFormat, notes);
             }
 
             // allow an always_true() group to match an empty group
             if (list.Count == 0 &&
-                unmatchedCompareRequirements.Count == 1 &&
-                unmatchedCompareRequirements[0].Evaluate() == true)
+                unmatchedCompareRequirementExs.Count == 1 &&
+                unmatchedCompareRequirementExs[0].Evaluate() == true)
             {
-                list.Add(new RequirementComparisonViewModel(unmatchedCompareRequirements[0], unmatchedCompareRequirements[0], numberFormat, notes));
-                unmatchedCompareRequirements.Clear();
+                AppendRequirements(list, unmatchedCompareRequirementExs[0], unmatchedCompareRequirementExs[0], numberFormat, notes);
+                unmatchedCompareRequirementExs.Clear();
             }
 
             // any remaining unmatched items still need to be added
-            foreach (var requirement in unmatchedCompareRequirements)
-                list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
+            foreach (var requirementEx in unmatchedCompareRequirementExs)
+                AppendRequirements(list, null, requirementEx, numberFormat, notes);
 
             Requirements = list;
         }
