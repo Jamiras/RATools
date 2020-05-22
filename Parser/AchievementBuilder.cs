@@ -827,6 +827,23 @@ namespace RATools.Parser
                             break;
                     }
                 }
+
+                if (requirement.Left.Size == FieldSize.BitCount &&
+                    requirement.Operator == RequirementOperator.Equal &&
+                    requirement.Right.Type == FieldType.Value)
+                {
+                    if (requirement.Right.Value == 0)
+                    {
+                        // bitcount == 0 is the same as byte == 0
+                        requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
+                    }
+                    else if (requirement.Right.Value == 8)
+                    {
+                        // bitcount == 8 is the same as byte == 255
+                        requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
+                        requirement.Right = new Field { Type = FieldType.Value, Value = 255 };
+                    }
+                }
             }
 
             if (alwaysFalse.Count > 0)

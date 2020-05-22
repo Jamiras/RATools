@@ -77,6 +77,7 @@ namespace RATools.Data
 
                         default:
                         case FieldSize.Byte:
+                        case FieldSize.BitCount:
                             builder.AppendFormat("{0:X2}", Value);
                             break;
 
@@ -152,6 +153,7 @@ namespace RATools.Data
                 case FieldSize.Word: return "word";
                 case FieldSize.TByte: return "tbyte";
                 case FieldSize.DWord: return "dword";
+                case FieldSize.BitCount: return "bitcount";
                 default: return size.ToString();
             }
         }
@@ -172,6 +174,9 @@ namespace RATools.Data
                 case FieldSize.Bit6:
                 case FieldSize.Bit7:
                     return 1;
+
+                case FieldSize.BitCount:
+                    return 8;
 
                 case FieldSize.LowNibble:
                 case FieldSize.HighNibble:
@@ -245,6 +250,7 @@ namespace RATools.Data
                 case FieldSize.Word: builder.Append(' ');  break;
                 case FieldSize.TByte: builder.Append('W'); break;
                 case FieldSize.DWord: builder.Append('X'); break;
+                case FieldSize.BitCount: builder.Append('K'); break;
             }
 
             builder.AppendFormat("{0:x6}", Value);
@@ -288,6 +294,7 @@ namespace RATools.Data
                 case 'H': size = FieldSize.Byte; tokenizer.Advance(); break;
                 case 'W': size = FieldSize.TByte; tokenizer.Advance(); break;
                 case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
+                case 'K': size = FieldSize.BitCount; tokenizer.Advance(); break;
                 case '0':
                 case '1':
                 case '2':
@@ -543,5 +550,10 @@ namespace RATools.Data
         /// Four bytes (32-bit). Read from memory in little-endian mode.
         /// </summary>
         DWord,
+
+        /// <summary>
+        /// The number of bits set in a byte.
+        /// </summary>
+        BitCount,
     }
 }

@@ -363,6 +363,10 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x001234) == 1) && unless(0 == 1)", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
         [TestCase("once(byte(0x001234) == 1) && never(1 == 1)", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
         [TestCase("once(byte(0x001234) == 1) && unless(1 == 1)", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
+        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
+        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
+        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
+        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
