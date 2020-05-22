@@ -126,6 +126,10 @@ namespace RATools.ViewModels
                 case RequirementType.AndNext:
                     builder.Append("AndNext ");
                     break;
+
+                case RequirementType.OrNext:
+                    builder.Append("OrNext ");
+                    break;
             }
 
             if (IsValueDependentOnPreviousRequirement)

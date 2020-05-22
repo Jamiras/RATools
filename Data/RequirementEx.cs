@@ -105,6 +105,12 @@ namespace RATools.Data
                         if (requirement.Evaluate() == true)
                             continue;
                         break;
+
+                    case RequirementType.OrNext:
+                        // an always_false() condition will not affect the next condition
+                        if (requirement.Evaluate() == false)
+                            continue;
+                        break;
                 }
 
                 if (!combiningRequirement)

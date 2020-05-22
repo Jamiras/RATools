@@ -121,10 +121,14 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.AddHits;
                     else if (tokenizer.Match("N:"))
                         requirement.Type = RequirementType.AndNext;
-                    else if (tokenizer.Match("M:"))
-                        requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("O:"))
+                        requirement.Type = RequirementType.OrNext;
                     else if (tokenizer.Match("I:"))
                         requirement.Type = RequirementType.AddAddress;
+                    else if (tokenizer.Match("M:"))
+                        requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("Q:"))
+                        requirement.Type = RequirementType.MeasuredIf;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -333,7 +337,9 @@ namespace RATools.Parser
                 case RequirementType.SubSource: builder.Append("B:"); break;
                 case RequirementType.AddHits: builder.Append("C:"); break;
                 case RequirementType.AndNext: builder.Append("N:"); break;
+                case RequirementType.OrNext: builder.Append("O:"); break;
                 case RequirementType.Measured: builder.Append("M:"); break;
+                case RequirementType.MeasuredIf: builder.Append("Q:"); break;
                 case RequirementType.AddAddress: builder.Append("I:"); break;
             }
 
@@ -490,6 +496,7 @@ namespace RATools.Parser
                             break;
 
                         case RequirementType.AndNext:
+                        case RequirementType.OrNext:
                             if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
                             {
                                 andNext.Append('(');
@@ -510,7 +517,15 @@ namespace RATools.Parser
                                 requirement.AppendString(andNext, numberFormat);
                             }
 
-                            andNext.Append(" && ");
+                            if (requirement.Type == RequirementType.OrNext)
+                            {
+                                andNext.Insert(0, '(');
+                                andNext.Append(") || ");
+                            }
+                            else
+                            {
+                                andNext.Append(" && ");
+                            }
                             break;
 
                         case RequirementType.AddHits:
@@ -975,14 +990,39 @@ namespace RATools.Parser
                     if ((requirement.Type == RequirementType.PauseIf && !hasMeasured) ||
                         requirement.Type == RequirementType.ResetIf)
                     {
-                        if (requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext))
+                        bool hasAndNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext);
+                        bool hasOrNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext);
+                        if (hasAndNext && hasOrNext)
                         {
-                            // the inverse of an AndNext is OrNext, which isn't currently possible. and we've already
-                            // expanded all of the OR clauses into alt groups, so another round of expansion at this time
-                            // is unreasonable. just leave the resetif/pauseif.
+                            // if both AndNext and OrNext is present, we can't just invert the logic as the order of operations may be affected
                         }
                         else
                         {
+                            if (hasAndNext)
+                            {
+                                // convert an AndNext chain into an OrNext chain
+                                foreach (var r in requirementEx.Requirements)
+                                {
+                                    if (r.Type == RequirementType.AndNext)
+                                    {
+                                        r.Type = RequirementType.OrNext;
+                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                                    }
+                                }
+                            }
+                            else if (hasOrNext)
+                            {
+                                // convert an OrNext chain into an AndNext chain
+                                foreach (var r in requirementEx.Requirements)
+                                {
+                                    if (r.Type == RequirementType.OrNext)
+                                    {
+                                        r.Type = RequirementType.AndNext;
+                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                                    }
+                                }
+                            }
+
                             requirement.Type = RequirementType.None;
                             requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
                         }
@@ -1605,6 +1645,50 @@ namespace RATools.Parser
             }
         }
 
+        private static void DenormalizeOrNexts(List<List<RequirementEx>> groups)
+        {
+            RequirementEx orNextGroup = null;
+            if (groups.Count == 1)
+            {
+                foreach (var requirementEx in groups[0])
+                {
+                    if (requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext))
+                    {
+                        if (orNextGroup != null)
+                            return;
+
+                        orNextGroup = requirementEx;
+                    }
+                }
+            }
+
+            // found a single OrNext and no alt groups. split it up
+            if (orNextGroup != null)
+            {
+                groups[0].Remove(orNextGroup);
+
+                var alt = new RequirementEx();
+                var altGroup = new List<RequirementEx>();
+                altGroup.Add(alt);
+                groups.Add(altGroup);
+
+                foreach (var requirement in orNextGroup.Requirements)
+                {
+                    alt.Requirements.Add(requirement);
+
+                    if (requirement.Type == RequirementType.OrNext)
+                    {
+                        requirement.Type = orNextGroup.Requirements.Last().Type;
+
+                        alt = new RequirementEx();
+                        altGroup = new List<RequirementEx>();
+                        altGroup.Add(alt);
+                        groups.Add(altGroup);
+                    }
+                }
+            }
+        }
+
         private static void RemoveDuplicates(IList<RequirementEx> group, IList<RequirementEx> coreGroup)
         {
             for (int i = 0; i < group.Count; i++)
@@ -1975,13 +2059,20 @@ namespace RATools.Parser
             // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
             RemoveAlwaysFalseAlts(groups);
 
+            // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
+            DenormalizeOrNexts(groups);
+
             // convert back to flattened expressions
             _core.Clear();
             Unprocess(_core, groups[0]);
 
             for (int i = 1; i < groups.Count; i++)
             {
-                _alts[i - 1].Clear();
+                if (i - 1 < _alts.Count)
+                    _alts[i - 1].Clear();
+                else
+                    _alts.Add(new List<Requirement>());
+
                 Unprocess(_alts[i - 1], groups[i]);
             }
 
@@ -2003,6 +2094,57 @@ namespace RATools.Parser
 
             // success!
             return null;
+        }
+
+        public bool CollapseForSubClause()
+        {
+            // no alts, nothing to collapse
+            if (_alts.Count == 0)
+                return true;
+
+            // core would have to be spread over all alts, cannot collapse
+            if (_core.Count > 0)
+                return false;
+
+            // verify each alt only has one clause without a special flag
+            ICollection<Requirement> andNextAlt = null;
+            foreach (var alt in _alts)
+            {
+                if (alt.Last().Type != RequirementType.None)
+                    return false;
+
+                if (alt.Any(a => a.Type == RequirementType.AndNext))
+                {
+                    // only one AndNext group allowed
+                    if (andNextAlt != null)
+                        return false;
+
+                    andNextAlt = alt;
+                }
+
+                var altGroup = RequirementEx.Combine(alt);
+                if (altGroup.Count > 1)
+                    return false;
+            }
+
+            // AndNext group must be first
+            if (andNextAlt != null)
+            {
+                _alts.Remove(andNextAlt);
+                _alts.Insert(0, andNextAlt);
+            }
+
+            // merge the alts into a series of OrNexts
+            foreach (var alt in _alts)
+            {
+                if (_core.Count > 0)
+                    _core.Last().Type = RequirementType.OrNext;
+
+                _core.AddRange(alt);
+            }
+
+            _alts.Clear();
+            return true;
         }
     }
 }
