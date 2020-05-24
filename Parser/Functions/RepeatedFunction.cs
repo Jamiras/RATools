@@ -20,6 +20,8 @@ namespace RATools.Parser.Functions
         {
         }
 
+        protected RequirementType _orNextFlag = RequirementType.OrNext;
+
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             if (!IsInTriggerClause(scope, out result))
@@ -69,16 +71,16 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        private static ParseErrorExpression ProcessAddHitsSubClause(ICollection<Requirement> requirements)
+        private ParseErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
         {
             int i = requirements.Count - 1;
             var requirement = requirements.ElementAt(i);
             if (requirement.Type != RequirementType.None)
                 return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
 
-            // all but the last clause need to be converted to AddHits.
+            // all but the last clause need to be converted to OrNext.
             // we'll change the last one back after we've processed all the clauses.
-            requirement.Type = RequirementType.AddHits;
+            requirement.Type = _orNextFlag;
 
             while (i > 0)
             {
@@ -92,8 +94,12 @@ namespace RATools.Parser.Functions
                         break;
 
                     case RequirementType.AddHits:
-                        // AddHits is a combining flag, but cannot be nested in another AddHits
-                        return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                        if (_orNextFlag == RequirementType.AddHits)
+                        {
+                            // AddHits is a combining flag, but cannot be nested in another AddHits
+                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                        }
+                        break;
 
                     default:
                         // non-constructing conditions are not allowed within the AddHits clause
@@ -119,7 +125,7 @@ namespace RATools.Parser.Functions
 
             if (builder.CoreRequirements.Any())
             {
-                var error = ProcessAddHitsSubClause(builder.CoreRequirements);
+                var error = ProcessOrNextSubClause(builder.CoreRequirements);
                 if (error != null)
                     return error;
 
@@ -130,7 +136,7 @@ namespace RATools.Parser.Functions
             var requirements = new List<ICollection<Requirement>>();
             foreach (var altGroup in builder.AlternateRequirements)
             {
-                var error = ProcessAddHitsSubClause(altGroup);
+                var error = ProcessOrNextSubClause(altGroup);
                 if (error != null)
                     return error;
 
@@ -155,7 +161,7 @@ namespace RATools.Parser.Functions
                 {
                     index--;
                 } while (index >= 0 && requirements[index].Last().HitCount > 0);
-                    
+
                 if (index == -1)
                 {
                     // all requirements had HitCount limits, add a dummy item that's never true for the total HitCount
@@ -170,7 +176,21 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            // everything was converted to an AddHits. convert the last back
+            // if we can guarantee the individual requirements won't be true in the same frame, we can use AddHits
+            // instead of OrNext to improve compatibility with older versions of RetroArch
+            if (_orNextFlag == RequirementType.OrNext && CanUseAddHits(requirements))
+            {
+                foreach (var requirement in requirements)
+                {
+                    foreach (var cond in requirement)
+                    {
+                        if (cond.Type == RequirementType.OrNext)
+                            cond.Type = RequirementType.AddHits;
+                    }
+                }
+            }
+
+            // everything was converted to an OrNext. convert the last back
             requirements.Last().Last().Type = RequirementType.None;
 
             // load the requirements into the trigger
@@ -181,6 +201,62 @@ namespace RATools.Parser.Functions
             }
 
             return null;
+        }
+
+        private static bool CanUseAddHits(List<ICollection<Requirement>> requirements)
+        {
+            // make sure each clause ends with a value comparison
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Last().Right.Type != FieldType.Value)
+                    return false;
+
+                // cannot change OrNext to AddHits if AddHits already exists
+                if (requirement.Any(r => r.Type == RequirementType.AddHits))
+                    return false;
+            }
+
+            // find the first condition that doesn't evaluate to always_false
+            List<RequirementEx> first;
+            var firstIndex = 0;
+            do
+            {
+                first = RequirementEx.Combine(requirements[firstIndex]);
+                if (first.Count >= 1)
+                    break;
+
+                // condition is always_false, try next
+                ++firstIndex;
+            } while (firstIndex < requirements.Count);
+
+            if (first.Count != 1)
+                return false;
+
+            var firstOperator = first[0].Requirements.Last().Operator;
+
+            for (int i = firstIndex + 1; i < requirements.Count; ++i)
+            {
+                var requirementEx = RequirementEx.Combine(requirements[i]);
+                if (requirementEx.Count == 0)
+                    continue;
+                if (requirementEx.Count > 1)
+                    return false;
+
+                var right = requirementEx[0];
+                if (right.Evaluate() == false)
+                    continue;
+
+                if (right.Requirements.Last().Operator != firstOperator ||
+                    right.Requirements.Last().Right.Type != FieldType.Value ||
+                    !right.LeftEquals(first[0]))
+                {
+                    // if both sides are not making the same comparison to different values, they
+                    // could occur in the same frame. don't change the OrNext to an AddHits
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

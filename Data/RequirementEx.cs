@@ -46,6 +46,25 @@ namespace RATools.Data
             return null;
         }
 
+        public bool LeftEquals(RequirementEx that)
+        {
+            if (Requirements.Count != that.Requirements.Count)
+                return false;
+
+            for (int i = 0; i < Requirements.Count; ++i)
+            {
+                var left = Requirements[i];
+                var right = that.Requirements[i];
+                if (left.Type != right.Type)
+                    return false;
+
+                if (left.Left != right.Left)
+                    return false;
+            }
+
+            return true;
+        }
+
         public override bool Equals(object obj)
         {
             var that = obj as RequirementEx;

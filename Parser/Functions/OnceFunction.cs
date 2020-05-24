@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using RATools.Data;
+using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -8,6 +9,9 @@ namespace RATools.Parser.Functions
         public OnceFunction()
             : base("once")
         {
+            // for increased compatibility, "once(A || B)" becomes "AddHits A, B (1)", 
+            // because as soon as either A or B is true, the hit target is met.
+            _orNextFlag = RequirementType.AddHits;
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)

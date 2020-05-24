@@ -439,12 +439,13 @@ namespace RATools.Parser
                 var andNext = new StringBuilder();
                 var addAddress = new StringBuilder();
                 bool isCombining = true;
+                RequirementType lastAndNext = RequirementType.None;
                 do
                 {
                     // precedence is AddAddress
                     //             > AddSource/SubSource
                     //             > AddHits
-                    //             > AndNext
+                    //             > AndNext/OrNext
                     //             > ResetIf/PauseIf
                     switch (requirement.Type)
                     {
@@ -519,13 +520,26 @@ namespace RATools.Parser
 
                             if (requirement.Type == RequirementType.OrNext)
                             {
-                                andNext.Insert(0, '(');
-                                andNext.Append(") || ");
+                                if (lastAndNext == RequirementType.AndNext)
+                                {
+                                    andNext.Insert(0, '(');
+                                    andNext.Append(')');
+                                }
+
+                                andNext.Append(" || ");
                             }
                             else
                             {
+                                if (lastAndNext == RequirementType.OrNext)
+                                {
+                                    andNext.Insert(0, '(');
+                                    andNext.Append(')');
+                                }
+
                                 andNext.Append(" && ");
                             }
+
+                            lastAndNext = requirement.Type;
                             break;
 
                         case RequirementType.AddHits:
@@ -1657,7 +1671,9 @@ namespace RATools.Parser
                         if (orNextGroup != null)
                             return;
 
-                        orNextGroup = requirementEx;
+                        // if there's a hit target, we can't split it up
+                        if (requirementEx.Requirements.Last().HitCount == 0)
+                            orNextGroup = requirementEx;
                     }
                 }
             }
