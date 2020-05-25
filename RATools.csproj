@@ -72,6 +72,7 @@
     <Compile Include="Parser\Functions\AlwaysTrueFunction.cs" />
     <Compile Include="Parser\Functions\BitCountFunction.cs" />
     <Compile Include="Parser\Functions\RangeFunction.cs" />
+    <Compile Include="Parser\Functions\TallyFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />
     <Compile Include="Parser\Functions\FormatFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceDisplayFunction.cs" />

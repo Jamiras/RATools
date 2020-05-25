@@ -181,7 +181,8 @@ namespace RATools.Test.Parser
         [TestCase("P:0xH000440=0", "unless(byte(0x000440) == 0)")]
         [TestCase("A:0xN20770f=0_0xO20770f=0", "(bit1(0x20770F) + bit2(0x20770F)) == 0")]
         [TestCase("B:0xN20770f=0_0xO20770f=0", "(bit2(0x20770F) - bit1(0x20770F)) == 0")]
-        [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
+        [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "tally(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
+        [TestCase("O:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
         [TestCase("N:0xN20770f=0_0xO20770f=0.1.", "once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)")]
         public void TestParseRequirements(string input, string expected)
         {
@@ -400,6 +401,8 @@ namespace RATools.Test.Parser
                   "byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))")] // PauseIf is not promoted if any part of group differs from other alts
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)))",
                   "byte(0x001234) == 1 && unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)")] // PauseIf in only promoted if entire group is duplicated in all alts
+        [TestCase("byte(0x001234) == 1 && ((byte(0x004567) == 1 && byte(0x004568) == 0) || (byte(0x004568) == 0))",
+                  "byte(0x001234) == 1 && byte(0x004568) == 0")] // entire alt is subset of second alt, eliminate second alt. remaining alt promoted to core
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) + byte(0x002346) == 2)) || (never(byte(0x002345) + byte(0x002347) == 2)))",
                   "once(byte(0x001234) == 1) && ((never((byte(0x002345) + byte(0x002346)) == 2)) || (never((byte(0x002345) + byte(0x002347)) == 2)))")] // partial AddSource cannot be promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
@@ -483,8 +486,8 @@ namespace RATools.Test.Parser
         [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
             "always_true() || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
-        [TestCase("repeated(2, once(byte(0x1111) == 1 && byte(0x2222) == 0) || once(byte(0x1111) == 2 && byte(0x2222) == 0))",
-            "repeated(2, (once(byte(0x001111) == 1 && byte(0x002222) == 0)) || (once(byte(0x001111) == 2 && byte(0x002222) == 0)) || always_false())")]
+        [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0) || once(byte(0x1111) == 2 && byte(0x2222) == 0))",
+            "tally(2, (once(byte(0x001111) == 1 && byte(0x002222) == 0)) || (once(byte(0x001111) == 2 && byte(0x002222) == 0)) || always_false())")]
         // ==== MergeBits ====
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]

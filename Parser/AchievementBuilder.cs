@@ -444,9 +444,9 @@ namespace RATools.Parser
                 {
                     // precedence is AddAddress
                     //             > AddSource/SubSource
-                    //             > AddHits
                     //             > AndNext/OrNext
-                    //             > ResetIf/PauseIf
+                    //             > AddHits
+                    //             > ResetIf/PauseIf/Measured
                     switch (requirement.Type)
                     {
                         case RequirementType.AddAddress:
@@ -1622,6 +1622,34 @@ namespace RATools.Parser
 
                 // put one copy of the repeated requirement it in the core group
                 groups[0].Add(requirement);
+            }
+
+            // if any group has been completely moved to the core group, it's a subset of
+            // all other groups, and any trivial logic can be removed from the other groups
+            bool removeTrivialLogic = false;
+            for (int i = 1; i < groups.Count; ++i)
+            {
+                if (groups[i].Count == 0)
+                {
+                    removeTrivialLogic = true;
+                    break;
+                }
+            }
+
+            if (removeTrivialLogic)
+            {
+                for (int i = groups.Count - 1; i > 0; --i)
+                {
+                    for (int j = groups[i].Count - 1; j >= 0; --j)
+                    {
+                        var finalCondition = groups[i][j].Requirements.Last();
+                        if (finalCondition.Type == RequirementType.None && finalCondition.HitCount == 0)
+                            groups[i].RemoveAt(j);
+                    }
+
+                    if (groups[i].Count == 0)
+                        groups.RemoveAt(i);
+                }
             }
         }
 

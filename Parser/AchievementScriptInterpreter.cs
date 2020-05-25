@@ -85,6 +85,7 @@ namespace RATools.Parser
 
                 _globalScope.AddFunction(new OnceFunction());
                 _globalScope.AddFunction(new RepeatedFunction());
+                _globalScope.AddFunction(new TallyFunction());
                 _globalScope.AddFunction(new FlagConditionFunction("never", RequirementType.ResetIf));
                 _globalScope.AddFunction(new FlagConditionFunction("unless", RequirementType.PauseIf));
                 _globalScope.AddFunction(new MeasuredFunction());

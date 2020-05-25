@@ -73,10 +73,13 @@ namespace RATools.Parser.Functions
 
         private ParseErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
         {
+            if (requirements.Count == 0)
+                return null;
+
             int i = requirements.Count - 1;
             var requirement = requirements.ElementAt(i);
             if (requirement.Type != RequirementType.None)
-                return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
 
             // all but the last clause need to be converted to OrNext.
             // we'll change the last one back after we've processed all the clauses.
@@ -97,14 +100,14 @@ namespace RATools.Parser.Functions
                         if (_orNextFlag == RequirementType.AddHits)
                         {
                             // AddHits is a combining flag, but cannot be nested in another AddHits
-                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                            return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
                         }
                         break;
 
                     default:
                         // non-constructing conditions are not allowed within the AddHits clause
                         if (!requirement.IsCombining)
-                            return new ParseErrorExpression("modifier not allowed in multi-condition repeated clause");
+                            return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
                         break;
                 }
             }
@@ -120,14 +123,23 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return (ParseErrorExpression)result;
 
-            if (builder.AlternateRequirements.Count == 0)
-                return BuildTriggerCondition(context, scope, condition);
-
             if (builder.CoreRequirements.Any())
             {
                 var error = ProcessOrNextSubClause(builder.CoreRequirements);
                 if (error != null)
                     return error;
+
+                if (builder.AlternateRequirements.Count == 0)
+                {
+                    // everything was converted to an OrNext. convert the last back
+                    builder.CoreRequirements.Last().Type = RequirementType.None;
+
+                    // one of the alts was entirely promoted to Core. We only need to check for that.
+                    foreach (var clause in builder.CoreRequirements)
+                        context.Trigger.Add(clause);
+
+                    return null;
+                }
 
                 // core requirements have to be injected into each subclause as a series of AndNext's
                 builder.CoreRequirements.Last().Type = RequirementType.AndNext;
@@ -178,14 +190,28 @@ namespace RATools.Parser.Functions
 
             // if we can guarantee the individual requirements won't be true in the same frame, we can use AddHits
             // instead of OrNext to improve compatibility with older versions of RetroArch
-            if (_orNextFlag == RequirementType.OrNext && CanUseAddHits(requirements))
+            if (_orNextFlag == RequirementType.OrNext)
             {
-                foreach (var requirement in requirements)
+                if (CanUseAddHits(requirements))
                 {
-                    foreach (var cond in requirement)
+                    foreach (var requirement in requirements)
                     {
-                        if (cond.Type == RequirementType.OrNext)
-                            cond.Type = RequirementType.AddHits;
+                        foreach (var cond in requirement)
+                        {
+                            if (cond.Type == RequirementType.OrNext)
+                                cond.Type = RequirementType.AddHits;
+                        }
+                    }
+                }
+                else
+                {
+                    // an AndNext in the first clause is acceptable, but once we see the first
+                    // OrNext, each clause must be a single logical condition as AndNext has the
+                    // same priority as OrNext and will not be processed first.
+                    for (int i = 1; i < requirements.Count; ++i)
+                    {
+                        if (requirements[i].Any(r => r.Type == RequirementType.AndNext))
+                            return new ParseErrorExpression("cannot join multiple AndNext chains with OrNext");
                     }
                 }
             }

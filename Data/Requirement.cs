@@ -132,6 +132,8 @@ namespace RATools.Data
             {
                 if (HitCount == 1)
                     builder.Append("once(");
+                else if (addHits != null)
+                    builder.AppendFormat("tally({0}, ", HitCount);
                 else
                     builder.AppendFormat("repeated({0}, ", HitCount);
 

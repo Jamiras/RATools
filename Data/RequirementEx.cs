@@ -60,6 +60,15 @@ namespace RATools.Data
 
                 if (left.Left != right.Left)
                     return false;
+
+                if (i < Requirements.Count - 1 && left.IsCombining)
+                {
+                    if (left.Operator != right.Operator)
+                        return false;
+
+                    if (left.Right != right.Right)
+                        return false;
+                }
             }
 
             return true;

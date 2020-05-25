@@ -121,6 +121,11 @@ namespace RATools.ViewModels
                 foreach (var requirement in left.Requirements)
                     list.Add(new RequirementComparisonViewModel(requirement, null, numberFormat, notes));
             }
+            else if (left == null)
+            {
+                foreach (var requirement in right.Requirements)
+                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
+            }
             else if (left.Requirements.Count == right.Requirements.Count)
             {
                 for (int i = 0; i < left.Requirements.Count; ++i)
