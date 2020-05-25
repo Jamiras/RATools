@@ -36,6 +36,7 @@ namespace RATools.Parser.Internal
             if (parseError != null)
             {
                 Message = parseError.Message;
+                InnerError = parseError.InnerError;
 
                 if (parseError.Line != 0)
                 {

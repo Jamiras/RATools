@@ -20,8 +20,6 @@ namespace RATools.Parser.Functions
         {
         }
 
-        protected RequirementType _orNextFlag = RequirementType.OrNext;
-
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             if (!IsInTriggerClause(scope, out result))
@@ -42,7 +40,13 @@ namespace RATools.Parser.Functions
 
         protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
-            // not actually called because we override BuildTrigger, but required because its abstract in the base class
+            // not actually modifying requirements, but allows us to do some validation
+            foreach (var requirement in builder.CoreRequirements)
+            {
+                if (requirement.Type == RequirementType.AddHits)
+                    return new ParseErrorExpression("tally not allowed in subclause");
+            }
+
             return null;
         }
 
@@ -56,14 +60,7 @@ namespace RATools.Parser.Functions
 
         protected ParseErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
         {
-            ParseErrorExpression error;
-
-            var logicalComparison = comparison as ConditionalExpression;
-            if (logicalComparison != null && logicalComparison.Operation == ConditionalOperation.Or)
-                error = EvaluateAddHits(context, scope, logicalComparison);
-            else
-                error = BuildTriggerCondition(context, scope, comparison);
-
+            ParseErrorExpression error = BuildTriggerCondition(context, scope, comparison);
             if (error != null)
                 return error;
 
@@ -71,7 +68,7 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        private ParseErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
+        private static ParseErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
         {
             if (requirements.Count == 0)
                 return null;
@@ -79,11 +76,7 @@ namespace RATools.Parser.Functions
             int i = requirements.Count - 1;
             var requirement = requirements.ElementAt(i);
             if (requirement.Type != RequirementType.None)
-                return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
-
-            // all but the last clause need to be converted to OrNext.
-            // we'll change the last one back after we've processed all the clauses.
-            requirement.Type = _orNextFlag;
+                return new ParseErrorExpression("Modifier not allowed in multi-condition repeated clause");
 
             while (i > 0)
             {
@@ -96,18 +89,10 @@ namespace RATools.Parser.Functions
                         requirement.Type = RequirementType.AndNext;
                         break;
 
-                    case RequirementType.AddHits:
-                        if (_orNextFlag == RequirementType.AddHits)
-                        {
-                            // AddHits is a combining flag, but cannot be nested in another AddHits
-                            return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
-                        }
-                        break;
-
                     default:
                         // non-constructing conditions are not allowed within the AddHits clause
                         if (!requirement.IsCombining)
-                            return new ParseErrorExpression("modifier not allowed in multi-condition " + Name.Name + " clause");
+                            return new ParseErrorExpression("Modifier not allowed in multi-condition repeated clause");
                         break;
                 }
             }
@@ -115,7 +100,7 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        private ParseErrorExpression EvaluateAddHits(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
+        protected ParseErrorExpression EvaluateCondition(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
         {
             ExpressionBase result;
 
@@ -190,29 +175,26 @@ namespace RATools.Parser.Functions
 
             // if we can guarantee the individual requirements won't be true in the same frame, we can use AddHits
             // instead of OrNext to improve compatibility with older versions of RetroArch
-            if (_orNextFlag == RequirementType.OrNext)
+            if (CanUseAddHits(requirements))
             {
-                if (CanUseAddHits(requirements))
+                foreach (var requirement in requirements)
                 {
-                    foreach (var requirement in requirements)
+                    foreach (var cond in requirement)
                     {
-                        foreach (var cond in requirement)
-                        {
-                            if (cond.Type == RequirementType.OrNext)
-                                cond.Type = RequirementType.AddHits;
-                        }
+                        if (cond.Type == RequirementType.OrNext)
+                            cond.Type = RequirementType.AddHits;
                     }
                 }
-                else
+            }
+            else
+            {
+                // an AndNext in the first clause is acceptable, but once we see the first
+                // OrNext, each clause must be a single logical condition as AndNext has the
+                // same priority as OrNext and will not be processed first.
+                for (int i = 1; i < requirements.Count; ++i)
                 {
-                    // an AndNext in the first clause is acceptable, but once we see the first
-                    // OrNext, each clause must be a single logical condition as AndNext has the
-                    // same priority as OrNext and will not be processed first.
-                    for (int i = 1; i < requirements.Count; ++i)
-                    {
-                        if (requirements[i].Any(r => r.Type == RequirementType.AndNext))
-                            return new ParseErrorExpression("cannot join multiple AndNext chains with OrNext");
-                    }
+                    if (requirements[i].Any(r => r.Type == RequirementType.AndNext))
+                        return new ParseErrorExpression("Cannot join multiple AndNext chains with OrNext");
                 }
             }
 

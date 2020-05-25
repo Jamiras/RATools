@@ -63,6 +63,7 @@
     <Compile Include="Data\Requirement.cs" />
     <Compile Include="Data\RequirementEx.cs" />
     <Compile Include="Parser\AchievementScriptContext.cs" />
+    <Compile Include="Parser\Functions\ArrayPushFunction.cs" />
     <Compile Include="Parser\Functions\AchievementFunction.cs" />
     <Compile Include="Parser\Functions\AlwaysFalseFunction.cs" />
     <Compile Include="Parser\Functions\BitFunction.cs" />

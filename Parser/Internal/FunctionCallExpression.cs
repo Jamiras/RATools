@@ -142,6 +142,26 @@ namespace RATools.Parser.Internal
             return false;
         }
 
+        private static ExpressionBase GetParameter(InterpreterScope scope, AssignmentExpression assignment)
+        {
+            ExpressionBase value;
+
+            var variable = assignment.Value as VariableExpression;
+            if (variable != null)
+            {
+                value = scope.GetVariable(variable.Name);
+                if (value is ArrayExpression || value is DictionaryExpression)
+                    return value;
+            }
+
+            var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+            if (!assignment.Value.ReplaceVariables(assignmentScope, out value))
+                return new ParseErrorExpression(value, assignment.Value);
+
+            assignment.Value.CopyLocation(value);
+            return value;
+        }
+
         /// <summary>
         /// Creates a new scope for calling a function and populates values for parameters passed to the function.
         /// </summary>
@@ -161,7 +181,7 @@ namespace RATools.Parser.Internal
             if (providedParameters.Remove("..."))
             {
                 varargs = new ArrayExpression();
-                parameterScope.AssignVariable(new VariableExpression("varargs"), varargs);
+                parameterScope.DefineVariable(new VariableDefinitionExpression("varargs"), varargs);
             }
 
             var parameterCount = providedParameters.Count;
@@ -185,16 +205,10 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    var assignmentScope = new InterpreterScope(scope) { Context = assignedParameter };
-
-                    ExpressionBase value;
-                    if (!assignedParameter.Value.ReplaceVariables(assignmentScope, out value))
-                    {
-                        error = new ParseErrorExpression(value, assignedParameter.Value);
+                    var value = GetParameter(scope, assignedParameter);
+                    error = value as ParseErrorExpression;
+                    if (error != null)
                         return null;
-                    }
-
-                    assignedParameter.Value.CopyLocation(value);
 
                     parameterScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
                     namedParameters = true;
@@ -214,16 +228,12 @@ namespace RATools.Parser.Internal
                     }
 
                     var variableName = (index < parameterCount) ? function.Parameters.ElementAt(index).Name : "...";
-                    var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(variableName), parameter) };
 
-                    ExpressionBase value;
-                    if (!parameter.ReplaceVariables(assignmentScope, out value))
-                    {
-                        error = new ParseErrorExpression(value, parameter);
+                    assignedParameter = new AssignmentExpression(new VariableExpression(variableName), parameter);
+                    var value = GetParameter(scope, assignedParameter);
+                    error = value as ParseErrorExpression;
+                    if (error != null)
                         return null;
-                    }
-
-                    parameter.CopyLocation(value);
 
                     if (index < parameterCount)
                     {

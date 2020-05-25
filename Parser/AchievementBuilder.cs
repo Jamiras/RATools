@@ -545,14 +545,12 @@ namespace RATools.Parser
                         case RequirementType.AddHits:
                             if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
                             {
-                                addHits.Append('(');
                                 requirement.AppendString(addHits, numberFormat,
                                     addSources.Length > 0 ? addSources.ToString() : null,
                                     subSources.Length > 0 ? subSources.ToString() : null,
                                     null,
                                     andNext.Length > 0 ? andNext.ToString() : null,
                                     addAddress.Length > 0 ? addAddress.ToString() : null);
-                                addHits.Append(')');
 
                                 addAddress.Clear();
                                 addSources.Clear();
@@ -564,7 +562,7 @@ namespace RATools.Parser
                                 requirement.AppendString(addHits, numberFormat);
                             }
 
-                            addHits.Append(" || ");
+                            addHits.Append(", ");
                             break;
 
                         default:
@@ -2140,35 +2138,43 @@ namespace RATools.Parser
             return null;
         }
 
-        public bool CollapseForSubClause()
+        internal ParseErrorExpression CollapseForSubClause()
         {
             // no alts, nothing to collapse
             if (_alts.Count == 0)
-                return true;
-
-            // core would have to be spread over all alts, cannot collapse
-            if (_core.Count > 0)
-                return false;
+                return null;
 
             // verify each alt only has one clause without a special flag
             ICollection<Requirement> andNextAlt = null;
             foreach (var alt in _alts)
             {
                 if (alt.Last().Type != RequirementType.None)
-                    return false;
+                    return new ParseErrorExpression("Modifier not allowed in subclause");
+
+                if (_core.Count > 0)
+                {
+                    // core conditions have to be put back into each alt
+                    var newAlt = new List<Requirement>(_core);
+                    newAlt.Last().Type = RequirementType.AndNext;
+                    newAlt.AddRange(alt);
+
+                    alt.Clear();
+                    foreach (var cond in newAlt)
+                        alt.Add(cond);
+                }
 
                 if (alt.Any(a => a.Type == RequirementType.AndNext))
                 {
                     // only one AndNext group allowed
                     if (andNextAlt != null)
-                        return false;
+                        return new ParseErrorExpression("Combination of complex &&s and ||s is too complex for subclause");
 
                     andNextAlt = alt;
                 }
 
                 var altGroup = RequirementEx.Combine(alt);
                 if (altGroup.Count > 1)
-                    return false;
+                    return new ParseErrorExpression("Subclause is too complex");
             }
 
             // AndNext group must be first
@@ -2177,6 +2183,10 @@ namespace RATools.Parser
                 _alts.Remove(andNextAlt);
                 _alts.Insert(0, andNextAlt);
             }
+
+            // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
+            // if necessary, find one without a HitCount and make it the last.
+            EnsureLastGroupHasNoHitCount(_alts);
 
             // merge the alts into a series of OrNexts
             foreach (var alt in _alts)
@@ -2188,7 +2198,35 @@ namespace RATools.Parser
             }
 
             _alts.Clear();
-            return true;
+            return null;
+        }
+
+        internal static void EnsureLastGroupHasNoHitCount(List<ICollection<Requirement>> requirements)
+        {
+            if (requirements.Count == 0)
+                return;
+
+            int index = requirements.Count - 1;
+            if (requirements[index].Last().HitCount > 0)
+            {
+                do
+                {
+                    index--;
+                } while (index >= 0 && requirements[index].Last().HitCount > 0);
+
+                if (index == -1)
+                {
+                    // all requirements had HitCount limits, add a dummy item that's never true for the total HitCount
+                    requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
+                }
+                else
+                {
+                    // found a requirement without a HitCount limit, move it to the last spot for the total HitCount
+                    var requirement = requirements[index];
+                    requirements.RemoveAt(index);
+                    requirements.Add(requirement);
+                }
+            }
         }
     }
 }

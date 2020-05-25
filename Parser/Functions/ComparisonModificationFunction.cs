@@ -1,6 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -50,12 +49,13 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            if (!builder.CollapseForSubClause())
-                return new ParseErrorExpression(Name.Name + " is too complex to be a subclause", condition);
-
-            var error = ModifyRequirements(builder);
+            var error = builder.CollapseForSubClause();
             if (error != null)
-                return error;
+                return new ParseErrorExpression(error.Message, condition);
+
+            error = ModifyRequirements(builder);
+            if (error != null)
+                return new ParseErrorExpression(error.Message, condition);
 
             foreach (var requirement in builder.CoreRequirements)
                 context.Trigger.Add(requirement);
