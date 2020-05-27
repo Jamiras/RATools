@@ -69,8 +69,8 @@ namespace RATools.Parser.Functions
                 requirements.Add(conditionRequirements);
             }
 
-            // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
-            // if necessary, find one without a HitCount and make it the last. 
+            // the last item cannot have its own HitCount as it will hold the HitCount for the group.
+            // if necessary, find one without a HitCount and make it the last.
             AchievementBuilder.EnsureLastGroupHasNoHitCount(requirements);
 
             // load the requirements into the trigger
