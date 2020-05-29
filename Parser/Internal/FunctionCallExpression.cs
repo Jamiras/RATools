@@ -144,22 +144,74 @@ namespace RATools.Parser.Internal
 
         private static ExpressionBase GetParameter(InterpreterScope scope, AssignmentExpression assignment)
         {
-            ExpressionBase value;
+            ExpressionBase value = assignment.Value;
 
-            var variable = assignment.Value as VariableExpression;
+            var variable = value as VariableExpression;
             if (variable != null)
             {
                 value = scope.GetVariable(variable.Name);
-                if (value is ArrayExpression || value is DictionaryExpression)
-                    return value;
+
+                // could not find variable, fallback to VariableExpression.ReplaceVariables generating an error
+                if (value == null)
+                    value = assignment.Value;
             }
 
-            var assignmentScope = new InterpreterScope(scope) { Context = assignment };
-            if (!assignment.Value.ReplaceVariables(assignmentScope, out value))
-                return new ParseErrorExpression(value, assignment.Value);
+            switch (value.Type)
+            {
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.StringConstant:
+                    // already a basic type, do nothing
+                    break;
+
+                case ExpressionType.Array:
+                case ExpressionType.Dictionary:
+                    // pass array and dictionary by reference so function can modify them.
+                    // also eliminates copying the entire object to pass it as a parameter.
+                    return value;
+
+                default:
+                    // not a basic type, evaluate it
+                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+                    if (!value.ReplaceVariables(assignmentScope, out value))
+                        return new ParseErrorExpression(value, assignment.Value);
+                    break;
+            }
 
             assignment.Value.CopyLocation(value);
             return value;
+        }
+
+        private bool GetSingleParameter(FunctionDefinitionExpression function, InterpreterScope parameterScope, out ExpressionBase error)
+        {
+            var funcParameter = function.Parameters.First();
+
+            ExpressionBase value = Parameters.First();
+            if (value.Type == ExpressionType.IntegerConstant || value.Type == ExpressionType.StringConstant)
+            {
+                // already a basic type, just proceed to storing it
+                error = null;
+            }
+            else
+            {
+                var assignedParameter = value as AssignmentExpression;
+                if (assignedParameter == null)
+                {
+                    assignedParameter = new AssignmentExpression(new VariableExpression(funcParameter.Name), value);
+                }
+                else if (funcParameter.Name != assignedParameter.Variable.Name)
+                {
+                    error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), value);
+                    return true;
+                }
+
+                value = GetParameter(parameterScope, assignedParameter);
+                error = value as ParseErrorExpression;
+                if (error != null)
+                    return true;
+            }
+
+            parameterScope.DefineVariable(new VariableDefinitionExpression(funcParameter.Name), value);
+            return true;
         }
 
         /// <summary>
@@ -172,6 +224,23 @@ namespace RATools.Parser.Internal
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
             var parameterScope = new InterpreterScope(scope);
+
+            // optimization for no parameter function
+            if (function.Parameters.Count == 0 && Parameters.Count == 0)
+            {
+                error = null;
+                return parameterScope;
+            }
+
+            // optimization for single parameter function
+            if (function.Parameters.Count == 1 && Parameters.Count == 1)
+            {
+                if (GetSingleParameter(function, parameterScope, out error))
+                    return parameterScope;
+
+                if (error != null)
+                    return null;
+            }
 
             var providedParameters = new List<string>(function.Parameters.Count);
             foreach (var parameter in function.Parameters)

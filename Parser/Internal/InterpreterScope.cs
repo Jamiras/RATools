@@ -62,7 +62,16 @@ namespace RATools.Parser.Internal
 
             var parentScope = GetParentScope(this);
             if (parentScope != null)
-                return parentScope.GetFunction(functionName);
+            {
+                function = parentScope.GetFunction(functionName);
+                if (function != null)
+                {
+                    // if found, and the current scope is a function call, store for faster future lookups
+                    if (Context is FunctionCallExpression)
+                        _functions.Add(functionName, function);
+                    return function;
+                }
+            }
 
             return null;
         }
