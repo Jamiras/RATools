@@ -148,5 +148,39 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.MeasuredIf));
             Assert.That(requirements[2].HitCount, Is.EqualTo(0));
         }
+
+        [Test]
+        public void TestTallyAddHits()
+        {
+            var requirements = Evaluate("measured(tally(2, byte(0x1234) == 120, byte(0x1234) == 126))");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("126"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestRepeatedOrNext()
+        {
+            var requirements = Evaluate("measured(repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126))");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.OrNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("126"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(2));
+        }
     }
 }

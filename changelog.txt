@@ -1,3 +1,15 @@
+v1.6.6 - TBD
+* add tally() function
+* add bitcount() function
+* add optional when parameter to measured() function
+* add array_push() function
+* improve requirement matching for multi-condition requirements in achievement viewer
+* arrays and dictionaries are no longer evaluated when passed to functions. this is significantly more
+  performant, and allows the function to modify the array/dictionary.
+* IMPORTANT NOTE: repeated(N, A || B) now generates an OrNext chain instead of an AddHits chain.
+  tally() should be used to generate an AddHits chain. For those situations where A || B was previously
+  being generated with a loop, use array_push() to build an array of conditions and pass that to tally().
+
 v1.6.5 - 12 Apr 2020
 * add format() function
 * support for measured() in leaderboard value

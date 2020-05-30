@@ -35,6 +35,7 @@ namespace RATools.Data
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
                     case RequirementType.AndNext:
+                    case RequirementType.OrNext:
                     case RequirementType.AddAddress:
                         return true;
 
@@ -131,6 +132,8 @@ namespace RATools.Data
             {
                 if (HitCount == 1)
                     builder.Append("once(");
+                else if (addHits != null)
+                    builder.AppendFormat("tally({0}, ", HitCount);
                 else
                     builder.AppendFormat("repeated({0}, ", HitCount);
 
@@ -480,6 +483,11 @@ namespace RATools.Data
         /// This requirement must also be true for the next requirement to be true.
         /// </summary>
         AndNext,
+
+        /// <summary>
+        /// This requirement or the following requirement must be true for the next requirement to be true.
+        /// </summary>
+        OrNext,
 
         /// <summary>
         /// Meta-flag indicating that this condition tracks progress.

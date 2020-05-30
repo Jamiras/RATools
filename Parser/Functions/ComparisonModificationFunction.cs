@@ -1,6 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -40,9 +39,6 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
 
-            if (builder.AlternateRequirements.Count > 0)
-                return new ParseErrorExpression(Name.Name + " does not support ||'d conditions", condition);
-
             if (builder.CoreRequirements.Count > 1)
             {
                 var last = builder.CoreRequirements.Last();
@@ -53,42 +49,16 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            ParseErrorExpression error = ValidateSingleCondition(builder.CoreRequirements);
+            var error = builder.CollapseForSubClause();
             if (error != null)
-                return new ParseErrorExpression(error, condition);
+                return new ParseErrorExpression(error.Message, condition);
 
             error = ModifyRequirements(builder);
             if (error != null)
-                return error;
+                return new ParseErrorExpression(error.Message, condition);
 
             foreach (var requirement in builder.CoreRequirements)
                 context.Trigger.Add(requirement);
-
-            return null;
-        }
-
-        protected ParseErrorExpression ValidateSingleCondition(ICollection<Requirement> requirements)
-        {
-            if (requirements.Count == 0 ||
-                requirements.Last().Operator == RequirementOperator.None)
-            {
-                return new ParseErrorExpression("comparison did not evaluate to a valid comparison");
-            }
-
-            bool isCombining = true;
-            foreach (var requirement in requirements)
-            {
-                if (requirement.IsCombining)
-                {
-                    isCombining = true;
-                }
-                else
-                {
-                    if (!isCombining)
-                        return new ParseErrorExpression(Name.Name + " does not support &&'d conditions");
-                    isCombining = false;
-                }
-            }
 
             return null;
         }

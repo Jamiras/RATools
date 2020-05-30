@@ -442,7 +442,7 @@ namespace RATools.Test.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 Incomplete trigger condition"));
         }
 
         [Test]
@@ -836,7 +836,7 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("function foo() => byte(1)\n" +
                                "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 comparison did not evaluate to a valid comparison"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 Incomplete trigger condition"));
         }
 
         [Test]

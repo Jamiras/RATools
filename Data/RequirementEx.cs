@@ -46,6 +46,34 @@ namespace RATools.Data
             return null;
         }
 
+        public bool LeftEquals(RequirementEx that)
+        {
+            if (Requirements.Count != that.Requirements.Count)
+                return false;
+
+            for (int i = 0; i < Requirements.Count; ++i)
+            {
+                var left = Requirements[i];
+                var right = that.Requirements[i];
+                if (left.Type != right.Type)
+                    return false;
+
+                if (left.Left != right.Left)
+                    return false;
+
+                if (i < Requirements.Count - 1 && left.IsCombining)
+                {
+                    if (left.Operator != right.Operator)
+                        return false;
+
+                    if (left.Right != right.Right)
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
         public override bool Equals(object obj)
         {
             var that = obj as RequirementEx;
@@ -103,6 +131,12 @@ namespace RATools.Data
                     case RequirementType.AndNext:
                         // an always_true() condition will not affect the next condition
                         if (requirement.Evaluate() == true)
+                            continue;
+                        break;
+
+                    case RequirementType.OrNext:
+                        // an always_false() condition will not affect the next condition
+                        if (requirement.Evaluate() == false)
                             continue;
                         break;
                 }

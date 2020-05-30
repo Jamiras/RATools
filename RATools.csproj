@@ -63,6 +63,7 @@
     <Compile Include="Data\Requirement.cs" />
     <Compile Include="Data\RequirementEx.cs" />
     <Compile Include="Parser\AchievementScriptContext.cs" />
+    <Compile Include="Parser\Functions\ArrayPushFunction.cs" />
     <Compile Include="Parser\Functions\AchievementFunction.cs" />
     <Compile Include="Parser\Functions\AlwaysFalseFunction.cs" />
     <Compile Include="Parser\Functions\BitFunction.cs" />
@@ -72,6 +73,7 @@
     <Compile Include="Parser\Functions\AlwaysTrueFunction.cs" />
     <Compile Include="Parser\Functions\BitCountFunction.cs" />
     <Compile Include="Parser\Functions\RangeFunction.cs" />
+    <Compile Include="Parser\Functions\TallyFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />
     <Compile Include="Parser\Functions\FormatFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceDisplayFunction.cs" />

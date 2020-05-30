@@ -135,9 +135,6 @@ namespace RATools.Parser.Internal
             if (tokenizer.NextChar == '\0')
                 return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column, tokenizer.Line, tokenizer.Column);
 
-            var line = tokenizer.Line;
-            var column = tokenizer.Column;
-
             var clause = ExpressionBase.ParseClause(tokenizer);
             if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
                 return clause;
@@ -631,7 +628,7 @@ namespace RATools.Parser.Internal
             var array = new ArrayExpression();
             while (tokenizer.NextChar != ']')
             {
-                var value = ParseClause(tokenizer);
+                var value = Parse(tokenizer);
                 if (value.Type == ExpressionType.ParseError)
                     return value;
 

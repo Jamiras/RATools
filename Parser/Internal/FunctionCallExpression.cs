@@ -142,6 +142,78 @@ namespace RATools.Parser.Internal
             return false;
         }
 
+        private static ExpressionBase GetParameter(InterpreterScope scope, AssignmentExpression assignment)
+        {
+            ExpressionBase value = assignment.Value;
+
+            var variable = value as VariableExpression;
+            if (variable != null)
+            {
+                value = scope.GetVariable(variable.Name);
+
+                // could not find variable, fallback to VariableExpression.ReplaceVariables generating an error
+                if (value == null)
+                    value = assignment.Value;
+            }
+
+            switch (value.Type)
+            {
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.StringConstant:
+                    // already a basic type, do nothing
+                    break;
+
+                case ExpressionType.Array:
+                case ExpressionType.Dictionary:
+                    // pass array and dictionary by reference so function can modify them.
+                    // also eliminates copying the entire object to pass it as a parameter.
+                    return value;
+
+                default:
+                    // not a basic type, evaluate it
+                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+                    if (!value.ReplaceVariables(assignmentScope, out value))
+                        return new ParseErrorExpression(value, assignment.Value);
+                    break;
+            }
+
+            assignment.Value.CopyLocation(value);
+            return value;
+        }
+
+        private bool GetSingleParameter(FunctionDefinitionExpression function, InterpreterScope parameterScope, out ExpressionBase error)
+        {
+            var funcParameter = function.Parameters.First();
+
+            ExpressionBase value = Parameters.First();
+            if (value.Type == ExpressionType.IntegerConstant || value.Type == ExpressionType.StringConstant)
+            {
+                // already a basic type, just proceed to storing it
+                error = null;
+            }
+            else
+            {
+                var assignedParameter = value as AssignmentExpression;
+                if (assignedParameter == null)
+                {
+                    assignedParameter = new AssignmentExpression(new VariableExpression(funcParameter.Name), value);
+                }
+                else if (funcParameter.Name != assignedParameter.Variable.Name)
+                {
+                    error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), value);
+                    return true;
+                }
+
+                value = GetParameter(parameterScope, assignedParameter);
+                error = value as ParseErrorExpression;
+                if (error != null)
+                    return true;
+            }
+
+            parameterScope.DefineVariable(new VariableDefinitionExpression(funcParameter.Name), value);
+            return true;
+        }
+
         /// <summary>
         /// Creates a new scope for calling a function and populates values for parameters passed to the function.
         /// </summary>
@@ -153,6 +225,23 @@ namespace RATools.Parser.Internal
         {
             var parameterScope = new InterpreterScope(scope);
 
+            // optimization for no parameter function
+            if (function.Parameters.Count == 0 && Parameters.Count == 0)
+            {
+                error = null;
+                return parameterScope;
+            }
+
+            // optimization for single parameter function
+            if (function.Parameters.Count == 1 && Parameters.Count == 1)
+            {
+                if (GetSingleParameter(function, parameterScope, out error))
+                    return parameterScope;
+
+                if (error != null)
+                    return null;
+            }
+
             var providedParameters = new List<string>(function.Parameters.Count);
             foreach (var parameter in function.Parameters)
                 providedParameters.Add(parameter.Name);
@@ -161,7 +250,7 @@ namespace RATools.Parser.Internal
             if (providedParameters.Remove("..."))
             {
                 varargs = new ArrayExpression();
-                parameterScope.AssignVariable(new VariableExpression("varargs"), varargs);
+                parameterScope.DefineVariable(new VariableDefinitionExpression("varargs"), varargs);
             }
 
             var parameterCount = providedParameters.Count;
@@ -185,16 +274,10 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    var assignmentScope = new InterpreterScope(scope) { Context = assignedParameter };
-
-                    ExpressionBase value;
-                    if (!assignedParameter.Value.ReplaceVariables(assignmentScope, out value))
-                    {
-                        error = new ParseErrorExpression(value, assignedParameter.Value);
+                    var value = GetParameter(scope, assignedParameter);
+                    error = value as ParseErrorExpression;
+                    if (error != null)
                         return null;
-                    }
-
-                    assignedParameter.Value.CopyLocation(value);
 
                     parameterScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
                     namedParameters = true;
@@ -214,16 +297,12 @@ namespace RATools.Parser.Internal
                     }
 
                     var variableName = (index < parameterCount) ? function.Parameters.ElementAt(index).Name : "...";
-                    var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(variableName), parameter) };
 
-                    ExpressionBase value;
-                    if (!parameter.ReplaceVariables(assignmentScope, out value))
-                    {
-                        error = new ParseErrorExpression(value, parameter);
+                    assignedParameter = new AssignmentExpression(new VariableExpression(variableName), parameter);
+                    var value = GetParameter(scope, assignedParameter);
+                    error = value as ParseErrorExpression;
+                    if (error != null)
                         return null;
-                    }
-
-                    parameter.CopyLocation(value);
 
                     if (index < parameterCount)
                     {

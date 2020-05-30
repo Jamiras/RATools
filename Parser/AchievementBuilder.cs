@@ -121,10 +121,14 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.AddHits;
                     else if (tokenizer.Match("N:"))
                         requirement.Type = RequirementType.AndNext;
-                    else if (tokenizer.Match("M:"))
-                        requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("O:"))
+                        requirement.Type = RequirementType.OrNext;
                     else if (tokenizer.Match("I:"))
                         requirement.Type = RequirementType.AddAddress;
+                    else if (tokenizer.Match("M:"))
+                        requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("Q:"))
+                        requirement.Type = RequirementType.MeasuredIf;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -333,7 +337,9 @@ namespace RATools.Parser
                 case RequirementType.SubSource: builder.Append("B:"); break;
                 case RequirementType.AddHits: builder.Append("C:"); break;
                 case RequirementType.AndNext: builder.Append("N:"); break;
+                case RequirementType.OrNext: builder.Append("O:"); break;
                 case RequirementType.Measured: builder.Append("M:"); break;
+                case RequirementType.MeasuredIf: builder.Append("Q:"); break;
                 case RequirementType.AddAddress: builder.Append("I:"); break;
             }
 
@@ -433,13 +439,14 @@ namespace RATools.Parser
                 var andNext = new StringBuilder();
                 var addAddress = new StringBuilder();
                 bool isCombining = true;
+                RequirementType lastAndNext = RequirementType.None;
                 do
                 {
                     // precedence is AddAddress
                     //             > AddSource/SubSource
+                    //             > AndNext/OrNext
                     //             > AddHits
-                    //             > AndNext
-                    //             > ResetIf/PauseIf
+                    //             > ResetIf/PauseIf/Measured
                     switch (requirement.Type)
                     {
                         case RequirementType.AddAddress:
@@ -490,6 +497,7 @@ namespace RATools.Parser
                             break;
 
                         case RequirementType.AndNext:
+                        case RequirementType.OrNext:
                             if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
                             {
                                 andNext.Append('(');
@@ -510,20 +518,39 @@ namespace RATools.Parser
                                 requirement.AppendString(andNext, numberFormat);
                             }
 
-                            andNext.Append(" && ");
+                            if (requirement.Type == RequirementType.OrNext)
+                            {
+                                if (lastAndNext == RequirementType.AndNext)
+                                {
+                                    andNext.Insert(0, '(');
+                                    andNext.Append(')');
+                                }
+
+                                andNext.Append(" || ");
+                            }
+                            else
+                            {
+                                if (lastAndNext == RequirementType.OrNext)
+                                {
+                                    andNext.Insert(0, '(');
+                                    andNext.Append(')');
+                                }
+
+                                andNext.Append(" && ");
+                            }
+
+                            lastAndNext = requirement.Type;
                             break;
 
                         case RequirementType.AddHits:
                             if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
                             {
-                                addHits.Append('(');
                                 requirement.AppendString(addHits, numberFormat,
                                     addSources.Length > 0 ? addSources.ToString() : null,
                                     subSources.Length > 0 ? subSources.ToString() : null,
                                     null,
                                     andNext.Length > 0 ? andNext.ToString() : null,
                                     addAddress.Length > 0 ? addAddress.ToString() : null);
-                                addHits.Append(')');
 
                                 addAddress.Clear();
                                 addSources.Clear();
@@ -535,7 +562,7 @@ namespace RATools.Parser
                                 requirement.AppendString(addHits, numberFormat);
                             }
 
-                            addHits.Append(" || ");
+                            addHits.Append(", ");
                             break;
 
                         default:
@@ -975,14 +1002,39 @@ namespace RATools.Parser
                     if ((requirement.Type == RequirementType.PauseIf && !hasMeasured) ||
                         requirement.Type == RequirementType.ResetIf)
                     {
-                        if (requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext))
+                        bool hasAndNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext);
+                        bool hasOrNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext);
+                        if (hasAndNext && hasOrNext)
                         {
-                            // the inverse of an AndNext is OrNext, which isn't currently possible. and we've already
-                            // expanded all of the OR clauses into alt groups, so another round of expansion at this time
-                            // is unreasonable. just leave the resetif/pauseif.
+                            // if both AndNext and OrNext is present, we can't just invert the logic as the order of operations may be affected
                         }
                         else
                         {
+                            if (hasAndNext)
+                            {
+                                // convert an AndNext chain into an OrNext chain
+                                foreach (var r in requirementEx.Requirements)
+                                {
+                                    if (r.Type == RequirementType.AndNext)
+                                    {
+                                        r.Type = RequirementType.OrNext;
+                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                                    }
+                                }
+                            }
+                            else if (hasOrNext)
+                            {
+                                // convert an OrNext chain into an AndNext chain
+                                foreach (var r in requirementEx.Requirements)
+                                {
+                                    if (r.Type == RequirementType.OrNext)
+                                    {
+                                        r.Type = RequirementType.AndNext;
+                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                                    }
+                                }
+                            }
+
                             requirement.Type = RequirementType.None;
                             requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
                         }
@@ -1569,6 +1621,34 @@ namespace RATools.Parser
                 // put one copy of the repeated requirement it in the core group
                 groups[0].Add(requirement);
             }
+
+            // if any group has been completely moved to the core group, it's a subset of
+            // all other groups, and any trivial logic can be removed from the other groups
+            bool removeTrivialLogic = false;
+            for (int i = 1; i < groups.Count; ++i)
+            {
+                if (groups[i].Count == 0)
+                {
+                    removeTrivialLogic = true;
+                    break;
+                }
+            }
+
+            if (removeTrivialLogic)
+            {
+                for (int i = groups.Count - 1; i > 0; --i)
+                {
+                    for (int j = groups[i].Count - 1; j >= 0; --j)
+                    {
+                        var finalCondition = groups[i][j].Requirements.Last();
+                        if (finalCondition.Type == RequirementType.None && finalCondition.HitCount == 0)
+                            groups[i].RemoveAt(j);
+                    }
+
+                    if (groups[i].Count == 0)
+                        groups.RemoveAt(i);
+                }
+            }
         }
 
         private static void RemoveAlwaysFalseAlts(List<List<RequirementEx>> groups)
@@ -1602,6 +1682,52 @@ namespace RATools.Parser
                 groups.Add(new List<RequirementEx>());
                 groups[0].Add(new RequirementEx());
                 groups[0][0].Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+            }
+        }
+
+        private static void DenormalizeOrNexts(List<List<RequirementEx>> groups)
+        {
+            RequirementEx orNextGroup = null;
+            if (groups.Count == 1)
+            {
+                foreach (var requirementEx in groups[0])
+                {
+                    if (requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext))
+                    {
+                        if (orNextGroup != null)
+                            return;
+
+                        // if there's a hit target, we can't split it up
+                        if (requirementEx.Requirements.Last().HitCount == 0)
+                            orNextGroup = requirementEx;
+                    }
+                }
+            }
+
+            // found a single OrNext and no alt groups. split it up
+            if (orNextGroup != null)
+            {
+                groups[0].Remove(orNextGroup);
+
+                var alt = new RequirementEx();
+                var altGroup = new List<RequirementEx>();
+                altGroup.Add(alt);
+                groups.Add(altGroup);
+
+                foreach (var requirement in orNextGroup.Requirements)
+                {
+                    alt.Requirements.Add(requirement);
+
+                    if (requirement.Type == RequirementType.OrNext)
+                    {
+                        requirement.Type = orNextGroup.Requirements.Last().Type;
+
+                        alt = new RequirementEx();
+                        altGroup = new List<RequirementEx>();
+                        altGroup.Add(alt);
+                        groups.Add(altGroup);
+                    }
+                }
             }
         }
 
@@ -1975,13 +2101,20 @@ namespace RATools.Parser
             // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
             RemoveAlwaysFalseAlts(groups);
 
+            // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
+            DenormalizeOrNexts(groups);
+
             // convert back to flattened expressions
             _core.Clear();
             Unprocess(_core, groups[0]);
 
             for (int i = 1; i < groups.Count; i++)
             {
-                _alts[i - 1].Clear();
+                if (i - 1 < _alts.Count)
+                    _alts[i - 1].Clear();
+                else
+                    _alts.Add(new List<Requirement>());
+
                 Unprocess(_alts[i - 1], groups[i]);
             }
 
@@ -2003,6 +2136,97 @@ namespace RATools.Parser
 
             // success!
             return null;
+        }
+
+        internal ParseErrorExpression CollapseForSubClause()
+        {
+            // no alts, nothing to collapse
+            if (_alts.Count == 0)
+                return null;
+
+            // verify each alt only has one clause without a special flag
+            ICollection<Requirement> andNextAlt = null;
+            foreach (var alt in _alts)
+            {
+                if (alt.Last().Type != RequirementType.None)
+                    return new ParseErrorExpression("Modifier not allowed in subclause");
+
+                if (_core.Count > 0)
+                {
+                    // core conditions have to be put back into each alt
+                    var newAlt = new List<Requirement>(_core);
+                    newAlt.Last().Type = RequirementType.AndNext;
+                    newAlt.AddRange(alt);
+
+                    alt.Clear();
+                    foreach (var cond in newAlt)
+                        alt.Add(cond);
+                }
+
+                if (alt.Any(a => a.Type == RequirementType.AndNext))
+                {
+                    // only one AndNext group allowed
+                    if (andNextAlt != null)
+                        return new ParseErrorExpression("Combination of complex &&s and ||s is too complex for subclause");
+
+                    andNextAlt = alt;
+                }
+
+                var altGroup = RequirementEx.Combine(alt);
+                if (altGroup.Count > 1)
+                    return new ParseErrorExpression("Subclause is too complex");
+            }
+
+            // AndNext group must be first
+            if (andNextAlt != null)
+            {
+                _alts.Remove(andNextAlt);
+                _alts.Insert(0, andNextAlt);
+            }
+
+            // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
+            // if necessary, find one without a HitCount and make it the last.
+            EnsureLastGroupHasNoHitCount(_alts);
+
+            // merge the alts into a series of OrNexts
+            foreach (var alt in _alts)
+            {
+                if (_core.Count > 0)
+                    _core.Last().Type = RequirementType.OrNext;
+
+                _core.AddRange(alt);
+            }
+
+            _alts.Clear();
+            return null;
+        }
+
+        internal static void EnsureLastGroupHasNoHitCount(List<ICollection<Requirement>> requirements)
+        {
+            if (requirements.Count == 0)
+                return;
+
+            int index = requirements.Count - 1;
+            if (requirements[index].Last().HitCount > 0)
+            {
+                do
+                {
+                    index--;
+                } while (index >= 0 && requirements[index].Last().HitCount > 0);
+
+                if (index == -1)
+                {
+                    // all requirements had HitCount limits, add a dummy item that's never true for the total HitCount
+                    requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
+                }
+                else
+                {
+                    // found a requirement without a HitCount limit, move it to the last spot for the total HitCount
+                    var requirement = requirements[index];
+                    requirements.RemoveAt(index);
+                    requirements.Add(requirement);
+                }
+            }
         }
     }
 }
