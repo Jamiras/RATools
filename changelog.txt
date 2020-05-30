@@ -2,7 +2,8 @@ v1.6.6 - TBD
 * add tally() function
 * add bitcount() function
 * add optional when parameter to measured() function
-* add array_push() function
+* add array_push() and array_pop() functions
+* add length() function
 * improve requirement matching for multi-condition requirements in achievement viewer
 * arrays and dictionaries are no longer evaluated when passed to functions. this is significantly more
   performant, and allows the function to modify the array/dictionary.

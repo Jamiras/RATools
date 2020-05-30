@@ -841,6 +841,7 @@ namespace RATools.Parser.Internal
         /// A comparison.
         /// </summary>
         Comparison,
+
         /// <summary>
         /// The conditional
         /// </summary>
@@ -850,7 +851,6 @@ namespace RATools.Parser.Internal
         /// An assignment.
         /// </summary>
         Assignment,
-
 
         /// <summary>
         /// A function definition.
