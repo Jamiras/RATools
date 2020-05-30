@@ -2,13 +2,12 @@
 
 namespace RATools.Parser.Functions
 {
-    internal class ArrayPushFunction : FunctionDefinitionExpression
+    internal class ArrayPopFunction : FunctionDefinitionExpression
     {
-        public ArrayPushFunction()
-            : base("array_push")
+        public ArrayPopFunction()
+            : base("array_pop")
         {
             Parameters.Add(new VariableDefinitionExpression("array"));
-            Parameters.Add(new VariableDefinitionExpression("value"));
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
@@ -23,13 +22,16 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            var value = GetParameter(scope, "value", out result);
-            if (value == null)
-                return false;
-            // don't call ReplaceVariables, we don't want to evaluate the item being added here
+            if (array.Entries.Count == 0)
+            {
+                result = new IntegerConstantExpression(0);
+            }
+            else
+            {
+                result = array.Entries[array.Entries.Count - 1];
+                array.Entries.RemoveAt(array.Entries.Count - 1);
+            }
 
-            array.Entries.Add(value);
-            result = null;
             return true;
         }
     }
