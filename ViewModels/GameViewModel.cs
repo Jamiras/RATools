@@ -342,13 +342,14 @@ namespace RATools.ViewModels
                     builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
                     builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
 
-                    if (publishedAchievement.GetField("Flags").IntegerValue == 5)
+                    var flags = publishedAchievement.GetField("Flags").IntegerValue;
+                    if (flags == 5)
                     {
                         achievement.Unofficial.LoadAchievement(builtAchievement);
                         unofficialCount++;
                         unofficialPoints += points;
                     }
-                    else
+                    else if (flags == 3)
                     {
                         achievement.Core.LoadAchievement(builtAchievement);
                         coreCount++;

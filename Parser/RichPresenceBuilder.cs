@@ -113,40 +113,7 @@ namespace RATools.Parser
                 builder.AppendLine(value.Key);
 
                 builder.Append("FormatType=");
-                switch (value.Value)
-                {
-                    case ValueFormat.Value:
-                        builder.AppendLine("VALUE");
-                        break;
-
-                    case ValueFormat.Score:
-                        builder.AppendLine("SCORE");
-                        break;
-
-                    case ValueFormat.TimeSecs:
-                        builder.AppendLine("SECS");
-                        break;
-
-                    case ValueFormat.TimeMillisecs:
-                        builder.AppendLine("MILLISECS");
-                        break;
-
-                    case ValueFormat.TimeFrames:
-                        builder.AppendLine("FRAMES");
-                        break;
-
-                    case ValueFormat.TimeMinutes:
-                        builder.AppendLine("MINUTES");
-                        break;
-
-                    case ValueFormat.TimeSecsAsMins:
-                        builder.AppendLine("SECS_AS_MINS");
-                        break;
-
-                    case ValueFormat.Other:
-                        builder.AppendLine("OTHER");
-                        break;
-                }
+                builder.AppendLine(Leaderboard.GetFormatString(value.Value));
 
                 builder.AppendLine();
             }

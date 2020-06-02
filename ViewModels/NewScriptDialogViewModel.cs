@@ -8,6 +8,7 @@ using Jamiras.ViewModels.Converters;
 using Jamiras.ViewModels.Fields;
 using Jamiras.ViewModels.Grid;
 using RATools.Data;
+using RATools.Parser;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,7 @@ namespace RATools.ViewModels
             _achievements = new ObservableCollection<DumpAchievementItem>();
             _memoryItems = new List<MemoryItem>();
             _ticketNotes = new TinyDictionary<int, string>();
+            _macros = new List<RichPresenceMacro>();
 
             CodeNoteFilters = new[]
             {
@@ -82,6 +84,11 @@ namespace RATools.ViewModels
                 if (File.Exists(notesFile))
                 {
                     LoadGame(gameId, dataDirectory);
+
+                    var richPresenceFile = Path.Combine(dataDirectory, gameId + "-Rich.txt");
+                    if (File.Exists(richPresenceFile))
+                        LoadRichPresence(richPresenceFile);
+
                     return;
                 }
             }
@@ -189,6 +196,177 @@ namespace RATools.ViewModels
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
+        private class RichPresenceMacro
+        {
+            public string Name;
+            public ValueFormat FormatType;
+            public Dictionary<string, string> LookupEntries;
+            public List<string> DisplayLines;
+        }
+        private List<RichPresenceMacro> _macros;
+
+        private void LoadRichPresence(string richPresenceFile)
+        {
+            RichPresenceMacro currentMacro = null;
+            RichPresenceMacro displayMacro = null;
+
+            using (var file = File.OpenText(richPresenceFile))
+            {
+                do
+                {
+                    var line = file.ReadLine();
+                    if (line == null)
+                        break;
+
+                    var index = line.IndexOf("//");
+                    if (index != -1)
+                        line = line.Substring(0, index).TrimEnd();
+
+                    if (line.Length == 0)
+                        continue;
+
+                    if (line.StartsWith("Format:"))
+                    {
+                        currentMacro = new RichPresenceMacro { Name = line.Substring(7) };
+                        _macros.Add(currentMacro);
+                    }
+                    else if (line.StartsWith("FormatType="))
+                    {
+                        currentMacro.FormatType = Leaderboard.ParseFormat(line.Substring(11));
+                    }
+                    else if (line.StartsWith("Lookup:"))
+                    {
+                        currentMacro = new RichPresenceMacro { Name = line.Substring(7), LookupEntries = new Dictionary<string, string>() };
+                        _macros.Add(currentMacro);
+                    }
+                    else if (line.StartsWith("Display:"))
+                    {
+                        currentMacro = displayMacro = new RichPresenceMacro { Name = "Display", DisplayLines = new List<string>() };
+                        _macros.Add(currentMacro);
+                    }
+                    else
+                    {
+                        if (currentMacro.DisplayLines != null)
+                        {
+                            currentMacro.DisplayLines.Add(line);
+                        }
+                        else if (currentMacro.LookupEntries != null)
+                        {
+                            index = line.IndexOf('=');
+                            if (index > 0)
+                                currentMacro.LookupEntries[line.Substring(0, index)] = line.Substring(index + 1);
+                        }
+                    }
+
+                } while (true);
+            }
+
+            foreach (var macro in _macros)
+            {
+                if (macro.LookupEntries != null)
+                {
+                    var dumpLookup = new DumpAchievementItem(0, macro.Name) { IsLookup = true };
+                    dumpLookup.PropertyChanged += DumpAchievement_PropertyChanged;
+                    _achievements.Add(dumpLookup);
+                }
+            }
+
+            if (displayMacro != null)
+            {
+                var dumpRichPresence = new DumpAchievementItem(0, "Rich Presence Script") { IsRichPresence = true };
+
+                for (int i = 0; i < displayMacro.DisplayLines.Count; ++i)
+                {
+                    var line = displayMacro.DisplayLines[i];
+                    if (line[0] == '?')
+                    {
+                        var index = line.IndexOf('?', 1);
+                        if (index != -1)
+                        {
+                            var trigger = line.Substring(1, index - 1);
+                            var achievement = new AchievementBuilder();
+                            achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
+
+                            foreach (var requirement in achievement.CoreRequirements)
+                                AddMemoryReferences(dumpRichPresence, requirement);
+
+                            foreach (var alt in achievement.AlternateRequirements)
+                                foreach (var requirement in alt)
+                                    AddMemoryReferences(dumpRichPresence, requirement);
+                        }
+
+                        AddMacroMemoryReferences(dumpRichPresence, line.Substring(index + 1));
+                    }
+                    else
+                    {
+                        AddMacroMemoryReferences(dumpRichPresence, line);
+
+                        if (i < displayMacro.DisplayLines.Count)
+                            displayMacro.DisplayLines.RemoveRange(i + 1, displayMacro.DisplayLines.Count - i - 1);
+                        break;
+                    }
+                }
+
+                dumpRichPresence.PropertyChanged += DumpAchievement_PropertyChanged;
+                _achievements.Add(dumpRichPresence);
+            }
+        }
+
+        private void AddMacroMemoryReferences(DumpAchievementItem displayRichPresence, string displayString)
+        {
+            var index = 0;
+            do
+            {
+                index = displayString.IndexOf('@', index);
+                if (index == -1)
+                    return;
+                var index2 = displayString.IndexOf('(', index);
+                if (index2 == -1)
+                    return;
+                var index3 = displayString.IndexOf(')', index2);
+                if (index3 == -1)
+                    return;
+
+                var name = displayString.Substring(index + 1, index2 - index - 1);
+                var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
+
+                var macro = _achievements.FirstOrDefault(a => a.IsLookup && a.Label == name);
+                if (macro == null)
+                    macro = displayRichPresence;
+
+                if (parameter[1] == ':')
+                {
+                    var achievement = new AchievementBuilder();
+                    achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
+
+                    foreach (var requirement in achievement.CoreRequirements)
+                        AddMemoryReferences(macro, requirement);
+
+                    foreach (var alt in achievement.AlternateRequirements)
+                        foreach (var requirement in alt)
+                            AddMemoryReferences(macro, requirement);
+                }
+                else
+                {
+                    foreach (var part in parameter.Split('_'))
+                    {
+                        foreach (var operand in part.Split('*'))
+                        {
+                            var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
+                            if (field.IsMemoryReference)
+                            {
+                                var memoryItem = AddMemoryAddress(field);
+                                if (memoryItem != null && !macro.MemoryAddresses.Contains(memoryItem))
+                                    macro.MemoryAddresses.Add(memoryItem);
+                            }
+                        }
+                    }
+                }
+
+                index = index2 + 1;
+            } while (true);
+        }
+
         private void MergeOpenTickets()
         {
             var openTickets = new List<int>();
@@ -215,6 +393,23 @@ namespace RATools.ViewModels
 
                 var notes = tokenizer.ReadTo("</code>").ToString();
                 _ticketNotes[ticket] = notes.ToString();
+            }
+        }
+
+        private void AddMemoryReferences(DumpAchievementItem dumpAchievement, Requirement requirement)
+        {
+            if (requirement.Left != null && requirement.Left.IsMemoryReference)
+            {
+                var memoryItem = AddMemoryAddress(requirement.Left);
+                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
+                    dumpAchievement.MemoryAddresses.Add(memoryItem);
+            }
+
+            if (requirement.Right != null && requirement.Right.IsMemoryReference)
+            {
+                var memoryItem = AddMemoryAddress(requirement.Right);
+                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
+                    dumpAchievement.MemoryAddresses.Add(memoryItem);
             }
         }
 
@@ -259,6 +454,10 @@ namespace RATools.ViewModels
 
             public bool IsUnofficial { get; set; }
 
+            public bool IsLookup { get; set; }
+            
+            public bool IsRichPresence { get; set; }
+
             public int OpenTicketCount
             {
                 get { return OpenTickets.Count; }
@@ -282,7 +481,30 @@ namespace RATools.ViewModels
         private void DumpAchievement_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "IsSelected")
+            {
+                var item = sender as DumpAchievementItem;
+                if (item != null)
+                {
+                    if (item.IsRichPresence && item.IsSelected)
+                    {
+                        foreach (var achievement in _achievements)
+                        {
+                            if (achievement.IsLookup)
+                                achievement.IsSelected = true;
+                        }
+                    }
+                    else if (item.IsLookup && !item.IsSelected)
+                    {
+                        foreach (var achievement in _achievements)
+                        {
+                            if (achievement.IsRichPresence)
+                                achievement.IsSelected = false;
+                        }
+                    }
+                }
+
                 UpdateMemoryGrid();
+            }
         }
 
         public CommandBase CheckAllCommand { get; private set; }
@@ -295,15 +517,15 @@ namespace RATools.ViewModels
         public CommandBase UncheckAllCommand { get; private set; }
         private void UncheckAll()
         {
-            foreach (var achievment in _achievements)
-                achievment.IsSelected = false;
+            foreach (var achievement in _achievements)
+                achievement.IsSelected = false;
         }
 
         public CommandBase CheckWithTicketsCommand { get; private set; }
         private void CheckWithTickets()
         {
-            foreach (var achievment in _achievements)
-                achievment.IsSelected = (achievment.OpenTicketCount > 0);
+            foreach (var achievement in _achievements)
+                achievement.IsSelected = (achievement.OpenTicketCount > 0);
         }
 
         public enum CodeNoteFilter
@@ -524,12 +746,15 @@ namespace RATools.ViewModels
                 stream.WriteLine(_game.Title);
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
+
                 bool needLine = true;
                 bool hadFunction = false;
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
                 string addressFormat = "{0:X4}";
                 if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
-                    addressFormat = "{0:X6}";
+                    addressFormat = "{0:X6}"; // TODO: addressFormat is only used in note comments - also apply to generated code
+
+                var lookupsToDump = _achievements.Where(a => a.IsLookup && a.IsSelected).ToList();
 
                 bool first;
                 var dumpNotes = SelectedNoteDump;
@@ -606,6 +831,16 @@ namespace RATools.ViewModels
                         stream.Write("() => ");
                         var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
                         stream.WriteLine(memoryReference);
+
+                        foreach (var dumpLookup in lookupsToDump)
+                        {
+                            if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
+                            {
+                                DumpLookup(stream, dumpLookup);
+                                lookupsToDump.Remove(dumpLookup);
+                                break;
+                            }
+                        }
                     }
                     else
                     {
@@ -613,11 +848,11 @@ namespace RATools.ViewModels
                     }
                 }
 
-                foreach (var dumpAchievement in _achievements)
-                {
-                    if (!dumpAchievement.IsSelected)
-                        continue;
+                foreach (var dumpLookup in lookupsToDump)
+                    DumpLookup(stream, dumpLookup);
 
+                foreach (var dumpAchievement in _achievements.Where(a => a.IsSelected && !a.IsLookup && !a.IsRichPresence))
+                {
                     var achievement = _game.Editors.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
                     if (achievement == null)
                         continue;
@@ -702,57 +937,321 @@ namespace RATools.ViewModels
                     stream.Write(achievementData.LastModified);
                     stream.WriteLine("\",");
 
-                    var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
-                    groupEnumerator.MoveNext();
                     stream.Write("    trigger = ");
                     const int indent = 14; // "    trigger = ".length
 
-                    bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
-                    if (!isCoreEmpty)
-                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
-
-                    first = true;
-                    while (groupEnumerator.MoveNext())
-                    {
-                        if (first)
-                        {
-                            if (!isCoreEmpty)
-                            {
-                                stream.WriteLine(" &&");
-                                stream.Write(new string(' ', indent));
-                            }
-                            stream.Write('(');
-                            first = false;
-
-                            if (achievementViewModel.RequirementGroups.Count() == 2)
-                            {
-                                // only core and one alt, inject an always_false clause to prevent the compiler from joining them
-                                stream.Write("always_false() || ");
-                            }
-
-                            stream.Write('(');
-                        }
-                        else
-                        {
-                            stream.WriteLine(" ||");
-                            stream.Write(new string(' ', indent));
-                            stream.Write(" (");
-                        }
-
-                        DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent + 2);
-                        stream.Write(")");
-                    }
-                    if (!first)
-                        stream.Write(')');
-
+                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel, indent);
                     stream.WriteLine();
 
                     stream.WriteLine(")");
                 }
+
+                foreach (var dumpRichPresence in _achievements.Where(a => a.IsRichPresence && a.IsSelected))
+                {
+                    var displayMacro = _macros.FirstOrDefault(m => m.DisplayLines != null);
+                    DumpRichPresence(stream, displayMacro, dumpRichPresence, numberFormat);
+                }
             }
         }
 
-        private void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
+        private void DumpLookup(StreamWriter stream, DumpAchievementItem dumpLookup)
+        {
+            var macro = _macros.FirstOrDefault(m => m.Name == dumpLookup.Label);
+            if (macro == null)
+                return;
+
+            stream.WriteLine();
+            stream.Write(dumpLookup.Label);
+            stream.WriteLine("Lookup = {");
+            foreach (var entry in macro.LookupEntries)
+            {
+                if (entry.Key == "*")
+                    continue;
+
+                stream.Write("    ");
+                stream.Write(entry.Key);
+                stream.Write(": \"");
+                stream.Write(EscapeString(entry.Value));
+                stream.WriteLine("\",");
+            }
+            stream.WriteLine("}");
+        }
+
+        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAchievementItem dumpRichPresence, NumberFormat numberFormat)
+        {
+            int index;
+
+            foreach (var line in displayMacro.DisplayLines)
+            {
+                string displayString = line;
+                stream.WriteLine();
+
+                if (line[0] == '?')
+                {
+                    index = line.IndexOf('?', 1);
+                    if (index != -1)
+                    {
+                        var trigger = line.Substring(1, index - 1);
+                        var achievement = new AchievementBuilder();
+                        achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
+
+                        var vmAchievement = new AchievementViewModel(_game, "RichPresence");
+                        vmAchievement.LoadAchievement(achievement.ToAchievement());
+
+                        stream.Write("rich_presence_conditional_display(");
+                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 4);
+                        stream.Write(", \"");
+                    }
+
+                    ++index;
+                }
+                else
+                {
+                    stream.Write("rich_presence_display(\"");
+                    index = 0;
+                }
+
+                var macros = new List<KeyValuePair<string, string>>();
+                do
+                {
+                    var index1 = displayString.IndexOf('@', index);
+                    if (index1 == -1)
+                    {
+                        stream.Write(displayString.Substring(index));
+                        break;
+                    }
+
+                    if (index1 > index)
+                        stream.Write(displayString.Substring(index, index1 - index));
+
+                    stream.Write('{');
+                    stream.Write(macros.Count());
+                    stream.Write('}');
+
+                    var index2 = displayString.IndexOf('(', index1);
+                    var index3 = displayString.IndexOf(')', index2);
+
+                    var name = displayString.Substring(index1 + 1, index2 - index1 - 1);
+                    var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
+
+                    macros.Add(new KeyValuePair<string, string>(name, parameter));
+
+                    index = index3 + 1;
+                } while (true);
+
+                stream.Write('"');
+
+                foreach (var kvp in macros)
+                {
+                    stream.WriteLine(",");
+                    stream.Write("    ");
+
+                    var macro = _macros.FirstOrDefault(m => m.Name == kvp.Key);
+                    if (macro.LookupEntries != null)
+                    {
+                        stream.Write("rich_presence_lookup(\"");
+                        stream.Write(macro.Name);
+                        stream.Write("\", ");
+                    }
+                    else
+                    {
+                        stream.Write("rich_presence_value(\"");
+                        stream.Write(macro.Name);
+                        stream.Write("\", ");
+                    }
+
+                    var parameter = kvp.Value;
+                    if (parameter[1] == ':')
+                    {
+                        var achievement = new AchievementBuilder();
+                        achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
+
+                        if (achievement.CoreRequirements.Count > 0 && achievement.CoreRequirements.Last().Type == RequirementType.Measured)
+                            achievement.CoreRequirements.Last().Type = RequirementType.None;
+
+                        var vmAchievement = new AchievementViewModel(_game, "Rich Presence");
+                        vmAchievement.LoadAchievement(achievement.ToAchievement());
+
+                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 32);
+                    }
+                    else
+                    {
+                        DumpLegacyExpression(stream, parameter, dumpRichPresence);
+                    }
+
+                    if (macro.LookupEntries != null)
+                    { 
+                        stream.Write(", ");
+                        stream.Write(macro.Name);
+                        stream.Write("Lookup");
+
+                        string defaultEntry;
+                        if (macro.LookupEntries.TryGetValue("*", out defaultEntry))
+                        {
+                            stream.Write(", fallback=\"");
+                            stream.Write(EscapeString(defaultEntry));
+                            stream.Write('"');
+                        }    
+
+                        stream.Write(')');
+                    }
+                    else
+                    {
+                        if (macro.FormatType != ValueFormat.Value)
+                        {
+                            stream.Write(", format=\"");
+                            stream.Write(Leaderboard.GetFormatString(macro.FormatType));
+                            stream.Write('"');
+                        }
+
+                        stream.Write(')');
+                    }
+                }
+
+                if (macros.Count() > 0)
+                    stream.WriteLine();
+
+                stream.WriteLine(')');
+            }
+        }
+
+        private static void DumpLegacyExpression(StreamWriter stream, string parameter, DumpAchievementItem dumpRichPresence)
+        {
+            var builder = new StringBuilder();
+
+            var parts = parameter.Split('_');
+            for (int i = 0; i < parts.Length; ++i)
+            {
+                if (i > 0)
+                    builder.Append(" + ");
+
+                var operands = parts[i].Split('*');
+                for (int j = 0; j < operands.Length; ++j)
+                {
+                    if (j > 0)
+                        builder.Append(" * ");
+
+                    var operand = operands[j];
+                    if (operand[0] == 'v' || operand[0] == 'V')
+                    {
+                        operand = operand.Substring(1);
+                        if (operand[0] == '-')
+                        {
+                            if (builder[builder.Length - 2] == '+')
+                            {
+                                builder[builder.Length - 2] = '-';
+                                operand = operand.Substring(1);
+                            }
+                        }
+
+                        builder.Append(operand);
+                    }
+                    else if (operand[0] == 'h' || operand[0] == 'H')
+                    {
+                        builder.Append("0x");
+                        builder.Append(operand.Substring(1));
+                    }
+                    else if (operand.Length > 2 && operand[1] == '.' && operand[0] == '0' && builder[builder.Length - 2] == '*')
+                    {
+                        bool isDivisor = false;
+                        var f = Double.Parse(operand);
+                        if (f > 0.0)
+                        {
+                            var divisor = 1 / f;
+                            if (Math.Abs(Math.Round(divisor) - divisor) < 0.000001)
+                            {
+                                isDivisor = true;
+                                builder[builder.Length - 2] = '/';
+                                builder.Append((int)divisor);
+                            }
+                        }
+
+                        if (!isDivisor)
+                            builder.Append(operand);
+                    }
+                    else
+                    {
+                        bool isBCD = false;
+                        if (operand[0] == 'b')
+                        {
+                            operand = operand.Substring(1);
+                            isBCD = true;
+                            builder.Append("bcd(");
+                        }
+
+                        var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
+                        if (field.IsMemoryReference)
+                        {
+                            var memoryItem = dumpRichPresence.MemoryAddresses.FirstOrDefault(m => m.Address == field.Value && m.Size == field.Size);
+                            if (memoryItem != null && !String.IsNullOrEmpty(memoryItem.FunctionName))
+                            {
+                                builder.Append(memoryItem.FunctionName);
+                                builder.Append("()");
+                            }
+                            else
+                            {
+                                builder.Append(Field.GetMemoryReference(field.Value, field.Size));
+                            }
+                        }
+                        else
+                        {
+                            builder.Append(operand);
+                        }
+
+                        if (isBCD)
+                            builder.Append(')');
+                    }
+                }
+            }
+
+            stream.Write(builder.ToString());
+        }
+
+        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, AchievementViewModel achievementViewModel, int indent)
+        {
+            var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
+            groupEnumerator.MoveNext();
+
+            bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
+            if (!isCoreEmpty)
+                DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
+
+            bool first = true;
+            while (groupEnumerator.MoveNext())
+            {
+                if (first)
+                {
+                    if (!isCoreEmpty)
+                    {
+                        stream.WriteLine(" &&");
+                        stream.Write(new string(' ', indent));
+                    }
+                    stream.Write('(');
+                    first = false;
+
+                    if (achievementViewModel.RequirementGroups.Count() == 2)
+                    {
+                        // only core and one alt, inject an always_false clause to prevent the compiler from joining them
+                        stream.Write("always_false() || ");
+                    }
+
+                    stream.Write('(');
+                }
+                else
+                {
+                    stream.WriteLine(" ||");
+                    stream.Write(new string(' ', indent));
+                    stream.Write(" (");
+                }
+
+                DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent + 2);
+                stream.Write(")");
+            }
+            if (!first)
+                stream.Write(')');
+        }
+
+        private static void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
             RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent)
         {
             const int MaxWidth = 120;
