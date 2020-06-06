@@ -123,6 +123,14 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestEmptyTrigger()
+        {
+            // tally() of empty array will result in to conditions for the trigger
+            var parser = Parse("achievement(\"T\", \"D\", 5, tally(4, []))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:26 Incomplete trigger condition"));
+        }
+
+        [Test]
         [TestCase("byte(0x1234) - 1 == 4", "byte(0x001234) == 5")]
         [TestCase("byte(0x1234) + 1 == 4", "byte(0x001234) == 3")]
         [TestCase("byte(0x1234) * 2 == 4", "byte(0x001234) == 2")]

@@ -181,7 +181,7 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestOrNextAndNext()
         {
-            var errorMessage = "Subclause is too complex";
+            var errorMessage = "Combination of &&s and ||s is too complex for subclause";
             Evaluate("repeated(4, (byte(0x1234) == 56 && byte(0x2345) == 67) || (byte(0x1234) == 34 && byte(0x2345) == 45))", errorMessage);
         }
 

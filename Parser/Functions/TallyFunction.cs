@@ -69,6 +69,10 @@ namespace RATools.Parser.Functions
                 requirements.Add(conditionRequirements);
             }
 
+            // if no requirements were generated, we're done
+            if (requirements.Count == 0)
+                return null;
+
             // the last item cannot have its own HitCount as it will hold the HitCount for the group.
             // if necessary, find one without a HitCount and make it the last.
             AchievementBuilder.EnsureLastGroupHasNoHitCount(requirements);
