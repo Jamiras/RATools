@@ -2167,14 +2167,44 @@ namespace RATools.Parser
                 {
                     // only one AndNext group allowed
                     if (andNextAlt != null)
-                        return new ParseErrorExpression("Combination of complex &&s and ||s is too complex for subclause");
+                        return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
 
                     andNextAlt = alt;
                 }
 
+                // if alt has multiple conditions, attempt to join them with AndNext
                 var altGroup = RequirementEx.Combine(alt);
                 if (altGroup.Count > 1)
-                    return new ParseErrorExpression("Subclause is too complex");
+                {
+                    for (int i = altGroup.Count - 1; i > 0; --i)
+                    {
+                        // cannot merge with AndNext if subclause contains OrNext as it has the same priority as AndNext.
+                        if (altGroup[i].Requirements.Any(r => r.Type == RequirementType.OrNext))
+                            return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
+
+                        // cannot merge with AndNext if subclause contains AddHits as it has lower priority than AndNext.
+                        if (altGroup[i].Requirements.Any(r => r.Type == RequirementType.AddHits))
+                            return new ParseErrorExpression("Subclause contains modifier");
+                    }
+
+                    // perform the join. note this is updating the original Requirements in the 'alt' variable. 'altGroup' will be discarded shortly.
+                    for (int i = 0; i < altGroup.Count - 1; ++i)
+                    {
+                        var lastRequirement = altGroup[i].Requirements.Last();
+
+                        // cannot change to AndNext if already something else
+                        if (lastRequirement.Type != RequirementType.None)
+                            return new ParseErrorExpression("Subclause contains modifier");
+
+                        lastRequirement.Type = RequirementType.AndNext;
+                    }
+
+                    // only one AndNext group allowed
+                    if (andNextAlt != null)
+                        return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
+
+                    andNextAlt = alt;
+                }
             }
 
             // AndNext group must be first

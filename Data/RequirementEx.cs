@@ -113,6 +113,9 @@ namespace RATools.Data
             return !left.Equals(right);
         }
 
+        /// <summary>
+        /// Constructs a series of <see cref="RequirementEx" />s from a series of <see cref="Requirement" />s.
+        /// </summary>
         public static List<RequirementEx> Combine(IEnumerable<Requirement> requirements)
         {
             var group = new List<RequirementEx>();
