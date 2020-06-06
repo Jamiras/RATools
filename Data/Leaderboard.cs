@@ -85,6 +85,39 @@ namespace RATools.Data
             }
         }
 
+        public static string GetFormatString(ValueFormat format)
+        {
+            switch (format)
+            {
+                case ValueFormat.Value:
+                    return "VALUE";
+
+                case ValueFormat.Score:
+                    return "SCORE";
+
+                case ValueFormat.TimeSecs:
+                    return "SECS";
+
+                case ValueFormat.TimeMillisecs:
+                    return "MILLISECS";
+
+                case ValueFormat.TimeFrames:
+                    return "FRAMES";
+
+                case ValueFormat.TimeMinutes:
+                    return "MINUTES";
+
+                case ValueFormat.TimeSecsAsMins:
+                    return "SECS_AS_MINS";
+
+                case ValueFormat.Other:
+                    return "OTHER";
+
+                default:
+                    return "UNKNOWN";
+            }
+        }
+
         internal int SourceLine { get; set; }
     }
 

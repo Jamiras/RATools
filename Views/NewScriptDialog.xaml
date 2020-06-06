@@ -3,8 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:RATools.Views"
-             mc:Ignorable="d" Width="960" Height="488"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True"
+             RenderOptions.BitmapScalingMode="HighQuality"
+             mc:Ignorable="d" Width="960" Height="492"
              d:DesignHeight="300" d:DesignWidth="300">
     <UserControl.Resources>
         <ResourceDictionary>
@@ -52,11 +54,41 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="16" />
-                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition Width="182" />
                             <ColumnDefinition Width="20" />
                         </Grid.ColumnDefinitions>
                         <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding IsSelected}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Label}">
+                        <Grid Grid.Column="1" Width="14" Height="13" Background="Transparent">
+                            <Image Margin="0,-1,0,-1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <Image.Style>
+                                    <Style TargetType="{x:Type Image}">
+                                        <Setter Property="Width" Value="12" />
+                                        <Setter Property="Height" Value="12" />
+                                        <Setter Property="Source" Value="/RATools;component/Resources/achievement.png" />
+                                        <Setter Property="ToolTip" Value="Achievement" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsRichPresence}" Value="True">
+                                                <Setter Property="Width" Value="14" />
+                                                <Setter Property="Height" Value="14" />
+                                                <Setter Property="Source" Value="/RATools;component/Resources/rich_presence.png" />
+                                                <Setter Property="ToolTip" Value="Rich Presence" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsLookup}" Value="True">
+                                                <Setter Property="Width" Value="14" />
+                                                <Setter Property="Height" Value="14" />
+                                                <Setter Property="Source" Value="/RATools;component/Resources/script.png" />
+                                                <Setter Property="ToolTip" Value="Lookup" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
+                                                <Setter Property="ToolTip" Value="Unofficial Achievement" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                        </Grid>
+                        <TextBlock Grid.Column="2" Text="{Binding Label}" Margin="0,0,0,1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}">
                                     <Style.Triggers>
@@ -67,7 +99,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Grid.Column="2" HorizontalAlignment="Right" Margin="0,0,2,0" Text="{Binding OpenTicketCount}">
+                        <TextBlock Grid.Column="3" HorizontalAlignment="Right" Margin="0,0,2,1" Text="{Binding OpenTicketCount}" VerticalAlignment="Center">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}">
                                     <Style.Triggers>

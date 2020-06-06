@@ -73,15 +73,15 @@ namespace RATools.ViewModels
 
                 if (genLines[genIndex].Length == 0)
                 {
-                    // blank generated line, advance core
-                    lines.Add(new RichPresenceLine(localLines[localIndex++], genLines[genIndex]));
+                    // extra blank line in generated output, ignore it
+                    genIndex++;
                     continue;
                 }
 
                 if (localLines[localIndex].Length == 0)
                 {
-                    // blank core line, advance generated
-                    lines.Add(new RichPresenceLine(localLines[localIndex], genLines[genIndex++]));
+                    // extra blank line in local file, ignore it
+                    localIndex++;
                     continue;
                 }
 
@@ -94,7 +94,11 @@ namespace RATools.ViewModels
 
                 if (genTagLine != -1 && localTagLine != -1)
                 {
-                    if (genTagLine > localTagLine)
+                    if (genTagLine < genIndex)
+                        genTagLine = -1;
+                    else if (localTagLine < localIndex)
+                        localTagLine = -1;
+                    else if (genTagLine > localTagLine)
                         genTagLine = -1;
                     else
                         localTagLine = -1;

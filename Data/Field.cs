@@ -281,19 +281,33 @@ namespace RATools.Data
             FieldSize size = FieldSize.None;
             switch (tokenizer.NextChar)
             {
+                case 'm':
                 case 'M': size = FieldSize.Bit0; tokenizer.Advance(); break;
+                case 'n':
                 case 'N': size = FieldSize.Bit1; tokenizer.Advance(); break;
+                case 'o':
                 case 'O': size = FieldSize.Bit2; tokenizer.Advance(); break;
+                case 'p':
                 case 'P': size = FieldSize.Bit3; tokenizer.Advance(); break;
+                case 'q':
                 case 'Q': size = FieldSize.Bit4; tokenizer.Advance(); break;
+                case 'r':
                 case 'R': size = FieldSize.Bit5; tokenizer.Advance(); break;
+                case 's':
                 case 'S': size = FieldSize.Bit6; tokenizer.Advance(); break;
+                case 't':
                 case 'T': size = FieldSize.Bit7; tokenizer.Advance(); break;
+                case 'l':
                 case 'L': size = FieldSize.LowNibble; tokenizer.Advance(); break;
+                case 'u':
                 case 'U': size = FieldSize.HighNibble; tokenizer.Advance(); break;
+                case 'h':
                 case 'H': size = FieldSize.Byte; tokenizer.Advance(); break;
+                case 'w':
                 case 'W': size = FieldSize.TByte; tokenizer.Advance(); break;
+                case 'x':
                 case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
+                case 'k':
                 case 'K': size = FieldSize.BitCount; tokenizer.Advance(); break;
                 case '0':
                 case '1':

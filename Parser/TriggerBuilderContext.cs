@@ -56,7 +56,8 @@ namespace RATools.Parser
                     case FieldType.Value:
                         if (term.field.Value == 0)
                         {
-                            builder.Length--;
+                            if (builder.Length > 0)
+                                builder.Length--;
                             break;
                         }
 
