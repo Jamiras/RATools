@@ -60,8 +60,12 @@ namespace RATools.Parser.Functions
 
             if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
             {
-                var error = (ParseErrorExpression)result;
-                result = new ParseErrorExpression(error.Message, trigger) { InnerError = error };
+                if (result.Column != trigger.Column || result.EndColumn != trigger.EndColumn || result.Line != trigger.Line || result.EndLine != trigger.EndLine)
+                {
+                    var error = (ParseErrorExpression)result;
+                    result = new ParseErrorExpression(error.Message, trigger) { InnerError = error };
+                }
+
                 return false;
             }
 

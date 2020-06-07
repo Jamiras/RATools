@@ -371,7 +371,7 @@ namespace RATools.Parser
                 return error;
 
             var context = scope.GetContext<TriggerBuilderContext>();
-            if (context.LastRequirement.Operator == RequirementOperator.None)
+            if (context.LastRequirement == null || context.LastRequirement.Operator == RequirementOperator.None)
                 return new ParseErrorExpression("Incomplete trigger condition", expression);
 
             return null;
