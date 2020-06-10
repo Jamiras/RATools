@@ -73,11 +73,16 @@ namespace RATools.Parser.Functions
 
         protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
-            var lastCondition = builder.CoreRequirements.Last();
-            if (lastCondition.Type != RequirementType.None)
-                return new ParseErrorExpression(string.Format("Cannot apply '%s', another flag is already set."));
+            var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
+            foreach (var requirementEx in requirementsEx)
+            {
+                var lastCondition = requirementEx.Requirements.Last();
+                if (lastCondition.Type != RequirementType.None)
+                    return new ParseErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
 
-            lastCondition.Type = _type;
+                lastCondition.Type = _type;
+            }
+
             return null;
         }
     }
