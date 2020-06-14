@@ -518,28 +518,22 @@ namespace RATools.Parser
                                 requirement.AppendString(andNext, numberFormat);
                             }
 
+                            if (lastAndNext != requirement.Type)
+                            {
+                                if (lastAndNext != RequirementType.None)
+                                {
+                                    andNext.Insert(0, '(');
+                                    andNext.Append(')');
+                                }
+
+                                lastAndNext = requirement.Type;
+                            }
+
                             if (requirement.Type == RequirementType.OrNext)
-                            {
-                                if (lastAndNext == RequirementType.AndNext)
-                                {
-                                    andNext.Insert(0, '(');
-                                    andNext.Append(')');
-                                }
-
                                 andNext.Append(" || ");
-                            }
                             else
-                            {
-                                if (lastAndNext == RequirementType.OrNext)
-                                {
-                                    andNext.Insert(0, '(');
-                                    andNext.Append(')');
-                                }
-
                                 andNext.Append(" && ");
-                            }
 
-                            lastAndNext = requirement.Type;
                             break;
 
                         case RequirementType.AddHits:
