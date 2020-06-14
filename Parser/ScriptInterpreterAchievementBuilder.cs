@@ -165,12 +165,19 @@ namespace RATools.Parser
 
             // first turn the OR trees into flat lists -- (A || (B || (C || D))) -> A, B, C, D
             var flattenedClauses = new List<List<ExpressionBase>>();
+            var expansionSize = 1;
             foreach (var clause in orConditions)
             {
                 var flattened = new List<ExpressionBase>();
                 FlattenOrClause(clause, flattened);
                 flattenedClauses.Add(flattened);
+
+                expansionSize *= flattened.Count();
             }
+
+            const int MAX_EXPANSION_SIZE = 10000;
+            if (expansionSize > MAX_EXPANSION_SIZE)
+                return new ParseErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
             var numFlattenedClauses = flattenedClauses.Count();
@@ -295,6 +302,13 @@ namespace RATools.Parser
             if (orConditions.Count() != 0)
             {
                 var altPart = CrossMultiplyOrConditions(orConditions);
+                if (altPart.Type == ExpressionType.ParseError)
+                {
+                    expression.CopyLocation(altPart);
+                    error = (ParseErrorExpression)altPart;
+                    return false;
+                }
+
                 andedConditions.Add(altPart);
             }
 
