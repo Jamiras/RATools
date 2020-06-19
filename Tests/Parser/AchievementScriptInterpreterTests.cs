@@ -127,7 +127,7 @@ namespace RATools.Test.Parser
         {
             // tally() of empty array will result in to conditions for the trigger
             var parser = Parse("achievement(\"T\", \"D\", 5, tally(4, []))", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("1:26 Incomplete trigger condition"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Incomplete trigger condition"));
         }
 
         [Test]
@@ -530,7 +530,7 @@ namespace RATools.Test.Parser
             var parser = Parse("function test() { p = 6 }\n" +
                                "test()\n" +
                                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("3:23 Unknown variable: p"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:23 Unknown variable: p"));
         }
 
         [Test]
@@ -583,7 +583,7 @@ namespace RATools.Test.Parser
                 "\n" +
                 "achievement(\"Test\", \"Description\", 5, foo(1) && byte(0x0001) == b)\n" + // global b not defined yet, should error
                 "b = 1\n", false);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("7:65 Unknown variable: b"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("7:65 Unknown variable: b"));
         }
 
         [Test]

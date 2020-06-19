@@ -123,6 +123,8 @@ namespace RATools.Parser.Internal
             if (!functionDefinition.Evaluate(functionScope, out result))
             {
                 var error = result as ParseErrorExpression;
+                if (error.Line == 0)
+                    this.CopyLocation(error);
                 result = new ParseErrorExpression(FunctionName.Name + " call failed", FunctionName) { InnerError = error };
                 return false;
             }
