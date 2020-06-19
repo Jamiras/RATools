@@ -53,7 +53,7 @@ namespace RATools.Parser.Internal
                 return false;
 
             result = entry.Value;
-            return true;
+            return result.ReplaceVariables(scope, out result);
         }
 
         internal DictionaryExpression.DictionaryEntry GetDictionaryEntry(InterpreterScope scope, out ExpressionBase result, bool create)
