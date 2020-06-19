@@ -165,12 +165,34 @@ namespace RATools.Parser
 
             // first turn the OR trees into flat lists -- (A || (B || (C || D))) -> A, B, C, D
             var flattenedClauses = new List<List<ExpressionBase>>();
+            var expansionSize = 1;
             foreach (var clause in orConditions)
             {
                 var flattened = new List<ExpressionBase>();
                 FlattenOrClause(clause, flattened);
                 flattenedClauses.Add(flattened);
+
+                expansionSize *= flattened.Count();
             }
+
+            if (expansionSize >= 20)
+            {
+                foreach (var flattened in flattenedClauses)
+                {
+                    var orNextChain = BuildOrNextChain(flattened);
+                    if (orNextChain != null)
+                    {
+                        expansionSize /= flattened.Count();
+
+                        flattened.Clear();
+                        flattened.Add(orNextChain);
+                    }
+                }
+            }
+
+            const int MAX_EXPANSION_SIZE = 10000;
+            if (expansionSize > MAX_EXPANSION_SIZE)
+                return new ParseErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
             var numFlattenedClauses = flattenedClauses.Count();
@@ -205,6 +227,69 @@ namespace RATools.Parser
                     partIndex[i--] = 0;
                 } while (true);
             } while (true);
+        }
+
+        private static bool IsValidInOrNextChain(ExpressionBase expression)
+        {
+            switch (expression.Type)
+            {
+                case ExpressionType.IntegerConstant:
+                    return true;
+
+                case ExpressionType.Comparison:
+                    var comparison = (ComparisonExpression)expression;
+                    return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
+
+                case ExpressionType.FunctionCall:
+                    var funcCall = (FunctionCallExpression)expression;
+
+                    // only memory accessor functions are allowed. all other functions
+                    // are assumed to flag the condition or set a hitcount on it.
+                    var globalScope = AchievementScriptInterpreter.GetGlobalScope();
+                    var funcDef = globalScope.GetFunction(funcCall.FunctionName.Name);
+                    if (funcDef is MemoryAccessorFunction)
+                        return true;
+
+                    if (funcDef is AlwaysFalseFunction)
+                        return true;
+
+                    if (funcDef is AlwaysTrueFunction)
+                        return true;
+
+                    return false;
+
+                default:
+                    return false;
+            }
+        }
+
+        private static ExpressionBase BuildOrNextChain(List<ExpressionBase> clause)
+        {
+            if (clause.Count == 1)
+                return clause[0];
+
+            foreach (var condition in clause)
+            {
+                if (!IsValidInOrNextChain(condition))
+                    return null;
+            }
+
+            ExpressionBase result = null;
+            foreach (var condition in clause)
+            {
+                if (result == null)
+                    result = condition;
+                else
+                    result = new ConditionalExpression(result, ConditionalOperation.Or, condition);
+            }
+
+            result = new FunctionCallExpression("repeated", new ExpressionBase[]
+            {
+                new IntegerConstantExpression(0),
+                result
+            });
+
+            return result;
         }
 
         private static ConditionalExpression BubbleUpOrs(ConditionalExpression condition)
@@ -292,10 +377,21 @@ namespace RATools.Parser
             if (!SortConditions(expression, andedConditions, orConditions, out error))
                 return false;
 
-            if (orConditions.Count() != 0)
+            if (orConditions.Count() > 1)
             {
                 var altPart = CrossMultiplyOrConditions(orConditions);
+                if (altPart.Type == ExpressionType.ParseError)
+                {
+                    expression.CopyLocation(altPart);
+                    error = (ParseErrorExpression)altPart;
+                    return false;
+                }
+
                 andedConditions.Add(altPart);
+            }
+            else if (orConditions.Count() == 1)
+            {
+                andedConditions.Add(orConditions[0]);
             }
 
             var context = new TriggerBuilderContext { Trigger = CoreRequirements };

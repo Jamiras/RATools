@@ -126,7 +126,17 @@ namespace RATools.Data
         {
             if (HitCount == 0)
             {
-                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                if (!string.IsNullOrEmpty(andNext) && andNext[0] != '(' &&
+                    (andNext.Contains(" && ") || andNext.Contains(" || ")))
+                {
+                    builder.Append('(');
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    builder.Append(')');
+                }
+                else
+                {
+                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                }
             }
             else
             {

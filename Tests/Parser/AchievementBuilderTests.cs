@@ -4,6 +4,7 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Test.Parser
 {
@@ -296,6 +297,7 @@ namespace RATools.Test.Parser
         [Test]
         // ==== NormalizeComparisons ====
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
+        [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
         [TestCase("byte(0x001234) > 0", "byte(0x001234) != 0")] // less than 0 can never be true, so if it's greater than 0, it's just not zero
         [TestCase("bit0(0x001234) <= 0", "bit0(0x001234) == 0")] // less than 0 can never be true, only keep the equals
@@ -557,16 +559,44 @@ namespace RATools.Test.Parser
             input = input.Replace("E", "byte(0x00000E) == 1");
             input = input.Replace("F", "byte(0x00000F) == 1");
 
-            expected = expected.Replace("A", "byte(0x00000A) == 1");
-            expected = expected.Replace("B", "byte(0x00000B) == 1");
-            expected = expected.Replace("C", "byte(0x00000C) == 1");
-            expected = expected.Replace("D", "byte(0x00000D) == 1");
-            expected = expected.Replace("E", "byte(0x00000E) == 1");
-            expected = expected.Replace("F", "byte(0x00000F) == 1");
-
             var achievement = CreateAchievement(input);
+
             // NOTE: not optimized - that's tested separately in TestOptimize
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+            var result = achievement.RequirementsDebugString;
+            result = result.Replace("byte(0x00000A) == 1", "A");
+            result = result.Replace("byte(0x00000B) == 1", "B");
+            result = result.Replace("byte(0x00000C) == 1", "C");
+            result = result.Replace("byte(0x00000D) == 1", "D");
+            result = result.Replace("byte(0x00000E) == 1", "E");
+            result = result.Replace("byte(0x00000F) == 1", "F");
+
+            Assert.That(result , Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestOrExpansionLarge()
+        {
+            var largeExpression = "(A || B || C) && (D || E || F) && (A || C || E)";
+
+            // cross-multiplication would result in 27 clauses. if more than 20 would be generated,
+            // the code switches to using OrNext and cross-multiplying simpler clauses.
+            // in this case, OrNext can be used in all clauses, so the output should match the input.
+            TestOrExpansion(largeExpression, largeExpression);
+        }
+
+        [Test]
+        public void TestOrExpansionLargeWithOnce()
+        {
+            var largeExpression = "(A || B || C) && (D || once(E) || F) && (A || C || E)";
+
+            // cross-multiplication would result in 27 clauses. if more than 20 would be generated,
+            // the code switches to using OrNext and cross-multiplying simpler clauses. The once(E)
+            // prevent complete collapse of the second clause, so the result is 1 x 3 x 1 = 3 alt groups
+            var expected = "((A || B || C) && D && (A || C || E)) || " +
+                           "((A || B || C) && once(E) && (A || C || E)) || " +
+                           "((A || B || C) && F && (A || C || E))";
+
+            TestOrExpansion(largeExpression, expected);
         }
 
         [Test]
