@@ -417,5 +417,58 @@ namespace RATools.Test.Parser.Internal
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
         }
+
+        [Test]
+        public void TestEvaluateDictionaryByReference()
+        {
+            // ensures the dictionary is passed by reference to func(), so it can be modified
+            // within func(). it's also much more efficient to pass the dictionary by reference
+            // instead of evaluating it (which creates a copy).
+            var functionDefinition = Parse("function func(d) { d[\"key\"] = 2 }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+
+            var dict = new DictionaryExpression();
+            dict.Entries.Add(new DictionaryExpression.DictionaryEntry()
+            {
+                Key = new StringConstantExpression("key"),
+                Value = new IntegerConstantExpression(1)
+            });
+            scope.AssignVariable(new VariableExpression("dict"), dict);
+
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new VariableExpression("dict") });
+
+            ExpressionBase result;
+            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(result, Is.Null);
+
+            Assert.That(dict.Entries.Count(), Is.EqualTo(1));
+            Assert.That(dict.Entries[0].Value, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)dict.Entries[0].Value).Value, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestEvaluateDictionaryDirect()
+        {
+            // ensures that a dictionary being passed directly to a function is evaluated
+            var functionDefinition = Parse("function func(d) { return d[\"key\"] }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+
+            var dict = new DictionaryExpression();
+            dict.Entries.Add(new DictionaryExpression.DictionaryEntry()
+            {
+                Key = new StringConstantExpression("key"),
+                Value = new VariableExpression("variable")
+            });
+            scope.AssignVariable(new VariableExpression("variable"), new IntegerConstantExpression(123));
+
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { dict });
+
+            ExpressionBase result;
+            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(123));
+        }
     }
 }
