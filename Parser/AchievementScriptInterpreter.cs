@@ -10,6 +10,12 @@ using System.Text;
 
 namespace RATools.Parser
 {
+    public interface IScriptInterpreterCallback
+    {
+        void UpdateProgress(int percentage, int line);
+        bool IsAborted { get; }
+    }
+
     public partial class AchievementScriptInterpreter
     {
         public AchievementScriptInterpreter()
@@ -241,10 +247,10 @@ namespace RATools.Parser
             }
 
             InterpreterScope scope;
-            return Run(expressionGroup, out scope);
+            return Run(expressionGroup, null, out scope);
         }
 
-        internal bool Run(ExpressionGroup expressionGroup, out InterpreterScope scope)
+        internal bool Run(ExpressionGroup expressionGroup, IScriptInterpreterCallback callback, out InterpreterScope scope)
         { 
             var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
             if (parseError != null)
@@ -262,7 +268,7 @@ namespace RATools.Parser
                 RichPresence = _richPresence
             };
 
-            if (!Evaluate(expressionGroup.Expressions, scope))
+            if (!Evaluate(expressionGroup.Expressions, scope, callback))
             {
                 var error = Error;
                 if (error != null)
@@ -291,10 +297,25 @@ namespace RATools.Parser
             }
         }
 
-        internal bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
+        internal bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope, IScriptInterpreterCallback callback = null)
         {
+            int i = 0;
+            int count = expressions.Count();
+
             foreach (var expression in expressions)
             {
+                if (callback != null)
+                {
+                    if (callback.IsAborted)
+                        return false;
+
+                    int progress = (i * 100 / count);
+                    if (progress > 0)
+                        callback.UpdateProgress(progress, expression.Line);
+
+                    i++;
+                }
+
                 if (!Evaluate(expression, scope))
                     return false;
 
