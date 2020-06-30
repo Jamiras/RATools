@@ -295,7 +295,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        // ==== NormalizeComparisons ====
+        // ==== NormalizeLimits ====
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
@@ -340,6 +340,11 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1000", "always_false()")] // can never be true
         [TestCase("byte(0x001234) > 256", "always_false()")] // can never be true
         [TestCase("byte(0x001234) < 256", "always_true()")] // always true
+        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
+        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
+        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
+        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
+        // ==== NormalizeComparisons ====
         [TestCase("byte(0x001234) == prev(byte(0x001234))", "byte(0x001234) == prev(byte(0x001234))")] // non-deterministic
         [TestCase("byte(0x001234) == word(0x001234)", "byte(0x001234) == word(0x001234)")] // non-deterministic
         [TestCase("byte(0x001234) == byte(0x001234)", "always_true()")] // always true
@@ -367,10 +372,6 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x001234) == 1) && unless(0 == 1)", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
         [TestCase("once(byte(0x001234) == 1) && never(1 == 1)", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
         [TestCase("once(byte(0x001234) == 1) && unless(1 == 1)", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
-        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
-        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
-        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
-        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]

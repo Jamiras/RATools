@@ -706,10 +706,138 @@ namespace RATools.Parser
 
         // ==== Optimize helpers ====
 
+        private static bool? NormalizeLimits(RequirementEx requirementEx)
+        {
+            var requirement = requirementEx.Requirements[0];
+
+            if (requirement.Right.Type != FieldType.Value)
+            {
+                // if the comparison is between two memory addresses, we cannot determine the relationship of the values
+                if (requirement.Left.Type != FieldType.Value)
+                    return null;
+
+                // normalize the comparison so the value is on the right.
+                var value = requirement.Left;
+                requirement.Left = requirement.Right;
+                requirement.Right = value;
+                requirement.Operator = Requirement.GetReversedRequirementOperator(requirement.Operator);
+            }
+
+            if (requirement.Right.Value == 0)
+            {
+                switch (requirement.Operator)
+                {
+                    case RequirementOperator.LessThan: // n < 0 -> never true
+                        return false;
+
+                    case RequirementOperator.LessThanOrEqual: // n <= 0 -> n == 0
+                        requirement.Operator = RequirementOperator.Equal;
+                        break;
+
+                    case RequirementOperator.GreaterThan: // n > 0 -> n != 0
+                        requirement.Operator = RequirementOperator.NotEqual;
+                        break;
+
+                    case RequirementOperator.GreaterThanOrEqual: // n >= 0 -> always true
+                        return true;
+                }
+            }
+            else if (requirement.Right.Value == 1 && requirement.Operator == RequirementOperator.LessThan)
+            {
+                // n < 1 -> n == 0
+                requirement.Operator = RequirementOperator.Equal;
+                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                return null;
+            }
+
+            uint max = Field.GetMaxValue(requirement.Left.Size);
+            if (max == 1)
+            {
+                if (requirement.Right.Value == 0)
+                {
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
+                        case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
+                            requirement.Operator = RequirementOperator.Equal;
+                            requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
+                            return null;
+                    }
+                }
+                else
+                {
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
+                        case RequirementOperator.LessThan: // bit < 1 -> bit == 0
+                            requirement.Operator = RequirementOperator.Equal;
+                            requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
+                            return null;
+                    }
+                }
+            }
+
+            if (requirement.Right.Value >= max)
+            {
+                switch (requirement.Operator)
+                {
+                    case RequirementOperator.GreaterThan: // n > max -> always false
+                        return false;
+
+                    case RequirementOperator.GreaterThanOrEqual: // n >= max -> n == max
+                        if (requirement.Right.Value > max)
+                            return false;
+
+                        requirement.Operator = RequirementOperator.Equal;
+                        break;
+
+                    case RequirementOperator.LessThanOrEqual: // n <= max -> always true
+                        return true;
+
+                    case RequirementOperator.LessThan: // n < max -> n != max
+                        if (requirement.Right.Value > max)
+                            return true;
+
+                        requirement.Operator = RequirementOperator.NotEqual;
+                        break;
+
+                    case RequirementOperator.Equal:
+                        if (requirement.Right.Value > max)
+                            return false;
+                        break;
+
+                    case RequirementOperator.NotEqual:
+                        if (requirement.Right.Value > max)
+                            return true;
+                        break;
+                }
+            }
+
+            if (requirement.Left.Size == FieldSize.BitCount &&
+                requirement.Operator == RequirementOperator.Equal &&
+                requirement.Right.Type == FieldType.Value)
+            {
+                if (requirement.Right.Value == 0)
+                {
+                    // bitcount == 0 is the same as byte == 0
+                    requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
+                }
+                else if (requirement.Right.Value == 8)
+                {
+                    // bitcount == 8 is the same as byte == 255
+                    requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
+                    requirement.Right = new Field { Type = FieldType.Value, Value = 255 };
+                }
+            }
+
+            return null;
+        }
+
         private static void NormalizeComparisons(IList<RequirementEx> requirements)
         {
             var alwaysTrue = new List<RequirementEx>();
             var alwaysFalse = new List<RequirementEx>();
+            bool? result;
 
             foreach (var requirementEx in requirements)
             {
@@ -728,7 +856,7 @@ namespace RATools.Parser
                         Right = requirement.Right,
                     };
 
-                    var result = clone.Evaluate();
+                    result = clone.Evaluate();
                     if (result == true)
                     {
                         var alwaysTrueRequirement = AlwaysTrueFunction.CreateAlwaysTrueRequirement();
@@ -746,7 +874,7 @@ namespace RATools.Parser
                 }
                 else
                 {
-                    var result = requirement.Evaluate();
+                    result = requirement.Evaluate();
                     if (result == true)
                     {
                         if (requirement.Type == RequirementType.PauseIf)
@@ -787,128 +915,14 @@ namespace RATools.Parser
                     }
                 }
 
-                if (requirement.Right.Type != FieldType.Value)
+                result = NormalizeLimits(requirementEx);
+                if (result != null)
                 {
-                    // if the comparison is between two memory addresses, we cannot determine the relationship of the values
-                    if (requirement.Left.Type != FieldType.Value)
-                        continue;
-
-                    // normalize the comparison so the value is on the right.
-                    var value = requirement.Left;
-                    requirement.Left = requirement.Right;
-                    requirement.Right = value;
-                    requirement.Operator = Requirement.GetReversedRequirementOperator(requirement.Operator);
-                }
-
-                if (requirement.Right.Value == 0)
-                {
-                    switch (requirement.Operator)
-                    {
-                        case RequirementOperator.LessThan: // n < 0 -> never true
-                            alwaysFalse.Add(requirementEx);
-                            continue;
-
-                        case RequirementOperator.LessThanOrEqual: // n <= 0 -> n == 0
-                            requirement.Operator = RequirementOperator.Equal;
-                            break;
-
-                        case RequirementOperator.GreaterThan: // n > 0 -> n != 0
-                            requirement.Operator = RequirementOperator.NotEqual;
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual: // n >= 0 -> always true
-                            alwaysTrue.Add(requirementEx);
-                            continue;
-                    }
-                }
-                else if (requirement.Right.Value == 1 && requirement.Operator == RequirementOperator.LessThan)
-                {
-                    // n < 1 -> n == 0
-                    requirement.Operator = RequirementOperator.Equal;
-                    requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                    continue;
-                }
-
-                uint max = Field.GetMaxValue(requirement.Left.Size);
-                if (max == 1)
-                {
-                    if (requirement.Right.Value == 0)
-                    {
-                        switch (requirement.Operator)
-                        {
-                            case RequirementOperator.NotEqual: // bit != 0 -> bit == 1
-                            case RequirementOperator.GreaterThan: // bit > 0 -> bit == 1
-                                requirement.Operator = RequirementOperator.Equal;
-                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 1 };
-                                continue;
-                        }
-                    }
+                    if (result == true)
+                        alwaysTrue.Add(requirementEx);
                     else
-                    {
-                        switch (requirement.Operator)
-                        {
-                            case RequirementOperator.NotEqual: // bit != 1 -> bit == 0
-                            case RequirementOperator.LessThan: // bit < 1 -> bit == 0
-                                requirement.Operator = RequirementOperator.Equal;
-                                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = 0 };
-                                continue;
-                        }
-                    }
-                }
-
-                if (requirement.Right.Value >= max)
-                {
-                    switch (requirement.Operator)
-                    {
-                        case RequirementOperator.GreaterThan: // n > max -> always false
-                            alwaysFalse.Add(requirementEx);
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual: // n >= max -> n == max
-                            if (requirement.Right.Value == max)
-                                requirement.Operator = RequirementOperator.Equal;
-                            else
-                                alwaysFalse.Add(requirementEx);
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual: // n <= max -> always true
-                            alwaysTrue.Add(requirementEx);
-                            break;
-
-                        case RequirementOperator.LessThan: // n < max -> n != max
-                            if (requirement.Right.Value == max)
-                                requirement.Operator = RequirementOperator.NotEqual;
-                            else
-                                alwaysTrue.Add(requirementEx);
-                            break;
-
-                        case RequirementOperator.Equal:
-                            if (requirement.Right.Value > max)
-                                alwaysFalse.Add(requirementEx);
-                            break;
-
-                        case RequirementOperator.NotEqual:
-                            if (requirement.Right.Value > max)
-                                alwaysTrue.Add(requirementEx);
-                            break;
-                    }
-                }
-
-                if (requirement.Left.Size == FieldSize.BitCount &&
-                    requirement.Operator == RequirementOperator.Equal &&
-                    requirement.Right.Type == FieldType.Value)
-                {
-                    if (requirement.Right.Value == 0)
-                    {
-                        // bitcount == 0 is the same as byte == 0
-                        requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
-                    }
-                    else if (requirement.Right.Value == 8)
-                    {
-                        // bitcount == 8 is the same as byte == 255
-                        requirement.Left = new Field { Size = FieldSize.Byte, Type = requirement.Left.Type, Value = requirement.Left.Value };
-                        requirement.Right = new Field { Type = FieldType.Value, Value = 255 };
-                    }
+                        alwaysFalse.Add(requirementEx);
+                    continue;
                 }
             }
 
