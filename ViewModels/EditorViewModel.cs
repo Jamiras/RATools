@@ -61,28 +61,37 @@ namespace RATools.ViewModels
                 ErrorsToolWindow.References.Clear();
                 foreach (var error in _parsedContent.Errors)
                 {
-                    string message = error.Message;
+                    var errors = new Stack<CodeReferenceViewModel>();
 
-                    var innerError = error;
-                    if (innerError.InnerError != null)
+                    ParseErrorExpression innerError = error;
+                    while (innerError != null)
                     {
-                        do
+                        errors.Push(new CodeReferenceViewModel
                         {
-                            innerError = innerError.InnerError;
-                        } while (innerError.InnerError != null);
+                            StartLine = innerError.Line,
+                            StartColumn = innerError.Column,
+                            EndLine = innerError.EndLine,
+                            EndColumn = innerError.EndColumn,
+                            Message = innerError.Message
+                        });
 
-                        if (error.Line != innerError.Line || error.Column != innerError.Column)
-                            message += String.Format(" (called from {0}:{1})", error.Line, error.Column);
+                        innerError = innerError.InnerError;
                     }
 
-                    ErrorsToolWindow.References.Add(new CodeReferenceViewModel
+                    int depth = 0;
+                    while (errors.Count() > 0)
                     {
-                        StartLine = innerError.Line,
-                        StartColumn = innerError.Column,
-                        EndLine = innerError.EndLine,
-                        EndColumn = innerError.EndColumn,
-                        Message = message
-                    });
+                        var errorViewModel = errors.Pop();
+                        if (depth > 0)
+                        {
+                            errorViewModel.Message = "> " + errorViewModel.Message;
+                            if (depth > 1)
+                                errorViewModel.Message = new string(' ', (depth - 1) * 2) + errorViewModel.Message;
+                        }
+
+                        ErrorsToolWindow.References.Add(errorViewModel);
+                        depth++;
+                    }
                 }
             });
 

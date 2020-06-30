@@ -313,7 +313,10 @@ namespace RATools.Test.Parser.Internal
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("func did not return a value"));
+            var parseError = (ParseErrorExpression)result;
+            while (parseError.InnerError != null)
+                parseError = parseError.InnerError;
+            Assert.That(parseError.Message, Is.EqualTo("func did not return a value"));
         }
 
         [Test]

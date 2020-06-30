@@ -145,7 +145,10 @@ namespace RATools.Test.Parser.Functions
             Assert.That(expression.Evaluate(scope, out result), Is.False);
 
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            return ((ParseErrorExpression)result).Message;
+            var parseError = (ParseErrorExpression)result;
+            while (parseError.InnerError != null)
+                parseError = parseError.InnerError;
+            return parseError.Message;
         }
 
         [Test]

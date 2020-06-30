@@ -82,7 +82,11 @@ namespace RATools.Parser.Internal
 
             functionScope.Context = this;
             if (!functionDefinition.ReplaceVariables(functionScope, out result))
+            {
+                var error = result as ParseErrorExpression;
+                result = new ParseErrorExpression(FunctionName.Name + " call failed", FunctionName) { InnerError = error };
                 return false;
+            }
 
             CopyLocation(result);
             return true;
@@ -117,7 +121,13 @@ namespace RATools.Parser.Internal
 
             functionScope.Context = this;
             if (!functionDefinition.Evaluate(functionScope, out result))
+            {
+                var error = result as ParseErrorExpression;
+                if (error.Line == 0)
+                    this.CopyLocation(error);
+                result = new ParseErrorExpression(FunctionName.Name + " call failed", FunctionName) { InnerError = error };
                 return false;
+            }
 
             scope.ReturnValue = result;
             return true;
@@ -173,7 +183,10 @@ namespace RATools.Parser.Internal
                     // not a basic type, evaluate it
                     var assignmentScope = new InterpreterScope(scope) { Context = assignment };
                     if (!value.ReplaceVariables(assignmentScope, out value))
-                        return new ParseErrorExpression(value, assignment.Value);
+                    {
+                        var error = (ParseErrorExpression)value;
+                        return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+                    }
                     break;
             }
 
