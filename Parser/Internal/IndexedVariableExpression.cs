@@ -107,17 +107,17 @@ namespace RATools.Parser.Internal
             var dict = value as DictionaryExpression;
             if (dict != null)
             {
-                var entry = dict.Entries.FirstOrDefault(e => Object.Equals(e.Key, index));
-                if (entry != null)
+                var entry = new DictionaryExpression.DictionaryEntry() { Key = index };
+                var entryIndex = dict.Entries.BinarySearch(entry, entry);
+                if (entryIndex >= 0)
                 {
                     result = dict;
-                    return entry;
+                    return dict.Entries[entryIndex];
                 }
 
                 if (create)
                 {
-                    entry = new DictionaryExpression.DictionaryEntry { Key = index };
-                    dict.Entries.Add(entry);
+                    dict.Entries.Insert(~entryIndex, entry);
                     result = dict;
                     return entry;
                 }

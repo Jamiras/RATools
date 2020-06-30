@@ -161,9 +161,19 @@ namespace RATools.Parser.Internal
             {
                 value = scope.GetVariable(variable.Name);
 
-                // could not find variable, fallback to VariableExpression.ReplaceVariables generating an error
                 if (value == null)
+                {
+                    // could not find variable, fallback to VariableExpression.ReplaceVariables generating an error
                     value = assignment.Value;
+                }
+                else
+                {
+                    // when a parameter is assigned to a variable that is an array or dictionary,
+                    // assume it has already been evaluated and pass it by reference. this is magnitudes
+                    // more performant, and allows the function to modify the data in the container.
+                    if (value.Type == ExpressionType.Dictionary || value.Type == ExpressionType.Array)
+                        return value;
+                }
             }
 
             switch (value.Type)
@@ -172,12 +182,6 @@ namespace RATools.Parser.Internal
                 case ExpressionType.StringConstant:
                     // already a basic type, do nothing
                     break;
-
-                case ExpressionType.Array:
-                case ExpressionType.Dictionary:
-                    // pass array and dictionary by reference so function can modify them.
-                    // also eliminates copying the entire object to pass it as a parameter.
-                    return value;
 
                 default:
                     // not a basic type, evaluate it

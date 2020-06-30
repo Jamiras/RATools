@@ -112,10 +112,12 @@ namespace RATools.Test.Parser.Internal
             Assert.That(result, Is.InstanceOf<DictionaryExpression>());
             var dictResult = (DictionaryExpression)result;
             Assert.That(dictResult.Entries.Count, Is.EqualTo(2));
-            Assert.That(dictResult.Entries[0].Key, Is.EqualTo(value1));
-            Assert.That(dictResult.Entries[0].Value, Is.EqualTo(value3));
-            Assert.That(dictResult.Entries[1].Key, Is.EqualTo(value4));
-            Assert.That(dictResult.Entries[1].Value, Is.EqualTo(value2));
+
+            // resulting list will be sorted for quicker lookups
+            Assert.That(dictResult.Entries[0].Key, Is.EqualTo(value4));
+            Assert.That(dictResult.Entries[0].Value, Is.EqualTo(value2));
+            Assert.That(dictResult.Entries[1].Key, Is.EqualTo(value1));
+            Assert.That(dictResult.Entries[1].Value, Is.EqualTo(value3));
         }
 
         [Test]

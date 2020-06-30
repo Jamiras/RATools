@@ -64,7 +64,7 @@ namespace RATools.Parser.Internal
                 if (value.Type == ExpressionType.ParseError)
                     break;
 
-                dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+                dict.Entries.Add(new DictionaryEntry { Key = key, Value = value });
 
                 SkipWhitespace(tokenizer);
                 if (tokenizer.NextChar == '}')
@@ -108,48 +108,57 @@ namespace RATools.Parser.Internal
                 ExpressionBase key, value;
                 key = entry.Key;
 
-                dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
-
-                if (key.Type == ExpressionType.FunctionCall)
-                {
-                    var expression = (FunctionCallExpression)key;
-                    if (!expression.ReplaceVariables(dictScope, out value))
-                    {
-                        result = value;
-                        return false;
-                    }
-
-                    key = value;
-                }
-
-                if (!key.ReplaceVariables(dictScope, out key))
-                {
-                    result = key;
-                    return false;
-                }
-
                 switch (key.Type)
                 {
                     case ExpressionType.StringConstant:
-                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
-                        break;
-
                     case ExpressionType.IntegerConstant:
-                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
+                        // simple data types, do nothing
                         break;
 
                     default:
-                        result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
-                        return false;
+                        dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
+                        if (!key.ReplaceVariables(dictScope, out value))
+                        {
+                            result = value;
+                            return false;
+                        }
+
+                        if (value.Type != ExpressionType.StringConstant && value.Type != ExpressionType.IntegerConstant)
+                        {
+                            result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
+                            return false;
+                        }
+
+                        key = value;
+                        break;
                 }
 
-                if (!entry.Value.ReplaceVariables(dictScope, out value))
+                switch (entry.Value.Type)
                 {
-                    result = value;
-                    return false;
+                    case ExpressionType.StringConstant:
+                    case ExpressionType.IntegerConstant:
+                        // simple data types, avoid overhead of generating an AssignmentExpression
+                        value = entry.Value;
+                        break;
+
+                    default:
+                        if (key.Type == ExpressionType.IntegerConstant)
+                            dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
+                        else // key.Type == ExpressionType.StringConstant
+                            dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
+
+                        if (!entry.Value.ReplaceVariables(dictScope, out value))
+                        {
+                            result = value;
+                            return false;
+                        }
+                        break;
                 }
 
-                if (entries.Exists(e => e.Key == key))
+                var newEntry = new DictionaryEntry { Key = key, Value = value };
+
+                var index = entries.BinarySearch(newEntry, newEntry);
+                if (index >= 0)
                 {
                     StringBuilder builder = new StringBuilder();
                     key.AppendString(builder);
@@ -158,7 +167,7 @@ namespace RATools.Parser.Internal
                     return false;
                 }
 
-                entries.Add(new DictionaryEntry { Key = key, Value = value });
+                entries.Insert(~index, newEntry);
             }
 
             result = new DictionaryExpression { Entries = entries };
@@ -191,7 +200,7 @@ namespace RATools.Parser.Internal
         }
 
         [DebuggerDisplay("{Key}: {Value}")]
-        public class DictionaryEntry
+        public class DictionaryEntry : IComparer<DictionaryEntry>
         {
             /// <summary>
             /// Gets or sets the key.
@@ -202,6 +211,26 @@ namespace RATools.Parser.Internal
             /// Gets or sets the value.
             /// </summary>
             public virtual ExpressionBase Value { get; set; }
+
+            int IComparer<DictionaryEntry>.Compare(DictionaryEntry x, DictionaryEntry y)
+            {
+                if (x.Key.Type != y.Key.Type)
+                    return ((int)x.Key.Type - (int)y.Key.Type);
+
+                switch (x.Key.Type)
+                {
+                    case ExpressionType.IntegerConstant:
+                        return ((IntegerConstantExpression)x.Key).Value -
+                            ((IntegerConstantExpression)y.Key).Value;
+
+                    case ExpressionType.StringConstant:
+                        return string.Compare(((StringConstantExpression)x.Key).Value,
+                            ((StringConstantExpression)y.Key).Value);
+
+                    default:
+                        return 0;
+                }
+            }
         }
     }
 }
