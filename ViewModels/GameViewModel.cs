@@ -184,7 +184,25 @@ namespace RATools.ViewModels
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
         internal TinyDictionary<int, string> Notes { get; private set; }
-        
+
+        public int CompileProgress { get; internal set; }
+        public int CompileProgressLine { get; internal set; }
+
+        internal void UpdateCompileProgress(int progress, int line)
+        {
+            if (CompileProgress != progress)
+            {
+                CompileProgress = progress;
+                OnPropertyChanged(() => CompileProgress);
+            }
+
+            if (CompileProgressLine != line)
+            {
+                CompileProgressLine = line;
+                OnPropertyChanged(() => CompileProgressLine);
+            }
+        }
+
         public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<GeneratedItemViewModelBase>), new GeneratedItemViewModelBase[0]);
         public IEnumerable<GeneratedItemViewModelBase> Editors
         {

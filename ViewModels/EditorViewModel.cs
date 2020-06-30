@@ -42,20 +42,95 @@ namespace RATools.ViewModels
 
         private readonly GameViewModel _owner;
 
+        private class ScriptInterpreterCallback : IScriptInterpreterCallback
+        {
+            public ScriptInterpreterCallback(EditorViewModel owner, ContentChangedEventArgs e)
+            {
+                _owner = owner;
+                _args = e;
+            }
+
+            private EditorViewModel _owner;
+            private ContentChangedEventArgs _args;
+
+            public bool IsAborted
+            {
+                get { return _args.IsAborted; }
+            }
+
+            public void UpdateProgress(int percentage, int line)
+            {
+                _owner.UpdateProgress(percentage, line);
+            }
+        }
+
         protected override void OnUpdateSyntax(ContentChangedEventArgs e)
         {
+            // show progress bar
+            UpdateProgress(1, 0);
+
+            // parse immediately so we can update the syntax highlighting
             var parser = new AchievementScriptParser();
             _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Content));
 
+            // if more changes have been made, bail
             if (e.IsAborted)
-                return;
+            {
+                // make sure the progress bar is hidden
+                UpdateProgress(0, 0);
+            }
+            else if (!e.IsWhitespaceOnlyChange)
+            {
+                // make sure to at least show the script file in the editor list
+                if (!_owner.Editors.Any())
+                    _owner.PopulateEditorList(null);
 
-            var interpreter = new AchievementScriptInterpreter();
-            interpreter.Run(_parsedContent, out _scope);
+                // running the script can take a lot of time, push that work onto a background thread
+                ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(() =>
+                {
+                    if (!e.IsAborted)
+                    {
+                        // run the script
+                        var callback = new ScriptInterpreterCallback(this, e);
+                        var interpreter = new AchievementScriptInterpreter();
+                        interpreter.Run(_parsedContent, callback, out _scope);
 
-            if (e.IsAborted)
-                return;
+                        if (!e.IsAborted)
+                        {
+                            UpdateProgress(100, 0);
 
+                            // report any errors
+                            UpdateErrorList();
+
+                            if (!e.IsAborted)
+                            {
+                                // wait a short while before updating the editor list
+                                System.Threading.Thread.Sleep(700);
+
+                                if (!e.IsAborted)
+                                {
+                                    // update the editor list
+                                    _owner.PopulateEditorList(interpreter);
+                                }
+                            }
+                        }
+                    }
+
+                    // make sure the progress bar is hidden
+                    UpdateProgress(0, 0);
+                });
+            }
+
+            base.OnUpdateSyntax(e);
+        }
+
+        internal void UpdateProgress(int progress, int line)
+        {
+            _owner.UpdateCompileProgress(progress, line);
+        }
+
+        private void UpdateErrorList()
+        {
             ServiceRepository.Instance.FindService<IBackgroundWorkerService>().InvokeOnUiThread(() =>
             {
                 ErrorsToolWindow.References.Clear();
@@ -94,24 +169,6 @@ namespace RATools.ViewModels
                     }
                 }
             });
-
-            if (e.IsAborted)
-                return;
-
-            if (e.IsWhitespaceOnlyChange)
-                return;
-
-            // wait a short while before updating the editor list
-            ServiceRepository.Instance.FindService<ITimerService>().Schedule(() =>
-            {
-                if (e.IsAborted)
-                    return;
-
-                _owner.PopulateEditorList(interpreter);
-
-            }, TimeSpan.FromMilliseconds(700));
-
-            base.OnUpdateSyntax(e);
         }
 
         protected override void OnContentChanged(ContentChangedEventArgs e)
