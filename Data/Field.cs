@@ -98,14 +98,29 @@ namespace RATools.Data
                 return;
             }
 
-            if (Type == FieldType.PreviousValue)
-                builder.Append("prev(");
-            else if (Type == FieldType.PriorValue)
-                builder.Append("prior(");
+            bool needsClosingParenthesis = true;
+            switch (Type)
+            {
+                case FieldType.PreviousValue:
+                    builder.Append("prev(");
+                    break;
+
+                case FieldType.PriorValue:
+                    builder.Append("prior(");
+                    break;
+
+                case FieldType.BinaryCodedDecimal:
+                    builder.Append("bcd(");
+                    break;
+
+                default:
+                    needsClosingParenthesis = false;
+                    break;
+            }
 
             AppendMemoryReference(builder, Value, Size, addAddress);
 
-            if (Type == FieldType.PreviousValue || Type == FieldType.PriorValue)
+            if (needsClosingParenthesis)
                 builder.Append(')');
         }
 
@@ -180,16 +195,19 @@ namespace RATools.Data
 
                 case FieldSize.LowNibble:
                 case FieldSize.HighNibble:
-                    return 15;
+                    return 0x0F;
 
                 case FieldSize.Byte:
-                    return 255;
+                    return 0xFF;
 
                 case FieldSize.Word:
-                    return 65535;
+                    return 0xFFFF;
+
+                case FieldSize.TByte:
+                    return 0xFFFFFF;
 
                 default:
-                    return uint.MaxValue;
+                    return 0xFFFFFFFF;
             }
         }
 
@@ -205,6 +223,7 @@ namespace RATools.Data
                     case FieldType.MemoryAddress:
                     case FieldType.PreviousValue:
                     case FieldType.PriorValue:
+                    case FieldType.BinaryCodedDecimal:
                         return true;
 
                     default:
@@ -221,16 +240,27 @@ namespace RATools.Data
         /// </remarks>
         internal void Serialize(StringBuilder builder)
         {
-            if (Type == FieldType.Value)
+            switch (Type)
             {
-                builder.Append(Value);
-                return;
-            }
+                case FieldType.Value:
+                    builder.Append(Value);
+                    return;
 
-            if (Type == FieldType.PreviousValue)
-                builder.Append('d');
-            else if (Type == FieldType.PriorValue)
-                builder.Append('p');
+                case FieldType.PreviousValue:
+                    builder.Append('d');
+                    break;
+
+                case FieldType.PriorValue:
+                    builder.Append('p');
+                    break;
+
+                case FieldType.BinaryCodedDecimal:
+                    builder.Append('b');
+                    break;
+
+                default:
+                    break;
+            }
 
             builder.Append("0x");
 
@@ -272,6 +302,11 @@ namespace RATools.Data
             else if (tokenizer.NextChar == 'p')
             {
                 fieldType = FieldType.PriorValue;
+                tokenizer.Advance();
+            }
+            else if (tokenizer.NextChar == 'b')
+            {
+                fieldType = FieldType.BinaryCodedDecimal;
                 tokenizer.Advance();
             }
 
@@ -483,6 +518,11 @@ namespace RATools.Data
         /// The last differing value at a memory address.
         /// </summary>
         PriorValue = 4, // Prior
+
+        /// <summary>
+        /// The current value at a memory address decoded from BCD.
+        /// </summary>
+        BinaryCodedDecimal = 5,
     }
 
     /// <summary>

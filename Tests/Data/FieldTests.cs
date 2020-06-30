@@ -26,6 +26,7 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.DWord, FieldType.MemoryAddress, 0x1234, "dword(0x001234)")]
         [TestCase(FieldSize.Byte, FieldType.PreviousValue, 0x1234, "prev(byte(0x001234))")]
         [TestCase(FieldSize.Byte, FieldType.PriorValue, 0x1234, "prior(byte(0x001234))")]
+        [TestCase(FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234, "bcd(byte(0x001234))")]
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "byte(0x123456)")]
         public void TestToString(FieldSize fieldSize, FieldType fieldType, int value, string expected)
@@ -86,6 +87,7 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.DWord, FieldType.MemoryAddress, 0x1234, "0xX001234")]
         [TestCase(FieldSize.Byte, FieldType.PreviousValue, 0x1234, "d0xH001234")]
         [TestCase(FieldSize.Byte, FieldType.PriorValue, 0x1234, "p0xH001234")]
+        [TestCase(FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234, "b0xH001234")]
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "0xH123456")]
         public void TestSerialize(FieldSize fieldSize, FieldType fieldType, int value, string expected)
@@ -113,6 +115,7 @@ namespace RATools.Tests.Data
         [TestCase("0xX001234", FieldSize.DWord, FieldType.MemoryAddress, 0x1234)]
         [TestCase("d0xH001234", FieldSize.Byte, FieldType.PreviousValue, 0x1234)]
         [TestCase("p0xH001234", FieldSize.Byte, FieldType.PriorValue, 0x1234)]
+        [TestCase("b0xH001234", FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234)]
         [TestCase("4660", FieldSize.None, FieldType.Value, 0x1234)]
         [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456)]
         public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, int value)
