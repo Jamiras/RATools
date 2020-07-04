@@ -39,16 +39,6 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
                 return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
 
-            if (builder.CoreRequirements.Count > 1)
-            {
-                var last = builder.CoreRequirements.Last();
-                foreach (var requirement in builder.CoreRequirements)
-                {
-                    if (requirement.Type == RequirementType.None && !ReferenceEquals(requirement, last))
-                        requirement.Type = RequirementType.AndNext;
-                }
-            }
-
             var error = builder.CollapseForSubClause();
             if (error != null)
                 return new ParseErrorExpression(error.Message, condition);
