@@ -99,6 +99,7 @@
     <Compile Include="Services\ISettings.cs" />
     <Compile Include="Services\RAWebCache.cs" />
     <Compile Include="Services\Settings.cs" />
+    <Compile Include="Services\Theme.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />

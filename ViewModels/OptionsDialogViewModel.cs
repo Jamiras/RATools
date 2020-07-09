@@ -5,8 +5,11 @@ using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
 using RATools.Services;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
+using System.Windows.Media;
 
 namespace RATools.ViewModels
 {
@@ -41,6 +44,21 @@ namespace RATools.ViewModels
 
             AddDirectoryCommand = new DelegateCommand(AddDirectory);
             RemoveDirectoryCommand = new DelegateCommand(RemoveDirectory);
+
+            var colors = new List<ColorViewModel>();
+            colors.Add(new ColorViewModel(Theme.Color.EditorBackground, "Editor Background"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorForeground, "Editor Foreground"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorSelection, "Editor Selection"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorLineNumbers, "Editor Line Numbers"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorKeyword, "Editor Keyword"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorComment, "Editor Comment"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorIntegerConstant, "Editor Integer Constant"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorStringConstant, "Editor String Constant"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorVariable, "Editor Variable"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorFunctionDefinition, "Editor Function Definition"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorFunctionCall, "Editor Function Call"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorError, "Editor Error"));
+            Colors = colors;
         }
 
         private readonly ISettings _settings;
@@ -98,6 +116,72 @@ namespace RATools.ViewModels
             var selectedDirectory = SelectedDirectory;
             if (selectedDirectory != null)
                 Directories.Remove(selectedDirectory);
+        }
+
+        public class ColorViewModel : ViewModelBase
+        {
+            public ColorViewModel(Theme.Color color, string label)
+            {
+                Label = label;
+                _themeColor = color;
+                _color = _originalColor = Theme.GetColor(color);
+
+                ChangeColorCommand = new DelegateCommand(ChangeColor);
+            }
+
+            public void Reset()
+            {
+                if (_color != _originalColor)
+                    Theme.SetColor(_themeColor, _originalColor);
+            }
+
+            /// <summary>
+            /// Gets or sets the item Label.
+            /// </summary>
+            public string Label { get; private set; }
+
+            /// <summary>
+            /// Gets or sets the current Color.
+            /// </summary>
+            public Color Color
+            {
+                get { return _color; }
+                set
+                {
+                    if (_color != value)
+                    {
+                        _color = value;
+                        OnPropertyChanged(() => Color);
+
+                        Theme.SetColor(_themeColor, value);
+                    }
+                }
+            }
+            [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+            private Color _color;
+
+            private readonly Theme.Color _themeColor;
+            private Color _originalColor;
+
+            public CommandBase ChangeColorCommand { get; private set; }
+            private void ChangeColor()
+            {
+                var vmColorPicker = new ColorPickerDialogViewModel();
+                vmColorPicker.SelectedColor = Color;
+
+                if (vmColorPicker.ShowDialog() == DialogResult.Ok)
+                    Color = vmColorPicker.SelectedColor;
+            }
+        }
+
+        public IEnumerable<ColorViewModel> Colors { get; private set; }
+
+        protected override void ExecuteCancelCommand()
+        {
+            foreach (var color in Colors)
+                color.Reset();
+
+            base.ExecuteCancelCommand();
         }
     }
 }
