@@ -1,6 +1,5 @@
 ﻿using Jamiras.Components;
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Windows.Media;
@@ -13,8 +12,9 @@ namespace RATools.Services
         {
             None,
 
-            EditorBackground,
-            EditorForeground,
+            Background,
+            Foreground,
+
             EditorSelection,
             EditorLineNumbers,
 
@@ -25,6 +25,9 @@ namespace RATools.Services
             EditorVariable,
             EditorFunctionDefinition,
             EditorFunctionCall,
+
+            DiffAdded,
+            DiffRemoved,
         }
 
         static Theme()
@@ -34,8 +37,8 @@ namespace RATools.Services
 
         public static void InitDefault()
         {
-            SetColor(Color.EditorBackground, Colors.White);
-            SetColor(Color.EditorForeground, Colors.Black);
+            SetColor(Color.Background, Colors.White);
+            SetColor(Color.Foreground, Colors.Black);
             SetColor(Color.EditorSelection, Colors.LightGray);
             SetColor(Color.EditorLineNumbers, Colors.LightGray);
 
@@ -47,13 +50,16 @@ namespace RATools.Services
             SetColor(Color.EditorFunctionDefinition, Colors.DarkViolet);
             SetColor(Color.EditorFunctionCall, Colors.DarkViolet);
 
+            SetColor(Color.DiffAdded, System.Windows.Media.Color.FromRgb(0x00, 0xD0, 0x40));
+            SetColor(Color.DiffRemoved, System.Windows.Media.Color.FromRgb(0xE0, 0x40, 0x40));
+
             _themeName = "Default";
         }
 
         public static void InitDark()
         {
-            SetColor(Color.EditorBackground, System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
-            SetColor(Color.EditorForeground, System.Windows.Media.Color.FromRgb(0x90, 0x90, 0x90));
+            SetColor(Color.Background, System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
+            SetColor(Color.Foreground, System.Windows.Media.Color.FromRgb(0x90, 0x90, 0x90));
             SetColor(Color.EditorSelection, System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
             SetColor(Color.EditorLineNumbers, System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
 
@@ -64,6 +70,9 @@ namespace RATools.Services
             SetColor(Color.EditorVariable, System.Windows.Media.Color.FromRgb(0x90, 0xA0, 0xC0));
             SetColor(Color.EditorFunctionDefinition, System.Windows.Media.Color.FromRgb(0x50, 0xF0, 0x80));
             SetColor(Color.EditorFunctionCall, System.Windows.Media.Color.FromRgb(0xC0, 0xB8, 0xB8));
+
+            SetColor(Color.DiffAdded, System.Windows.Media.Color.FromRgb(0x20, 0x80, 0x40));
+            SetColor(Color.DiffRemoved, System.Windows.Media.Color.FromRgb(0xA0, 0x30, 0x20));
 
             _themeName = "Dark";
         }

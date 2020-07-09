@@ -93,7 +93,7 @@
                                                 <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                            <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
+                                                            <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffRemovedBrush, ElementName=gameGrid}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -105,7 +105,7 @@
                                     <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                                 <DataTemplate x:Key="generatedOnlyRichPresenceLine">
-                                    <TextBlock Text="{Binding Generated}" Foreground="{StaticResource newValueColor}" 
+                                    <TextBlock Text="{Binding Generated}" Foreground="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" 
                                                TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                             </ItemsControl.Resources>

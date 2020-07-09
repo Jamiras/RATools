@@ -46,8 +46,8 @@ namespace RATools.ViewModels
             RemoveDirectoryCommand = new DelegateCommand(RemoveDirectory);
 
             var colors = new List<ColorViewModel>();
-            colors.Add(new ColorViewModel(Theme.Color.EditorBackground, "Editor Background"));
-            colors.Add(new ColorViewModel(Theme.Color.EditorForeground, "Editor Foreground"));
+            colors.Add(new ColorViewModel(Theme.Color.Background, "Background"));
+            colors.Add(new ColorViewModel(Theme.Color.Foreground, "Foreground"));
             colors.Add(new ColorViewModel(Theme.Color.EditorSelection, "Editor Selection"));
             colors.Add(new ColorViewModel(Theme.Color.EditorLineNumbers, "Editor Line Numbers"));
             colors.Add(new ColorViewModel(Theme.Color.EditorKeyword, "Editor Keyword"));
@@ -57,6 +57,8 @@ namespace RATools.ViewModels
             colors.Add(new ColorViewModel(Theme.Color.EditorVariable, "Editor Variable"));
             colors.Add(new ColorViewModel(Theme.Color.EditorFunctionDefinition, "Editor Function Definition"));
             colors.Add(new ColorViewModel(Theme.Color.EditorFunctionCall, "Editor Function Call"));
+            colors.Add(new ColorViewModel(Theme.Color.DiffAdded, "Change Added"));
+            colors.Add(new ColorViewModel(Theme.Color.DiffRemoved, "Change Removed"));
             Colors = colors;
         }
 

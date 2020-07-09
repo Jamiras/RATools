@@ -13,6 +13,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows.Media;
 
 namespace RATools.ViewModels
 {
@@ -24,6 +25,7 @@ namespace RATools.ViewModels
             GameId = gameId;
             Title = title;
             Script = new ScriptViewModel(this);
+            Resources = new ResourceContainer();
             SelectedEditor = Script;
             Notes = new TinyDictionary<int, string>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
@@ -485,5 +487,44 @@ namespace RATools.ViewModels
 
             _logger.WriteVerbose(String.Format("Merged {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
         }
+
+        public class ResourceContainer : PropertyChangedObject
+        {
+            public ResourceContainer()
+            {
+                DiffAddedBrush = CreateBrush(Theme.Color.DiffAdded);
+                DiffRemovedBrush = CreateBrush(Theme.Color.DiffRemoved);
+
+                Theme.ColorChanged += Theme_ColorChanged;
+            }
+
+            private void Theme_ColorChanged(object sender, Theme.ColorChangedEventArgs e)
+            {
+                switch (e.Color)
+                {
+                    case Theme.Color.DiffAdded:
+                        DiffAddedBrush = CreateBrush(Theme.Color.DiffAdded);
+                        OnPropertyChanged(() => DiffAddedBrush);
+                        break;
+
+                    case Theme.Color.DiffRemoved:
+                        DiffRemovedBrush = CreateBrush(Theme.Color.DiffRemoved);
+                        OnPropertyChanged(() => DiffRemovedBrush);
+                        break;
+                }
+            }
+
+            private static Brush CreateBrush(Theme.Color color)
+            {
+                var brush = new SolidColorBrush(Theme.GetColor(color));
+                brush.Freeze();
+                return brush;
+            }
+
+            public Brush DiffAddedBrush { get; private set; }
+            public Brush DiffRemovedBrush { get; private set; }
+        }
+
+        public ResourceContainer Resources { get; private set; }
     }
 }

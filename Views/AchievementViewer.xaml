@@ -125,7 +125,7 @@
                                     <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                                <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -136,7 +136,7 @@
                                     <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
+                                                <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffRemovedBrush, ElementName=gameGrid}" />
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -196,7 +196,7 @@
                         <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorTitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
                                     <Setter Property="ToolTip" Value="{StaticResource modifiedTitleToolTip}" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -209,7 +209,7 @@
                         <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
                                     <Setter Property="ToolTip" Value="{StaticResource modifiedDescriptionToolTip}" />
                                 </DataTrigger>
                             </Style.Triggers>
@@ -222,7 +222,7 @@
                         <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
-                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
                                     <Setter Property="ToolTip" Value="{StaticResource modifiedPointsToolTip}" />
                                 </DataTrigger>
                             </Style.Triggers>

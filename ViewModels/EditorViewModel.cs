@@ -37,8 +37,8 @@ namespace RATools.ViewModels
 
             foreach (var kvp in _themeColors)
                Style.SetCustomColor((int)kvp.Value, Theme.GetColor(kvp.Key));
-            Style.Background = Theme.GetColor(Theme.Color.EditorBackground);
-            Style.Foreground = Theme.GetColor(Theme.Color.EditorForeground);
+            Style.Background = Theme.GetColor(Theme.Color.Background);
+            Style.Foreground = Theme.GetColor(Theme.Color.Foreground);
             Style.Selection = Theme.GetColor(Theme.Color.EditorSelection);
             Style.LineNumber = Theme.GetColor(Theme.Color.EditorLineNumbers);
 
@@ -61,11 +61,11 @@ namespace RATools.ViewModels
         {
             switch (e.Color)
             {
-                case Theme.Color.EditorBackground:
+                case Theme.Color.Background:
                     Style.Background = e.NewValue;
                     break;
 
-                case Theme.Color.EditorForeground:
+                case Theme.Color.Foreground:
                     Style.Foreground = e.NewValue;
                     break;
 
