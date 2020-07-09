@@ -1,4 +1,8 @@
-﻿using System;
+﻿using Jamiras.Components;
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Windows.Media;
 
 namespace RATools.Services
@@ -21,24 +25,47 @@ namespace RATools.Services
             EditorVariable,
             EditorFunctionDefinition,
             EditorFunctionCall,
-            EditorError,
         }
 
         static Theme()
         {
-            _colors[(int)Color.EditorBackground] = Colors.White;
-            _colors[(int)Color.EditorForeground] = Colors.Black;
-            _colors[(int)Color.EditorSelection] = Colors.LightGray;
-            _colors[(int)Color.EditorLineNumbers] = Colors.LightGray;
+            InitDefault();
+        }
 
-            _colors[(int)Color.EditorKeyword] = Colors.DarkGoldenrod;
-            _colors[(int)Color.EditorComment] = Colors.DarkCyan;
-            _colors[(int)Color.EditorIntegerConstant] = Colors.DarkGray;
-            _colors[(int)Color.EditorStringConstant] = Colors.DarkSeaGreen;
-            _colors[(int)Color.EditorVariable] = Colors.Violet;
-            _colors[(int)Color.EditorFunctionDefinition] = Colors.DarkViolet;
-            _colors[(int)Color.EditorFunctionCall] = Colors.DarkViolet;
-            _colors[(int)Color.EditorError] = Colors.Red;
+        public static void InitDefault()
+        {
+            SetColor(Color.EditorBackground, Colors.White);
+            SetColor(Color.EditorForeground, Colors.Black);
+            SetColor(Color.EditorSelection, Colors.LightGray);
+            SetColor(Color.EditorLineNumbers, Colors.LightGray);
+
+            SetColor(Color.EditorKeyword, Colors.DarkGoldenrod);
+            SetColor(Color.EditorComment, Colors.DarkCyan);
+            SetColor(Color.EditorIntegerConstant, Colors.DarkGray);
+            SetColor(Color.EditorStringConstant, Colors.DarkSeaGreen);
+            SetColor(Color.EditorVariable, Colors.Violet);
+            SetColor(Color.EditorFunctionDefinition, Colors.DarkViolet);
+            SetColor(Color.EditorFunctionCall, Colors.DarkViolet);
+
+            _themeName = "Default";
+        }
+
+        public static void InitDark()
+        {
+            SetColor(Color.EditorBackground, System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
+            SetColor(Color.EditorForeground, System.Windows.Media.Color.FromRgb(0x90, 0x90, 0x90));
+            SetColor(Color.EditorSelection, System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
+            SetColor(Color.EditorLineNumbers, System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
+
+            SetColor(Color.EditorKeyword, System.Windows.Media.Color.FromRgb(0xC0, 0x80, 0xC0));
+            SetColor(Color.EditorComment, System.Windows.Media.Color.FromRgb(0x60, 0x70, 0xA0));
+            SetColor(Color.EditorIntegerConstant, System.Windows.Media.Color.FromRgb(0x70, 0x70, 0x80));
+            SetColor(Color.EditorStringConstant, System.Windows.Media.Color.FromRgb(0xC0, 0xC0, 0x80));
+            SetColor(Color.EditorVariable, System.Windows.Media.Color.FromRgb(0x90, 0xA0, 0xC0));
+            SetColor(Color.EditorFunctionDefinition, System.Windows.Media.Color.FromRgb(0x50, 0xF0, 0x80));
+            SetColor(Color.EditorFunctionCall, System.Windows.Media.Color.FromRgb(0xC0, 0xB8, 0xB8));
+
+            _themeName = "Dark";
         }
 
         public static System.Windows.Media.Color GetColor(Color color)
@@ -53,10 +80,13 @@ namespace RATools.Services
             {
                 _colors[(int)color] = value;
                 OnColorChanged(new ColorChangedEventArgs(color, value, oldValue));
+
+                _themeName = "Custom";
             }
         }
 
         private static readonly System.Windows.Media.Color[] _colors = new System.Windows.Media.Color[16];
+        private static string _themeName;
 
         public class ColorChangedEventArgs : EventArgs
         {
@@ -79,5 +109,67 @@ namespace RATools.Services
         }
 
         public static event EventHandler<ColorChangedEventArgs> ColorChanged;
+
+        public static string Serialize()
+        {
+            if (_themeName != "Custom")
+                return _themeName;
+
+            var builder = new StringBuilder();
+            foreach (Color color in Enum.GetValues(typeof(Color)))
+            {
+                if (color == Color.None)
+                    continue;
+
+                if (builder.Length > 0)
+                    builder.Append(',');
+
+                var value = GetColor(color);
+                builder.Append(color.ToString());
+                builder.Append(':');
+                builder.AppendFormat("{0:X2}{1:X2}{2:X2}", value.R, value.G, value.B);
+            }
+
+            return builder.ToString();
+        }
+
+        public static void Deserialize(string serialized)
+        {
+            if (String.IsNullOrEmpty(serialized) || serialized == "Default")
+            {
+                InitDefault();
+                return;
+            }
+
+            if (serialized == "Dark")
+            {
+                InitDark();
+                return;
+            }
+
+            InitDefault();
+
+            var tokenizer = Tokenizer.CreateTokenizer(serialized);
+            while (tokenizer.NextChar != '\0')
+            {
+                var setting = tokenizer.ReadTo(':');
+                tokenizer.Advance();
+                var value = tokenizer.ReadTo(',');
+                tokenizer.Advance();
+
+                Color color;
+                if (Enum.TryParse(setting.ToString(), out color))
+                {
+                    var rtb = value.ToString();
+                    byte r, g, b;
+                    if (Byte.TryParse(rtb.Substring(0, 2), NumberStyles.HexNumber, null, out r) &&
+                        Byte.TryParse(rtb.Substring(2, 2), NumberStyles.HexNumber, null, out g) &&
+                        Byte.TryParse(rtb.Substring(4, 2), NumberStyles.HexNumber, null, out b))
+                    {
+                        SetColor(color, System.Windows.Media.Color.FromRgb(r, g, b));
+                    }
+                }
+            }
+        }
     }
 }

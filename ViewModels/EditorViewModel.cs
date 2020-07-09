@@ -31,7 +31,6 @@ namespace RATools.ViewModels
                 _themeColors[Theme.Color.EditorVariable] = ExpressionType.Variable;
                 _themeColors[Theme.Color.EditorFunctionDefinition] = ExpressionType.FunctionDefinition;
                 _themeColors[Theme.Color.EditorFunctionCall] = ExpressionType.FunctionCall;
-                _themeColors[Theme.Color.EditorError] = ExpressionType.ParseError;
             }
 
             Theme.ColorChanged += Theme_ColorChanged;

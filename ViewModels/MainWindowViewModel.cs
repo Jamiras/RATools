@@ -43,6 +43,7 @@ namespace RATools.ViewModels
             var settings = new Settings();
             ServiceRepository.Instance.RegisterInstance<ISettings>(settings);
             ShowHexValues = settings.HexValues;
+            Theme.Deserialize(settings.Colors);
 
             var persistance = ServiceRepository.Instance.FindService<IPersistantDataRepository>();
             var recent = persistance.GetValue("RecentFiles");

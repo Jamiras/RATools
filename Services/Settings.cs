@@ -55,6 +55,10 @@ namespace RATools.Services
                 string apiKey;
                 if (values.TryGetValue("ApiKey", out apiKey) && apiKey.Length > 0)
                     ApiKey = apiKey;
+
+                string colors;
+                if (values.TryGetValue("Colors", out colors) && colors.Length > 0)
+                    Colors = colors;
             }
             catch (FileNotFoundException)
             {
@@ -90,6 +94,8 @@ namespace RATools.Services
 
             values.Remove("RACacheDirectory");
 
+            values["Colors"] = Colors;
+
             file.Write(values);
         }
 
@@ -102,6 +108,8 @@ namespace RATools.Services
         public string UserName { get; set; }
 
         public string ApiKey { get; set; }
+
+        public string Colors { get; set; }
 
         public bool HexValues
         {

@@ -57,7 +57,6 @@ namespace RATools.ViewModels
             colors.Add(new ColorViewModel(Theme.Color.EditorVariable, "Editor Variable"));
             colors.Add(new ColorViewModel(Theme.Color.EditorFunctionDefinition, "Editor Function Definition"));
             colors.Add(new ColorViewModel(Theme.Color.EditorFunctionCall, "Editor Function Call"));
-            colors.Add(new ColorViewModel(Theme.Color.EditorError, "Editor Error"));
             Colors = colors;
         }
 
@@ -90,6 +89,8 @@ namespace RATools.ViewModels
             settings.EmulatorDirectories.Clear();
             foreach (var directoryViewModel in Directories)
                 settings.EmulatorDirectories.Add(directoryViewModel.Path);
+
+            settings.Colors = Theme.Serialize();
 
             settings.Save();
         }
