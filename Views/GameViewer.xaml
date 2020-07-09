@@ -9,7 +9,7 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate x:Key="editorRowTemplate">
-        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}" Height="13" Margin="-2,0,0,0">
+        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}" Height="13" Margin="-1,0,0,0">
             <Grid.Resources>
                 <ContextMenu x:Key="updateLocalContextMenu" DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
                     <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
@@ -42,7 +42,7 @@
                 <ColumnDefinition Width="30" />
             </Grid.ColumnDefinitions>
 
-            <!-- Modified -->
+            <!-- Modified (explicitly gray to match images) -->
             <TextBlock FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
                        ToolTip="{Binding ModificationMessage}" Margin="-2,-2,0,0">
                 <TextBlock.Style>
@@ -117,12 +117,22 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Grid Margin="4" Background="Red" x:Name="maxAchievementRowWidth" Height="10" />
+                <Grid Margin="6" Background="Red" x:Name="maxAchievementRowWidth" Height="10" />
                 <ScrollBar Grid.Column="2" Orientation="Vertical" />
             </Grid>
 
             <ListBox ItemsSource="{Binding Editors}" SelectedItem="{Binding SelectedEditor}" HorizontalContentAlignment="Stretch"
-                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsGrid" BorderBrush="#808080" />
+                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsGrid" BorderBrush="#808080" 
+                     ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                     Background="{Binding Script.Editor.Resources.Background.Brush}"
+                     Foreground="{Binding Script.Editor.Resources.Foreground.Brush}">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="BorderThickness" Value="0" />
+                        <Setter Property="Margin" Value="1" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
 
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" ResizeDirection="Columns" />
 
