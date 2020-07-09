@@ -6,4 +6,10 @@
     <Style TargetType="{x:Type TextBlock}" x:Key="themedTextBlock">
         <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
     </Style>
+
+    <Style TargetType="{x:Type Border}" x:Key="editorBorder">
+        <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
+        <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
+        <Setter Property="BorderThickness" Value="1" />
+    </Style>
 </ResourceDictionary>

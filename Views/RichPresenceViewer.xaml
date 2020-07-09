@@ -8,8 +8,8 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
-        <Border BorderThickness="1" BorderBrush="Gray">
-            <Grid Background="White">
+        <Border Style="{StaticResource editorBorder}">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -22,8 +22,8 @@
                 </Grid.ColumnDefinitions>
 
                 <Image Width="48" Height="48" Grid.RowSpan="3" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
-                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0">
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" Style="{StaticResource themedTextBlock}" />
+                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0" Style="{StaticResource themedTextBlock}">
                     <TextBlock Text="{Binding RichPresenceLength}" />
                     <TextBlock Text="/" />
                     <TextBlock Text="{Binding RichPresenceMaxLength}" />
@@ -47,7 +47,7 @@
                         </Grid.ColumnDefinitions>
 
 
-                        <TextBlock Grid.Column="0" Margin="0,0,0,6" VerticalAlignment="Bottom">
+                        <TextBlock Grid.Column="0" Margin="0,0,0,6" VerticalAlignment="Bottom" Style="{StaticResource themedTextBlock}">
                             <TextBlock FontSize="12" FontStyle="Italic"  Text="{Binding GeneratedSource}" />
                             <TextBlock FontSize="10">
                                 <TextBlock.Style>
@@ -65,7 +65,8 @@
                                 </Hyperlink>
                             </TextBlock>
                         </TextBlock>
-                        <TextBlock Grid.Column="1" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding CompareSource}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom"
+                                   Text="{Binding CompareSource}" Style="{StaticResource themedTextBlock}" />
 
                         <ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding Lines}" HorizontalAlignment="Stretch">
                             <ItemsControl.Resources>
@@ -77,7 +78,7 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Generated}" TextWrapping="Wrap" Margin="0,0,4,0">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                             <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -88,7 +89,7 @@
                                         </TextBlock>
                                         <TextBlock Grid.Column="1" Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,8,0">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                             <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
@@ -100,10 +101,11 @@
                                     </Grid>
                                 </DataTemplate>
                                 <DataTemplate x:Key="unmodifiedRichPresenceLine">
-                                    <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                    <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                                 <DataTemplate x:Key="generatedOnlyRichPresenceLine">
-                                    <TextBlock Text="{Binding Generated}" Foreground="{StaticResource newValueColor}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                    <TextBlock Text="{Binding Generated}" Foreground="{StaticResource newValueColor}" 
+                                               TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                             </ItemsControl.Resources>
                             <ItemsControl.Style>

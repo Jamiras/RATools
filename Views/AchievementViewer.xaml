@@ -8,7 +8,7 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:AchievementViewModel}">
-        <Border Background="White" BorderBrush="Black" BorderThickness="1">
+        <Border Style="{StaticResource editorBorder}">
             <Grid VerticalAlignment="Stretch">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
@@ -92,9 +92,7 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
-        <Border Background="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" 
-                BorderBrush="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" 
-                BorderThickness="1">
+        <Border Style="{StaticResource editorBorder}">
             <Grid VerticalAlignment="Stretch">
                 <Grid.Resources>
                     <TextBlock x:Key="modifiedTitleToolTip">
