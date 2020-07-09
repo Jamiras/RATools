@@ -2,4 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="newValueColor" Color="#00D040" />
     <SolidColorBrush x:Key="oldValueColor" Color="#E04040" />
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="themedTextBlock">
+        <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
+    </Style>
 </ResourceDictionary>

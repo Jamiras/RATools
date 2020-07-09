@@ -100,7 +100,7 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:GameViewModel}">
-        <Grid Background="#F0F0F0">
+        <Grid Background="#F0F0F0" x:Name="gameGrid">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="238" MinWidth="128" MaxWidth="400" />
                 <ColumnDefinition Width="4" />
@@ -122,7 +122,7 @@
             </Grid>
 
             <ListBox ItemsSource="{Binding Editors}" SelectedItem="{Binding SelectedEditor}" HorizontalContentAlignment="Stretch"
-                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsGrid" BorderBrush="#808080" 
+                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsList" BorderBrush="#808080" 
                      ScrollViewer.HorizontalScrollBarVisibility="Hidden"
                      Background="{Binding Script.Editor.Resources.Background.Brush}"
                      Foreground="{Binding Script.Editor.Resources.Foreground.Brush}">

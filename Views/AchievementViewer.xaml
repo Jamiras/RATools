@@ -39,15 +39,16 @@
                         </Image>
                     </Grid>
                 </Border>
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" VerticalAlignment="Top" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" Style="{StaticResource themedTextBlock}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" 
+                           Style="{StaticResource themedTextBlock}" VerticalAlignment="Top" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top" Style="{StaticResource themedTextBlock}">
                     <TextBlock Text="{Binding Points.Value}" />
                     <Run Text="points" />
                 </TextBlock>
                 <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Id}" Value="0">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -64,7 +65,8 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Vertical">
-                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                    <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold"  
+                                               Style="{StaticResource themedTextBlock}" />
 
                                     <ItemsControl ItemsSource="{Binding Requirements}" Margin="6,0,0,4" Grid.IsSharedSizeScope="True">
                                         <ItemsControl.ItemTemplate>
@@ -90,7 +92,9 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
-        <Border Background="White" BorderBrush="#808080" BorderThickness="1">
+        <Border Background="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" 
+                BorderBrush="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" 
+                BorderThickness="1">
             <Grid VerticalAlignment="Stretch">
                 <Grid.Resources>
                     <TextBlock x:Key="modifiedTitleToolTip">
@@ -120,7 +124,7 @@
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Definition}" Margin="0,0,8,0">
                                 <TextBlock.Style>
-                                    <Style TargetType="{x:Type TextBlock}">
+                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                 <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -131,7 +135,7 @@
                             </TextBlock>
                             <TextBlock Grid.Column="1"  Text="{Binding OtherDefinition}" Margin="0,0,8,0">
                                 <TextBlock.Style>
-                                    <Style TargetType="{x:Type TextBlock}">
+                                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding IsModified}" Value="True">
                                                 <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
@@ -140,7 +144,7 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
-                            <TextBlock Grid.Column="2" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                            <TextBlock Grid.Column="2" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" Style="{StaticResource themedTextBlock}" />
                         </Grid>
                     </DataTemplate>
 
@@ -150,8 +154,8 @@
                                 <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
-                            <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                            <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" Style="{StaticResource themedTextBlock}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" Style="{StaticResource themedTextBlock}" />
                         </Grid>
                     </DataTemplate>
 
@@ -191,7 +195,7 @@
                 <!-- Name -->
                 <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
                                     <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -204,7 +208,7 @@
                 <!-- Description -->
                 <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
                                     <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -218,7 +222,7 @@
                 <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
                     <TextBlock Text="{Binding Points}">
                         <TextBlock.Style>
-                            <Style TargetType="{x:Type TextBlock}">
+                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
                                         <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -233,7 +237,7 @@
                 <!-- ID -->
                 <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Id}" Value="0">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -269,7 +273,7 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="0" Margin="4,0,0,0" VerticalAlignment="Bottom">
+                        <TextBlock Grid.Column="0" Margin="4,0,0,0" VerticalAlignment="Bottom" Style="{StaticResource themedTextBlock}">
                             <TextBlock FontSize="12" FontStyle="Italic"  Text="{Binding RequirementSource}" />
                             <TextBlock FontSize="10">
                                 <TextBlock.Style>
@@ -287,9 +291,11 @@
                                 </Hyperlink>
                             </TextBlock>
                         </TextBlock>
-                        <TextBlock Grid.Column="1" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding Other.Source}" />
-                        <TextBlock Grid.Column="2" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="Code Notes" />
-
+                        <TextBlock Grid.Column="1" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding Other.Source}"
+                                   Style="{StaticResource themedTextBlock}" />
+                        <TextBlock Grid.Column="2" Margin="4,0,0,0" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="Code Notes"
+                                   Style="{StaticResource themedTextBlock}" />
+ 
                         <ItemsControl Grid.Row="1" Grid.ColumnSpan="3" ItemsSource="{Binding RequirementGroups}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -299,7 +305,8 @@
                                             <RowDefinition Height="*" />
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold" />
+                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold"
+                                                   Style="{StaticResource themedTextBlock}" />
                                         <ItemsControl Grid.Row="1" ItemsSource="{Binding Requirements}" Margin="6,0,0,4" />
                                     </Grid>
                                 </DataTemplate>
