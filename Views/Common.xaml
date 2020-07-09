@@ -12,4 +12,21 @@
         <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
         <Setter Property="BorderThickness" Value="1" />
     </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="editorTitle" BasedOn="{StaticResource themedTextBlock}">
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="FontWeight" Value="DemiBold" />
+        <Setter Property="Margin" Value="2,0,0,0" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="editorSubtitle" BasedOn="{StaticResource themedTextBlock}">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="Margin" Value="6,0,2,0" />
+        <Setter Property="VerticalAlignment" Value="Top" />
+    </Style>
+
+    <Style TargetType="{x:Type TextBlock}" x:Key="notesTextBlock" BasedOn="{StaticResource themedTextBlock}">
+        <Setter Property="FontStyle" Value="Italic" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
 </ResourceDictionary>

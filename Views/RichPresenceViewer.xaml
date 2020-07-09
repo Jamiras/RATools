@@ -14,6 +14,7 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
@@ -21,21 +22,21 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Image Width="48" Height="48" Grid.RowSpan="3" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" Style="{StaticResource themedTextBlock}" />
-                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0" Style="{StaticResource themedTextBlock}">
+                <Image Width="48" Height="48" Grid.RowSpan="4" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
+                <TextBlock Grid.Column="1" Text="Rich Presence" Style="{StaticResource editorTitle}" />
+                <TextBlock Grid.Column="1" Grid.Row="1" Style="{StaticResource editorSubtitle}">
                     <TextBlock Text="{Binding RichPresenceLength}" />
                     <TextBlock Text="/" />
                     <TextBlock Text="{Binding RichPresenceMaxLength}" />
                     <TextBlock Text="characters" />
                 </TextBlock>
-                <TextBlock Grid.Column="1" Grid.Row="2" FontSize="10" VerticalAlignment="Top" Margin="8,0,0,2">
+                <TextBlock Grid.Column="1" Grid.Row="2" Style="{StaticResource editorSubtitle}">
                     <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
                         <TextBlock Text="Copy to Clipboard" />
                     </Hyperlink>
                 </TextBlock>
 
-                <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0">
+                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />

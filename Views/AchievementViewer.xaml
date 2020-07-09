@@ -39,16 +39,16 @@
                         </Image>
                     </Grid>
                 </Border>
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title.Text}" Style="{StaticResource themedTextBlock}" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description.Text}" 
-                           Style="{StaticResource themedTextBlock}" VerticalAlignment="Top" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top" Style="{StaticResource themedTextBlock}">
+                <TextBlock Grid.Column="1" Text="{Binding Title.Text}" Style="{StaticResource editorTitle}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Description.Text}" FontSize="12"
+                           Style="{StaticResource editorSubtitle}" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Style="{StaticResource editorSubtitle}">
                     <TextBlock Text="{Binding Points.Value}" />
                     <Run Text="points" />
                 </TextBlock>
-                <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                <TextBlock Grid.Row="3" Grid.Column="1">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Id}" Value="0">
                                     <Setter Property="Visibility" Value="Collapsed" />
@@ -77,7 +77,7 @@
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
                                                     <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" Style="{StaticResource notesTextBlock}" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
@@ -153,7 +153,7 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" Style="{StaticResource themedTextBlock}" />
-                            <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" Style="{StaticResource themedTextBlock}" />
+                            <TextBlock Grid.Column="1" Text="{Binding Notes}" Style="{StaticResource notesTextBlock}" />
                         </Grid>
                     </DataTemplate>
 
@@ -191,9 +191,9 @@
                 </Border>
 
                 <!-- Name -->
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}">
+                <TextBlock Grid.Column="1" Text="{Binding Title}">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorTitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsTitleModified}" Value="True">
                                     <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -204,9 +204,9 @@
                     </TextBlock.Style>
                 </TextBlock>
                 <!-- Description -->
-                <TextBlock Grid.Row="1" Grid.Column="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top">
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Description}" FontSize="12">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsDescriptionModified}" Value="True">
                                     <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
@@ -217,25 +217,24 @@
                     </TextBlock.Style>
                 </TextBlock>
                 <!-- Points -->
-                <TextBlock Grid.Row="2" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
-                    <TextBlock Text="{Binding Points}">
-                        <TextBlock.Style>
-                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
-                                        <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
-                                        <Setter Property="ToolTip" Value="{StaticResource modifiedPointsToolTip}" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>                
+                <TextBlock Grid.Row="2" Grid.Column="1">
+                    <TextBlock.Style>
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPointsModified}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                    <Setter Property="ToolTip" Value="{StaticResource modifiedPointsToolTip}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                    <TextBlock Text="{Binding Points}" />
                     <Run Text="points" />
                 </TextBlock>
                 <!-- ID -->
-                <TextBlock Grid.Row="3" Grid.Column="1" Margin="6,0,2,2" FontSize="10" VerticalAlignment="Top">
+                <TextBlock Grid.Row="3" Grid.Column="1">
                     <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Id}" Value="0">
                                     <Setter Property="Visibility" Value="Collapsed" />

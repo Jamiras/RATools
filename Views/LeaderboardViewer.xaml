@@ -4,11 +4,12 @@
                     xmlns:views="clr-namespace:RATools.Views">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+        <ResourceDictionary Source="Common.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:LeaderboardViewModel}">
-        <Border BorderThickness="1" BorderBrush="Gray">
-            <Grid Background="White">
+        <Border Style="{StaticResource editorBorder}">
+            <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -22,8 +23,9 @@
 
                 <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/leaderboard.png" Margin="4,2,2,2" />
 
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="{Binding Title}" Margin="2,0,0,0" />
-                <TextBlock Grid.Column="1" Grid.Row="1" Margin="6,2,2,2" Text="{Binding Description}" VerticalAlignment="Top" />
+                <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource editorTitle}" />
+                <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description}" FontSize="12"
+                           Style="{StaticResource editorSubtitle}" />
 
                 <TextBlock Grid.Row="2" Margin="4,0,0,2" VerticalAlignment="Bottom" FontSize="10">
                     <TextBlock.Style>
@@ -58,7 +60,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontWeight="DemiBold" VerticalAlignment="Bottom">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Setter Property="FontSize" Value="16" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
@@ -70,7 +72,7 @@
                                         </TextBlock>
                                         <TextBlock FontSize="10" VerticalAlignment="Bottom" Margin="8,0,0,2">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
                                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -91,8 +93,8 @@
                                                         <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
                                                         <ColumnDefinition Width="*" />
                                                     </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" />
+                                                    <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" Style="{StaticResource themedTextBlock}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" Style="{StaticResource notesTextBlock}" />
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
