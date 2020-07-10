@@ -122,10 +122,9 @@
             </Grid>
 
             <ListBox ItemsSource="{Binding Editors}" SelectedItem="{Binding SelectedEditor}" HorizontalContentAlignment="Stretch"
-                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsList" BorderBrush="#808080" 
+                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsList" 
                      ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                     Background="{Binding Script.Editor.Resources.Background.Brush}"
-                     Foreground="{Binding Script.Editor.Resources.Foreground.Brush}">
+                     Style="{StaticResource themedListBox}">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="BorderThickness" Value="0" />

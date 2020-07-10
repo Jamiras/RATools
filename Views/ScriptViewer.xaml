@@ -11,13 +11,29 @@
 
     <DataTemplate DataType="{x:Type toolwindows:CodeReferencesToolWindowViewModel}">
         <ListView ItemsSource="{Binding References}" x:Name="referencesList" BorderThickness="0" jamiras:ListViewUtils.HasAutoSizeColumns="True"
-                  Background="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}"
-                  Foreground="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}"
+                  Style="{StaticResource themedListView}"
                   SelectedIndex="{Binding SelectedReferenceIndex}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="{x:Type ListViewItem}">
                     <Setter Property="jamiras:CommandBinding.DoubleClickCommand" Value="{Binding DataContext.GotoReferenceCommand, ElementName=referencesList}" />
                     <Setter Property="jamiras:CommandBinding.DoubleClickCommandParameter" Value="{Binding}" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ListViewItem}">
+                                <Border x:Name="Bd" Background="Transparent"
+                                        SnapsToDevicePixels="true">
+                                    <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                          Columns="{TemplateBinding GridView.ColumnCollection}" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="true">
+                                        <Setter Property="Background" TargetName="Bd"
+                                                Value="{Binding DataContext.Script.Editor.Resources.Selection.Brush, ElementName=gameGrid}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
                 </Style>
             </ListView.ItemContainerStyle>
             <ListView.View>
@@ -27,7 +43,15 @@
                             <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
                             <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
                             <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
-                            <Setter Property="HorizontalContentAlignment" Value="Left" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="{x:Type GridViewColumnHeader}">
+                                        <Border BorderThickness="0,0,0,1" BorderBrush="{TemplateBinding BorderBrush}" Background="Transparent">
+                                            <TextBlock x:Name="ContentHeader" Text="{TemplateBinding Content}" Padding="5,5,5,0" Width="{TemplateBinding Width}" TextAlignment="Left" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </GridView.ColumnHeaderContainerStyle>
                     <GridViewColumn Header="Line" Width="60" DisplayMemberBinding="{Binding StartLine}" />
@@ -47,12 +71,14 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="104" />
+                <RowDefinition Height="110" />
             </Grid.RowDefinitions>
 
             <jamiras:CodeEditorView DataContext="{Binding Editor}">
                 <jamiras:CodeEditorView.Resources>
-                    <Style TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource themedScrollViewer}" />
+                    <Style TargetType="{x:Type ScrollViewer}">
+                        <Setter Property="Template" Value="{StaticResource themedScrollViewerTemplate}" />
+                    </Style>
                 </jamiras:CodeEditorView.Resources>
             </jamiras:CodeEditorView>
 
