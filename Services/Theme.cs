@@ -47,7 +47,7 @@ namespace RATools.Services
             SetColor(Color.EditorIntegerConstant, Colors.DarkGray);
             SetColor(Color.EditorStringConstant, Colors.DarkSeaGreen);
             SetColor(Color.EditorVariable, Colors.Violet);
-            SetColor(Color.EditorFunctionDefinition, Colors.DarkViolet);
+            SetColor(Color.EditorFunctionDefinition, System.Windows.Media.Color.FromRgb(0xC0, 0x40, 0xD0));
             SetColor(Color.EditorFunctionCall, Colors.DarkViolet);
 
             SetColor(Color.DiffAdded, System.Windows.Media.Color.FromRgb(0x00, 0xD0, 0x40));
@@ -68,7 +68,7 @@ namespace RATools.Services
             SetColor(Color.EditorIntegerConstant, System.Windows.Media.Color.FromRgb(0x70, 0x70, 0x80));
             SetColor(Color.EditorStringConstant, System.Windows.Media.Color.FromRgb(0xC0, 0xC0, 0x80));
             SetColor(Color.EditorVariable, System.Windows.Media.Color.FromRgb(0x90, 0xA0, 0xC0));
-            SetColor(Color.EditorFunctionDefinition, System.Windows.Media.Color.FromRgb(0x50, 0xF0, 0x80));
+            SetColor(Color.EditorFunctionDefinition, System.Windows.Media.Color.FromRgb(0x80, 0xA0, 0x90));
             SetColor(Color.EditorFunctionCall, System.Windows.Media.Color.FromRgb(0xC0, 0xB8, 0xB8));
 
             SetColor(Color.DiffAdded, System.Windows.Media.Color.FromRgb(0x20, 0x80, 0x40));
