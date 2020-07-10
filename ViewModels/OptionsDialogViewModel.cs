@@ -63,6 +63,8 @@ namespace RATools.ViewModels
 
             DefaultColorsCommand = new DelegateCommand(DefaultColors);
             DarkColorsCommand = new DelegateCommand(DarkColors);
+            ExportColorsCommand = new DelegateCommand(ExportColors);
+            ImportColorsCommand = new DelegateCommand(ImportColors);
         }
 
         private readonly ISettings _settings;
@@ -186,6 +188,37 @@ namespace RATools.ViewModels
         }
 
         public IEnumerable<ColorViewModel> Colors { get; private set; }
+
+
+        public CommandBase ExportColorsCommand { get; private set; }
+        private void ExportColors()
+        {
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Export Colors";
+            vm.Filters["JSON file"] = "*.json";
+            vm.FileNames = new[] { "Colors.json" };
+            vm.OverwritePrompt = true;
+
+            if (vm.ShowSaveFileDialog() == DialogResult.Ok)
+            {
+                Theme.Export(vm.FileNames[0]);
+            }
+        }
+
+        public CommandBase ImportColorsCommand { get; private set; }
+        private void ImportColors()
+        {
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Import Colors";
+            vm.Filters["JSON file"] = "*.json";
+            vm.FileNames = new[] { "Colors.json" };
+            vm.CheckFileExists = true;
+
+            if (vm.ShowOpenFileDialog() == DialogResult.Ok)
+            {
+                Theme.Import(vm.FileNames[0]);
+            }
+        }
 
         public CommandBase DefaultColorsCommand { get; private set; }
         private void DefaultColors()

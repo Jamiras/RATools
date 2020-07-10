@@ -90,6 +90,7 @@
         <TabItem Header="Colors">
             <Grid Margin="4">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
@@ -100,7 +101,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <ListView Grid.ColumnSpan="5" Margin="0,2,0,2" x:Name="colorsList" ItemsSource="{Binding Colors}">
+                <TextBlock Grid.ColumnSpan="5" Text="Double click on an entry to change it." />
+                <ListView Grid.Row="1" Grid.ColumnSpan="5" Margin="0,2,0,2" x:Name="colorsList" ItemsSource="{Binding Colors}">
                     <ListView.ItemTemplate>
                         <DataTemplate>
                             <Grid jamiras:CommandBinding.DoubleClickCommand="{Binding ChangeColorCommand}">
@@ -121,6 +123,10 @@
                         Content="Default Theme" Command="{Binding DefaultColorsCommand}" />
                 <Button Grid.Row="2" Grid.Column="1" Margin="2,0,2,0" Width="100"
                         Content="Dark Theme" Command="{Binding DarkColorsCommand}" />
+                <Button Grid.Row="2" Grid.Column="3" Margin="0,0,2,0" Width="100"
+                        Content="Import..." Command="{Binding ImportColorsCommand}" />
+                <Button Grid.Row="2" Grid.Column="4" Margin="2,0,2,0" Width="100"
+                        Content="Export..." Command="{Binding ExportColorsCommand}" />
             </Grid>
         </TabItem>
     </TabControl>

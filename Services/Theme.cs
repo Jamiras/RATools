@@ -1,6 +1,8 @@
 ﻿using Jamiras.Components;
+using Jamiras.IO.Serialization;
 using System;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Windows.Media;
 
@@ -169,11 +171,62 @@ namespace RATools.Services
                 Color color;
                 if (Enum.TryParse(setting.ToString(), out color))
                 {
-                    var rtb = value.ToString();
+                    var rgb = value.ToString();
                     byte r, g, b;
-                    if (Byte.TryParse(rtb.Substring(0, 2), NumberStyles.HexNumber, null, out r) &&
-                        Byte.TryParse(rtb.Substring(2, 2), NumberStyles.HexNumber, null, out g) &&
-                        Byte.TryParse(rtb.Substring(4, 2), NumberStyles.HexNumber, null, out b))
+                    if (Byte.TryParse(rgb.Substring(0, 2), NumberStyles.HexNumber, null, out r) &&
+                        Byte.TryParse(rgb.Substring(2, 2), NumberStyles.HexNumber, null, out g) &&
+                        Byte.TryParse(rgb.Substring(4, 2), NumberStyles.HexNumber, null, out b))
+                    {
+                        SetColor(color, System.Windows.Media.Color.FromRgb(r, g, b));
+                    }
+                }
+            }
+        }
+
+        public static void Export(string filename)
+        {
+            var json = new JsonObject();
+            foreach (Color color in Enum.GetValues(typeof(Color)))
+            {
+                if (color == Color.None)
+                    continue;
+
+                var value = GetColor(color);
+                var colorValue = String.Format("#{0:X2}{1:X2}{2:X2}", value.R, value.G, value.B);
+                json.AddField(color.ToString(), colorValue);
+            }
+
+            using (var file = File.OpenWrite(filename))
+            {
+                using (var writer = new StreamWriter(file))
+                {
+                    writer.Write(json.ToString(2));
+                }
+            }
+        }
+
+        public static void Import(string filename)
+        {
+            JsonObject json;
+
+            using (var file = File.OpenText(filename))
+            {
+                json = new JsonObject(file.ReadToEnd());
+            }
+
+            foreach (Color color in Enum.GetValues(typeof(Color)))
+            {
+                if (color == Color.None)
+                    continue;
+
+                var field = json.GetField(color.ToString());
+                if (field.Type == JsonFieldType.String)
+                {
+                    var rgb = field.StringValue;
+                    byte r, g, b;
+                    if (Byte.TryParse(rgb.Substring(1, 2), NumberStyles.HexNumber, null, out r) &&
+                        Byte.TryParse(rgb.Substring(3, 2), NumberStyles.HexNumber, null, out g) &&
+                        Byte.TryParse(rgb.Substring(5, 2), NumberStyles.HexNumber, null, out b))
                     {
                         SetColor(color, System.Windows.Media.Color.FromRgb(r, g, b));
                     }
