@@ -16,6 +16,8 @@ namespace RATools.Services
 
             Background,
             Foreground,
+            ScrollBarBackground,
+            ScrollBarForeground,
 
             EditorSelection,
             EditorLineNumbers,
@@ -41,6 +43,8 @@ namespace RATools.Services
         {
             SetColor(Color.Background, Colors.White);
             SetColor(Color.Foreground, Colors.Black);
+            SetColor(Color.ScrollBarBackground, Colors.LightGray);
+            SetColor(Color.ScrollBarForeground, Colors.Gray);
             SetColor(Color.EditorSelection, Colors.LightGray);
             SetColor(Color.EditorLineNumbers, Colors.LightGray);
 
@@ -62,6 +66,8 @@ namespace RATools.Services
         {
             SetColor(Color.Background, System.Windows.Media.Color.FromRgb(0x12, 0x12, 0x12));
             SetColor(Color.Foreground, System.Windows.Media.Color.FromRgb(0x90, 0x90, 0x90));
+            SetColor(Color.ScrollBarBackground, Colors.LightGray);
+            SetColor(Color.ScrollBarForeground, Colors.Gray);
             SetColor(Color.EditorSelection, System.Windows.Media.Color.FromRgb(0x30, 0x30, 0x30));
             SetColor(Color.EditorLineNumbers, System.Windows.Media.Color.FromRgb(0x50, 0x50, 0x50));
 

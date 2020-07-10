@@ -6,10 +6,13 @@
 
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/NoBorderButtonStyle.xaml" />
+        <ResourceDictionary Source="Common.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type toolwindows:CodeReferencesToolWindowViewModel}">
         <ListView ItemsSource="{Binding References}" x:Name="referencesList" BorderThickness="0" jamiras:ListViewUtils.HasAutoSizeColumns="True"
+                  Background="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}"
+                  Foreground="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}"
                   SelectedIndex="{Binding SelectedReferenceIndex}">
             <ListView.ItemContainerStyle>
                 <Style TargetType="{x:Type ListViewItem}">
@@ -21,6 +24,9 @@
                 <GridView>
                     <GridView.ColumnHeaderContainerStyle>
                         <Style TargetType="{x:Type GridViewColumnHeader}">
+                            <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
+                            <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
+                            <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
                             <Setter Property="HorizontalContentAlignment" Value="Left" />
                         </Style>
                     </GridView.ColumnHeaderContainerStyle>
@@ -43,8 +49,12 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="104" />
             </Grid.RowDefinitions>
-            
-            <jamiras:CodeEditorView DataContext="{Binding Editor}" />
+
+            <jamiras:CodeEditorView DataContext="{Binding Editor}">
+                <jamiras:CodeEditorView.Resources>
+                    <Style TargetType="{x:Type ScrollViewer}" BasedOn="{StaticResource themedScrollViewer}" />
+                </jamiras:CodeEditorView.Resources>
+            </jamiras:CodeEditorView>
 
             <GridSplitter Grid.Row="1" ResizeDirection="Rows" Height="4" HorizontalAlignment="Stretch" 
                           Visibility="{Binding Editor.ErrorsToolWindow.IsVisible, Converter={StaticResource boolToVisConverter}}"

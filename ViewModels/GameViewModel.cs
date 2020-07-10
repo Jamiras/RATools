@@ -494,6 +494,8 @@ namespace RATools.ViewModels
             {
                 DiffAddedBrush = CreateBrush(Theme.Color.DiffAdded);
                 DiffRemovedBrush = CreateBrush(Theme.Color.DiffRemoved);
+                ScrollBarBackgroundBrush = CreateBrush(Theme.Color.ScrollBarBackground);
+                ScrollBarForegroundBrush = CreateBrush(Theme.Color.ScrollBarForeground);
 
                 Theme.ColorChanged += Theme_ColorChanged;
             }
@@ -502,6 +504,16 @@ namespace RATools.ViewModels
             {
                 switch (e.Color)
                 {
+                    case Theme.Color.ScrollBarBackground:
+                        ScrollBarBackgroundBrush = CreateBrush(Theme.Color.ScrollBarBackground);
+                        OnPropertyChanged(() => ScrollBarBackgroundBrush);
+                        break;
+
+                    case Theme.Color.ScrollBarForeground:
+                        ScrollBarForegroundBrush = CreateBrush(Theme.Color.ScrollBarForeground);
+                        OnPropertyChanged(() => ScrollBarForegroundBrush);
+                        break;
+
                     case Theme.Color.DiffAdded:
                         DiffAddedBrush = CreateBrush(Theme.Color.DiffAdded);
                         OnPropertyChanged(() => DiffAddedBrush);
@@ -521,6 +533,8 @@ namespace RATools.ViewModels
                 return brush;
             }
 
+            public Brush ScrollBarBackgroundBrush { get; private set; }
+            public Brush ScrollBarForegroundBrush { get; private set; }
             public Brush DiffAddedBrush { get; private set; }
             public Brush DiffRemovedBrush { get; private set; }
         }

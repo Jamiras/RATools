@@ -48,6 +48,8 @@ namespace RATools.ViewModels
             var colors = new List<ColorViewModel>();
             colors.Add(new ColorViewModel(Theme.Color.Background, "Background"));
             colors.Add(new ColorViewModel(Theme.Color.Foreground, "Foreground"));
+            colors.Add(new ColorViewModel(Theme.Color.ScrollBarBackground, "ScrollBar Background"));
+            colors.Add(new ColorViewModel(Theme.Color.ScrollBarForeground, "ScrollBar Foreground"));
             colors.Add(new ColorViewModel(Theme.Color.EditorSelection, "Editor Selection"));
             colors.Add(new ColorViewModel(Theme.Color.EditorLineNumbers, "Editor Line Numbers"));
             colors.Add(new ColorViewModel(Theme.Color.EditorKeyword, "Editor Keyword"));
