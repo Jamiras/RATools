@@ -60,6 +60,9 @@ namespace RATools.ViewModels
             colors.Add(new ColorViewModel(Theme.Color.DiffAdded, "Change Added"));
             colors.Add(new ColorViewModel(Theme.Color.DiffRemoved, "Change Removed"));
             Colors = colors;
+
+            DefaultColorsCommand = new DelegateCommand(DefaultColors);
+            DarkColorsCommand = new DelegateCommand(DarkColors);
         }
 
         private readonly ISettings _settings;
@@ -138,6 +141,11 @@ namespace RATools.ViewModels
                     Theme.SetColor(_themeColor, _originalColor);
             }
 
+            public void UpdateColor()
+            {
+                Color = Theme.GetColor(_themeColor);
+            }
+
             /// <summary>
             /// Gets or sets the item Label.
             /// </summary>
@@ -178,6 +186,24 @@ namespace RATools.ViewModels
         }
 
         public IEnumerable<ColorViewModel> Colors { get; private set; }
+
+        public CommandBase DefaultColorsCommand { get; private set; }
+        private void DefaultColors()
+        {
+            Theme.InitDefault();
+
+            foreach (var color in Colors)
+                color.UpdateColor();
+        }
+
+        public CommandBase DarkColorsCommand { get; private set; }
+        private void DarkColors()
+        {
+            Theme.InitDark();
+
+            foreach (var color in Colors)
+                color.UpdateColor();
+        }
 
         protected override void ExecuteCancelCommand()
         {
