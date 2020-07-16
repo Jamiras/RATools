@@ -60,7 +60,8 @@
                     <TextBlock Text="{Binding Id}" />
                 </TextBlock>
 
-                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
+                              Template="{StaticResource themedScrollViewerTemplate}">
                     <ItemsControl ItemsSource="{Binding RequirementGroups}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -258,7 +259,8 @@
                 </TextBlock>
 
                 <!-- Requirements -->
-                <ScrollViewer Grid.Row="5" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto">
+                <ScrollViewer Grid.Row="5" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
+                              Template="{StaticResource themedScrollViewerTemplate}">
                     <Grid Grid.IsSharedSizeScope="True">
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
