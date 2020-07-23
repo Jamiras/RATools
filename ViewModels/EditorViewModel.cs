@@ -7,28 +7,40 @@ using Jamiras.ViewModels.CodeEditor;
 using Jamiras.ViewModels.CodeEditor.ToolWindows;
 using RATools.Parser;
 using RATools.Parser.Internal;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Windows.Media;
 
 namespace RATools.ViewModels
 {
-    public class EditorViewModel : CodeEditorViewModel
+    public class EditorViewModel : CodeEditorViewModel, IDisposable
     {
         public EditorViewModel(GameViewModel owner)
         {
             _owner = owner;
 
-            Style.SetCustomColor((int)ExpressionType.Comment, Colors.DarkCyan);
-            Style.SetCustomColor((int)ExpressionType.IntegerConstant, Colors.DarkGray);
-            Style.SetCustomColor((int)ExpressionType.FunctionDefinition, Colors.DarkViolet);
-            Style.SetCustomColor((int)ExpressionType.FunctionCall, Colors.DarkViolet);
-            Style.SetCustomColor((int)ExpressionType.Variable, Colors.Violet);
-            Style.SetCustomColor((int)ExpressionType.StringConstant, Colors.DarkSeaGreen);
-            Style.SetCustomColor((int)ExpressionType.Keyword, Colors.DarkGoldenrod);
-            Style.SetCustomColor((int)ExpressionType.ParseError, Colors.Red);
+            if (_themeColors == null)
+            {
+                _themeColors = new Dictionary<Theme.Color, ExpressionType>();
+                _themeColors[Theme.Color.EditorKeyword] = ExpressionType.Keyword;
+                _themeColors[Theme.Color.EditorComment] = ExpressionType.Comment;
+                _themeColors[Theme.Color.EditorIntegerConstant] = ExpressionType.IntegerConstant;
+                _themeColors[Theme.Color.EditorStringConstant] = ExpressionType.StringConstant;
+                _themeColors[Theme.Color.EditorVariable] = ExpressionType.Variable;
+                _themeColors[Theme.Color.EditorFunctionDefinition] = ExpressionType.FunctionDefinition;
+                _themeColors[Theme.Color.EditorFunctionCall] = ExpressionType.FunctionCall;
+            }
+
+            Theme.ColorChanged += Theme_ColorChanged;
+
+            foreach (var kvp in _themeColors)
+               Style.SetCustomColor((int)kvp.Value, Theme.GetColor(kvp.Key));
+            Style.Background = Theme.GetColor(Theme.Color.Background);
+            Style.Foreground = Theme.GetColor(Theme.Color.Foreground);
+            Style.Selection = Theme.GetColor(Theme.Color.EditorSelection);
+            Style.LineNumber = Theme.GetColor(Theme.Color.EditorLineNumbers);
 
             Braces['('] = ')';
             Braces['['] = ']';
@@ -39,6 +51,47 @@ namespace RATools.ViewModels
 
             GotoDefinitionCommand = new DelegateCommand(GotoDefinitionAtCursor);
         }
+
+        public virtual void Dispose()
+        {
+            Theme.ColorChanged -= Theme_ColorChanged;
+        }
+
+        private void Theme_ColorChanged(object sender, Theme.ColorChangedEventArgs e)
+        {
+            switch (e.Color)
+            {
+                case Theme.Color.Background:
+                    Style.Background = e.NewValue;
+                    break;
+
+                case Theme.Color.Foreground:
+                    Style.Foreground = e.NewValue;
+                    break;
+
+                case Theme.Color.EditorSelection:
+                    Style.Selection = e.NewValue;
+                    break;
+
+                case Theme.Color.EditorLineNumbers:
+                    Style.LineNumber = e.NewValue;
+                    break;
+
+                default:
+                    ExpressionType type;
+                    if (!_themeColors.TryGetValue(e.Color, out type))
+                        return;
+
+                    Style.SetCustomColor((int)type, e.NewValue);
+                    break;
+            }
+
+            // force repaint of all lines
+            foreach (var line in Lines)
+                line.Refresh();
+        }
+
+        private static Dictionary<Theme.Color, ExpressionType> _themeColors;
 
         private readonly GameViewModel _owner;
 

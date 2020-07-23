@@ -8,9 +8,10 @@
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
-        <Border BorderThickness="1" BorderBrush="Gray">
-            <Grid Background="White">
+        <Border Style="{StaticResource editorBorder}">
+            <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
@@ -21,21 +22,22 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Image Width="48" Height="48" Grid.RowSpan="3" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
-                <TextBlock Grid.Column="1" FontSize="18" FontWeight="DemiBold" Text="Rich Presence" />
-                <TextBlock Grid.Column="1" Grid.Row="1" FontSize="10" VerticalAlignment="Top" Margin="8,4,0,0">
+                <Image Width="48" Height="48" Grid.RowSpan="4" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
+                <TextBlock Grid.Column="1" Text="Rich Presence" Style="{StaticResource editorTitle}" />
+                <TextBlock Grid.Column="1" Grid.Row="1" Style="{StaticResource editorSubtitle}">
                     <TextBlock Text="{Binding RichPresenceLength}" />
                     <TextBlock Text="/" />
                     <TextBlock Text="{Binding RichPresenceMaxLength}" />
                     <TextBlock Text="characters" />
                 </TextBlock>
-                <TextBlock Grid.Column="1" Grid.Row="2" FontSize="10" VerticalAlignment="Top" Margin="8,0,0,2">
+                <TextBlock Grid.Column="1" Grid.Row="2" Style="{StaticResource editorSubtitle}">
                     <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
                         <TextBlock Text="Copy to Clipboard" />
                     </Hyperlink>
                 </TextBlock>
 
-                <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0">
+                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0"
+                              Template="{StaticResource themedScrollViewerTemplate}">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -47,7 +49,7 @@
                         </Grid.ColumnDefinitions>
 
 
-                        <TextBlock Grid.Column="0" Margin="0,0,0,6" VerticalAlignment="Bottom">
+                        <TextBlock Grid.Column="0" Margin="0,0,0,6" VerticalAlignment="Bottom" Style="{StaticResource themedTextBlock}">
                             <TextBlock FontSize="12" FontStyle="Italic"  Text="{Binding GeneratedSource}" />
                             <TextBlock FontSize="10">
                                 <TextBlock.Style>
@@ -65,7 +67,8 @@
                                 </Hyperlink>
                             </TextBlock>
                         </TextBlock>
-                        <TextBlock Grid.Column="1" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom" Text="{Binding CompareSource}" />
+                        <TextBlock Grid.Column="1" Margin="0,0,0,6" FontSize="12" FontStyle="Italic" VerticalAlignment="Bottom"
+                                   Text="{Binding CompareSource}" Style="{StaticResource themedTextBlock}" />
 
                         <ItemsControl Grid.Row="1" Grid.ColumnSpan="2" ItemsSource="{Binding Lines}" HorizontalAlignment="Stretch">
                             <ItemsControl.Resources>
@@ -77,10 +80,10 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="{Binding Generated}" TextWrapping="Wrap" Margin="0,0,4,0">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                            <Setter Property="Foreground" Value="{StaticResource newValueColor}" />
+                                                            <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -88,10 +91,10 @@
                                         </TextBlock>
                                         <TextBlock Grid.Column="1" Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,8,0">
                                             <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}">
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
-                                                            <Setter Property="Foreground" Value="{StaticResource oldValueColor}" />
+                                                            <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffRemovedBrush, ElementName=gameGrid}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -100,10 +103,11 @@
                                     </Grid>
                                 </DataTemplate>
                                 <DataTemplate x:Key="unmodifiedRichPresenceLine">
-                                    <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                    <TextBlock Text="{Binding Current}" TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                                 <DataTemplate x:Key="generatedOnlyRichPresenceLine">
-                                    <TextBlock Text="{Binding Generated}" Foreground="{StaticResource newValueColor}" TextWrapping="Wrap" Margin="4,0,4,0" />
+                                    <TextBlock Text="{Binding Generated}" Foreground="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" 
+                                               TextWrapping="Wrap" Margin="4,0,4,0" Style="{StaticResource themedTextBlock}" />
                                 </DataTemplate>
                             </ItemsControl.Resources>
                             <ItemsControl.Style>

@@ -4,8 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:RATools"
+             xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
              mc:Ignorable="d" 
-             Width="600" Height="290">
+             Width="600" Height="312">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -13,74 +14,120 @@
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
-    <Grid Margin="4">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-        </Grid.RowDefinitions>
+    <TabControl Margin="4,0,4,0">
+        <TabItem Header="General">
+            <Grid Margin="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-        <GroupBox Header="User Name">
-            <StackPanel>
-                <TextBlock Margin="2" FontSize="11" Text="Please enter your RetroAchievements.org user name here." />
-                <TextBox Text="{Binding UserName.Text}" Margin="2" MaxLength="{Binding UserName.MaxLength}" />
-            </StackPanel>
-        </GroupBox>
+                <GroupBox Header="User Name">
+                    <StackPanel>
+                        <TextBlock Margin="2" FontSize="11" Text="Please enter your RetroAchievements.org user name here." />
+                        <TextBox Text="{Binding UserName.Text}" Margin="2" MaxLength="{Binding UserName.MaxLength}" />
+                    </StackPanel>
+                </GroupBox>
 
-        <GroupBox Grid.Row="1" Header="Emulator Directories">
-            <Grid>
+                <GroupBox Grid.Row="1" Header="Emulator Directories">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock TextWrapping="Wrap" FontSize="11" Margin="2"
+                                   Text="Specifies the directories where RetroAchievements emulators are installed. Code notes are loaded from the emulator cache directories." />
+                        <ListView Grid.Row="1" Margin="0,2,0,2" x:Name="directoriesList"
+                                  ItemsSource="{Binding Directories}" SelectedItem="{Binding SelectedDirectory}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="12" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="10">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}">
+                                                    <Setter Property="Foreground" Value="#00D040" />
+                                                    <Setter Property="Text" Value="&#10003;" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsValid}" Value="false">
+                                                            <Setter Property="Foreground" Value="#E04040" />
+                                                            <Setter Property="Text" Value="&#10008;" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Grid.Column="1" FontSize="11" Text="{Binding Path}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+                        </ListView>
+
+                        <Button Grid.Row="2" HorizontalAlignment="Left" Width="80" 
+                                Content="Remove" Command="{Binding RemoveDirectoryCommand}">
+                            <Button.Style>
+                                <Style TargetType="{x:Type Button}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SelectedDirectory}" Value="{x:Null}">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button Grid.Row="2" HorizontalAlignment="Right" Width="80" 
+                                Content="Add" Command="{Binding AddDirectoryCommand}" />
+                    </Grid>
+                </GroupBox>
+            </Grid>
+        </TabItem>
+        <TabItem Header="Colors">
+            <Grid Margin="4">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-
-                <TextBlock TextWrapping="Wrap" FontSize="11" Margin="2"
-                           Text="Specifies the directories where RetroAchievements emulators are installed. Code notes are loaded from the emulator cache directories." />
-                <ListView Grid.Row="1" Margin="0,2,0,2" x:Name="directoriesList"
-                          ItemsSource="{Binding Directories}" SelectedItem="{Binding SelectedDirectory}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.ColumnSpan="5" Text="Double click on an entry to change it." />
+                <ListView Grid.Row="1" Grid.ColumnSpan="5" Margin="0,2,0,2" x:Name="colorsList" ItemsSource="{Binding Colors}">
                     <ListView.ItemTemplate>
                         <DataTemplate>
-                            <Grid>
+                            <Grid jamiras:CommandBinding.DoubleClickCommand="{Binding ChangeColorCommand}">
+                                <Grid.Resources>
+                                    <SolidColorBrush x:Key="ColorBrush" Color="{Binding Color}" />
+                                </Grid.Resources>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center" FontSize="10">
-                                    <TextBlock.Style>
-                                        <Style TargetType="{x:Type TextBlock}">
-                                            <Setter Property="Foreground" Value="#00D040" />
-                                            <Setter Property="Text" Value="&#10003;" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsValid}" Value="false">
-                                                    <Setter Property="Foreground" Value="#E04040" />
-                                                    <Setter Property="Text" Value="&#10008;" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                                <TextBlock Grid.Column="1" FontSize="11" Text="{Binding Path}" />
+                                <Border Margin="2" Background="{StaticResource ColorBrush}" />
+                                <TextBlock Grid.Column="1" FontSize="11" Text="{Binding Label}" />
                             </Grid>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-
-                <Button Grid.Row="2" HorizontalAlignment="Left" Width="80" 
-                        Content="Remove" Command="{Binding RemoveDirectoryCommand}">
-                    <Button.Style>
-                        <Style TargetType="{x:Type Button}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SelectedDirectory}" Value="{x:Null}">
-                                    <Setter Property="IsEnabled" Value="False" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
-
-                <Button Grid.Row="2" HorizontalAlignment="Right" Width="80" 
-                        Content="Add" Command="{Binding AddDirectoryCommand}" />
+                <Button Grid.Row="2" Grid.Column="0" Margin="0,0,2,0" Width="100"
+                        Content="Default Theme" Command="{Binding DefaultColorsCommand}" />
+                <Button Grid.Row="2" Grid.Column="1" Margin="2,0,2,0" Width="100"
+                        Content="Dark Theme" Command="{Binding DarkColorsCommand}" />
+                <Button Grid.Row="2" Grid.Column="3" Margin="0,0,2,0" Width="100"
+                        Content="Import..." Command="{Binding ImportColorsCommand}" />
+                <Button Grid.Row="2" Grid.Column="4" Margin="2,0,2,0" Width="100"
+                        Content="Export..." Command="{Binding ExportColorsCommand}" />
             </Grid>
-        </GroupBox>
-    </Grid>
+        </TabItem>
+    </TabControl>
 </UserControl>

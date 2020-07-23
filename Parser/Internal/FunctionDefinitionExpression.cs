@@ -324,7 +324,11 @@ namespace RATools.Parser.Internal
             if (_keyword != null && _keyword.Line == line)
                 expressions.Add(_keyword);
             if (Name.Line == line)
-                expressions.Add(Name);
+            {
+                var name = new FunctionDefinitionExpression(Name.Name);
+                Name.CopyLocation(name);
+                expressions.Add(name);
+            }
 
             foreach (var parameter in Parameters)
             {

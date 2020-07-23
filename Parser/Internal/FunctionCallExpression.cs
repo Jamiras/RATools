@@ -191,10 +191,11 @@ namespace RATools.Parser.Internal
                         var error = (ParseErrorExpression)value;
                         return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
                     }
+
+                    assignment.Value.CopyLocation(value);
                     break;
             }
 
-            assignment.Value.CopyLocation(value);
             return value;
         }
 
