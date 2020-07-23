@@ -295,7 +295,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        // ==== NormalizeComparisons ====
+        // ==== NormalizeLimits ====
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
@@ -340,6 +340,24 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1000", "always_false()")] // can never be true
         [TestCase("byte(0x001234) > 256", "always_false()")] // can never be true
         [TestCase("byte(0x001234) < 256", "always_true()")] // always true
+        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
+        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
+        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
+        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
+        // ==== NormalizeBCD ====
+        [TestCase("bcd(byte(0x1234)) == 20", "byte(0x001234) == 32")]
+        [TestCase("bcd(byte(0x1234)) == 100", "always_false()")] // BCD of a byte cannot exceed 99
+        [TestCase("bcd(byte(0x1234)) < 100", "always_true()")] // BCD of a byte cannot exceed 99
+        [TestCase("bcd(byte(0x1234)) >= 99", "byte(0x001234) >= 153")] // BCD of a byte can exceed 99, but it's not a valid BCD entry
+        [TestCase("bcd(dword(0x1234)) == 12345678", "dword(0x001234) == 305419896")]
+        [TestCase("bcd(dword(0x1234)) == 100000000", "always_false()")] // BCD of a dword cannot exceed 99999999
+        [TestCase("bcd(byte(0x1234)) == bcd(byte(0x2345))", "byte(0x001234) == byte(0x002345)")] // BCD can be removed from both sides of the comparison
+        [TestCase("bcd(byte(0x1234)) == byte(0x2345)", "bcd(byte(0x001234)) == byte(0x002345)")] // BCD cannot be removed when comparing to another memory address
+        [TestCase("bcd(low4(0x1234)) == low4(0x2345)", "low4(0x001234) == low4(0x002345)")] // BCD can be removed for memory accessors of 4 bits or less
+        [TestCase("low4(0x1234) == bcd(low4(0x2345))", "low4(0x001234) == low4(0x002345)")] // BCD can be removed for memory accessors of 4 bits or less
+        [TestCase("bcd(low4(0x1234)) == 6", "low4(0x001234) == 6")] // BCD can be removed for memory accessors of 4 bits or less
+        [TestCase("bcd(low4(0x1234)) == 10", "always_false()")] // BCD of a nummber cannot exceed 9
+        // ==== NormalizeComparisons ====
         [TestCase("byte(0x001234) == prev(byte(0x001234))", "byte(0x001234) == prev(byte(0x001234))")] // non-deterministic
         [TestCase("byte(0x001234) == word(0x001234)", "byte(0x001234) == word(0x001234)")] // non-deterministic
         [TestCase("byte(0x001234) == byte(0x001234)", "always_true()")] // always true
@@ -367,10 +385,6 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x001234) == 1) && unless(0 == 1)", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
         [TestCase("once(byte(0x001234) == 1) && never(1 == 1)", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
         [TestCase("once(byte(0x001234) == 1) && unless(1 == 1)", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
-        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
-        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
-        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
-        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]

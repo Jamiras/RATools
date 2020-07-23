@@ -1171,15 +1171,28 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        bool isBCD = false;
-                        if (operand[0] == 'b')
+                        var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
+
+                        bool needsClosingParenthesis = true;
+                        switch (field.Type)
                         {
-                            operand = operand.Substring(1);
-                            isBCD = true;
-                            builder.Append("bcd(");
+                            case FieldType.PreviousValue:
+                                builder.Append("prev(");
+                                break;
+
+                            case FieldType.PriorValue:
+                                builder.Append("prior(");
+                                break;
+
+                            case FieldType.BinaryCodedDecimal:
+                                builder.Append("bcd(");
+                                break;
+
+                            default:
+                                needsClosingParenthesis = false;
+                                break;
                         }
 
-                        var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
                         if (field.IsMemoryReference)
                         {
                             var memoryItem = dumpRichPresence.MemoryAddresses.FirstOrDefault(m => m.Address == field.Value && m.Size == field.Size);
@@ -1198,7 +1211,7 @@ namespace RATools.ViewModels
                             builder.Append(operand);
                         }
 
-                        if (isBCD)
+                        if (needsClosingParenthesis)
                             builder.Append(')');
                     }
                 }
