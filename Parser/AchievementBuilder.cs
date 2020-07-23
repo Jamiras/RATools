@@ -2220,93 +2220,76 @@ namespace RATools.Parser
 
         internal ParseErrorExpression CollapseForSubClause()
         {
-            // no alts, nothing to collapse
-            if (_alts.Count == 0)
-                return null;
-
-            // verify each alt only has one clause without a special flag
+            // only one AndNext chain allowed. core group will automatically generate an AndNext
+            // chain (with every alt, which will often result in a too complex error)
             ICollection<Requirement> andNextAlt = null;
+            if (_core.Count > 0)
+            {
+                // turn the core group into an AndNext chain
+                foreach (var requirement in _core)
+                {
+                    if (requirement.Type == RequirementType.None)
+                        requirement.Type = RequirementType.AndNext;
+                }
+
+                andNextAlt = _core;
+            }
+
+            // the last item cannot have its own HitCount as it will hold the HitCount for the group.
+            // if necessary, find one without a HitCount and make it the last.
+            EnsureLastGroupHasNoHitCount(_alts);
+
+            // merge the alts into the core group as an OrNext chain
+            var newCore = new List<Requirement>();
             foreach (var alt in _alts)
             {
                 if (alt.Last().Type != RequirementType.None)
                     return new ParseErrorExpression("Modifier not allowed in subclause");
 
-                if (_core.Count > 0)
+                if (alt.Count() > 1)
                 {
-                    // core conditions have to be put back into each alt
-                    var newAlt = new List<Requirement>(_core);
-                    newAlt.Last().Type = RequirementType.AndNext;
-                    newAlt.AddRange(alt);
-
-                    alt.Clear();
-                    foreach (var cond in newAlt)
-                        alt.Add(cond);
-                }
-
-                if (alt.Any(a => a.Type == RequirementType.AndNext))
-                {
-                    // only one AndNext group allowed
-                    if (andNextAlt != null)
-                        return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
-
-                    andNextAlt = alt;
-                }
-
-                // if alt has multiple conditions, attempt to join them with AndNext
-                var altGroup = RequirementEx.Combine(alt);
-                if (altGroup.Count > 1)
-                {
-                    for (int i = altGroup.Count - 1; i > 0; --i)
+                    bool hasAndNext = false;
+                    foreach (var requirement in alt)
                     {
-                        // cannot merge with AndNext if subclause contains OrNext as it has the same priority as AndNext.
-                        if (altGroup[i].Requirements.Any(r => r.Type == RequirementType.OrNext))
-                            return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
+                        if (requirement.Type == RequirementType.None || requirement.Type == RequirementType.AndNext)
+                        {
+                            if (hasAndNext)
+                            {
+                                // only one AndNext group allowed
+                                if (andNextAlt != null)
+                                    return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
 
-                        // cannot merge with AndNext if subclause contains AddHits as it has lower priority than AndNext.
-                        if (altGroup[i].Requirements.Any(r => r.Type == RequirementType.AddHits))
-                            return new ParseErrorExpression("Subclause contains modifier");
+                                andNextAlt = alt;
+                            }
+
+                            requirement.Type = RequirementType.AndNext;
+                            hasAndNext = true;
+                        }
                     }
-
-                    // perform the join. note this is updating the original Requirements in the 'alt' variable. 'altGroup' will be discarded shortly.
-                    for (int i = 0; i < altGroup.Count - 1; ++i)
-                    {
-                        var lastRequirement = altGroup[i].Requirements.Last();
-
-                        // cannot change to AndNext if already something else
-                        if (lastRequirement.Type != RequirementType.None)
-                            return new ParseErrorExpression("Subclause contains modifier");
-
-                        lastRequirement.Type = RequirementType.AndNext;
-                    }
-
-                    // only one AndNext group allowed
-                    if (andNextAlt != null)
-                        return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
-
-                    andNextAlt = alt;
                 }
+
+                alt.Last().Type = RequirementType.OrNext;
+
+                if (alt != andNextAlt)
+                    newCore.AddRange(alt);
             }
 
-            // AndNext group must be first
-            if (andNextAlt != null)
+            if (andNextAlt == _core)
             {
-                _alts.Remove(andNextAlt);
-                _alts.Insert(0, andNextAlt);
+                if (newCore.Any())
+                    newCore.Last().Type = RequirementType.AndNext;
+                newCore.AddRange(_core);
             }
-
-            // the last item cannot have its own HitCount as it will hold the HitCount for the group. 
-            // if necessary, find one without a HitCount and make it the last.
-            EnsureLastGroupHasNoHitCount(_alts);
-
-            // merge the alts into a series of OrNexts
-            foreach (var alt in _alts)
+            else if (andNextAlt != null)
             {
-                if (_core.Count > 0)
-                    _core.Last().Type = RequirementType.OrNext;
-
-                _core.AddRange(alt);
+                newCore.InsertRange(0, andNextAlt);
             }
 
+            var last = newCore.Last();
+            if (last.Type == RequirementType.AndNext || last.Type == RequirementType.OrNext)
+                last.Type = RequirementType.None;
+
+            _core = newCore;
             _alts.Clear();
             return null;
         }
