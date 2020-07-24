@@ -172,10 +172,6 @@
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Core\Tests\Jamiras.Core.Tests.csproj">
-      <Project>{8f415f4b-4184-429f-80a2-58da15afb26e}</Project>
-      <Name>Jamiras.Core.Tests</Name>
-    </ProjectReference>
     <ProjectReference Include="..\RATools.csproj">
       <Project>{965d9b5a-9070-40e5-9eaa-edc581f0f000}</Project>
       <Name>RATools</Name>
