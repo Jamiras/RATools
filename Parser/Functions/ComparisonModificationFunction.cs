@@ -37,7 +37,19 @@ namespace RATools.Parser.Functions
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
-                return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
+            {
+                switch (condition.Type)
+                {
+                    case ExpressionType.Conditional:
+                    case ExpressionType.Comparison:
+                        // allowed constructs should only report the inner error
+                        return (ParseErrorExpression)result;
+
+                    default:
+                        // non-allowed construct
+                        return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
+                }
+            }
 
             var error = builder.CollapseForSubClause();
             if (error != null)

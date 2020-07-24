@@ -402,8 +402,16 @@ namespace RATools.Parser
 
                 if (error != null)
                 {
-                    if (error.InnerError != null)
-                        error = new ParseErrorExpression(error.InnermostError.Message, error.Line, error.Column, error.EndLine, error.EndColumn);
+                    switch (condition.Type)
+                    {
+                        case ExpressionType.Comparison:
+                        case ExpressionType.Conditional:
+                            break;
+
+                        default:
+                            error = ParseErrorExpression.WrapError(error, "Invalid condition", condition);
+                            break;
+                    }
                     return false;
                 }
             }
@@ -659,7 +667,7 @@ namespace RATools.Parser
 
             var error = ExecuteAchievementExpression(left, scope);
             if (error != null)
-                return error;
+                return ParseErrorExpression.WrapError(error, "Invalid value", left);
 
             var integerRight = right as IntegerConstantExpression;
             if (integerRight != null)
@@ -674,7 +682,7 @@ namespace RATools.Parser
             {
                 error = ExecuteAchievementExpression(right, scope);
                 if (error != null)
-                    return error;
+                    return ParseErrorExpression.WrapError(error, "Invalid value", right);
 
                 var extraRequirement = context.LastRequirement;
                 ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);

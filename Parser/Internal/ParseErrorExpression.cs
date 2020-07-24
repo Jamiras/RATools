@@ -52,6 +52,17 @@ namespace RATools.Parser.Internal
             }
         }
 
+        public static ParseErrorExpression WrapError(ParseErrorExpression error, string message, ExpressionBase expression)
+        {
+            if (error.EndColumn == expression.EndColumn && error.Column == expression.Column &&
+                error.EndLine == expression.EndLine && error.Line == expression.Line)
+            {
+                return error;
+            }
+
+            return new ParseErrorExpression(message, expression) { InnerError = error };
+        }
+
         /// <summary>
         /// Gets the message.
         /// </summary>

@@ -172,7 +172,25 @@ namespace RATools.Test.Parser.Functions
         [TestCase("byte(repeated(4, word(0x1234) == 3))")] // repeated condition is not an address
         public void TestInvalidAddAddress(string input)
         {
-            Evaluate(input, "Cannot convert to an address");
+            var requirements = new List<Requirement>();
+
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            var funcDef = scope.GetFunction(funcCall.FunctionName.Name) as MemoryAccessorFunction;
+            Assert.That(funcDef, Is.Not.Null);
+
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
+
+            ExpressionBase evaluated;
+            Assert.That(funcCall.ReplaceVariables(scope, out evaluated), Is.True);
+
+            var parseError = funcDef.BuildTrigger(context, scope, funcCall);
+            Assert.That(parseError, Is.Not.Null);
+            Assert.That(parseError.Message.StartsWith("Cannot convert to an address: "));
         }
     }
 }
