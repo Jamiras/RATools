@@ -164,33 +164,18 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        [TestCase("byte(word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
-        [TestCase("byte(repeated(4, word(0x1234) == 3))")] // repeated condition is not an address
-        public void TestInvalidAddAddress(string input)
+        [TestCase("byte(word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(4660) == 3)")]
+        [TestCase("byte(word(0x1234) * 3)", "Cannot convert to an address: word(4660) * 3")]
+        [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(4660) == 3")]
+        [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(4660) == 3 && 2 > 1")]
+        [TestCase("byte(word(0x1234) - 10)", "Negative relative offset not supported")]
+        public void TestInvalidAddress(string input, string error)
         {
-            var requirements = new List<Requirement>();
-
-            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
-            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
-            var funcCall = (FunctionCallExpression)expression;
-
-            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            var funcDef = scope.GetFunction(funcCall.FunctionName.Name) as MemoryAccessorFunction;
-            Assert.That(funcDef, Is.Not.Null);
-
-            var context = new TriggerBuilderContext { Trigger = requirements };
-            scope.Context = context;
-
-            ExpressionBase evaluated;
-            Assert.That(funcCall.ReplaceVariables(scope, out evaluated), Is.True);
-
-            var parseError = funcDef.BuildTrigger(context, scope, funcCall);
-            Assert.That(parseError, Is.Not.Null);
-            Assert.That(parseError.Message.StartsWith("Cannot convert to an address: "));
+            Evaluate(input, error);
         }
     }
 }
