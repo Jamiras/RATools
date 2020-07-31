@@ -272,7 +272,7 @@ namespace RATools.Parser
 
             var error = triggerBuilderFunction.BuildTrigger(this, scope, functionCall);
             if (error != null)
-                return new ParseErrorExpression(error, functionCall);
+                return ParseErrorExpression.WrapError(error, "Function call failed.", functionCall);
 
             return null;
         }

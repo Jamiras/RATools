@@ -164,15 +164,18 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        [TestCase("byte(word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)")] // cannot add two lookups to a single address
-        [TestCase("byte(repeated(4, word(0x1234) == 3))")] // repeated condition is not an address
-        public void TestInvalidAddAddress(string input)
+        [TestCase("byte(word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(4660) == 3)")]
+        [TestCase("byte(word(0x1234) * 3)", "Cannot convert to an address: word(4660) * 3")]
+        [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(4660) == 3")]
+        [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(4660) == 3 && 2 > 1")]
+        [TestCase("byte(word(0x1234) - 10)", "Negative relative offset not supported")]
+        public void TestInvalidAddress(string input, string error)
         {
-            Evaluate(input, "Cannot convert to an address");
+            Evaluate(input, error);
         }
     }
 }

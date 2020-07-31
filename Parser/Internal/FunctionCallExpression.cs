@@ -84,7 +84,7 @@ namespace RATools.Parser.Internal
             if (!functionDefinition.ReplaceVariables(functionScope, out result))
             {
                 var error = result as ParseErrorExpression;
-                result = new ParseErrorExpression(FunctionName.Name + " call failed", FunctionName) { InnerError = error };
+                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }
 
@@ -125,7 +125,7 @@ namespace RATools.Parser.Internal
                 var error = result as ParseErrorExpression;
                 if (error.Line == 0)
                     this.CopyLocation(error);
-                result = new ParseErrorExpression(FunctionName.Name + " call failed", FunctionName) { InnerError = error };
+                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }
 
