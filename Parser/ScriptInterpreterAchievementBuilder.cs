@@ -629,6 +629,123 @@ namespace RATools.Parser
             return new ParseErrorExpression("Unsupported conditional", condition);
         }
 
+        private static ParseErrorExpression HandleAddAddressComparison(ExpressionBase comparison,
+            IList<Requirement> requirements, RequirementOperator op, Requirement extraRequirement)
+        {
+            var requirement = requirements.Last();
+
+            // if right side is an AddAddress chain, it must match the left side
+            var addAddressRequirements = new List<Requirement>();
+            do
+            {
+                addAddressRequirements.Add(requirement);
+                requirements.RemoveAt(requirements.Count - 1);
+
+                requirement = requirements.Last();
+            } while (requirement.Type == RequirementType.AddAddress);
+
+            // if the right side has at least as many conditions as the left, compare them to make 
+            // sure the AddAddress values are the same at each step of the chain.
+            bool match = (requirements.Count >= addAddressRequirements.Count);
+            if (match)
+            {
+                for (int i = 0; i < addAddressRequirements.Count; i++)
+                {
+                    var previousRequirement = requirements[requirements.Count - addAddressRequirements.Count - 1 + i];
+                    if (previousRequirement != addAddressRequirements[i])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+            }
+
+            if (match)
+            {
+                // AddAddress chains match, merge the conditions
+                requirement.Operator = op;
+                requirement.Right = extraRequirement.Left;
+            }
+            else
+            {
+                // AddAddress chains were not the same. Attempt to rearrange the logic using SubSource
+                // A == B   =>   A - B     == 0   =>   B - A     == 0   =>   -A + B     == 0
+                // A != B   =>   A - B     != 0   =>   B - A     != 0   =>   -A + B     != 0
+                // A >  B   =>   A - B + M >  0   =>   B - A     >  M   =>   -A + B     >  M
+                // A >= B   =>   A - B + M >= 0   =>   B - A - 1 >= M   =>   -A - 1 + B >= M
+                // A <  B   =>   A - B     >  M   =>   B - A + M >  M   =>   -A + B + M >  M
+                // A <= B   =>   A - B     >= M   =>   B - A + M >= M   =>   -A + B + M >= M
+
+                var maxValue = Math.Max(Field.GetMaxValue(requirement.Left.Size), Field.GetMaxValue(extraRequirement.Left.Size));
+                if (maxValue == 0xFFFFFFFF)
+                    return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison for 32-bit values", comparison);
+
+                // Change A to -A
+                requirement.Type = RequirementType.SubSource;
+
+                // Put B back
+                int insertIndex = requirements.Count;
+                for (int i = addAddressRequirements.Count -1; i >= 0; --i)
+                    requirements.Add(addAddressRequirements[i]);
+
+                requirement = extraRequirement;
+                requirements.Add(requirement);
+
+                switch (op)
+                {
+                    case RequirementOperator.Equal:
+                    case RequirementOperator.NotEqual:
+                        requirement.Operator = op;
+                        requirement.Right = new Field { Type = FieldType.Value, Value = 0 };
+                        break;
+
+                    case RequirementOperator.GreaterThan:
+                        requirement.Operator = op;
+                        requirement.Right = new Field { Type = FieldType.Value, Value = maxValue + 1 };
+                        break;
+
+                    case RequirementOperator.GreaterThanOrEqual:
+                        requirement.Operator = op;
+                        requirement.Right = new Field { Type = FieldType.Value, Value = maxValue + 1 };
+
+                        requirement = new Requirement
+                        {
+                            Type = RequirementType.SubSource,
+                            Left = new Field { Type = FieldType.Value, Value = 1 },
+                        };
+                        requirements.Insert(insertIndex, requirement);
+                        break;
+
+                    case RequirementOperator.LessThan:
+                        requirement.Type = RequirementType.AddSource;
+                        requirement = new Requirement
+                        {
+                            Left = new Field { Type = FieldType.Value, Value = maxValue + 1 },
+                            Operator = RequirementOperator.GreaterThan,
+                            Right = new Field { Type = FieldType.Value, Value = maxValue + 1 }
+                        };
+                        requirements.Add(requirement);
+                        break;
+
+                    case RequirementOperator.LessThanOrEqual:
+                        requirement.Type = RequirementType.AddSource;
+                        requirement = new Requirement
+                        {
+                            Left = new Field { Type = FieldType.Value, Value = maxValue + 1 },
+                            Operator = RequirementOperator.GreaterThanOrEqual,
+                            Right = new Field { Type = FieldType.Value, Value = maxValue + 1 }
+                        };
+                        requirements.Add(requirement);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return null;
+        }
+
         private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
         {
             var context = scope.GetContext<TriggerBuilderContext>();
@@ -692,29 +809,7 @@ namespace RATools.Parser
                 {
                     if (requirement.Type == RequirementType.AddAddress)
                     {
-                        // if right side is an AddAddress chain, it must match the left side
-                        var addAddressRequirements = new List<Requirement>();
-                        do
-                        {
-                            addAddressRequirements.Add(requirement);
-                            ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);
-
-                            requirement = context.LastRequirement;
-                        } while (requirement.Type == RequirementType.AddAddress);
-
-                        if (context.Trigger.Count <= addAddressRequirements.Count)
-                            return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison", comparison);
-
-                        for (int i = 0; i < addAddressRequirements.Count; i++)
-                        {
-                            var previousRequirement = context.Trigger.ElementAt(context.Trigger.Count - addAddressRequirements.Count - 1 + i);
-                            if (previousRequirement != addAddressRequirements[i])
-                                return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison", comparison);
-                        }
-
-                        // AddAddress chains match, merge the conditions
-                        requirement.Operator = op;
-                        requirement.Right = extraRequirement.Left;
+                        return HandleAddAddressComparison(comparison, (IList<Requirement>)context.Trigger, op, extraRequirement);
                     }
                     else if (context.Trigger.Count > 1 && context.Trigger.ElementAt(context.Trigger.Count - 2).Type == RequirementType.AddAddress)
                     {

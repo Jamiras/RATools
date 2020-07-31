@@ -209,7 +209,7 @@ namespace RATools.Parser.Internal
                             var memoryAccessor = scope.GetFunction(functionCall.FunctionName.Name) as MemoryAccessorFunction;
                             if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
                             {
-                                underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size);
+                                underflowAdjustment += (int)Field.GetMaxValue(memoryAccessor.Size) + 1;
                                 moveLeft = true;
                             }
                         }

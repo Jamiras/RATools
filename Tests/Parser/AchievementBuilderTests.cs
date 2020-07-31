@@ -635,19 +635,37 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestAddAddressAcrossCondition()
+        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 0x00000A) > prev(byte(WA + 0x00000A))")] // simple compare to prev of same address
+        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 0x00000A) > byte(WA + 0x00000B)")] // simple compare to neighboring address
+        [TestCase("byte(WA + 10) > byte(WB + 10)", "(byte(WB + 0x00000A) - (byte(WA + 0x00000A))) > 256")] // complex compare using differing addresses
+        [TestCase("byte(WA) == byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) == 0")] // complex compare using differing addresses
+        [TestCase("byte(WA) != byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) != 0")] // complex compare using differing addresses
+        [TestCase("byte(WA) > byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) > 256")] // complex compare using differing addresses
+        [TestCase("byte(WA) >= byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000)) - 1) >= 256")] // complex compare using differing addresses
+        [TestCase("byte(WA) < byte(WB)", "((byte(WB + 0x000000)) + 256 - (byte(WA + 0x000000))) > 256")] // complex compare using differing addresses
+        [TestCase("byte(WA) <= byte(WB)", "((byte(WB + 0x000000)) + 256 - (byte(WA + 0x000000))) >= 256")] // complex compare using differing addresses
+        [TestCase("byte(WA + 10) > byte(WB) + 10", "(256 + byte(WA + 0x00000A) - (byte(WB + 0x000000))) > 266")] // complex compare using differing addresses
+        [TestCase("byte(WA) > word(WB)", "(word(WB + 0x000000) - (byte(WA + 0x000000))) > 65536")] // complex compare using differing addresses
+        [TestCase("word(WA) > byte(WB)", "(byte(WB + 0x000000) - (word(WA + 0x000000))) > 65536")] // complex compare using differing addresses
+        [TestCase("word(WA) > word(WB)", "(word(WB + 0x000000) - (word(WA + 0x000000))) > 65536")] // complex compare using differing addresses
+        [TestCase("byte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (byte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
+        [TestCase("tbyte(WA) > word(WB)", "(word(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
+        [TestCase("tbyte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
+        public void TestAddAddressAcrossCondition(string input, string expected)
         {
-            var achievement = CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x1234) + 10))");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(word(0x001234) + 0x00000A) > prev(byte(word(0x001234) + 0x00000A))"));
+            input = input.Replace("WA", "word(0x1234)");
+            input = input.Replace("WB", "word(0x2345)");
+            var achievement = CreateAchievement(input);
+
+            expected = expected.Replace("WA", "word(0x001234)");
+            expected = expected.Replace("WB", "word(0x002345)");
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
         }
 
         [Test]
-        public void TestAddAddressAcrossConditionMismatch()
+        public void TestAddAddressAcrossConditionDword()
         {
-            var achievement = CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x1234) + 11))");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(word(0x001234) + 0x00000A) > prev(byte(word(0x001234) + 0x00000B))"));
-
-            CreateAchievement("byte(word(0x1234) + 10) > prev(byte(word(0x2345) + 10))", "Indirect memory addresses must match on both sides of a comparison");
+            CreateAchievement("byte(word(0x1234)) > dword(word(0x2345))", "Indirect memory addresses must match on both sides of a comparison for 32-bit values");
         }
 
         [Test]
@@ -655,8 +673,6 @@ namespace RATools.Test.Parser
         {
             var achievement = CreateAchievement("byte(word(0x1234)) == word(0x2345)");
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo("((byte(word(0x001234) + 0x000000)) + 0) == word(0x002345)"));
-
-            CreateAchievement("byte(word(0x1234)) == byte(word(0x2345))", "Indirect memory addresses must match on both sides of a comparison");
         }
 
         [Test]
