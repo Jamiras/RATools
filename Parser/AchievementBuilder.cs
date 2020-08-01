@@ -1829,8 +1829,20 @@ namespace RATools.Parser
                     {
                         if (group[j] == coreGroup[i])
                         {
-                            // always_true has special meaning and shouldn't be eliminated if present in the core group
-                            if (group[j].Requirements.Count > 1 || group[j].Requirements[0].Evaluate() != true)
+                            bool remove = true;
+
+                            if (group[j].Requirements.Count == 1 && group[j].Requirements[0].Evaluate() == true)
+                            {
+                                // always_true has special meaning and shouldn't be eliminated if present in the core group
+                                remove = false;
+                            }
+                            else if (group[j].Requirements.Last().Type == RequirementType.PauseIf)
+                            {
+                                // if the PauseIf wasn't eliminated by NormalizeNonHitCountResetAndPauseIfs, it's protecting something. Keep it.
+                                remove = false;
+                            }
+
+                            if (remove)
                                 group.RemoveAt(j);
                         }
                     }
