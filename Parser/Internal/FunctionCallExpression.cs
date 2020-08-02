@@ -74,6 +74,13 @@ namespace RATools.Parser.Internal
             if (functionScope == null)
                 return false;
 
+            var error = result as ParseErrorExpression;
+            if (error != null)
+            {
+                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
+                return false;
+            }
+
             if (functionScope.Depth >= 100)
             {
                 result = new ParseErrorExpression("Maximum recursion depth exceeded", this);
@@ -83,7 +90,7 @@ namespace RATools.Parser.Internal
             functionScope.Context = this;
             if (!functionDefinition.ReplaceVariables(functionScope, out result))
             {
-                var error = result as ParseErrorExpression;
+                error = result as ParseErrorExpression;
                 result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }
