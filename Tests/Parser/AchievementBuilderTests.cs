@@ -443,6 +443,8 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x002345) == 1 && byte(0x001234) == 1) && once(byte(0x002345) == 1 && byte(0x001234) == 1)", "once(byte(0x002345) == 1 && byte(0x001234) == 1)")] // complete AndNext duplicate should be elimiated
         [TestCase("byte(0x001234) == 2 && ((byte(0x001234) == 2 && byte(0x004567) == 3) || (byte(0x001234) == 2 && byte(0x004567) == 4))",
                   "byte(0x001234) == 2 && (byte(0x004567) == 3 || byte(0x004567) == 4)")] // alts in core are redundant
+        [TestCase("unless(byte(0x001234) == 1) && never(byte(0x002345) == 1) && ((unless(byte(0x001234) == 1) && once(byte(0x002345) == 2)) || (unless(byte(0x001234) == 1) && never(byte(0x002345) == 3)))", // PauseIf guarding once or never should not be promoted even if duplicated
+                  "unless(byte(0x001234) == 1) && never(byte(0x002345) == 1) && ((unless(byte(0x001234) == 1) && once(byte(0x002345) == 2)) || (unless(byte(0x001234) == 1) && never(byte(0x002345) == 3)))")]
         // ==== RemoveRedundancies ====
         [TestCase("byte(0x001234) > 1 && byte(0x001234) > 2", "byte(0x001234) > 2")] // >1 && >2 is only >2
         [TestCase("byte(0x001234) > 1 && byte(0x001235) > 2", "byte(0x001234) > 1 && byte(0x001235) > 2")] // different addresses
