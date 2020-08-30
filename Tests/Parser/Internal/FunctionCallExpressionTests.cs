@@ -132,6 +132,41 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestGetParametersByIndexUnknownVariable()
+        {
+            var functionDefinition = Parse("function func(i) { }");
+            var scope = new InterpreterScope();
+            var value1 = new VariableExpression("var");
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value1 });
+
+            ExpressionBase error;
+            var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
+            Assert.That(innerScope, Is.Not.Null);
+            Assert.That(error, Is.Not.Null);
+            var parseError = (ParseErrorExpression)error;
+            Assert.That(parseError.Message, Is.EqualTo("Invalid value for parameter: i"));
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
+        }
+
+        [Test]
+        public void TestGetParametersByIndexUnknownVariableInExpression()
+        {
+            var functionDefinition = Parse("function func(i) { }");
+            var scope = new InterpreterScope();
+            var value1 = new VariableExpression("var");
+            var expr1 = new ComparisonExpression(value1, ComparisonOperation.Equal, new IntegerConstantExpression(1));
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { expr1 });
+
+            ExpressionBase error;
+            var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
+            Assert.That(innerScope, Is.Not.Null);
+            Assert.That(error, Is.Not.Null);
+            var parseError = (ParseErrorExpression)error;
+            Assert.That(parseError.Message, Is.EqualTo("Invalid value for parameter: i"));
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
+        }
+
+        [Test]
         public void TestGetParametersByName()
         {
             var functionDefinition = Parse("function func(i,j) { }");
@@ -265,6 +300,70 @@ namespace RATools.Test.Parser.Internal
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.EqualTo(value));
+        }
+
+        [Test]
+        public void TestReplaceVariablesUnknownVariable()
+        {
+            var functionDefinition = Parse("function func(i) { return var }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+            var value = new IntegerConstantExpression(6);
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
+
+            ExpressionBase result;
+            Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            var parseError = (ParseErrorExpression)result;
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesUnknownVariableInExpression()
+        {
+            var functionDefinition = Parse("function func(i) { return var == 3 }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+            var value = new IntegerConstantExpression(6);
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
+
+            ExpressionBase result;
+            Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            var parseError = (ParseErrorExpression)result;
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
+        }
+        [Test]
+        public void TestReplaceVariablesUnknownParameter()
+        {
+            var functionDefinition = Parse("function func(i) { return i }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+            var value = new VariableExpression("var");
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
+
+            ExpressionBase result;
+            Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            var parseError = (ParseErrorExpression)result;
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesUnknownParameterInExpression()
+        {
+            var functionDefinition = Parse("function func(i) { return i }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(functionDefinition);
+            var value = new VariableExpression("var");
+            var expr = new ComparisonExpression(value, ComparisonOperation.Equal, new IntegerConstantExpression(6));
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { expr });
+
+            ExpressionBase result;
+            Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+            var parseError = (ParseErrorExpression)result;
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
 
         [Test]
