@@ -123,8 +123,11 @@ namespace RATools.ViewModels
             UpdateProgress(1, 0);
 
             // parse immediately so we can update the syntax highlighting
-            var parser = new AchievementScriptParser();
-            _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Content));
+            if (_parsedContent == null)
+            {
+                _parsedContent = new ExpressionGroupCollection();
+                _parsedContent.Parse(Tokenizer.CreateTokenizer(e.Content));
+            }
 
             // if more changes have been made, bail
             if (e.IsAborted)
@@ -146,7 +149,7 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Run(_parsedContent, callback, out _scope);
+                        interpreter.Run(_parsedContent.Groups.First(), callback, out _scope);
 
                         if (!e.IsAborted)
                         {
@@ -243,7 +246,7 @@ namespace RATools.ViewModels
             base.OnContentChanged(e);
         }
 
-        private ExpressionGroup _parsedContent;
+        private ExpressionGroupCollection _parsedContent;
         private InterpreterScope _scope;
 
         private class ErrorsToolWindowViewModel : CodeReferencesToolWindowViewModel

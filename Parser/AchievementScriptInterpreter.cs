@@ -232,7 +232,9 @@ namespace RATools.Parser
         /// </returns>
         public bool Run(Tokenizer input)
         {
-            var expressionGroup = new AchievementScriptParser().Parse(input);
+            var expressionGroupCollection = new ExpressionGroupCollection();
+            expressionGroupCollection.Parse(input);
+            var expressionGroup = expressionGroupCollection.Groups.First();
             if (expressionGroup.Comments.Count > 0)
             {
                 GameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();

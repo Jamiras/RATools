@@ -10,7 +10,12 @@ namespace RATools.Parser.Internal
             _expressionGroup = expressionGroup;
         }
 
-        private readonly ExpressionGroup _expressionGroup;
+        private ExpressionGroup _expressionGroup;
+
+        public void ChangeExpressionGroup(ExpressionGroup expressionGroup)
+        {
+            _expressionGroup = expressionGroup;
+        }
 
         public void AddComment(CommentExpression comment)
         {

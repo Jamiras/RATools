@@ -86,9 +86,9 @@
     <Compile Include="Parser\Functions\MemoryAccessorFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceLookupFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceValueFunction.cs" />
-    <Compile Include="Parser\Internal\AchievementScriptParser.cs" />
     <Compile Include="Parser\Internal\CommentExpression.cs" />
     <Compile Include="Parser\Internal\ArrayExpression.cs" />
+    <Compile Include="Parser\Internal\ExpressionGroupCollection.cs" />
     <Compile Include="Parser\Internal\ExpressionGroup.cs" />
     <Compile Include="Parser\Internal\ExpressionTokenizer.cs" />
     <Compile Include="Parser\Internal\KeywordExpression.cs" />

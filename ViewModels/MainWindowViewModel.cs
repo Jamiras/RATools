@@ -252,16 +252,28 @@ namespace RATools.ViewModels
                 return;
             }
 
-            var tokenizer = Tokenizer.CreateTokenizer(content);
-            var expressionGroup = new AchievementScriptParser().Parse(tokenizer);
-
             int gameId = 0;
-            var idComment = expressionGroup.Comments.FirstOrDefault(c => c.Value.Contains("#ID"));
-            if (idComment != null)
+            string gameTitle = null;
+
+            var tokenizer = Tokenizer.CreateTokenizer(content);
+            tokenizer.SkipWhitespace();
+            while (tokenizer.Match("//"))
             {
-                var tokens = idComment.Value.Split('=');
-                if (tokens.Length > 1)
-                    Int32.TryParse(tokens[1].ToString(), out gameId);
+                var comment = tokenizer.ReadTo('\n');
+                if (comment.Contains("#ID"))
+                {
+                    var tokens = comment.Split('=');
+                    if (tokens.Length > 1)
+                        Int32.TryParse(tokens[1].ToString(), out gameId);
+
+                    break;
+                }
+                else if (gameTitle == null)
+                {
+                    gameTitle = comment.Trim().ToString();
+                }
+
+                tokenizer.SkipWhitespace();
             }
 
             if (gameId == 0)
@@ -276,7 +288,6 @@ namespace RATools.ViewModels
 
             logger.WriteVerbose("Game ID: " + gameId);
 
-            var gameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
             GameViewModel viewModel = null;
 
             foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
