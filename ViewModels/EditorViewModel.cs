@@ -149,7 +149,7 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Run(_parsedContent.Groups.First(), callback, out _scope);
+                        interpreter.Run(_parsedContent, callback, out _scope);
 
                         if (!e.IsAborted)
                         {

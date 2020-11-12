@@ -232,37 +232,29 @@ namespace RATools.Parser
         /// </returns>
         public bool Run(Tokenizer input)
         {
-            var expressionGroupCollection = new ExpressionGroupCollection();
-            expressionGroupCollection.Parse(input);
-            var expressionGroup = expressionGroupCollection.Groups.First();
-            if (expressionGroup.Comments.Count > 0)
-            {
-                GameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
+            var expressionGroups = new ExpressionGroupCollection();
+            expressionGroups.Parse(input);
 
-                foreach (var comment in expressionGroup.Comments)
+            GameTitle = null;
+            foreach (var comment in expressionGroups.Groups.First().Expressions.OfType<CommentExpression>())
+            {
+                if (comment.Value.Contains("#ID"))
                 {
-                    if (comment.Value.Contains("#ID"))
-                    {
-                        ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
-                        break;
-                    }
+                    ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
+                    break;
+                }
+                else if (GameTitle == null)
+                {
+                    GameTitle = comment.Value.Substring(2).Trim();
                 }
             }
 
             InterpreterScope scope;
-            return Run(expressionGroup, null, out scope);
+            return Run(expressionGroups, null, out scope);
         }
 
-        internal bool Run(ExpressionGroup expressionGroup, IScriptInterpreterCallback callback, out InterpreterScope scope)
+        internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback, out InterpreterScope scope)
         { 
-            var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
-            if (parseError != null)
-            {
-                Error = parseError;
-                scope = null;
-                return false;
-            }
-
             scope = new InterpreterScope(GetGlobalScope());
             scope.Context = new AchievementScriptContext
             {
@@ -271,22 +263,29 @@ namespace RATools.Parser
                 RichPresence = _richPresence
             };
 
-            if (!Evaluate(expressionGroup.Expressions, scope, callback))
+            bool result = true;
+            foreach (var expressionGroup in expressionGroups.Groups)
             {
-                var error = Error;
-                if (error != null)
-                    expressionGroup.Errors.Add(error);
+                if (!Evaluate(expressionGroup.Expressions, scope, callback))
+                {
+                    var error = Error;
+                    if (error != null)
+                        expressionGroup.Errors.Add(error);
 
-                return false;
+                    result = false;
+                }
             }
 
-            if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+            if (result)
             {
-                RichPresence = _richPresence.ToString();
-                RichPresenceLine = _richPresence.Line;
+                if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+                {
+                    RichPresence = _richPresence.ToString();
+                    RichPresenceLine = _richPresence.Line;
+                }
             }
 
-            return true;
+            return result;
         }
 
         private void ExtractGameId(Token line)
@@ -365,6 +364,9 @@ namespace RATools.Parser
 
                 case ExpressionType.FunctionDefinition:
                     return EvaluateFunctionDefinition((FunctionDefinitionExpression)expression, scope);
+
+                case ExpressionType.Comment:
+                    return true;
 
                 default:
                     Error = new ParseErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);

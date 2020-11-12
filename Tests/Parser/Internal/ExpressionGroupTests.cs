@@ -9,11 +9,12 @@ namespace RATools.Test.Parser.Internal
     [TestFixture]
     class ExpressionGroupTests
     {
-        private ExpressionGroup Parse(string input)
+        private ExpressionGroupCollection Parse(string input)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
-            var parser = new AchievementScriptParser();
-            return parser.Parse(tokenizer);
+            var parser = new ExpressionGroupCollection();
+            parser.Parse(tokenizer);
+            return parser;
         }
 
         [Test]

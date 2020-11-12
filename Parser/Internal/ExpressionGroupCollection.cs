@@ -31,7 +31,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase.SkipWhitespace(expressionTokenizer);
 
                 // if comments were found, start a new group
-                if (commentGroup.Comments.Count > 0)
+                if (commentGroup.Expressions.Count > 0)
                 {
                     expressionGroup = new ExpressionGroup();
                     Groups.Add(expressionGroup);
@@ -57,7 +57,6 @@ namespace RATools.Parser.Internal
                             case ExpressionType.StringConstant:
                                 if (constantVariablesExpressionGroup != null)
                                 {
-                                    constantVariablesExpressionGroup.Comments.AddRange(commentGroup.Comments);
                                     constantVariablesExpressionGroup.Expressions.AddRange(expressionGroup.Expressions);
                                     constantVariablesExpressionGroup.Errors.AddRange(expressionGroup.Errors);
                                 }
@@ -67,7 +66,7 @@ namespace RATools.Parser.Internal
 
                                     if (!ReferenceEquals(commentGroup, expressionGroup))
                                     {
-                                        expressionGroup.Comments.InsertRange(0, commentGroup.Comments);
+                                        expressionGroup.Expressions.InsertRange(0, commentGroup.Expressions);
                                         Groups.Remove(commentGroup);
                                     }
                                 }
@@ -95,7 +94,7 @@ namespace RATools.Parser.Internal
             }
 
             var lastGroup = Groups.LastOrDefault();
-            if (lastGroup != null && lastGroup.Expressions.Count == 0 && lastGroup.Comments.Count == 0)
+            if (lastGroup != null && lastGroup.Expressions.Count == 0)
                 Groups.RemoveAt(Groups.Count - 1);
         }
 

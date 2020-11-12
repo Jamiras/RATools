@@ -7,26 +7,15 @@ namespace RATools.Parser.Internal
         public ExpressionGroup()
         {
             Errors = new List<ParseErrorExpression>();
-            Comments = new List<CommentExpression>();
             Expressions = new List<ExpressionBase>();
         }
 
         public List<ParseErrorExpression> Errors { get; private set; }
-        public List<CommentExpression> Comments { get; private set; }
         public List<ExpressionBase> Expressions { get; private set; }
 
         public bool GetExpressionsForLine(List<ExpressionBase> expressions, int line)
         {
             bool result = GetExpressionsForLine(expressions, Expressions, line);
-
-            foreach (var comment in Comments)
-            {
-                if (comment.Line == line)
-                {
-                    expressions.Add(comment);
-                    break;
-                }
-            }
 
             foreach (var error in Errors)
             {
