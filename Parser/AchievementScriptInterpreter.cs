@@ -16,7 +16,7 @@ namespace RATools.Parser
         bool IsAborted { get; }
     }
 
-    public partial class AchievementScriptInterpreter
+    public class AchievementScriptInterpreter
     {
         public AchievementScriptInterpreter()
         {
@@ -249,30 +249,37 @@ namespace RATools.Parser
                 }
             }
 
-            InterpreterScope scope;
-            return Run(expressionGroups, null, out scope);
+            return Run(expressionGroups, null);
         }
 
-        internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback, out InterpreterScope scope)
-        { 
-            scope = new InterpreterScope(GetGlobalScope());
-            scope.Context = new AchievementScriptContext
+        internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
+        {
+            if (expressionGroups.Scope == null)
             {
-                Achievements = _achievements,
-                Leaderboards = _leaderboards,
-                RichPresence = _richPresence
-            };
+                expressionGroups.Scope = new InterpreterScope(GetGlobalScope());
+                expressionGroups.Scope.Context = new AchievementScriptContext
+                {
+                    Achievements = _achievements,
+                    Leaderboards = _leaderboards,
+                    RichPresence = _richPresence
+                };
+            }
 
             bool result = true;
             foreach (var expressionGroup in expressionGroups.Groups)
             {
-                if (!Evaluate(expressionGroup.Expressions, scope, callback))
+                if (expressionGroup.NeedsEvaluated)
                 {
-                    var error = Error;
-                    if (error != null)
-                        expressionGroup.AddError(error);
+                    if (!Evaluate(expressionGroup.Expressions, expressionGroups.Scope, callback))
+                    {
+                        var error = Error;
+                        if (error != null)
+                            expressionGroup.AddError(error);
 
-                    result = false;
+                        result = false;
+                    }
+
+                    expressionGroup.NeedsEvaluated = false;
                 }
             }
 

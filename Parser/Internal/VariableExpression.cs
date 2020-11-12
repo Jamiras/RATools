@@ -87,6 +87,9 @@ namespace RATools.Parser.Internal
 
         bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
         {
+            if (Line == line)
+                expressions.Add(this);
+
             return true;
         }
 

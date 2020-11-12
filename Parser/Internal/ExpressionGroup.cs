@@ -16,6 +16,8 @@ namespace RATools.Parser.Internal
         private HashSet<string> _dependencies;
         private HashSet<string> _modifies;
 
+        public bool NeedsEvaluated { get; set; }
+
         public IEnumerable<ParseErrorExpression> Errors
         {
             get

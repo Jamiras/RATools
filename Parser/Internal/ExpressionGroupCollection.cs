@@ -10,9 +10,11 @@ namespace RATools.Parser.Internal
         public ExpressionGroupCollection()
         {
             Groups = new List<ExpressionGroup>();
+
         }
 
         public List<ExpressionGroup> Groups { get; private set; }
+        public InterpreterScope Scope { get; set; }
 
         public void Parse(Tokenizer tokenizer)
         {
@@ -63,7 +65,10 @@ namespace RATools.Parser.Internal
                 Groups.RemoveAt(Groups.Count - 1);
 
             foreach (var group in Groups)
+            {
                 group.UpdateMetadata();
+                group.NeedsEvaluated = group.Modifies.Any();
+            }
         }
 
         public IEnumerable<ParseErrorExpression> Errors

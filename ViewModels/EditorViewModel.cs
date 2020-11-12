@@ -149,7 +149,7 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Run(_parsedContent, callback, out _scope);
+                        interpreter.Run(_parsedContent, callback);
 
                         if (!e.IsAborted)
                         {
@@ -247,7 +247,6 @@ namespace RATools.ViewModels
         }
 
         private ExpressionGroupCollection _parsedContent;
-        private InterpreterScope _scope;
 
         private class ErrorsToolWindowViewModel : CodeReferencesToolWindowViewModel
         {
@@ -332,12 +331,12 @@ namespace RATools.ViewModels
             {
                 string tooltip = null;
 
-                if (_scope != null)
+                if (_parsedContent.Scope != null)
                 {
                     var variable = expression as VariableExpression;
                     if (variable != null)
                     {
-                        var value = _scope.GetVariable(variable.Name);
+                        var value = _parsedContent.Scope.GetVariable(variable.Name);
                         if (value != null)
                             tooltip = BuildTooltip(value);
                     }
@@ -345,7 +344,7 @@ namespace RATools.ViewModels
                     var functionCall = expression as FunctionCallExpression;
                     if (functionCall != null)
                     {
-                        var function = _scope.GetFunction(functionCall.FunctionName.Name);
+                        var function = _parsedContent.Scope.GetFunction(functionCall.FunctionName.Name);
                         if (function != null && function.Expressions.Count == 1)
                             tooltip = BuildTooltip(function.Expressions.First());
                     }
@@ -392,7 +391,7 @@ namespace RATools.ViewModels
 
         private void GotoDefinitionAtCursor()
         {
-            if (_scope == null)
+            if (_parsedContent.Scope == null)
                 return;
 
             var expressions = new List<ExpressionBase>();
@@ -408,7 +407,7 @@ namespace RATools.ViewModels
                 var functionCall = expression as FunctionCallExpression;
                 if (functionCall != null)
                 {
-                    var function = _scope.GetFunction(functionCall.FunctionName.Name);
+                    var function = _parsedContent.Scope.GetFunction(functionCall.FunctionName.Name);
                     if (function != null && function.Line != 0)
                     {
                         GotoLine(function.Name.Line);
@@ -422,7 +421,7 @@ namespace RATools.ViewModels
                 var variableReference = expression as VariableExpression;
                 if (variableReference != null)
                 {
-                    var variable = _scope.GetVariableDefinition(variableReference.Name);
+                    var variable = _parsedContent.Scope.GetVariableDefinition(variableReference.Name);
                     if (variable != null && variable.Line != 0)
                     {
                         MoveCursorTo(variable.Line, variable.Column, MoveCursorFlags.None);
