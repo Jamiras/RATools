@@ -270,7 +270,7 @@ namespace RATools.Parser
                 {
                     var error = Error;
                     if (error != null)
-                        expressionGroup.Errors.Add(error);
+                        expressionGroup.AddError(error);
 
                     result = false;
                 }

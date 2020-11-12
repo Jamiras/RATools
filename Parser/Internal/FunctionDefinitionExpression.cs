@@ -84,6 +84,8 @@ namespace RATools.Parser.Internal
         {
             var function = new FunctionDefinitionExpression();
             function._keyword = new KeywordExpression("function", line, column);
+            function.Line = line;
+            function.Column = column;
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
@@ -156,6 +158,8 @@ namespace RATools.Parser.Internal
 
                 var returnExpression = new ReturnExpression(expression);
                 function.Expressions.Add(returnExpression);
+                function.EndLine = expression.EndLine;
+                function.EndColumn = expression.EndColumn;
                 return function;
             }
 
@@ -187,6 +191,8 @@ namespace RATools.Parser.Internal
                 ExpressionBase.SkipWhitespace(tokenizer);
             }
 
+            function.EndLine = tokenizer.Line;
+            function.EndColumn = tokenizer.Column;
             tokenizer.Advance();
             return function;
         }

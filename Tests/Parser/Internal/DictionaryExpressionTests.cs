@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Text;
+using System.Linq;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -69,10 +70,10 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expression, Is.InstanceOf<DictionaryExpression>());
             var dict = (DictionaryExpression)expression;
             Assert.That(dict.Entries.Count, Is.EqualTo(0));
-            Assert.That(group.Errors.Count, Is.GreaterThan(0));
-            Assert.That(group.Errors[0].Message, Is.EqualTo("Expecting colon following key expression"));
-            Assert.That(group.Errors[0].Line, Is.EqualTo(1));
-            Assert.That(group.Errors[0].Column, Is.EqualTo(4));
+            Assert.That(group.Errors.Count(), Is.GreaterThan(0));
+            Assert.That(group.Errors.ElementAt(0).Message, Is.EqualTo("Expecting colon following key expression"));
+            Assert.That(group.Errors.ElementAt(0).Line, Is.EqualTo(1));
+            Assert.That(group.Errors.ElementAt(0).Column, Is.EqualTo(4));
         }
 
         [Test]
@@ -84,10 +85,10 @@ namespace RATools.Test.Parser.Internal
             var expression = DictionaryExpression.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<DictionaryExpression>());
             var dict = (DictionaryExpression)expression;
-            Assert.That(group.Errors.Count, Is.GreaterThan(0));
-            Assert.That(group.Errors[0].Message, Is.EqualTo("Expecting comma between entries"));
-            Assert.That(group.Errors[0].Line, Is.EqualTo(2));
-            Assert.That(group.Errors[0].Column, Is.EqualTo(2));
+            Assert.That(group.Errors.Count(), Is.GreaterThan(0));
+            Assert.That(group.Errors.ElementAt(0).Message, Is.EqualTo("Expecting comma between entries"));
+            Assert.That(group.Errors.ElementAt(0).Line, Is.EqualTo(2));
+            Assert.That(group.Errors.ElementAt(0).Column, Is.EqualTo(2));
         }
 
         [Test]

@@ -31,7 +31,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase.SkipWhitespace(expressionTokenizer);
 
                 // if comments were found, start a new group
-                if (commentGroup.Expressions.Count > 0)
+                if (!commentGroup.IsEmpty)
                 {
                     expressionGroup = new ExpressionGroup();
                     Groups.Add(expressionGroup);
@@ -47,7 +47,7 @@ namespace RATools.Parser.Internal
                 {
                     case ExpressionType.Assignment:
                         /* valid at top-level */
-                        expressionGroup.Expressions.Add(expression);
+                        expressionGroup.AddExpression(expression);
 
                         // multiple constant assignments can be grouped into a single expression group with no dependencies
                         var assignment = (AssignmentExpression)expression;
@@ -57,18 +57,17 @@ namespace RATools.Parser.Internal
                             case ExpressionType.StringConstant:
                                 if (constantVariablesExpressionGroup != null)
                                 {
-                                    constantVariablesExpressionGroup.Expressions.AddRange(expressionGroup.Expressions);
-                                    constantVariablesExpressionGroup.Errors.AddRange(expressionGroup.Errors);
+                                    constantVariablesExpressionGroup.Merge(expressionGroup);
                                 }
                                 else
                                 {
-                                    constantVariablesExpressionGroup = expressionGroup;
-
                                     if (!ReferenceEquals(commentGroup, expressionGroup))
                                     {
-                                        expressionGroup.Expressions.InsertRange(0, commentGroup.Expressions);
-                                        Groups.Remove(commentGroup);
+                                        commentGroup.Merge(expressionGroup);
+                                        Groups.RemoveAt(Groups.Count - 1);
                                     }
+
+                                    constantVariablesExpressionGroup = commentGroup;
                                 }
                                 break;
 
@@ -82,20 +81,23 @@ namespace RATools.Parser.Internal
                     case ExpressionType.FunctionCall:
                     case ExpressionType.FunctionDefinition:
                         /* valid at top-level */
-                        expressionGroup.Expressions.Add(expression);
+                        expressionGroup.AddExpression(expression);
                         constantVariablesExpressionGroup = null;
                         break;
 
                     default:
-                        expressionGroup.Errors.Add(new ParseErrorExpression(String.Format("standalone {0} has no meaning", expression.Type), expression));
+                        expressionGroup.AddError(new ParseErrorExpression(String.Format("standalone {0} has no meaning", expression.Type), expression));
                         constantVariablesExpressionGroup = null;
                         break;
                 }
             }
 
             var lastGroup = Groups.LastOrDefault();
-            if (lastGroup != null && lastGroup.Expressions.Count == 0)
+            if (lastGroup != null && lastGroup.IsEmpty)
                 Groups.RemoveAt(Groups.Count - 1);
+
+            foreach (var group in Groups)
+                group.UpdateMetadata();
         }
 
         public IEnumerable<ParseErrorExpression> Errors
@@ -114,9 +116,38 @@ namespace RATools.Parser.Internal
         public bool GetExpressionsForLine(List<ExpressionBase> expressions, int line)
         {
             bool result = false;
+            int left = 0;
+            int right = Groups.Count;
 
-            foreach (var group in Groups)
-                result |= group.GetExpressionsForLine(expressions, line);
+            while (left != right)
+            {
+                int mid = (left + right) / 2;
+                var group = Groups[mid];
+                if (line < group.FirstLine)
+                {
+                    right = mid;
+                }
+                else if (line > group.LastLine)
+                {
+                    left = mid;
+                }
+                else
+                {
+                    var index = mid;
+                    while (index >= left && index > 0 && Groups[index - 1].LastLine >= line)
+                        index--;
+
+                    while (index < right)
+                    {
+                        group = Groups[index++];
+                        if (group.FirstLine > line)
+                            break;
+
+                        result |= group.GetExpressionsForLine(expressions, line);
+                    }
+                    break;
+                }
+            }
 
             return result;
         }

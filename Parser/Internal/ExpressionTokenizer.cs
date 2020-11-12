@@ -18,12 +18,12 @@ namespace RATools.Parser.Internal
         }
         public void AddComment(CommentExpression comment)
         {
-            _expressionGroup.Expressions.Add(comment);
+            _expressionGroup.AddExpression(comment);
         }
 
         public void AddError(ParseErrorExpression error)
         {
-            _expressionGroup.Errors.Add(error);
+            _expressionGroup.AddError(error);
         }
     }
 }
