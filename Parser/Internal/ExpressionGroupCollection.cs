@@ -19,7 +19,6 @@ namespace RATools.Parser.Internal
             Groups.Clear();
 
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
-            ExpressionGroup constantVariablesExpressionGroup = null;
             ExpressionGroup expressionGroup;
 
             while (expressionTokenizer.NextChar != '\0')
@@ -45,49 +44,16 @@ namespace RATools.Parser.Internal
                 var expression = ExpressionBase.Parse(expressionTokenizer);
                 switch (expression.Type)
                 {
-                    case ExpressionType.Assignment:
-                        /* valid at top-level */
-                        expressionGroup.AddExpression(expression);
-
-                        // multiple constant assignments can be grouped into a single expression group with no dependencies
-                        var assignment = (AssignmentExpression)expression;
-                        switch (assignment.Value.Type)
-                        {
-                            case ExpressionType.IntegerConstant:
-                            case ExpressionType.StringConstant:
-                                if (constantVariablesExpressionGroup != null)
-                                {
-                                    constantVariablesExpressionGroup.Merge(expressionGroup);
-                                }
-                                else
-                                {
-                                    if (!ReferenceEquals(commentGroup, expressionGroup))
-                                    {
-                                        commentGroup.Merge(expressionGroup);
-                                        Groups.RemoveAt(Groups.Count - 1);
-                                    }
-
-                                    constantVariablesExpressionGroup = commentGroup;
-                                }
-                                break;
-
-                            default:
-                                constantVariablesExpressionGroup = null;
-                                break;
-                        }
-                        break;
-
                     case ExpressionType.For:
+                    case ExpressionType.Assignment:
                     case ExpressionType.FunctionCall:
                     case ExpressionType.FunctionDefinition:
                         /* valid at top-level */
                         expressionGroup.AddExpression(expression);
-                        constantVariablesExpressionGroup = null;
                         break;
 
                     default:
                         expressionGroup.AddError(new ParseErrorExpression(String.Format("standalone {0} has no meaning", expression.Type), expression));
-                        constantVariablesExpressionGroup = null;
                         break;
                 }
             }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -34,7 +35,7 @@ namespace RATools.Parser.Internal
 
     }
 
-    internal class VariableExpression : VariableExpressionBase
+    internal class VariableExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableExpression(string name)
             : base(name)
@@ -82,6 +83,20 @@ namespace RATools.Parser.Internal
         {
             var that = (VariableExpression)obj;
             return Name == that.Name;
+        }
+
+        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        {
+            return true;
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            dependencies.Add(Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> dependencies)
+        {
         }
     }
 

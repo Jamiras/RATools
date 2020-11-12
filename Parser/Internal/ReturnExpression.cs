@@ -86,5 +86,16 @@ namespace RATools.Parser.Internal
 
             return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Value }, line);
         }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            var nested = Value as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+        }
     }
 }

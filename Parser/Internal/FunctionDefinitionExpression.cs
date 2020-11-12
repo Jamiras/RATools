@@ -346,5 +346,33 @@ namespace RATools.Parser.Internal
 
             return true;
         }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            foreach (var expression in Expressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+
+            foreach (var parameter in Parameters)
+                dependencies.Remove(parameter.Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            modifies.Add(Name.Name);
+
+            foreach (var expression in Expressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetModifications(modifies);
+            }
+
+            foreach (var parameter in Parameters)
+                modifies.Remove(parameter.Name);
+        }
     }
 }

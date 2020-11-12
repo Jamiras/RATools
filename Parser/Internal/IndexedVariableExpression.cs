@@ -189,5 +189,16 @@ namespace RATools.Parser.Internal
         {
             return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Variable, Index }, line);
         }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            var nested = Index as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+        }
     }
 }

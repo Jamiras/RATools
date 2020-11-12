@@ -14,6 +14,7 @@ namespace RATools.Parser.Internal
         private List<ExpressionBase> _expressions;
         private ExpressionBase _expression;
         private HashSet<string> _dependencies;
+        private HashSet<string> _modifies;
 
         public IEnumerable<ParseErrorExpression> Errors
         {
@@ -75,6 +76,17 @@ namespace RATools.Parser.Internal
             return _dependencies.Contains(name);
         }
 
+        public IEnumerable<string> Modifies
+        {
+            get
+            {
+                if (_modifies != null)
+                    return _modifies;
+
+                return Enumerable.Empty<string>();
+            }
+        }
+
         public bool IsEmpty
         {
             get { return _expression == null && _expressions == null; }
@@ -89,6 +101,21 @@ namespace RATools.Parser.Internal
             {
                 FirstLine = Expressions.First().Line;
                 LastLine = Expressions.Last().EndLine;
+
+                var dependencies = new HashSet<string>();
+                var modifies = new HashSet<string>();
+                foreach (var expression in Expressions)
+                {
+                    var nested = expression as INestedExpressions;
+                    if (nested != null)
+                    {
+                        nested.GetDependencies(dependencies);
+                        nested.GetModifications(modifies);
+                    }
+                }
+
+                _dependencies = (dependencies.Count > 0) ? dependencies : null;
+                _modifies = (modifies.Count > 0) ? modifies : null;
             }
         }
 
@@ -169,5 +196,9 @@ namespace RATools.Parser.Internal
     internal interface INestedExpressions
     {
         bool GetExpressionsForLine(List<ExpressionBase> expressions, int line);
+
+        void GetDependencies(HashSet<string> dependencies);
+
+        void GetModifications(HashSet<string> modifies);
     }
 }

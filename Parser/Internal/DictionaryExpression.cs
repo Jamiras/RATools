@@ -199,6 +199,24 @@ namespace RATools.Parser.Internal
             return true;
         }
 
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            foreach (var entry in Entries)
+            {
+                var nested = entry.Key as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+
+                nested = entry.Value as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+        }
+
         [DebuggerDisplay("{Key}: {Value}")]
         public class DictionaryEntry : IComparer<DictionaryEntry>
         {
