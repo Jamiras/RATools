@@ -783,6 +783,23 @@ namespace RATools.Parser.Internal
             return !left.Equals(right);
         }
 
+        protected static bool ExpressionsEqual(IEnumerable<ExpressionBase> left, IEnumerable<ExpressionBase> right)
+        {
+            var leftEnumerator = left.GetEnumerator();
+            var rightEnumerator = right.GetEnumerator();
+
+            while (leftEnumerator.MoveNext())
+            {
+                if (!rightEnumerator.MoveNext())
+                    return false;
+
+                if (leftEnumerator.Current != rightEnumerator.Current)
+                    return false;
+            }
+
+            return (!rightEnumerator.MoveNext());
+        }
+
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope"/>.
         /// </summary>

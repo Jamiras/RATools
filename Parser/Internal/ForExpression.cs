@@ -98,7 +98,7 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = (ForExpression)obj;
-            return IteratorName == that.IteratorName && Range == that.Range && Expressions == that.Expressions;
+            return IteratorName == that.IteratorName && Range == that.Range && ExpressionsEqual(Expressions, that.Expressions);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

@@ -87,7 +87,8 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = (IfExpression)obj;
-            return Condition == that.Condition && Expressions == that.Expressions && ElseExpressions == that.ElseExpressions;
+            return Condition == that.Condition && ExpressionsEqual(Expressions, that.Expressions) && 
+                ExpressionsEqual(ElseExpressions, that.ElseExpressions);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

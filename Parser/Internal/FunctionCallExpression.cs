@@ -376,7 +376,7 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = (FunctionCallExpression)obj;
-            return FunctionName == that.FunctionName && Parameters == that.Parameters;
+            return (FunctionName == that.FunctionName) && ExpressionsEqual(Parameters, that.Parameters);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

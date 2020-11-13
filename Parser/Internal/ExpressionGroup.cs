@@ -23,6 +23,14 @@ namespace RATools.Parser.Internal
 
         public bool NeedsEvaluated { get; set; }
 
+        public bool HasExpressionsToEvaluate
+        {
+            get
+            {
+                return Expressions.Any(e => e.Type != ExpressionType.Comment);
+            }
+        }
+
         public IEnumerable<ParseErrorExpression> Errors
         {
             get
@@ -265,6 +273,35 @@ namespace RATools.Parser.Internal
                 AddError(error);
         }
 
+        public bool ExpressionsMatch(ExpressionGroup that)
+        {
+            if (_expression != null)
+                return (_expression == that._expression);
+
+            if (_expressions == null)
+                return (that._expressions == null);
+
+            if (that._expressions == null)
+                return false;
+
+            if (_expressions.Count != that._expressions.Count)
+                return false;
+            
+            for (int i = 0; i < _expressions.Count; ++i)
+            {
+                if (_expressions[i] != that._expressions[i])
+                    return false;
+            }
+
+            return true;
+        }
+
+        public void ReplaceExpressions(ExpressionGroup that)
+        {
+            _expression = that._expression;
+            _expressions = that._expressions;
+        }
+
         public void AdjustLines(int amount)
         {
             FirstLine += amount;
@@ -293,8 +330,6 @@ namespace RATools.Parser.Internal
         {
             if (IsEmpty)
                 return "empty";
-
-            UpdateMetadata();
 
             var builder = new StringBuilder();
             builder.Append(FirstLine);

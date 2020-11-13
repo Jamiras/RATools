@@ -10,7 +10,6 @@ namespace RATools.Parser.Internal
         public ExpressionGroupCollection()
         {
             Groups = new List<ExpressionGroup>();
-
         }
 
         public List<ExpressionGroup> Groups { get; private set; }
@@ -21,174 +20,50 @@ namespace RATools.Parser.Internal
             Groups.Clear();
 
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
-            while (expressionTokenizer.NextChar != '\0')
+            ParseGroups(expressionTokenizer, Groups);
+
+            foreach (var group in Groups)
+            {
+                group.UpdateMetadata();
+                group.NeedsEvaluated = group.HasExpressionsToEvaluate;
+            }
+        }
+
+        private static void ParseGroups(ExpressionTokenizer tokenizer, List<ExpressionGroup> groups)
+        {
+            while (tokenizer.NextChar != '\0')
             {
                 // create a separate group for comments
                 var newGroup = new ExpressionGroup();
-                Groups.Add(newGroup);
-                expressionTokenizer.ChangeExpressionGroup(newGroup);
-                ExpressionBase.SkipWhitespace(expressionTokenizer);
+                groups.Add(newGroup);
+                tokenizer.ChangeExpressionGroup(newGroup);
+                ExpressionBase.SkipWhitespace(tokenizer);
 
                 // if comments were found, start a new group
                 if (!newGroup.IsEmpty)
                 {
                     newGroup = new ExpressionGroup();
-                    Groups.Add(newGroup);
-                    expressionTokenizer.ChangeExpressionGroup(newGroup);
+                    groups.Add(newGroup);
+                    tokenizer.ChangeExpressionGroup(newGroup);
                 }
 
-                var expression = ExpressionBase.Parse(expressionTokenizer);
+                var expression = ExpressionBase.Parse(tokenizer);
 
                 // sometimes parsing an expression will process trailing whitespace looking for a continuation character. 
                 // move the trailing comments into a separate group. do not move the internal comments
                 var commentGroup = newGroup.ExtractTrailingComments(expression);
                 if (commentGroup != null)
-                    Groups.Add(commentGroup);
+                    groups.Add(commentGroup);
 
-                switch (expression.Type)
-                {
-                    case ExpressionType.For:
-                    case ExpressionType.Assignment:
-                    case ExpressionType.FunctionCall:
-                    case ExpressionType.FunctionDefinition:
-                        /* valid at top-level */
-                        newGroup.AddExpression(expression);
-                        newGroup.NeedsEvaluated = true;
-                        break;
-
-                    default:
-                        newGroup.AddError(new ParseErrorExpression(String.Format("standalone {0} has no meaning", expression.Type), expression));
-                        break;
-                }
+                AddTopLevelExpression(newGroup, expression);
             }
 
-            var lastGroup = Groups.LastOrDefault();
+            var lastGroup = groups.LastOrDefault();
             if (lastGroup != null && lastGroup.IsEmpty)
-                Groups.RemoveAt(Groups.Count - 1);
-
-            foreach (var group in Groups)
-                group.UpdateMetadata();
+                groups.RemoveAt(groups.Count - 1);
         }
 
-        public void Update(Tokenizer tokenizer, IEnumerable<int> affectedLines)
-        {
-            var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
-
-            var updatedLines = new List<int>(affectedLines);
-            updatedLines.Sort();
-            var updatedLineIndex = 0;
-            var nextUpdatedLine = (updatedLines.Count > 0) ? updatedLines[0] : 0;
-
-            var affectedVariables = new HashSet<string>();
-            int adjust = 0;
-            for (int i = 0; i < Groups.Count; ++i)
-            {
-                var group = Groups[i];
-
-                // if the next updated line is not in the group, skip the group
-                var lastLine = group.LastLine + adjust;
-                if (nextUpdatedLine == 0 || nextUpdatedLine > lastLine)
-                {
-                    if (adjust != 0)
-                        group.AdjustLines(adjust);
-                    continue;
-                }
-
-                // if the next updated line is between groups, check for a potential new group
-                var firstLine = group.FirstLine + adjust;
-                if (nextUpdatedLine < firstLine && expressionTokenizer.Line < firstLine)
-                { 
-                    group = new ExpressionGroup();
-                    group.FirstLine = Math.Max(nextUpdatedLine, expressionTokenizer.Line);
-                    group.LastLine = lastLine;
-                    Groups.Insert(i, group);
-                }
-                else
-                {
-                    // undefine any variables modified by this group - we'll completely re-evaluate them later
-                    foreach (var variable in group.Modifies)
-                    {
-                        affectedVariables.Add(variable);
-                        Scope.UndefineVariable(variable);
-                    }
-                }
-
-                // update nextUpdatedLine for the next trip through the loop
-                do
-                {
-                    if (++updatedLineIndex == updatedLines.Count)
-                    {
-                        nextUpdatedLine = 0;
-                        break;
-                    }
-
-                    nextUpdatedLine = updatedLines[updatedLineIndex];
-                } while (nextUpdatedLine <= group.LastLine);
-
-                // skip ahead to the data to parse
-                expressionTokenizer.AdvanceToLine(group.FirstLine);
-
-                // do the parse
-                int newLastLine = 0;
-                var newGroup = new ExpressionGroup();
-                expressionTokenizer.ChangeExpressionGroup(newGroup);
-                ExpressionBase.SkipWhitespace(expressionTokenizer);
-
-                if (!newGroup.IsEmpty)
-                {
-                    newGroup.UpdateMetadata();
-
-                    // found comments
-                    if (group.IsEmpty || // replacing a placeholder
-                        group.Expressions.First().Type == ExpressionType.Comment) // group was only comments before
-                    {
-                        Groups[i] = newGroup;
-                        newLastLine = newGroup.LastLine;
-                    }
-                    else
-                    {
-                        // pre-existing non-comment group before. insert the new group for the comments
-                        Groups.Insert(i++, newGroup);
-                    }
-                }
-
-                if (newLastLine == 0)
-                {
-                    if (!newGroup.IsEmpty)
-                    {
-                        newGroup = new ExpressionGroup();
-                        expressionTokenizer.ChangeExpressionGroup(newGroup);
-                    }
-
-                    var expression = ExpressionBase.Parse(expressionTokenizer);
-                    newGroup.ExtractTrailingComments(expression);
-                    AddTopLevelExpression(newGroup, expression);
-                    newGroup.UpdateMetadata();
-
-                    newGroup.NeedsEvaluated = true;
-                    Groups[i] = newGroup;
-                    newLastLine = newGroup.LastLine;
-                }
-
-                // make sure to re-evaluate anything that might have already been looking for modified names
-                foreach (var variable in newGroup.Modifies)
-                    affectedVariables.Add(variable);
-
-                adjust = (newLastLine - lastLine);
-            }
-
-            // re-evaluate any groups that are dependent on (or modify) the affected variables
-            foreach (var group in Groups)
-            {
-                if (!group.NeedsEvaluated &&
-                    (group.IsDependentOn(affectedVariables) || group.Modifies.Any(v => affectedVariables.Contains(v))))
-                {
-                    group.NeedsEvaluated = true;
-                }
-            }
-        }
-
-        private void AddTopLevelExpression(ExpressionGroup expressionGroup, ExpressionBase expression)
+        private static void AddTopLevelExpression(ExpressionGroup expressionGroup, ExpressionBase expression)
         {
             switch (expression.Type)
             {
@@ -204,6 +79,106 @@ namespace RATools.Parser.Internal
                     expressionGroup.AddError(new ParseErrorExpression(String.Format("standalone {0} has no meaning", expression.Type), expression));
                     break;
             }
+        }
+
+        public void Update(Tokenizer tokenizer, IEnumerable<int> affectedLines)
+        {
+            var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
+            var nextUpdatedLine = affectedLines.Min();
+
+            // we can ignore everything before the first modified line
+            int groupStart = 0;
+            while (groupStart < Groups.Count && nextUpdatedLine > Groups[groupStart].LastLine)
+                ++groupStart;
+            if (groupStart < Groups.Count)
+                nextUpdatedLine = Math.Min(Groups[groupStart].FirstLine, nextUpdatedLine);
+            expressionTokenizer.AdvanceToLine(nextUpdatedLine);
+
+            // parse whatever is remaining
+            var newGroups = new List<ExpressionGroup>();
+            ParseGroups(expressionTokenizer, newGroups);
+
+            // attempt to match the end of the script
+            int groupStop = Groups.Count;
+            int newGroupStop = newGroups.Count;
+
+            while (groupStop > groupStart && newGroupStop > 0)
+            {
+                var existingGroup = Groups[--groupStop];
+                var newGroup = newGroups[--newGroupStop];
+
+                if (!existingGroup.ExpressionsMatch(newGroup))
+                {
+                    ++groupStop;
+                    ++newGroupStop;
+                    break;
+                }
+
+                existingGroup.ReplaceExpressions(newGroup);
+            }
+
+            // whatever is remaining will be swapped out. capture any affected variables
+            var affectedVariables = new HashSet<string>();
+            for (int i = groupStart; i < groupStop; ++i)
+            {
+                foreach (var variable in Groups[i].Modifies)
+                {
+                    affectedVariables.Add(variable);
+                    Scope.UndefineVariable(variable);
+                }
+            }
+            for (int i = 0; i < newGroupStop; ++i)
+            {
+                var newGroup = newGroups[i];
+                newGroup.UpdateMetadata();
+                newGroup.NeedsEvaluated = newGroup.HasExpressionsToEvaluate;
+
+                foreach (var variable in newGroup.Modifies)
+                    affectedVariables.Add(variable);
+            }
+
+            // perform the swap
+            Groups.RemoveRange(groupStart, groupStop - groupStart);
+            Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
+
+            // re-evaluate any groups that are dependent on (or modify) the affected variables
+            if (affectedVariables.Count > 0)
+                FlagDependencies(affectedVariables);
+        }
+
+        private void FlagDependencies(HashSet<string> affectedVariables)
+        {
+            int count;
+            do
+            {
+                count = affectedVariables.Count;
+
+                foreach (var group in Groups)
+                {
+                    // this group is already flagged for evaluation - ignore
+                    if (group.NeedsEvaluated)
+                        continue;
+
+                    if (group.IsDependentOn(affectedVariables))
+                    {
+                        // this group depends on one of the affected variables, re-evaluate
+                        group.NeedsEvaluated = true;
+
+                        // also flag the output of this group for possible chaining
+                        foreach (var variable in group.Modifies)
+                            affectedVariables.Add(variable);
+                    }
+                    else if (group.Modifies.Any(v => affectedVariables.Contains(v)))
+                    {
+                        // this group could modify one of the affected variables.
+                        // any time a variable is potentially modified, we have to fully re-evaluate it
+                        group.NeedsEvaluated = true;
+                    }
+                }
+
+                // if any new items were added to the affected variables list, go through again and check
+                // for new stuff to flag
+            } while (affectedVariables.Count > count);
         }
 
         public IEnumerable<ParseErrorExpression> Errors
