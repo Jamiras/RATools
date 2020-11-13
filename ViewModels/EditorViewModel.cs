@@ -124,27 +124,14 @@ namespace RATools.ViewModels
 
             // parse immediately so we can update the syntax highlighting
             var tokenizer = Tokenizer.CreateTokenizer(e.Content);
-            if (_parsedContent == null)
+            if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
                 _parsedContent = new ExpressionGroupCollection();
                 _parsedContent.Parse(tokenizer);
             }
-            else
+            else if (e.Type == ContentChangeType.Update)
             {
-                foreach (var line in e.UpdatedLines)
-                {
-                    bool found = false;
-                    foreach (var group in _parsedContent.GetGroupsForLine(line.Line))
-                    {
-                        group.NeedsParsed = true;
-                        found = true;
-                    }
-
-                    if (!found)
-                        _parsedContent.AddNewGroup(line.Line);
-                }
-
-                _parsedContent.Update(tokenizer);
+                _parsedContent.Update(tokenizer, e.AffectedLines);
             }
 
             // if more changes have been made, bail

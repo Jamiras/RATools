@@ -16,6 +16,7 @@ namespace RATools.Parser.Internal
         {
             _expressionGroup = expressionGroup;
         }
+
         public void AddComment(CommentExpression comment)
         {
             _expressionGroup.AddExpression(comment);
@@ -24,6 +25,12 @@ namespace RATools.Parser.Internal
         public void AddError(ParseErrorExpression error)
         {
             _expressionGroup.AddError(error);
+        }
+
+        public void AdvanceToLine(int line)
+        {
+            while (Line < line && NextChar != '\0')
+                Advance();
         }
     }
 }

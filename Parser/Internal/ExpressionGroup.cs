@@ -22,7 +22,6 @@ namespace RATools.Parser.Internal
         public RichPresenceBuilder GeneratedRichPresence { get; set; }
 
         public bool NeedsEvaluated { get; set; }
-        public bool NeedsParsed { get; set; }
 
         public IEnumerable<ParseErrorExpression> Errors
         {
@@ -268,6 +267,9 @@ namespace RATools.Parser.Internal
 
         public void AdjustLines(int amount)
         {
+            FirstLine += amount;
+            LastLine += amount;
+
             foreach (var expression in Expressions)
                 AdjustLines(expression, amount);
 

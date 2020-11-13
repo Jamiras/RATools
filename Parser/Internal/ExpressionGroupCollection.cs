@@ -70,64 +70,66 @@ namespace RATools.Parser.Internal
                 group.UpdateMetadata();
         }
 
-        public void AddNewGroup(int line)
-        {
-            var index = 0;
-            while (index < Groups.Count && Groups[index].LastLine < line)
-                ++index;
-
-            var newGroup = new ExpressionGroup();
-            newGroup.FirstLine = (index > 0) ? Groups[index - 1].LastLine + 1 : 1;
-            newGroup.LastLine = (index < Groups.Count) ? Groups[index].FirstLine - 1 : line;
-            newGroup.NeedsParsed = true;
-            Groups.Insert(index, newGroup);
-        }
-
-        public void Update(Tokenizer tokenizer)
+        public void Update(Tokenizer tokenizer, IEnumerable<int> affectedLines)
         {
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
+
+            var updatedLines = new List<int>(affectedLines);
+            updatedLines.Sort();
+            var updatedLineIndex = 0;
+            var nextUpdatedLine = (updatedLines.Count > 0) ? updatedLines[0] : 0;
 
             var affectedVariables = new HashSet<string>();
             int adjust = 0;
             for (int i = 0; i < Groups.Count; ++i)
             {
                 var group = Groups[i];
-                if (!group.NeedsParsed)
+
+                // if the next updated line is not in the group, skip the group
+                var lastLine = group.LastLine + adjust;
+                if (nextUpdatedLine == 0 || nextUpdatedLine > lastLine)
                 {
                     if (adjust != 0)
                         group.AdjustLines(adjust);
                     continue;
                 }
 
-                group.NeedsParsed = false;
-
-                // if we generated a placeholder record for an empty line, discard it
-                if (group.IsEmpty && (expressionTokenizer.Line > group.LastLine || expressionTokenizer.NextChar == '\0'))
-                {
-                    Groups.RemoveAt(i);
-                    --i;
-                    continue;
+                // if the next updated line is between groups, check for a potential new group
+                var firstLine = group.FirstLine + adjust;
+                if (nextUpdatedLine < firstLine && expressionTokenizer.Line < firstLine)
+                { 
+                    group = new ExpressionGroup();
+                    group.FirstLine = Math.Max(nextUpdatedLine, expressionTokenizer.Line);
+                    group.LastLine = lastLine;
+                    Groups.Insert(i, group);
                 }
+                else
+                {
+                    // undefine any variables modified by this group - we'll completely re-evaluate them later
+                    foreach (var variable in group.Modifies)
+                    {
+                        affectedVariables.Add(variable);
+                        Scope.UndefineVariable(variable);
+                    }
+                }
+
+                // update nextUpdatedLine for the next trip through the loop
+                do
+                {
+                    if (++updatedLineIndex == updatedLines.Count)
+                    {
+                        nextUpdatedLine = 0;
+                        break;
+                    }
+
+                    nextUpdatedLine = updatedLines[updatedLineIndex];
+                } while (nextUpdatedLine <= group.LastLine);
 
                 // skip ahead to the data to parse
-                while (expressionTokenizer.Line < group.FirstLine)
-                {
-                    while (expressionTokenizer.NextChar != '\n')
-                        expressionTokenizer.Advance();
+                expressionTokenizer.AdvanceToLine(group.FirstLine);
 
-                    expressionTokenizer.Advance();
-                }
-
-                int lastLine = group.LastLine;
+                // do the parse
                 int newLastLine = 0;
-
-                // undefine any variables modified by this group - we'll completely re-evaluate them later
-                foreach (var variable in group.Modifies)
-                {
-                    affectedVariables.Add(variable);
-                    Scope.UndefineVariable(variable);
-                }
-
                 var newGroup = new ExpressionGroup();
                 expressionTokenizer.ChangeExpressionGroup(newGroup);
                 ExpressionBase.SkipWhitespace(expressionTokenizer);

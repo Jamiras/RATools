@@ -438,6 +438,14 @@ namespace RATools.Parser.Internal
             return Name == that.Name;
         }
 
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+            builder.Append("FunctionName: ");
+            AppendString(builder);
+            return builder.ToString();
+        }
+
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
