@@ -60,12 +60,15 @@ namespace RATools.Parser.Internal
             return newRoot;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (Left == null)
-                return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Right }, line);
+            get
+            {
+                if (Left != null)
+                    yield return Left;
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Left, Right }, line);
+                yield return Right;
+            }
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

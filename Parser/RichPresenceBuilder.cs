@@ -126,5 +126,35 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
+        public bool IsEmpty
+        {
+            get
+            {
+                return String.IsNullOrEmpty(DisplayString) && _valueFields.Count == 0 &&
+                    _lookupFields.Count == 0 && _conditionalDisplayStrings.Count == 0;
+            }
+        }
+
+        public void Clear()
+        {
+            _conditionalDisplayStrings.Clear();
+            _valueFields.Clear();
+            _lookupFields.Clear();
+            DisplayString = null;
+        }
+
+        public void Merge(RichPresenceBuilder from)
+        {
+            if (!String.IsNullOrEmpty(from.DisplayString))
+                DisplayString = from.DisplayString;
+
+            _conditionalDisplayStrings.AddRange(from._conditionalDisplayStrings);
+
+            foreach (var kvp in from._valueFields)
+                _valueFields.Add(kvp);
+
+            foreach (var kvp in from._lookupFields)
+                _lookupFields.Add(kvp);
+        }
     }
 }

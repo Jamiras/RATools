@@ -79,32 +79,24 @@ namespace RATools.Parser.Internal
             return Variable == that.Variable && Value == that.Value;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (Variable.Line == line)
+            get
             {
-                var indexedVariable = Variable as IndexedVariableExpression;
-                if (indexedVariable != null)
-                {
-                    if (!ExpressionGroup.GetExpressionsForLine(expressions, new[] { indexedVariable }, line))
-                        return false;
-                }
-                else
-                {
-                    expressions.Add(new VariableDefinitionExpression(Variable));
-                }
+                yield return Variable;
+                yield return Value;
             }
-
-            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Value }, line);
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
-            var nested = Variable as INestedExpressions;
-            if (nested != null && Variable.GetType() != typeof(VariableExpression))
-                nested.GetDependencies(dependencies);
+            // don't call GetDependencies on a base VariableExpression as we're updating it, not reading it
+            // do call GetDependencies on an IndexedVariableExpression to get the dependencies of the index
+            var indexedVariable = Variable as IndexedVariableExpression;
+            if (indexedVariable != null)
+                ((INestedExpressions)indexedVariable).GetDependencies(dependencies);
 
-            nested = Value as INestedExpressions;
+            var nested = Value as INestedExpressions;
             if (nested != null)
                 nested.GetDependencies(dependencies);
         }

@@ -165,6 +165,15 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Removes the definition of a variable from the current scope.
+        /// </summary>
+        /// <param name="variable">The variable.</param>
+        public void UndefineVariable(string name)
+        {
+            _variables.Remove(name);
+        }
+
+        /// <summary>
         /// Gets whether or not the processor has encountered an early exit statement (return, break)
         /// </summary>
         public bool IsComplete { get; internal set; }

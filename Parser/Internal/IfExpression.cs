@@ -90,18 +90,22 @@ namespace RATools.Parser.Internal
             return Condition == that.Condition && Expressions == that.Expressions && ElseExpressions == that.ElseExpressions;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keyword != null && _keyword.Line == line)
-                expressions.Add(_keyword);
+            get
+            {
+                if (_keyword != null)
+                    yield return _keyword;
 
-            if (!ExpressionGroup.GetExpressionsForLine(expressions, new[] { Condition }, line))
-                return false;
+                if (Condition != null)
+                    yield return Condition;
 
-            if (!ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line))
-                return false;
+                foreach (var expression in Expressions)
+                    yield return expression;
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, ElseExpressions, line);
+                foreach (var expression in ElseExpressions)
+                    yield return expression;
+            }
         }
         
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

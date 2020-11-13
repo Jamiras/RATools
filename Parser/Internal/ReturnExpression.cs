@@ -78,13 +78,16 @@ namespace RATools.Parser.Internal
             var that = (ReturnExpression)obj;
             return Value == that.Value;
         }
-
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keyword != null && _keyword.Line == line)
-                expressions.Add(_keyword);
+            get
+            {
+                if (_keyword != null)
+                    yield return _keyword;
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Value }, line);
+                if (Value != null)
+                    yield return Value;
+            }
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

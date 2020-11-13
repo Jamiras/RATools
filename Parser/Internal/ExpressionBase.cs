@@ -275,6 +275,12 @@ namespace RATools.Parser.Internal
             return clause;
         }
 
+        internal void AdjustLines(int amount)
+        {
+            Line += amount;
+            EndLine += amount;
+        }
+
         protected static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
             var line = tokenizer.Line;
@@ -441,7 +447,7 @@ namespace RATools.Parser.Internal
                         var parameters = new List<ExpressionBase>();
                         ParseParameters(tokenizer, parameters);
 
-                        var functionCall = new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
+                        var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
                         functionCall.EndLine = tokenizer.Line;
                         functionCall.EndColumn = tokenizer.Column - 1;
                         return functionCall;

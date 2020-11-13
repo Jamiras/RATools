@@ -325,26 +325,26 @@ namespace RATools.Parser.Internal
             return Name == that.Name && Parameters == that.Parameters && Expressions == that.Expressions;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keyword != null && _keyword.Line == line)
-                expressions.Add(_keyword);
-            if (Name.Line == line)
+            get
             {
-                var name = new FunctionDefinitionExpression(Name.Name);
-                Name.CopyLocation(name);
-                expressions.Add(name);
+                if (_keyword != null)
+                    yield return _keyword;
+
+                if (Name != null)
+                {
+                    //var name = new FunctionDefinitionExpression(Name.Name);
+                    //Name.CopyLocation(name);
+                    yield return Name;
+                }
+
+                foreach (var parameter in Parameters)
+                    yield return parameter;
+
+                foreach (var expression in Expressions)
+                    yield return expression;
             }
-
-            foreach (var parameter in Parameters)
-            {
-                if (parameter.Line == line)
-                    expressions.Add(parameter);
-            }
-
-            ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
-
-            return true;
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

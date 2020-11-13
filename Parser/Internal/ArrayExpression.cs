@@ -88,15 +88,12 @@ namespace RATools.Parser.Internal
             return Entries == that.Entries;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            foreach (var entry in Entries)
+            get
             {
-                if (line >= entry.Line && line <= entry.EndLine)
-                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry }, line);
+                return Entries;
             }
-
-            return true;
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

@@ -123,10 +123,28 @@ namespace RATools.ViewModels
             UpdateProgress(1, 0);
 
             // parse immediately so we can update the syntax highlighting
+            var tokenizer = Tokenizer.CreateTokenizer(e.Content);
             if (_parsedContent == null)
             {
                 _parsedContent = new ExpressionGroupCollection();
-                _parsedContent.Parse(Tokenizer.CreateTokenizer(e.Content));
+                _parsedContent.Parse(tokenizer);
+            }
+            else
+            {
+                foreach (var line in e.UpdatedLines)
+                {
+                    bool found = false;
+                    foreach (var group in _parsedContent.GetGroupsForLine(line.Line))
+                    {
+                        group.NeedsParsed = true;
+                        found = true;
+                    }
+
+                    if (!found)
+                        _parsedContent.AddNewGroup(line.Line);
+                }
+
+                _parsedContent.Update(tokenizer);
             }
 
             // if more changes have been made, bail
@@ -160,14 +178,8 @@ namespace RATools.ViewModels
 
                             if (!e.IsAborted)
                             {
-                                // wait a short while before updating the editor list
-                                System.Threading.Thread.Sleep(700);
-
-                                if (!e.IsAborted)
-                                {
-                                    // update the editor list
-                                    _owner.PopulateEditorList(interpreter);
-                                }
+                                // update the editor list
+                                _owner.PopulateEditorList(interpreter);
                             }
                         }
                     }
@@ -341,10 +353,10 @@ namespace RATools.ViewModels
                             tooltip = BuildTooltip(value);
                     }
 
-                    var functionCall = expression as FunctionCallExpression;
+                    var functionCall = expression as FunctionNameExpression;
                     if (functionCall != null)
                     {
-                        var function = _parsedContent.Scope.GetFunction(functionCall.FunctionName.Name);
+                        var function = _parsedContent.Scope.GetFunction(functionCall.Name);
                         if (function != null && function.Expressions.Count == 1)
                             tooltip = BuildTooltip(function.Expressions.First());
                     }
@@ -404,10 +416,10 @@ namespace RATools.ViewModels
                 if (column < expression.Column || column > expression.EndColumn + 1)
                     continue;
 
-                var functionCall = expression as FunctionCallExpression;
+                var functionCall = expression as FunctionNameExpression;
                 if (functionCall != null)
                 {
-                    var function = _parsedContent.Scope.GetFunction(functionCall.FunctionName.Name);
+                    var function = _parsedContent.Scope.GetFunction(functionCall.Name);
                     if (function != null && function.Line != 0)
                     {
                         GotoLine(function.Name.Line);

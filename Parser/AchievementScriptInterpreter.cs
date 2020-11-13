@@ -255,21 +255,25 @@ namespace RATools.Parser
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
         {
             if (expressionGroups.Scope == null)
-            {
                 expressionGroups.Scope = new InterpreterScope(GetGlobalScope());
-                expressionGroups.Scope.Context = new AchievementScriptContext
-                {
-                    Achievements = _achievements,
-                    Leaderboards = _leaderboards,
-                    RichPresence = _richPresence
-                };
-            }
+
+            var scriptContext = new AchievementScriptContext();
+
+            expressionGroups.Scope.Context = scriptContext;
 
             bool result = true;
             foreach (var expressionGroup in expressionGroups.Groups)
             {
                 if (expressionGroup.NeedsEvaluated)
                 {
+                    if (scriptContext.Achievements == null)
+                        scriptContext.Achievements = new List<Achievement>();
+                    if (scriptContext.Leaderboards == null)
+                        scriptContext.Leaderboards = new List<Leaderboard>();
+                    if (scriptContext.RichPresence == null)
+                        scriptContext.RichPresence = new RichPresenceBuilder();
+
+                    expressionGroup.ResetErrors();
                     if (!Evaluate(expressionGroup.Expressions, expressionGroups.Scope, callback))
                     {
                         var error = Error;
@@ -279,17 +283,56 @@ namespace RATools.Parser
                         result = false;
                     }
 
+                    if (scriptContext.Achievements.Count > 0)
+                    {
+                        expressionGroup.GeneratedAchievements = scriptContext.Achievements;
+                        scriptContext.Achievements = null;
+                    }
+                    else if (expressionGroup.GeneratedAchievements != null)
+                    {
+                        expressionGroup.GeneratedAchievements = null;
+                    }
+
+                    if (scriptContext.Leaderboards.Count > 0)
+                    {
+                        expressionGroup.GeneratedLeaderboards = scriptContext.Leaderboards;
+                        scriptContext.Leaderboards = null;
+                    }
+                    else if (expressionGroup.GeneratedLeaderboards != null)
+                    {
+                        expressionGroup.GeneratedLeaderboards = null;
+                    }
+
+                    if (!scriptContext.RichPresence.IsEmpty)
+                    {
+                        expressionGroup.GeneratedRichPresence = scriptContext.RichPresence;
+                        scriptContext.RichPresence = null;
+                    }
+
                     expressionGroup.NeedsEvaluated = false;
                 }
             }
 
-            if (result)
+            _achievements.Clear();
+            _leaderboards.Clear();
+            _richPresence.Clear();
+
+            foreach (var expressionGroup in expressionGroups.Groups)
             {
-                if (!String.IsNullOrEmpty(_richPresence.DisplayString))
-                {
-                    RichPresence = _richPresence.ToString();
-                    RichPresenceLine = _richPresence.Line;
-                }
+                if (expressionGroup.GeneratedAchievements != null)
+                    _achievements.AddRange(expressionGroup.GeneratedAchievements);
+
+                if (expressionGroup.GeneratedLeaderboards != null)
+                    _leaderboards.AddRange(expressionGroup.GeneratedLeaderboards);
+
+                if (expressionGroup.GeneratedRichPresence != null)
+                    _richPresence.Merge(expressionGroup.GeneratedRichPresence);
+            }
+
+            if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+            {
+                RichPresence = _richPresence.ToString();
+                RichPresenceLine = _richPresence.Line;
             }
 
             return result;

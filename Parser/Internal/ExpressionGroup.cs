@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Data;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -16,7 +17,12 @@ namespace RATools.Parser.Internal
         private HashSet<string> _dependencies;
         private HashSet<string> _modifies;
 
+        public ICollection<Achievement> GeneratedAchievements { get; set; }
+        public ICollection<Leaderboard> GeneratedLeaderboards { get; set; }
+        public RichPresenceBuilder GeneratedRichPresence { get; set; }
+
         public bool NeedsEvaluated { get; set; }
+        public bool NeedsParsed { get; set; }
 
         public IEnumerable<ParseErrorExpression> Errors
         {
@@ -27,6 +33,11 @@ namespace RATools.Parser.Internal
 
                 return Enumerable.Empty<ParseErrorExpression>();
             }
+        }
+
+        public void ResetErrors()
+        {
+            _errors = null;
         }
 
         public void AddError(ParseErrorExpression error)
@@ -53,21 +64,81 @@ namespace RATools.Parser.Internal
 
         public void AddExpression(ExpressionBase expression)
         {
-            if (_expressions != null)
+            if (_expressions == null)
             {
-                _expressions.Add(expression);
-            }
-            else if (_expression != null)
-            {
+                if (_expression == null)
+                {
+                    _expression = expression;
+                    return;
+                }
+
                 _expressions = new List<ExpressionBase>();
                 _expressions.Add(_expression);
                 _expression = null;
-                _expressions.Add(expression);
             }
-            else
+
+            int insertAt = _expressions.Count();
+            while (insertAt > 0)
             {
-                _expression = expression;
+                var previous = _expressions[insertAt - 1];
+                if (previous.Line < expression.Line)
+                    break;
+                if (previous.Line == expression.Line && previous.Column < expression.Column)
+                    break;
+
+                --insertAt;
             }
+
+            _expressions.Insert(insertAt, expression);
+        }
+
+        internal ExpressionGroup ExtractTrailingComments(ExpressionBase expression)
+        {
+            if (_expression != null)
+            {
+                if (_expression.Line < expression.EndLine)
+                    return null;
+                // ASSERT: comment must be the last thing on a line, so we don't have to check columns
+
+                var newGroup = new ExpressionGroup();
+                newGroup._expression = _expression;
+                _expression = null;
+                return newGroup;
+            }
+
+            if (_expressions == null)
+                return null;
+
+            int index = _expressions.Count;
+            while (index > 0 && _expressions[index - 1].Line >= expression.EndLine)
+                --index;
+
+            if (index != _expressions.Count)
+            {
+                var newGroup = new ExpressionGroup();
+                if (index == 1)
+                {
+                    _expression = _expressions[0];
+                    _expressions.RemoveAt(0);
+                    --index;
+                }
+
+                if (index == 0)
+                {
+                    newGroup._expressions = _expressions;
+                    _expressions = null;
+                    return newGroup;
+                }
+
+                newGroup._expressions = new List<ExpressionBase>();
+                for (int i = index; i < _expressions.Count; ++i)
+                    newGroup._expressions.Add(_expressions[i]);
+
+                _expressions.RemoveRange(index, _expressions.Count - index);
+                return newGroup;
+            }
+
+            return null;
         }
 
         public bool IsDependentOn(string name)
@@ -76,6 +147,20 @@ namespace RATools.Parser.Internal
                 return false;
 
             return _dependencies.Contains(name);
+        }
+
+        public bool IsDependentOn(HashSet<string> names)
+        {
+            if (_dependencies != null)
+            {
+                foreach (var name in names)
+                {
+                    if (_dependencies.Contains(name))
+                        return true;
+                }
+            }
+
+            return false;
         }
 
         public IEnumerable<string> Modifies
@@ -94,15 +179,27 @@ namespace RATools.Parser.Internal
             get { return _expression == null && _expressions == null; }
         }
 
-        public int FirstLine { get; private set; }
-        public int LastLine { get; private set; }
+        public int FirstLine { get; internal set; }
+        public int LastLine { get; internal set; }
 
         public void UpdateMetadata()
         {
             if (!IsEmpty)
             {
-                FirstLine = Expressions.First().Line;
-                LastLine = Expressions.Last().EndLine;
+                var enumerator = Expressions.GetEnumerator();
+                if (enumerator.MoveNext())
+                {
+                    FirstLine = enumerator.Current.Line;
+                    LastLine = enumerator.Current.EndLine;
+
+                    while (enumerator.MoveNext())
+                    {
+                        if (enumerator.Current.Line < FirstLine)
+                            FirstLine = enumerator.Current.Line;
+                        if (enumerator.Current.EndLine > LastLine)
+                            LastLine = enumerator.Current.EndLine;
+                    }
+                }
 
                 var dependencies = new HashSet<string>();
                 var modifies = new HashSet<string>();
@@ -146,9 +243,9 @@ namespace RATools.Parser.Internal
                     break;
 
                 var nested = expression as INestedExpressions;
-                if (nested != null)
+                if (nested != null && nested.NestedExpressions.Any())
                 {
-                    if (!nested.GetExpressionsForLine(matchingExpressions, line))
+                    if (!GetExpressionsForLine(matchingExpressions, nested.NestedExpressions, line))
                         return false;
                 }
                 else
@@ -167,6 +264,27 @@ namespace RATools.Parser.Internal
 
             foreach (var error in from.Errors)
                 AddError(error);
+        }
+
+        public void AdjustLines(int amount)
+        {
+            foreach (var expression in Expressions)
+                AdjustLines(expression, amount);
+
+            foreach (var expression in Errors)
+                AdjustLines(expression, amount);
+        }
+
+        private static void AdjustLines(ExpressionBase expression, int amount)
+        {
+            expression.AdjustLines(amount);
+
+            var nested = expression as INestedExpressions;
+            if (nested != null)
+            {
+                foreach (var nestedExpression in nested.NestedExpressions)
+                    AdjustLines(nestedExpression, amount);
+            }
         }
 
         public override string ToString()
@@ -197,7 +315,7 @@ namespace RATools.Parser.Internal
 
     internal interface INestedExpressions
     {
-        bool GetExpressionsForLine(List<ExpressionBase> expressions, int line);
+        IEnumerable<ExpressionBase> NestedExpressions { get; }
 
         void GetDependencies(HashSet<string> dependencies);
 

@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Text;
-using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -185,9 +184,13 @@ namespace RATools.Parser.Internal
             return Variable == that.Variable && Index == that.Index;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Variable, Index }, line);
+            get
+            {
+                yield return Variable;
+                yield return Index;
+            }
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)

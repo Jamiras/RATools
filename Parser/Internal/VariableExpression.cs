@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Internal
@@ -85,12 +86,12 @@ namespace RATools.Parser.Internal
             return Name == that.Name;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (Line == line)
-                expressions.Add(this);
-
-            return true;
+            get
+            {
+                return Enumerable.Empty<ExpressionBase>();
+            }
         }
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
@@ -98,12 +99,12 @@ namespace RATools.Parser.Internal
             dependencies.Add(Name);
         }
 
-        void INestedExpressions.GetModifications(HashSet<string> dependencies)
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
         }
     }
 
-    internal class VariableDefinitionExpression : VariableExpressionBase
+    internal class VariableDefinitionExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableDefinitionExpression(string name)
             : base(name)
@@ -133,6 +134,23 @@ namespace RATools.Parser.Internal
         {
             var that = (VariableDefinitionExpression)obj;
             return Name == that.Name;
+        }
+
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get
+            {
+                return Enumerable.Empty<ExpressionBase>();
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            modifies.Add(Name);
         }
     }
 }
