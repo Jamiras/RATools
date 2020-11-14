@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +12,7 @@ namespace RATools.Parser.Internal
         {
         }
 
-        private List<ParseErrorExpression> _errors;
+        private List<ParseErrorExpression> _parseErrors;
         private List<ExpressionBase> _expressions;
         private ExpressionBase _expression;
         private HashSet<string> _dependencies;
@@ -21,38 +22,44 @@ namespace RATools.Parser.Internal
         public ICollection<Leaderboard> GeneratedLeaderboards { get; set; }
         public RichPresenceBuilder GeneratedRichPresence { get; set; }
 
-        public bool NeedsEvaluated { get; set; }
+        public bool NeedsEvaluated { get; private set; }
 
-        public bool HasExpressionsToEvaluate
+        public void MarkForEvaluation()
         {
-            get
+            if (_parseErrors != null)
             {
-                return Expressions.Any(e => e.Type != ExpressionType.Comment);
+                // don't evaluate if parse errors are present
+                NeedsEvaluated = false;
+            }
+            else
+            {
+                // if there are no expressions, or only comments, we don't need to evaluate
+                NeedsEvaluated = Expressions.Any(e => e.Type != ExpressionType.Comment);
             }
         }
 
-        public IEnumerable<ParseErrorExpression> Errors
+        public void MarkEvaluated()
+        {
+            NeedsEvaluated = false;
+        }
+
+        public IEnumerable<ParseErrorExpression> ParseErrors
         {
             get
             {
-                if (_errors != null)
-                    return _errors;
+                if (_parseErrors != null)
+                    return _parseErrors;
 
                 return Enumerable.Empty<ParseErrorExpression>();
             }
         }
 
-        public void ResetErrors()
+        public void AddParseError(ParseErrorExpression error)
         {
-            _errors = null;
-        }
+            if (_parseErrors == null)
+                _parseErrors = new List<ParseErrorExpression>();
 
-        public void AddError(ParseErrorExpression error)
-        {
-            if (_errors == null)
-                _errors = new List<ParseErrorExpression>();
-
-            _errors.Add(error);
+            _parseErrors.Add(error);
         }
 
         public IEnumerable<ExpressionBase> Expressions 
@@ -183,7 +190,7 @@ namespace RATools.Parser.Internal
 
         public bool IsEmpty
         {
-            get { return _expression == null && _expressions == null; }
+            get { return _expression == null && _expressions == null && _parseErrors == null; }
         }
 
         public int FirstLine { get; internal set; }
@@ -193,20 +200,7 @@ namespace RATools.Parser.Internal
         {
             if (!IsEmpty)
             {
-                var enumerator = Expressions.GetEnumerator();
-                if (enumerator.MoveNext())
-                {
-                    FirstLine = enumerator.Current.Line;
-                    LastLine = enumerator.Current.EndLine;
-
-                    while (enumerator.MoveNext())
-                    {
-                        if (enumerator.Current.Line < FirstLine)
-                            FirstLine = enumerator.Current.Line;
-                        if (enumerator.Current.EndLine > LastLine)
-                            LastLine = enumerator.Current.EndLine;
-                    }
-                }
+                UpdateRange();
 
                 var dependencies = new HashSet<string>();
                 var modifies = new HashSet<string>();
@@ -216,7 +210,10 @@ namespace RATools.Parser.Internal
                     if (nested != null)
                     {
                         nested.GetDependencies(dependencies);
-                        nested.GetModifications(modifies);
+
+                        // if any parse errors are present, this group will not be evaluated, so no modifications will be made
+                        if (_parseErrors == null)
+                            nested.GetModifications(modifies);
                     }
                 }
 
@@ -225,11 +222,35 @@ namespace RATools.Parser.Internal
             }
         }
 
+        private void UpdateRange()
+        {
+            FirstLine = Int32.MaxValue;
+            LastLine = 0;
+
+            var enumerator = Expressions.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current.Line < FirstLine)
+                    FirstLine = enumerator.Current.Line;
+                if (enumerator.Current.EndLine > LastLine)
+                    LastLine = enumerator.Current.EndLine;
+            }
+
+            enumerator = ParseErrors.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.Current.Line < FirstLine)
+                    FirstLine = enumerator.Current.Line;
+                if (enumerator.Current.EndLine > LastLine)
+                    LastLine = enumerator.Current.EndLine;
+            }
+        }
+
         public bool GetExpressionsForLine(List<ExpressionBase> expressions, int line)
         {
             bool result = GetExpressionsForLine(expressions, Expressions, line);
 
-            foreach (var error in Errors)
+            foreach (var error in ParseErrors)
             {
                 var innerError = error.InnermostError ?? error;
                 if (innerError.Line <= line && innerError.EndLine >= line)
@@ -269,8 +290,13 @@ namespace RATools.Parser.Internal
             foreach (var expression in from.Expressions)
                 AddExpression(expression);
 
-            foreach (var error in from.Errors)
-                AddError(error);
+            if (from._parseErrors != null)
+            {
+                if (_parseErrors == null)
+                    _parseErrors = new List<ParseErrorExpression>();
+
+                _parseErrors.AddRange(from._parseErrors);
+            }
         }
 
         public bool ExpressionsMatch(ExpressionGroup that)
@@ -296,10 +322,31 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        public void ReplaceExpressions(ExpressionGroup that)
+        public void ReplaceExpressions(ExpressionGroup that, bool updateDependencies)
         {
             _expression = that._expression;
             _expressions = that._expressions;
+            _parseErrors = that._parseErrors;
+
+            if (updateDependencies)
+            {
+                // update everything
+                UpdateMetadata();
+            }
+            else if (that.FirstLine != 0)
+            {
+                // copy everything
+                FirstLine = that.FirstLine;
+                LastLine = that.LastLine;
+
+                _dependencies = that._dependencies;
+                _modifies = that._modifies;
+            }
+            else
+            {
+                // only update the range, assume the Dependencies and Modifies collections are correct
+                UpdateRange();
+            }
         }
 
         public void AdjustLines(int amount)
@@ -310,7 +357,7 @@ namespace RATools.Parser.Internal
             foreach (var expression in Expressions)
                 AdjustLines(expression, amount);
 
-            foreach (var expression in Errors)
+            foreach (var expression in ParseErrors)
                 AdjustLines(expression, amount);
         }
 
@@ -340,10 +387,21 @@ namespace RATools.Parser.Internal
             }
             builder.Append(": ");
 
-            foreach (var expression in Expressions)
+            if (_expression != null || _expressions != null)
             {
-                builder.AppendLine();
-                expression.AppendString(builder);
+                foreach (var expression in Expressions)
+                {
+                    builder.AppendLine();
+                    expression.AppendString(builder);
+                }
+            }
+            else
+            {
+                foreach (var expression in ParseErrors)
+                {
+                    builder.AppendLine();
+                    expression.AppendString(builder);
+                }
             }
 
             return builder.ToString();

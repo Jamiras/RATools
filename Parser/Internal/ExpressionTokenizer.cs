@@ -1,4 +1,6 @@
 ﻿using Jamiras.Components;
+using System;
+using System.Diagnostics;
 
 namespace RATools.Parser.Internal
 {
@@ -24,13 +26,33 @@ namespace RATools.Parser.Internal
 
         public void AddError(ParseErrorExpression error)
         {
-            _expressionGroup.AddError(error);
+            _expressionGroup.AddParseError(error);
         }
 
         public void AdvanceToLine(int line)
         {
             while (Line < line && NextChar != '\0')
                 Advance();
+        }
+
+        private ExpressionBase _queuedExpression;
+
+        public void QueueExpression(ExpressionBase expression)
+        {
+            Debug.Assert(_queuedExpression == null);
+            _queuedExpression = expression;
+        }
+
+        public ExpressionBase DequeueExpression()
+        {
+            if (_queuedExpression != null)
+            {
+                var queuedExpression = _queuedExpression;
+                _queuedExpression = null;
+                return queuedExpression;
+            }
+
+            return null;
         }
     }
 }

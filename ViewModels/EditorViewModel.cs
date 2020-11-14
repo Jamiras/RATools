@@ -122,16 +122,20 @@ namespace RATools.ViewModels
             // show progress bar
             UpdateProgress(1, 0);
 
+            bool needsUpdate = false;
+
             // parse immediately so we can update the syntax highlighting
             var tokenizer = Tokenizer.CreateTokenizer(e.Content);
             if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
                 _parsedContent = new ExpressionGroupCollection();
                 _parsedContent.Parse(tokenizer);
+
+                needsUpdate = true;
             }
             else if (e.Type == ContentChangeType.Update)
             {
-                _parsedContent.Update(tokenizer, e.AffectedLines);
+                needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
             }
 
             // if more changes have been made, bail
@@ -140,7 +144,7 @@ namespace RATools.ViewModels
                 // make sure the progress bar is hidden
                 UpdateProgress(0, 0);
             }
-            else if (!e.IsWhitespaceOnlyChange)
+            else if (needsUpdate)
             {
                 // make sure to at least show the script file in the editor list
                 if (!_owner.Editors.Any())
@@ -154,11 +158,17 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Run(_parsedContent, callback);
+
+                        bool hadErrors = _parsedContent.HasEvaluationErrors;
+                        bool hasErrors = interpreter.Run(_parsedContent, callback);
 
                         if (!e.IsAborted)
                         {
                             UpdateProgress(100, 0);
+
+                            // if any errors were added or removed, update the highlighting
+                            if (hasErrors != hadErrors)
+                                UpdateSyntaxHighlighting(e);
 
                             // report any errors
                             UpdateErrorList();

@@ -130,6 +130,14 @@ namespace RATools.Parser.Internal
         /// <returns>The next expression, <c>null</c> if at end of file.</returns>
         public static ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
+            var expressionTokenizer = tokenizer as ExpressionTokenizer;
+            if (expressionTokenizer != null)
+            {
+                var queuedExpression = expressionTokenizer.DequeueExpression();
+                if (queuedExpression != null)
+                    return queuedExpression;
+            }
+
             SkipWhitespace(tokenizer);
 
             if (tokenizer.NextChar == '\0')
@@ -543,7 +551,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible mathematical operation", new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible mathematical operation", right);
                     break;
             }
 
@@ -567,7 +580,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible comparison", new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible comparison", right);
                     break;
             }
 
@@ -590,7 +608,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible logical condition", new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible logical condition", right);
                     break;
             }
 
@@ -620,7 +643,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible assignment", new KeywordExpression("=", joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(value);
+
+                    value = new KeywordExpression("=", joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible assignment", value);
                     break;
             }
 

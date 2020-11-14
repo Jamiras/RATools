@@ -260,6 +260,7 @@ namespace RATools.Parser
             var scriptContext = new AchievementScriptContext();
 
             expressionGroups.Scope.Context = scriptContext;
+            expressionGroups.ResetErrors();
 
             bool result = true;
             foreach (var expressionGroup in expressionGroups.Groups)
@@ -273,12 +274,11 @@ namespace RATools.Parser
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
-                    expressionGroup.ResetErrors();
                     if (!Evaluate(expressionGroup.Expressions, expressionGroups.Scope, callback))
                     {
                         var error = Error;
                         if (error != null)
-                            expressionGroup.AddError(error);
+                            expressionGroups.AddEvaluationError(error);
 
                         result = false;
                     }
@@ -309,7 +309,7 @@ namespace RATools.Parser
                         scriptContext.RichPresence = null;
                     }
 
-                    expressionGroup.NeedsEvaluated = false;
+                    expressionGroup.MarkEvaluated();
                 }
             }
 
