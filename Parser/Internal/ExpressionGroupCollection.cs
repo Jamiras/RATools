@@ -134,7 +134,7 @@ namespace RATools.Parser.Internal
                     {
                         _evaluationErrors.RemoveAt(j);
                     }
-                    else
+                    else if (error.InnerError != null)
                     {
                         error = error.InnermostError;
                         if (error.EndLine >= group.FirstLine && error.Line <= group.LastLine)

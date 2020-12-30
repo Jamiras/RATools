@@ -135,7 +135,10 @@ namespace RATools.Parser
                     tokenizer.ReadTo(':'); // downvotes
                     tokenizer.Advance();
 
-                    achievement.BadgeName = tokenizer.ReadTo(':').ToString();
+                    if (tokenizer.NextChar == '"')
+                        achievement.BadgeName = tokenizer.ReadQuotedString().ToString();
+                    else
+                        achievement.BadgeName = tokenizer.ReadTo(':').ToString();
                     if (achievement.BadgeName.EndsWith("_lock"))
                         achievement.BadgeName.Remove(achievement.BadgeName.Length - 5);
 

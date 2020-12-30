@@ -373,7 +373,7 @@ namespace RATools.ViewModels
 
             if (achievement.Id == 0 && Local.Id > 0)
                 achievement.Id = Local.Id;
-            if (!String.IsNullOrEmpty(Local.BadgeName))
+            if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
                 achievement.BadgeName = Local.BadgeName;
 
             _owner.UpdateLocal(achievement, Local.Achievement, warning, validateAll);

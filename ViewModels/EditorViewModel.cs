@@ -119,9 +119,6 @@ namespace RATools.ViewModels
 
         protected override void OnUpdateSyntax(ContentChangedEventArgs e)
         {
-            // show progress bar
-            UpdateProgress(1, 0);
-
             bool needsUpdate = false;
 
             // parse immediately so we can update the syntax highlighting
@@ -138,19 +135,19 @@ namespace RATools.ViewModels
                 needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
             }
 
-            // if more changes have been made, bail
             if (e.IsAborted)
             {
-                // make sure the progress bar is hidden
-                UpdateProgress(0, 0);
+                // if more changes have been made, bail
             }
             else if (needsUpdate)
             {
+                // running the script can take a lot of time, push that work onto a background thread and show progress bar
+                UpdateProgress(1, 0);
+
                 // make sure to at least show the script file in the editor list
                 if (!_owner.Editors.Any())
                     _owner.PopulateEditorList(null);
 
-                // running the script can take a lot of time, push that work onto a background thread
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(() =>
                 {
                     if (!e.IsAborted)
