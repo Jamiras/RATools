@@ -235,6 +235,16 @@ namespace RATools.Parser
             var expressionGroups = new ExpressionGroupCollection();
             expressionGroups.Parse(input);
 
+            if (Error == null)
+            {
+                foreach (var group in expressionGroups.Groups)
+                {
+                    Error = group.ParseErrors.FirstOrDefault();
+                    if (Error != null)
+                        return false;
+                }
+            }
+
             GameTitle = null;
             foreach (var comment in expressionGroups.Groups.First().Expressions.OfType<CommentExpression>())
             {
@@ -249,7 +259,15 @@ namespace RATools.Parser
                 }
             }
 
-            return Run(expressionGroups, null);
+            if (!Run(expressionGroups, null))
+            {
+                if (Error == null)
+                    Error = expressionGroups.Errors.FirstOrDefault();
+
+                return false;
+            }
+
+            return true;
         }
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
@@ -326,7 +344,14 @@ namespace RATools.Parser
                     _leaderboards.AddRange(expressionGroup.GeneratedLeaderboards);
 
                 if (expressionGroup.GeneratedRichPresence != null)
-                    _richPresence.Merge(expressionGroup.GeneratedRichPresence);
+                {
+                    var error = _richPresence.Merge(expressionGroup.GeneratedRichPresence);
+                    if (error != null)
+                    {
+                        expressionGroups.AddEvaluationError(error);
+                        result = false;
+                    }
+                }
             }
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))

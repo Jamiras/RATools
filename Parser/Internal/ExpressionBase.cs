@@ -199,7 +199,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '=')
                     {
-                        clause = ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
                     }
                     else
                     {
@@ -238,7 +238,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '&')
                     {
-                        clause = ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
                     }
                     else
                     {
@@ -253,7 +253,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '|')
                     {
-                        clause = ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
                     }
                     else
                     {

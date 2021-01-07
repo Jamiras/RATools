@@ -71,7 +71,9 @@ namespace RATools.Parser.Functions
             if (value == null)
                 return false;
 
-            var error = context.RichPresence.AddLookupField(name.Value, dictionary, fallback);
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+
+            var error = context.RichPresence.AddLookupField(functionCall, name.Value, dictionary, fallback);
             if (error != null)
             {
                 result = error;

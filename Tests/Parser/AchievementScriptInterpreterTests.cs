@@ -474,7 +474,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestNeverWithOrs()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -493,7 +493,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestUnlessWithOrs()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5)");
+            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -658,7 +658,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestMeasuredMultipleValue()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) || measured(byte(0x2345) == 10)");
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) || measured(byte(0x2345) == 10))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -668,7 +668,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestMeasuredMultipleHits()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10)) || measured(repeated(6, byte(0x2345) == 4))");
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10)) || measured(repeated(6, byte(0x2345) == 4)))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -678,14 +678,14 @@ namespace RATools.Test.Parser
         [Test]
         public void TestMeasuredMultipleDiffering()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1)", false);
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1))", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions must have the same target."));
         }
 
         [Test]
         public void TestMeasuredMultipleHitsWhen()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345)==7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2346)==7)");
+            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345)==7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2346)==7))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -695,7 +695,7 @@ namespace RATools.Test.Parser
         [Test]
         public void TestTransitiveOrClause()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3");
+            var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -763,6 +763,22 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestRichPresenceValueReused()
+        {
+            var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345)))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceValueReusedDifferingFormat()
+        {
+            var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345), format=\"VALUE\"))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234), format=\"FRAMES\"))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("1:68 Multiple rich_presence_value calls with the same name must have the same format"));
+        }
+
+        [Test]
         public void TestRichPresenceLookup()
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
@@ -776,6 +792,59 @@ namespace RATools.Test.Parser
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupReused()
+        {
+            // multiple display strings can use the same lookup only if they use the same dictionary and fallback
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupReusedDifferingFallback()
+        {
+            // multiple display strings can use the same lookup only if they use the same dictionary and fallback
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict, fallback=\"x\"))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, fallback=\"y\"))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("3:99 Multiple rich_presence_lookup calls with the same name must have the same fallback"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupReusedDifferingDictionary()
+        {
+            // multiple display strings can use the same lookup only if they use the same dictionary and fallback
+            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "dict2 = { 1:\"Yes\", 2:\"No\", 3:\"Maybe\" }\n" +
+                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))", false);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("4:41 Multiple rich_presence_lookup calls with the same name must have the same dictionary"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupReusedEquivalentDictionary()
+        {
+            // multiple display strings can use the same lookup only if they use the same dictionary and fallback
+            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupMultipleDictionaries()
+        {
+            // multiple display strings can use the same lookup only if they use the same dictionary and fallback
+            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test1\", byte(0x2345), dict1))\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test2\", byte(0x1234), dict2))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test1\r\n1=Yes\r\n2=No\r\n\r\nLookup:Test2\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test1(0xH002345) there\r\nvalue @Test2(0xH001234) here\r\n"));
         }
 
         [Test]

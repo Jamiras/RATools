@@ -25,7 +25,7 @@ namespace RATools.Test.Parser.Internal
                               "// line 3\n");
 
             var expressions = new List<ExpressionBase>();
-            Assert.That(group.GetExpressionsForLine(expressions, 0), Is.True);
+            Assert.That(group.GetExpressionsForLine(expressions, 0), Is.False);
             Assert.That(expressions.Count, Is.EqualTo(0));
 
             expressions.Clear();
@@ -47,7 +47,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(((CommentExpression)expressions[0]).Value, Is.EqualTo("// line 3"));
 
             expressions.Clear();
-            Assert.That(group.GetExpressionsForLine(expressions, 4), Is.True);
+            Assert.That(group.GetExpressionsForLine(expressions, 4), Is.False);
             Assert.That(expressions.Count, Is.EqualTo(0));
         }
 
@@ -62,7 +62,7 @@ namespace RATools.Test.Parser.Internal
             Assert.That(group.GetExpressionsForLine(expressions, 2), Is.True);
             Assert.That(expressions.Count, Is.EqualTo(3));
 
-            var b = expressions.FirstOrDefault(e => e is VariableDefinitionExpression) as VariableDefinitionExpression;
+            var b = expressions.FirstOrDefault(e => e is VariableExpression) as VariableExpression;
             Assert.That(b, Is.Not.Null);
             Assert.That(b.Name, Is.EqualTo("b"));
 

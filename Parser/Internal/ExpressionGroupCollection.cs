@@ -51,6 +51,9 @@ namespace RATools.Parser.Internal
                     tokenizer.ChangeExpressionGroup(newGroup);
                 }
 
+                if (tokenizer.NextChar == '\0')
+                    break;
+
                 var expression = ExpressionBase.Parse(tokenizer);
 
                 // sometimes parsing an expression will process trailing whitespace looking for a continuation character. 
@@ -156,7 +159,9 @@ namespace RATools.Parser.Internal
             }
 
             // perform the swap
-            Debug.WriteLine("Replacing {0}-{1} with {2} lines", groupStart, groupStop - 1, newGroupStop);
+            Debug.WriteLine("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})", 
+                groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine, 
+                newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
             Groups.RemoveRange(groupStart, groupStop - groupStart);
             Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
 
