@@ -139,7 +139,7 @@ namespace RATools.Parser.Internal
             SkipWhitespace(tokenizer);
 
             if (tokenizer.NextChar == '\0')
-                return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column, tokenizer.Line, tokenizer.Column);
+                return ParseError(tokenizer, "Unexpected end of script");
 
             var clause = ExpressionBase.ParseClause(tokenizer);
             if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
@@ -647,7 +647,8 @@ namespace RATools.Parser.Internal
             switch (value.Type)
             {
                 case ExpressionType.ParseError:
-                    return value;
+                    value = new KeywordExpression("=", joinerLine, joinerColumn);
+                    break;
 
                 case ExpressionType.Array:
                 case ExpressionType.Comparison:

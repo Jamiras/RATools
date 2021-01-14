@@ -97,8 +97,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ForExpression)obj;
-            return IteratorName == that.IteratorName && Range == that.Range && ExpressionsEqual(Expressions, that.Expressions);
+            var that = obj as ForExpression;
+            return that != null && IteratorName == that.IteratorName && Range == that.Range && ExpressionsEqual(Expressions, that.Expressions);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
@@ -131,6 +131,8 @@ namespace RATools.Parser.Internal
                 if (nested != null)
                     nested.GetDependencies(dependencies);
             }
+
+            dependencies.Remove(IteratorName.Name);
         }
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)

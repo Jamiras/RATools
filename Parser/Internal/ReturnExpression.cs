@@ -75,8 +75,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ReturnExpression)obj;
-            return Value == that.Value;
+            var that = obj as ReturnExpression;
+            return that != null && Value == that.Value;
         }
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {

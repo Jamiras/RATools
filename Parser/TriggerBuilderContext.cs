@@ -269,7 +269,7 @@ namespace RATools.Parser
 
                     default:
                         System.Diagnostics.Debug.Assert(requirement.IsCombining);
-                        
+
                         // force Operator on combining requirement to None
                         requirement.Operator = RequirementOperator.None;
                         break;

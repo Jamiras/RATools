@@ -375,8 +375,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (FunctionCallExpression)obj;
-            return (FunctionName == that.FunctionName) && ExpressionsEqual(Parameters, that.Parameters);
+            var that = obj as FunctionCallExpression;
+            return (that != null && FunctionName == that.FunctionName) && ExpressionsEqual(Parameters, that.Parameters);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
@@ -423,19 +423,6 @@ namespace RATools.Parser.Internal
         {
             EndLine = variable.EndLine;
             EndColumn = variable.EndColumn;
-        }
-
-        /// <summary>
-        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        protected override bool Equals(ExpressionBase obj)
-        {
-            var that = (FunctionNameExpression)obj;
-            return Name == that.Name;
         }
 
         public override string ToString()

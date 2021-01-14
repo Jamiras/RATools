@@ -4,6 +4,7 @@ using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Text;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -250,6 +251,62 @@ namespace RATools.Test.Parser.Internal
             var arrayResult = (DictionaryExpression)result;
             Assert.That(arrayResult.Entries.Count, Is.EqualTo(1));
             Assert.That(arrayResult.Entries[0].Value.ToString(), Is.EqualTo(value.ToString()));
+        }
+
+        [Test]
+        public void TestNestedExpressions()
+        {
+            var key1 = new VariableExpression("key1");
+            var value1 = new IntegerConstantExpression(99);
+            var key2 = new StringConstantExpression("key2");
+            var value2 = new VariableExpression("value2");
+            var expr = new DictionaryExpression();
+            expr.Add(key1, value1);
+            expr.Add(key2, value2);
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(4));
+            Assert.That(nested.Contains(key1));
+            Assert.That(nested.Contains(value1));
+            Assert.That(nested.Contains(key2));
+            Assert.That(nested.Contains(value2));
+        }
+
+        [Test]
+        public void TestGetDependencies()
+        {
+            var key1 = new VariableExpression("key1");
+            var value1 = new IntegerConstantExpression(99);
+            var key2 = new StringConstantExpression("key2");
+            var value2 = new VariableExpression("value2");
+            var expr = new DictionaryExpression();
+            expr.Add(key1, value1);
+            expr.Add(key2, value2);
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(2));
+            Assert.That(dependencies.Contains("key1"));
+            Assert.That(dependencies.Contains("value2"));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var key1 = new VariableExpression("key1");
+            var value1 = new IntegerConstantExpression(99);
+            var key2 = new StringConstantExpression("key2");
+            var value2 = new VariableExpression("value2");
+            var expr = new DictionaryExpression();
+            expr.Add(key1, value1);
+            expr.Add(key2, value2);
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(0));
         }
     }
 }

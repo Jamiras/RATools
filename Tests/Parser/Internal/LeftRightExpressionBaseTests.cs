@@ -1,5 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Test.Parser.Internal
@@ -93,6 +95,48 @@ namespace RATools.Test.Parser.Internal
             Assert.That(newLeft.Column, Is.EqualTo(one.Column));
             Assert.That(newLeft.EndLine, Is.EqualTo(two.EndLine));
             Assert.That(newLeft.EndColumn, Is.EqualTo(two.EndColumn));
+        }
+
+        [Test]
+        public void TestNestedExpressions()
+        {
+            var left = new VariableExpression("variable1");
+            var right = new VariableExpression("variable2");
+            var expr = new LeftRightExpression(left, right);
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(2));
+            Assert.That(nested.Contains(left));
+            Assert.That(nested.Contains(right));
+        }
+
+        [Test]
+        public void TestGetDependencies()
+        {
+            var left = new VariableExpression("variable1");
+            var right = new VariableExpression("variable2");
+            var expr = new LeftRightExpression(left, right);
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(2));
+            Assert.That(dependencies.Contains("variable1"));
+            Assert.That(dependencies.Contains("variable2"));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var left = new VariableExpression("variable1");
+            var right = new VariableExpression("variable2");
+            var expr = new LeftRightExpression(left, right);
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(0));
         }
     }
 }

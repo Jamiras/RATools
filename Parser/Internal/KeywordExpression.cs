@@ -41,8 +41,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (KeywordExpression)obj;
-            return (Keyword == that.Keyword);
+            var that = obj as KeywordExpression;
+            return (that != null && Keyword == that.Keyword);
         }
     }
 }

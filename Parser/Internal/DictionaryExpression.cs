@@ -64,7 +64,7 @@ namespace RATools.Parser.Internal
                 if (value.Type == ExpressionType.ParseError)
                     break;
 
-                dict.Entries.Add(new DictionaryEntry { Key = key, Value = value });
+                dict.Add(key, value);
 
                 SkipWhitespace(tokenizer);
                 if (tokenizer.NextChar == '}')
@@ -81,6 +81,15 @@ namespace RATools.Parser.Internal
 
             tokenizer.Advance();
             return dict;
+        }
+
+        /// <summary>
+        /// Adds an entry to the dictionary.
+        /// </summary>
+        /// <remarks>Does not check for duplicate keys.</remarks>
+        public void Add(ExpressionBase key, ExpressionBase value)
+        {
+            Entries.Add(new DictionaryEntry { Key = key, Value = value });
         }
 
         /// <summary>
@@ -184,8 +193,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (DictionaryExpression)obj;
-            return Entries == that.Entries;
+            var that = obj as DictionaryExpression;
+            return that != null && Entries == that.Entries;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

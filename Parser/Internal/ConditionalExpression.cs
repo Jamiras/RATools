@@ -152,8 +152,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ConditionalExpression)obj;
-            return Operation == that.Operation && Left == that.Left && Right == that.Right;
+            var that = obj as ConditionalExpression;
+            return that != null && Operation == that.Operation && Left == that.Left && Right == that.Right;
         }
     }
 

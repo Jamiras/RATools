@@ -75,8 +75,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (AssignmentExpression)obj;
-            return Variable == that.Variable && Value == that.Value;
+            var that = obj as AssignmentExpression;
+            return that != null && Variable == that.Variable && Value == that.Value;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
@@ -90,11 +90,18 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
-            // don't call GetDependencies on a base VariableExpression as we're updating it, not reading it
-            // do call GetDependencies on an IndexedVariableExpression to get the dependencies of the index
-            var indexedVariable = Variable as IndexedVariableExpression;
-            if (indexedVariable != null)
-                ((INestedExpressions)indexedVariable).GetDependencies(dependencies);
+            // manually traverse the IndexedVariableExpression so we don't add the outermost variable to the
+            // dependencies list. we are updating that, not reading it.
+            IndexedVariableExpression indexedVariable;
+            var variable = Variable;
+            while ((indexedVariable = variable as IndexedVariableExpression) != null)
+            {
+                var indexNested = indexedVariable.Index as INestedExpressions;
+                if (indexNested != null)
+                    indexNested.GetDependencies(dependencies);
+
+                variable = indexedVariable.Variable;
+            }
 
             var nested = Value as INestedExpressions;
             if (nested != null)
@@ -103,7 +110,13 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
-            modifies.Add(Variable.Name);
+            IndexedVariableExpression indexedVariable;
+            var variable = Variable;
+
+            while ((indexedVariable = variable as IndexedVariableExpression) != null)
+                variable = indexedVariable.Variable;
+
+            modifies.Add(variable.Name);
         }
     }
 }

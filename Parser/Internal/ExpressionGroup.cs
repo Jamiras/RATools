@@ -62,8 +62,8 @@ namespace RATools.Parser.Internal
             _parseErrors.Add(error);
         }
 
-        public IEnumerable<ExpressionBase> Expressions 
-        { 
+        public IEnumerable<ExpressionBase> Expressions
+        {
             get
             {
                 if (_expressions != null)
@@ -285,20 +285,6 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        public void Merge(ExpressionGroup from)
-        {
-            foreach (var expression in from.Expressions)
-                AddExpression(expression);
-
-            if (from._parseErrors != null)
-            {
-                if (_parseErrors == null)
-                    _parseErrors = new List<ParseErrorExpression>();
-
-                _parseErrors.AddRange(from._parseErrors);
-            }
-        }
-
         public bool ExpressionsMatch(ExpressionGroup that)
         {
             if (_expression != null)
@@ -312,7 +298,7 @@ namespace RATools.Parser.Internal
 
             if (_expressions.Count != that._expressions.Count)
                 return false;
-            
+
             for (int i = 0; i < _expressions.Count; ++i)
             {
                 if (_expressions[i] != that._expressions[i])
@@ -410,10 +396,19 @@ namespace RATools.Parser.Internal
 
     internal interface INestedExpressions
     {
+        /// <summary>
+        /// Gets the child expressions.
+        /// </summary>
         IEnumerable<ExpressionBase> NestedExpressions { get; }
 
+        /// <summary>
+        /// Gets the name of any variables or functions this expression depends on.
+        /// </summary>
         void GetDependencies(HashSet<string> dependencies);
 
+        /// <summary>
+        /// Gets any variables modified by this expression.
+        /// </summary>
         void GetModifications(HashSet<string> modifies);
     }
 }

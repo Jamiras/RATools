@@ -6,7 +6,7 @@ namespace RATools.Parser.Internal
 {
     internal class IndexedVariableExpression : VariableExpression, INestedExpressions
     {
-        public IndexedVariableExpression(ExpressionBase variable, ExpressionBase index)
+        public IndexedVariableExpression(VariableExpression variable, ExpressionBase index)
             : base(String.Empty)
         {
             Variable = variable;
@@ -18,7 +18,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the variable expression.
         /// </summary>
-        public ExpressionBase Variable { get; private set; }
+        public VariableExpression Variable { get; private set; }
 
         /// <summary>
         /// Gets the index expression.
@@ -180,8 +180,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (IndexedVariableExpression)obj;
-            return Variable == that.Variable && Index == that.Index;
+            var that = obj as IndexedVariableExpression;
+            return that != null && Variable == that.Variable && Index == that.Index;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
@@ -195,7 +195,11 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
-            var nested = Index as INestedExpressions;
+            var nested = Variable as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+
+            nested = Index as INestedExpressions;
             if (nested != null)
                 nested.GetDependencies(dependencies);
         }

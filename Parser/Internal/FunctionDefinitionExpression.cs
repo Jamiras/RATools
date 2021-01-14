@@ -321,8 +321,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (FunctionDefinitionExpression)obj;
-            return Name == that.Name && ExpressionsEqual(Parameters, that.Parameters) && 
+            var that = obj as FunctionDefinitionExpression;
+            return that != null && Name == that.Name && ExpressionsEqual(Parameters, that.Parameters) && 
                 ExpressionsEqual(Expressions, that.Expressions);
         }
 
@@ -334,11 +334,7 @@ namespace RATools.Parser.Internal
                     yield return _keyword;
 
                 if (Name != null)
-                {
-                    //var name = new FunctionDefinitionExpression(Name.Name);
-                    //Name.CopyLocation(name);
                     yield return Name;
-                }
 
                 foreach (var parameter in Parameters)
                     yield return parameter;

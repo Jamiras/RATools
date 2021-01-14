@@ -62,7 +62,8 @@ namespace RATools.Parser.Internal
                 if (commentGroup != null)
                     groups.Add(commentGroup);
 
-                newGroup.AddExpression(expression);
+                if (expression.Type != ExpressionType.ParseError)
+                    newGroup.AddExpression(expression);
             }
 
             var lastGroup = groups.LastOrDefault();
@@ -79,12 +80,16 @@ namespace RATools.Parser.Internal
             if (affectedLines.Any())
             {
                 var nextUpdatedLine = affectedLines.Min();
-                Debug.WriteLine("Updating {0}-{1} ({2} groups)", nextUpdatedLine, affectedLines.Max(), Groups.Count);
+                Debug.WriteLine("Updating lines {0}-{1} (searching {2} groups)", nextUpdatedLine, affectedLines.Max(), Groups.Count);
 
                 while (groupStart < Groups.Count && nextUpdatedLine > Groups[groupStart].LastLine)
                     ++groupStart;
+
                 if (groupStart < Groups.Count)
+                {
+                    Debug.WriteLine("Found line {0} in group {1} (first line of group is {2})", nextUpdatedLine, groupStart, Groups[groupStart].FirstLine);
                     nextUpdatedLine = Math.Min(Groups[groupStart].FirstLine, nextUpdatedLine);
+                }
 
                 expressionTokenizer.AdvanceToLine(nextUpdatedLine);
             }
@@ -130,7 +135,7 @@ namespace RATools.Parser.Internal
                 }
             }
 
-            // whatever is remaining will be swapped out. 
+            // whatever is remaining will be swapped out.
             // capture any affected variables and remove associated evaluation errors
             var affectedVariables = new HashSet<string>();
             for (int i = groupStart; i < groupStop; ++i)
@@ -158,7 +163,7 @@ namespace RATools.Parser.Internal
                 }
             }
 
-            // also capture any affected variables for groups being swapped in, and determine 
+            // also capture any affected variables for groups being swapped in, and determine
             // if they need to be evaluated.
             for (int i = 0; i < newGroupStop; ++i)
             {
@@ -175,15 +180,25 @@ namespace RATools.Parser.Internal
             {
                 Debug.WriteLine("Removing groups {0}-{1} (lines {2}-{3})",
                     groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine);
+
+                Groups.RemoveRange(groupStart, groupStop - groupStart);
+            }
+            else if (groupStop == groupStart)
+            {
+                Debug.WriteLine("Adding {0} groups (lines {1}-{2})",
+                    newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
+
+                Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
             else
             {
                 Debug.WriteLine("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})",
                     groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine,
                     newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
+
+                Groups.RemoveRange(groupStart, groupStop - groupStart);
+                Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
-            Groups.RemoveRange(groupStart, groupStop - groupStart);
-            Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
 
             DumpGroups(groupStart - 2, groupStart + newGroupStop + 2);
 

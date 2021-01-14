@@ -39,8 +39,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (IntegerConstantExpression)obj;
-            return (Value == that.Value);
+            var that = obj as IntegerConstantExpression;
+            return (that != null && Value == that.Value);
         }
     }
 }

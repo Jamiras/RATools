@@ -14,7 +14,7 @@ namespace RATools.Parser.Internal
             ElseExpressions = new List<ExpressionBase>();
         }
 
-        private KeywordExpression _keyword;
+        private KeywordExpression _keyword, _elseKeyword;
 
         /// <summary>
         /// Gets the condition expression.
@@ -57,8 +57,12 @@ namespace RATools.Parser.Internal
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
+            line = tokenizer.Line;
+            column = tokenizer.Column;
             if (tokenizer.Match("else"))
             {
+                ifExpression._elseKeyword = new KeywordExpression("else", line, column);
+
                 error = ExpressionBase.ParseStatementBlock(tokenizer, ifExpression.ElseExpressions);
                 if (error != null)
                     return error;
@@ -86,8 +90,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (IfExpression)obj;
-            return Condition == that.Condition && ExpressionsEqual(Expressions, that.Expressions) && 
+            var that = obj as IfExpression;
+            return that != null && Condition == that.Condition && ExpressionsEqual(Expressions, that.Expressions) && 
                 ExpressionsEqual(ElseExpressions, that.ElseExpressions);
         }
 
@@ -104,11 +108,14 @@ namespace RATools.Parser.Internal
                 foreach (var expression in Expressions)
                     yield return expression;
 
+                if (_elseKeyword != null)
+                    yield return _elseKeyword;
+
                 foreach (var expression in ElseExpressions)
                     yield return expression;
             }
         }
-        
+
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
             var nested = Condition as INestedExpressions;

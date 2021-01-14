@@ -1,5 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Test.Parser.Internal
@@ -72,6 +74,72 @@ namespace RATools.Test.Parser.Internal
             Assert.That(variable1.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(99));
+        }
+
+        [Test]
+        public void TestNestedExpressions()
+        {
+            var expr = new VariableExpression("variable1");
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestGetDependencies()
+        {
+            var expr = new VariableExpression("variable1");
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(1));
+            Assert.That(dependencies.Contains("variable1"));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var expr = new VariableExpression("variable1");
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestDefinitionNestedExpressions()
+        {
+            var expr = new VariableDefinitionExpression("variable1");
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestDefinitionGetDependencies()
+        {
+            var expr = new VariableDefinitionExpression("variable1");
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestDefinitionGetModifications()
+        {
+            var expr = new VariableDefinitionExpression("variable1");
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(1));
+            Assert.That(modifications.Contains("variable1"));
         }
     }
 }

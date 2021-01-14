@@ -547,8 +547,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (MathematicExpression)obj;
-            return Operation == that.Operation && Left == that.Left && Right == that.Right;
+            var that = obj as MathematicExpression;
+            return that != null && Operation == that.Operation && Left == that.Left && Right == that.Right;
         }
     }
 

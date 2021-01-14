@@ -34,6 +34,18 @@ namespace RATools.Parser.Internal
             builder.Append(Name);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="VariableExpressionBase" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="VariableExpressionBase" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="VariableExpressionBase" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = obj as VariableExpressionBase;
+            return that != null && Name == that.Name && GetType() == that.GetType();
+        }
     }
 
     internal class VariableExpression : VariableExpressionBase, INestedExpressions
@@ -73,19 +85,6 @@ namespace RATools.Parser.Internal
             return value.ReplaceVariables(scope, out result);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        protected override bool Equals(ExpressionBase obj)
-        {
-            var that = (VariableExpression)obj;
-            return Name == that.Name;
-        }
-
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
@@ -121,19 +120,6 @@ namespace RATools.Parser.Internal
         {
             EndLine = variable.EndLine;
             EndColumn = variable.EndColumn;
-        }
-
-        /// <summary>
-        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        protected override bool Equals(ExpressionBase obj)
-        {
-            var that = (VariableDefinitionExpression)obj;
-            return Name == that.Name;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
