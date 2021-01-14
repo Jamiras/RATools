@@ -103,7 +103,7 @@ namespace RATools.Parser.Internal
             int groupStop = Groups.Count;
             int newGroupStop = newGroups.Count;
 
-            while (groupStop > groupStart && newGroupStop > 0)
+            while (groupStop > groupStart)
             {
                 var existingGroup = Groups[--groupStop];
                 var newGroup = newGroups[--newGroupStop];
@@ -116,6 +116,18 @@ namespace RATools.Parser.Internal
                 }
 
                 existingGroup.ReplaceExpressions(newGroup, false);
+
+                if (newGroupStop == 0)
+                {
+                    if (groupStop == groupStart)
+                    {
+                        // no change detected
+                        return false;
+                    }
+
+                    // groups were removed
+                    break;
+                }
             }
 
             // whatever is remaining will be swapped out. 
@@ -159,9 +171,17 @@ namespace RATools.Parser.Internal
             }
 
             // perform the swap
-            Debug.WriteLine("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})", 
-                groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine, 
-                newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
+            if (newGroupStop == 0)
+            {
+                Debug.WriteLine("Removing groups {0}-{1} (lines {2}-{3})",
+                    groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine);
+            }
+            else
+            {
+                Debug.WriteLine("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})",
+                    groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine,
+                    newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
+            }
             Groups.RemoveRange(groupStart, groupStop - groupStart);
             Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
 

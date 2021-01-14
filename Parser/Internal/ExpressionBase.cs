@@ -117,10 +117,8 @@ namespace RATools.Parser.Internal
         internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
         {
             var error = ParseError(tokenizer, message);
-            error.Line = expression.Line;
-            error.Column = expression.Column;
-            error.EndLine = expression.EndLine;
-            error.EndColumn = expression.EndColumn;
+            error.InnerError = expression as ParseErrorExpression;
+            expression.CopyLocation(error);
             return error;
         }
 
@@ -311,6 +309,55 @@ namespace RATools.Parser.Internal
             return clause;
         }
 
+        private static ExpressionBase ParseNumber(PositionalTokenizer tokenizer, bool isUnsigned)
+        {
+            int line = tokenizer.Line;
+            int column = tokenizer.Column;
+            int endLine = line;
+            int endColumn = column;
+            uint value;
+            string number = "";
+
+            if (tokenizer.Match("0x"))
+            {
+                while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
+                {
+                    number += tokenizer.NextChar;
+
+                    endLine = tokenizer.Line;
+                    endColumn = tokenizer.Column;
+                    tokenizer.Advance();
+                }
+
+                if (!UInt32.TryParse(number, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out value))
+                    return new ParseErrorExpression("Number too large");
+            }
+            else
+            {
+                while (Char.IsDigit(tokenizer.NextChar))
+                {
+                    number += tokenizer.NextChar;
+
+                    endLine = tokenizer.Line;
+                    endColumn = tokenizer.Column;
+                    tokenizer.Advance();
+                }
+
+                if (!UInt32.TryParse(number, out value))
+                    return new ParseErrorExpression("Number too large");
+            }
+
+            if (value > Int32.MaxValue && !isUnsigned)
+                return new ParseErrorExpression("Number too large");
+
+            var integerExpression = new IntegerConstantExpression((int)value);
+            integerExpression.Line = line;
+            integerExpression.Column = column;
+            integerExpression.EndLine = endLine;
+            integerExpression.EndColumn = endColumn;
+            return integerExpression;
+        }
+
         private static ExpressionBase ParseClauseCore(PositionalTokenizer tokenizer)
         { 
             ExpressionBase clause;
@@ -355,21 +402,6 @@ namespace RATools.Parser.Internal
                     }
 
                 case '0':
-                    if (tokenizer.Match("0x"))
-                    {
-                        string hexNumber = "";
-                        while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
-                        {
-                            hexNumber += tokenizer.NextChar;
-                            tokenizer.Advance();
-                        }
-
-                        int hexValue = 0;
-                        Int32.TryParse(hexNumber, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out hexValue);
-                        return new IntegerConstantExpression(hexValue);
-                    }
-                    goto case '1';
-
                 case '1':
                 case '2':
                 case '3':
@@ -379,37 +411,23 @@ namespace RATools.Parser.Internal
                 case '7':
                 case '8':
                 case '9':
-                    {
-                        var number = tokenizer.ReadNumber();
-                        uint value;
-                        UInt32.TryParse(number.ToString(), out value);
-                        return new IntegerConstantExpression((int)value);
-                    }
+                    return ParseNumber(tokenizer, true);
 
                 case '-':
                     tokenizer.Advance();
                     if (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
                     {
-                        if (tokenizer.Match("0x"))
-                        {
-                            string hexNumber = "";
-                            while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
-                            {
-                                hexNumber += tokenizer.NextChar;
-                                tokenizer.Advance();
-                            }
+                        var result = ParseNumber(tokenizer, false);
+                        if (result.Type == ExpressionType.ParseError)
+                            return result;
 
-                            int hexValue = 0;
-                            Int32.TryParse(hexNumber, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out hexValue);
-                            return new IntegerConstantExpression(-hexValue);
-                        }
-
-                        var number = tokenizer.ReadNumber();
-                        int value;
-                        Int32.TryParse(number.ToString(), out value);
-                        return new IntegerConstantExpression(-value);
+                        var integerExpression = (IntegerConstantExpression)result;
+                        var negativeIntegerExpression = new IntegerConstantExpression(-integerExpression.Value);
+                        integerExpression.CopyLocation(negativeIntegerExpression);
+                        negativeIntegerExpression.Column--;
+                        return negativeIntegerExpression;
                     }
-                    return ParseError(tokenizer, "Minus without value");
+                    return ParseError(tokenizer, "Minus without value", tokenizer.Line, tokenizer.Column - 1);
 
                 case '{':
                     tokenizer.Advance();

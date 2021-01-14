@@ -153,13 +153,13 @@ namespace RATools.Parser
                     if (tokenizer.NextChar == '.')
                     {
                         tokenizer.Advance(); // first period
-                        requirement.HitCount = (ushort)ReadNumber(tokenizer);
+                        requirement.HitCount = ReadNumber(tokenizer);
                         tokenizer.Advance(); // second period
                     }
                     else if (tokenizer.NextChar == '(') // old format
                     {
                         tokenizer.Advance(); // '('
-                        requirement.HitCount = (ushort)ReadNumber(tokenizer);
+                        requirement.HitCount = ReadNumber(tokenizer);
                         tokenizer.Advance(); // ')'
                     }
 

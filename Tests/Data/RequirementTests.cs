@@ -55,7 +55,7 @@ namespace RATools.Tests.Data
                 Left = GetField(left),
                 Operator = requirementOperator,
                 Right = GetField(right),
-                HitCount = (ushort)hitCount
+                HitCount = (uint)hitCount
             };
 
             Assert.That(requirement.ToString(), Is.EqualTo(expected));
@@ -83,7 +83,7 @@ namespace RATools.Tests.Data
                 Left = GetField(left),
                 Operator = requirementOperator,
                 Right = GetField(right),
-                HitCount = (ushort)hitCount
+                HitCount = (uint)hitCount
             };
 
             var builder = new StringBuilder();
