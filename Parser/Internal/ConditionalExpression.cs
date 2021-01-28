@@ -23,7 +23,16 @@ namespace RATools.Parser.Internal
             if (Operation == ConditionalOperation.Not)
             {
                 builder.Append('!');
-                Right.AppendString(builder);
+                if (Right.Type == ExpressionType.Conditional || Right.Type == ExpressionType.Comparison)
+                {
+                    builder.Append('(');
+                    Right.AppendString(builder);
+                    builder.Append(')');
+                }
+                else
+                {
+                    Right.AppendString(builder);
+                }
                 return;
             }
 

@@ -126,13 +126,18 @@ namespace RATools.ViewModels
             if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
                 _parsedContent = new ExpressionGroupCollection();
-                _parsedContent.Parse(tokenizer);
-
-                needsUpdate = true;
+                lock (_parsedContent)
+                {
+                    _parsedContent.Parse(tokenizer);
+                    needsUpdate = true;
+                }
             }
             else if (e.Type == ContentChangeType.Update)
             {
-                needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
+                lock (_parsedContent)
+                {
+                    needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
+                }
             }
 
             if (e.IsAborted)
@@ -159,8 +164,12 @@ namespace RATools.ViewModels
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
 
-                        bool hadErrors = _parsedContent.HasEvaluationErrors;
-                        bool hasErrors = interpreter.Run(_parsedContent, callback);
+                        bool hadErrors, hasErrors;
+                        lock (_parsedContent)
+                        {
+                            hadErrors = _parsedContent.HasEvaluationErrors;
+                            hasErrors = interpreter.Run(_parsedContent, callback);
+                        }
 
                         if (!e.IsAborted)
                         {
