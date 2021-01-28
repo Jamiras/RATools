@@ -190,5 +190,37 @@ namespace RATools.Test.Parser.Internal
             hashSet.Remove("b");
             Assert.That(group.IsDependentOn(hashSet), Is.False);
         }
+
+        [Test]
+        [TestCase("a = b", "a = b", true)]
+        [TestCase("a = b", "b = a", false)]
+        [TestCase("a = b", "a = b + 1", false)]
+        [TestCase("a = b", "a = 3", false)]
+        [TestCase("a = b", "", false)]
+        [TestCase("", "a = b", false)]
+        [TestCase("a = b", "if a == b { c() }", false)]
+        [TestCase("a = b", "a == b", false)]
+        [TestCase("a = b", "a   =   b", true)]
+        [TestCase("// a", "// a", true)]
+        [TestCase("// a", "// b", false)]
+        [TestCase("// a", "// ab", false)]
+        [TestCase("// a", "// a\n", true)]
+        [TestCase("// a", "// a\n// b", false)]
+        [TestCase("// a\n// b", "// a\n// b", true)]
+        [TestCase("// a\n// b", "// a", false)]
+        [TestCase("// a\n// b", "// a\n// b\n// c", false)]
+        [TestCase("a = b", "a $ b", false)]
+        [TestCase("a = b", "$a = $b", false)]
+        [TestCase("$a = $b", "a = b", false)]
+        public void TestExpressionsMatch(string expr1, string expr2, bool match)
+        {
+            var group1 = Parse(expr1).Groups.FirstOrDefault() ?? new ExpressionGroup();
+            var group2 = Parse(expr2).Groups.FirstOrDefault() ?? new ExpressionGroup();
+
+            if (match)
+                Assert.That(group1.ExpressionsMatch(group2), Is.True);
+            else
+                Assert.That(group1.ExpressionsMatch(group2), Is.False);
+        }
     }
 }

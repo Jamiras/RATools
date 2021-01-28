@@ -289,10 +289,11 @@ namespace RATools.Parser.Internal
         {
             if (_expression != null)
                 return (_expression == that._expression);
+            if (that._expression != null)
+                return false;
 
             if (_expressions == null)
                 return (that._expressions == null);
-
             if (that._expressions == null)
                 return false;
 
