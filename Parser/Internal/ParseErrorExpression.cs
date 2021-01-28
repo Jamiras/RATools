@@ -112,4 +112,12 @@ namespace RATools.Parser.Internal
             return that != null && Message == that.Message;
         }
     }
+
+    internal class UnknownVariableParseErrorExpression : ParseErrorExpression
+    {
+        public UnknownVariableParseErrorExpression(string message, ExpressionBase expression)
+            : base(message, expression)
+        {
+        }
+    }
 }

@@ -324,7 +324,7 @@ namespace RATools.Parser
         {
             var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
             if (functionDefinition == null)
-                return new ParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name, functionCall.FunctionName);
+                return new UnknownVariableParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name, functionCall.FunctionName);
 
             var triggerBuilderFunction = functionDefinition as FunctionDefinition;
             if (triggerBuilderFunction == null)

@@ -92,7 +92,7 @@ namespace RATools.Parser.Internal
 
                     if (value == null)
                     {
-                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, variable);
+                        result = new UnknownVariableParseErrorExpression("Unknown variable: " + variable.Name, variable);
                         return null;
                     }
                 }

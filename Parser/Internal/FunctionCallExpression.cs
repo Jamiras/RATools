@@ -66,7 +66,7 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 
@@ -112,7 +112,7 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 

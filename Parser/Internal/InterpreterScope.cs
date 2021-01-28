@@ -167,10 +167,19 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Removes the definition of a variable from the current scope.
         /// </summary>
-        /// <param name="variable">The variable.</param>
+        /// <param name="name">The variable name.</param>
         public void UndefineVariable(string name)
         {
             _variables.Remove(name);
+        }
+
+        /// <summary>
+        /// Removes the definition of a function from the current scope.
+        /// </summary>
+        /// <param name="name">The function name.</param>
+        public void UndefineFunction(string name)
+        {
+            _functions.Remove(name);
         }
 
         /// <summary>

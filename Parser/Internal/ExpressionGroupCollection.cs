@@ -145,6 +145,7 @@ namespace RATools.Parser.Internal
                 {
                     affectedVariables.Add(variable);
                     Scope.UndefineVariable(variable);
+                    Scope.UndefineFunction(variable);
                 }
 
                 for (int j = _evaluationErrors.Count - 1; j >= 0; j--)
@@ -320,6 +321,15 @@ namespace RATools.Parser.Internal
 
             foreach (var error in _evaluationErrors)
             {
+                var unknownVariableError = error.InnermostError as UnknownVariableParseErrorExpression;
+                if (unknownVariableError != null && unknownVariableError.Line <= line && unknownVariableError.EndLine >= line)
+                {
+                    if (!expressions.Contains(unknownVariableError))
+                        expressions.Add(unknownVariableError);
+
+                    result = true;
+                }
+
                 ParseErrorExpression mostSignificantError = null;
                 var scan = error;
                 do
