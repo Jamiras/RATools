@@ -13,11 +13,14 @@ namespace RATools.Test.Parser
     [TestFixture]
     class RegressionTests
     {
-        class RegressionTestFactory
+        static string regressionDir = null;
+        const string NoScriptsError = "No scripts found.";
+
+        static string RegressionDir
         {
-            public static IEnumerable<string> Files
+            get
             {
-                get
+                if (regressionDir == null)
                 {
                     var dir = Path.GetDirectoryName(typeof(RegressionTestFactory).Assembly.Location);
                     do
@@ -25,19 +28,41 @@ namespace RATools.Test.Parser
                         var parent = Directory.GetParent(dir);
                         dir = Path.Combine(dir, "Regressions");
                         if (Directory.Exists(dir))
+                        {
+                            regressionDir = dir;
                             break;
+                        }
 
                         if (parent == null)
                         {
-                            yield return "No scripts found.";
-                            yield break;
+                            regressionDir = NoScriptsError;
+                            break;
                         }
 
                         dir = parent.FullName;
                     } while (true);
+                }
 
-                    foreach (var file in Directory.EnumerateFiles(dir, "*.rascript"))
-                        yield return file;
+                return regressionDir;
+            }
+        }
+
+        class RegressionTestFactory
+        {
+            public static IEnumerable<string> Files
+            {
+                get
+                {
+                    var dir = RegressionDir;
+                    if (dir == NoScriptsError)
+                    {
+                        yield return NoScriptsError;
+                    }
+                    else
+                    {
+                        foreach (var file in Directory.EnumerateFiles(dir, "*.rascript"))
+                            yield return Path.GetFileNameWithoutExtension(file);
+                    }
                 }
             }
         }
@@ -46,9 +71,10 @@ namespace RATools.Test.Parser
         [TestCaseSource(typeof(RegressionTestFactory), "Files")]
         public void RegressionTest(string scriptFileName)
         {
-            if (scriptFileName == "No scripts found.")
+            if (scriptFileName == NoScriptsError)
                 return;
 
+            scriptFileName = Path.Combine(RegressionDir, scriptFileName + ".rascript");
             var outputFileName = scriptFileName.Substring(0, scriptFileName.Length - 9) + ".updated.txt";
             var expectedFileName = scriptFileName.Substring(0, scriptFileName.Length - 9) + ".txt";
 
