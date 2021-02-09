@@ -478,6 +478,7 @@ namespace RATools.Test.Parser
         [TestCase("repeated(5, byte(0x1234) == 6) && once(byte(0x1234) == 6)", "repeated(5, byte(0x001234) == 6)")] // same condition with different hitcounts only honors higher hitcount
         [TestCase("byte(0x1234) == 6 && repeated(5, byte(0x1234) == 6)", "byte(0x001234) == 6 && repeated(5, byte(0x001234) == 6)")] // without hitcount, cannot be merged
         [TestCase("once(byte(0x1234) == byte(0x1234)) && repeated(5, byte(0x2345) == byte(0x2345))", "repeated(5, always_true())")] // different conditions evaluate to always true, only capture higher hitcount
+        [TestCase("once(byte(0x1234) == 1) && never(byte(0x2345) != 12) && never(byte(0x2345) == 0)", "once(byte(0x001234) == 1) && never(byte(0x002345) != 12)")] // never should keep the less restrictive condition
         // ==== MergeDuplicateAlts ====
         [TestCase("byte(0x001234) > 1 || byte(0x001234) > 2", "byte(0x001234) > 1")] // >1 || >2 is only >1
         [TestCase("byte(0x001234) > 1 || byte(0x001235) > 2", "byte(0x001234) > 1 || byte(0x001235) > 2")] // different addresses
