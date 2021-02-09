@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System;
 using System.Collections.Generic;
 
 namespace RATools.Parser.Internal
@@ -180,6 +181,70 @@ namespace RATools.Parser.Internal
         public void UndefineFunction(string name)
         {
             _functions.Remove(name);
+        }
+
+        private bool UpdateVariable(string name, IEnumerable<ExpressionBase> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                var assignment = expression as AssignmentExpression;
+                if (assignment != null && assignment.Variable.Name == name)
+                {
+                    DefineVariable(new VariableDefinitionExpression(assignment.Variable), assignment.Value);
+                    return true;
+                }
+
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                {
+                    if (UpdateVariable(name, nested.NestedExpressions))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool UpdateFunction(string name, IEnumerable<ExpressionBase> expressions)
+        {
+            foreach (var expression in expressions)
+            {
+                var definition = expression as FunctionDefinitionExpression;
+                if (definition != null && definition.Name.Name == name)
+                {
+                    _functions[name] = definition;
+                    return true;
+                }
+
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                {
+                    if (UpdateFunction(name, nested.NestedExpressions))
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal void UpdateVariables(IEnumerable<string> names, ExpressionGroup newGroup)
+        {
+            foreach (var name in names)
+            {
+                KeyValuePair<VariableDefinitionExpression, ExpressionBase> variable;
+                if (_variables.TryGetValue(name, out variable))
+                {
+                    UpdateVariable(name, newGroup.Expressions);
+                }
+                else
+                {
+                    FunctionDefinitionExpression function;
+                    if (_functions.TryGetValue(name, out function))
+                    {
+                        UpdateFunction(name, newGroup.Expressions);
+                    }
+                }
+            }
         }
 
         /// <summary>

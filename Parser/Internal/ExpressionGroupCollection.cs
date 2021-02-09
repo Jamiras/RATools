@@ -121,6 +121,7 @@ namespace RATools.Parser.Internal
                 }
 
                 existingGroup.ReplaceExpressions(newGroup, false);
+                Scope.UpdateVariables(existingGroup.Modifies, newGroup);
 
                 if (newGroupStop == 0)
                 {
