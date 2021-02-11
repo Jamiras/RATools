@@ -1,4 +1,6 @@
-﻿using Jamiras.Components;
+﻿//#define DEBUG_UPDATE
+
+using Jamiras.Components;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -80,14 +82,14 @@ namespace RATools.Parser.Internal
             if (affectedLines.Any())
             {
                 var nextUpdatedLine = affectedLines.Min();
-                Debug.WriteLine("Updating lines {0}-{1} (searching {2} groups)", nextUpdatedLine, affectedLines.Max(), Groups.Count);
+                LOG_UPDATE("Updating lines {0}-{1} (searching {2} groups)", nextUpdatedLine, affectedLines.Max(), Groups.Count);
 
                 while (groupStart < Groups.Count && nextUpdatedLine > Groups[groupStart].LastLine)
                     ++groupStart;
 
                 if (groupStart < Groups.Count)
                 {
-                    Debug.WriteLine("Found line {0} in group {1} (first line of group is {2})", nextUpdatedLine, groupStart, Groups[groupStart].FirstLine);
+                    LOG_UPDATE("Found line {0} in group {1} (first line of group is {2})", nextUpdatedLine, groupStart, Groups[groupStart].FirstLine);
                     nextUpdatedLine = Math.Min(Groups[groupStart].FirstLine, nextUpdatedLine);
                 }
 
@@ -95,10 +97,10 @@ namespace RATools.Parser.Internal
             }
             else
             {
-                Debug.WriteLine("Updating all lines ({0} groups)", Groups.Count);
+                LOG_UPDATE("Updating all lines ({0} groups)", Groups.Count);
             }
 
-            DumpGroups(groupStart - 2, groupStart + 2);
+            LOG_GROUPS(groupStart - 2, groupStart + 2);
 
             // parse whatever is remaining
             var newGroups = new List<ExpressionGroup>();
@@ -108,31 +110,34 @@ namespace RATools.Parser.Internal
             int groupStop = Groups.Count;
             int newGroupStop = newGroups.Count;
 
-            while (groupStop > groupStart)
+            if (newGroupStop > 0)
             {
-                var existingGroup = Groups[--groupStop];
-                var newGroup = newGroups[--newGroupStop];
-
-                if (!existingGroup.ExpressionsMatch(newGroup))
+                while (groupStop > groupStart)
                 {
-                    ++groupStop;
-                    ++newGroupStop;
-                    break;
-                }
+                    var existingGroup = Groups[--groupStop];
+                    var newGroup = newGroups[--newGroupStop];
 
-                existingGroup.ReplaceExpressions(newGroup, false);
-                Scope.UpdateVariables(existingGroup.Modifies, newGroup);
-
-                if (newGroupStop == 0)
-                {
-                    if (groupStop == groupStart)
+                    if (!existingGroup.ExpressionsMatch(newGroup))
                     {
-                        // no change detected
-                        return false;
+                        ++groupStop;
+                        ++newGroupStop;
+                        break;
                     }
 
-                    // groups were removed
-                    break;
+                    existingGroup.ReplaceExpressions(newGroup, false);
+                    Scope.UpdateVariables(existingGroup.Modifies, newGroup);
+
+                    if (newGroupStop == 0)
+                    {
+                        if (groupStop == groupStart)
+                        {
+                            // no change detected
+                            return false;
+                        }
+
+                        // groups were removed
+                        break;
+                    }
                 }
             }
 
@@ -180,21 +185,24 @@ namespace RATools.Parser.Internal
             // perform the swap
             if (newGroupStop == 0)
             {
-                Debug.WriteLine("Removing groups {0}-{1} (lines {2}-{3})",
-                    groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine);
+                if (groupStart < Groups.Count)
+                {
+                    LOG_UPDATE("Removing groups {0}-{1} (lines {2}-{3})",
+                        groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine);
 
-                Groups.RemoveRange(groupStart, groupStop - groupStart);
+                    Groups.RemoveRange(groupStart, groupStop - groupStart);
+                }
             }
             else if (groupStop == groupStart)
             {
-                Debug.WriteLine("Adding {0} groups (lines {1}-{2})",
+                LOG_UPDATE("Adding {0} groups (lines {1}-{2})",
                     newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
 
                 Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
             else
             {
-                Debug.WriteLine("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})",
+                LOG_UPDATE("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})",
                     groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine,
                     newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
 
@@ -202,7 +210,7 @@ namespace RATools.Parser.Internal
                 Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
 
-            DumpGroups(groupStart - 2, groupStart + newGroupStop + 2);
+            LOG_GROUPS(groupStart - 2, groupStart + newGroupStop + 2);
 
             bool needsEvaluated = false;
 
@@ -227,7 +235,14 @@ namespace RATools.Parser.Internal
             return needsEvaluated;
         }
 
-        private void DumpGroups(int start, int end)
+        [Conditional("DEBUG_UPDATE")]
+        private void LOG_UPDATE(string fmt, params object[] parameters)
+        {
+            Debug.WriteLine(fmt, parameters);
+        }
+
+        [Conditional("DEBUG_UPDATE")]
+        private void LOG_GROUPS(int start, int end)
         {
             for (int i = start; i < end; ++i)
             {
@@ -243,7 +258,7 @@ namespace RATools.Parser.Internal
                         else
                             group = group.Substring(index).Trim();
                     }
-                    Debug.WriteLine("{0}-{1}: {2}", Groups[i].FirstLine, Groups[i].LastLine, group);
+                    LOG_UPDATE("{0}-{1}: {2}", Groups[i].FirstLine, Groups[i].LastLine, group);
                 }
             }
         }

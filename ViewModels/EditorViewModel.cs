@@ -140,17 +140,10 @@ namespace RATools.ViewModels
                 }
             }
 
-            if (e.IsAborted)
-            {
-                // if more changes have been made, bail
-                System.Diagnostics.Debug.WriteLine("Aborted after Update");
-            }
-            else if (needsUpdate)
+            if (needsUpdate && !e.IsAborted)
             {
                 // running the script can take a lot of time, push that work onto a background thread and show progress bar
                 UpdateProgress(1, 0);
-
-                System.Diagnostics.Debug.WriteLine("Scheduling Run");
 
                 // make sure to at least show the script file in the editor list
                 if (!_owner.Editors.Any())
@@ -175,8 +168,6 @@ namespace RATools.ViewModels
                         {
                             UpdateProgress(100, 0);
 
-                            System.Diagnostics.Debug.WriteLine("Updating highlights");
-
                             // if any errors were added or removed, update the highlighting
                             if (hasErrors != hadErrors)
                                 UpdateSyntaxHighlighting(e);
@@ -186,24 +177,10 @@ namespace RATools.ViewModels
 
                             if (!e.IsAborted)
                             {
-                                System.Diagnostics.Debug.WriteLine("Updating editors");
-
                                 // update the editor list
                                 _owner.PopulateEditorList(interpreter);
                             }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine("Aborted after highlighting");
-                            }
                         }
-                        else
-                        {
-                            System.Diagnostics.Debug.WriteLine("Aborted after Run");
-                        }
-                    }
-                    else
-                    {
-                        System.Diagnostics.Debug.WriteLine("Aborted before Run");
                     }
 
                     // make sure the progress bar is hidden
@@ -396,6 +373,8 @@ namespace RATools.ViewModels
 
             base.OnFormatLine(e);
         }
+
+        static bool automaticKeys = false;
 
         protected override void OnKeyPressed(KeyPressedEventArgs e)
         {
