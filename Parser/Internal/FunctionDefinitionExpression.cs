@@ -179,7 +179,14 @@ namespace RATools.Parser.Internal
             {
                 expression = ExpressionBase.Parse(tokenizer);
                 if (expression.Type == ExpressionType.ParseError)
+                {
+                    // the ExpressionTokenizer will capture the error, we should still return the incomplete FunctionDefinition
+                    if (tokenizer is ExpressionTokenizer)
+                        break;
+
+                    // not an ExpressionTokenizer, just return the error
                     return expression;
+                }
 
                 if (expression.Type == ExpressionType.Return)
                     seenReturn = true;

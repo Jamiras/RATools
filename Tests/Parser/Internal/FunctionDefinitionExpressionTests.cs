@@ -96,6 +96,19 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestParseErrorInsideDefinitionExpressionTokenizer()
+        {
+            var group = new ExpressionGroup();
+            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"), group);
+            tokenizer.Match("function");
+            var expr = FunctionDefinitionExpression.Parse(tokenizer);
+
+            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
+            Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Expected conditional statement following if"));
+        }
+
+        [Test]
         public void TestNestedExpressions()
         {
             var expr = Parse("function func(i) => func2(i) + j");
