@@ -8,11 +8,11 @@ namespace RATools.Parser.Internal
     internal class FunctionCallExpression : ExpressionBase, INestedExpressions
     {
         public FunctionCallExpression(string functionName, ICollection<ExpressionBase> parameters)
-            : this(new VariableExpression(functionName), parameters)
+            : this(new FunctionNameExpression(functionName), parameters)
         {
         }
 
-        public FunctionCallExpression(VariableExpression functionName, ICollection<ExpressionBase> parameters)
+        public FunctionCallExpression(FunctionNameExpression functionName, ICollection<ExpressionBase> parameters)
             : base(ExpressionType.FunctionCall)
         {
             FunctionName = functionName;
@@ -25,7 +25,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the name of the function to call.
         /// </summary>
-        public VariableExpression FunctionName { get; private set; }
+        public FunctionNameExpression FunctionName { get; private set; }
 
         /// <summary>
         /// Gets the parameters to pass to the function.
@@ -66,7 +66,7 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 
@@ -112,7 +112,7 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new ParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
                 return false;
             }
 
@@ -375,16 +375,79 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (FunctionCallExpression)obj;
-            return FunctionName == that.FunctionName && Parameters == that.Parameters;
+            var that = obj as FunctionCallExpression;
+            return (that != null && FunctionName == that.FunctionName) && ExpressionsEqual(Parameters, that.Parameters);
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (FunctionName.Line == line)
-                expressions.Add(new FunctionCallExpression(FunctionName, Parameters) { EndLine = FunctionName.Line, EndColumn = FunctionName.EndColumn });
+            get
+            {
+                yield return FunctionName;
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, Parameters, line);
+                foreach (var parameter in Parameters)
+                    yield return parameter;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            dependencies.Add(FunctionName.Name);
+
+            foreach (var parameter in Parameters)
+            {
+                var nested = parameter as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+        }
+    }
+    internal class FunctionNameExpression : VariableExpressionBase, INestedExpressions
+    {
+        public FunctionNameExpression(string name)
+            : base(name)
+        {
+        }
+
+        internal FunctionNameExpression(string name, int line, int column)
+            : base(name, line, column)
+        {
+        }
+
+        internal FunctionNameExpression(VariableExpression variable)
+            : base(variable.Name, variable.Line, variable.Column)
+        {
+            EndLine = variable.EndLine;
+            EndColumn = variable.EndColumn;
+        }
+
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+            builder.Append("FunctionName: ");
+            AppendString(builder);
+            return builder.ToString();
+        }
+
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get
+            {
+                return Enumerable.Empty<ExpressionBase>();
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            dependencies.Add(Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
     }
 }

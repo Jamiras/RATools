@@ -63,8 +63,9 @@ namespace RATools.Parser.Functions
             if (value == null)
                 return false;
 
+            var functionCall = scope.GetContext<FunctionCallExpression>();
             var valueFormat = Leaderboard.ParseFormat(format.Value);
-            context.RichPresence.AddValueField(name.Value, valueFormat);
+            context.RichPresence.AddValueField(functionCall, name.Value, valueFormat);
 
             result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));
             return true;

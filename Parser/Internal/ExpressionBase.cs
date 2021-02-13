@@ -117,10 +117,8 @@ namespace RATools.Parser.Internal
         internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
         {
             var error = ParseError(tokenizer, message);
-            error.Line = expression.Line;
-            error.Column = expression.Column;
-            error.EndLine = expression.EndLine;
-            error.EndColumn = expression.EndColumn;
+            error.InnerError = expression as ParseErrorExpression;
+            expression.CopyLocation(error);
             return error;
         }
 
@@ -130,10 +128,18 @@ namespace RATools.Parser.Internal
         /// <returns>The next expression, <c>null</c> if at end of file.</returns>
         public static ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
+            var expressionTokenizer = tokenizer as ExpressionTokenizer;
+            if (expressionTokenizer != null)
+            {
+                var queuedExpression = expressionTokenizer.DequeueExpression();
+                if (queuedExpression != null)
+                    return queuedExpression;
+            }
+
             SkipWhitespace(tokenizer);
 
             if (tokenizer.NextChar == '\0')
-                return new ParseErrorExpression("Unexpected end of script", tokenizer.Line, tokenizer.Column, tokenizer.Line, tokenizer.Column);
+                return ParseError(tokenizer, "Unexpected end of script");
 
             var clause = ExpressionBase.ParseClause(tokenizer);
             if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
@@ -191,7 +197,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '=')
                     {
-                        clause = ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
                     }
                     else
                     {
@@ -230,7 +236,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '&')
                     {
-                        clause = ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
                     }
                     else
                     {
@@ -245,7 +251,7 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                     if (tokenizer.NextChar != '|')
                     {
-                        clause = ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
+                        ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
                     }
                     else
                     {
@@ -275,6 +281,12 @@ namespace RATools.Parser.Internal
             return clause;
         }
 
+        internal void AdjustLines(int amount)
+        {
+            Line += amount;
+            EndLine += amount;
+        }
+
         protected static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
             var line = tokenizer.Line;
@@ -295,6 +307,55 @@ namespace RATools.Parser.Internal
             }
 
             return clause;
+        }
+
+        private static ExpressionBase ParseNumber(PositionalTokenizer tokenizer, bool isUnsigned)
+        {
+            int line = tokenizer.Line;
+            int column = tokenizer.Column;
+            int endLine = line;
+            int endColumn = column;
+            uint value;
+            string number = "";
+
+            if (tokenizer.Match("0x"))
+            {
+                while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
+                {
+                    number += tokenizer.NextChar;
+
+                    endLine = tokenizer.Line;
+                    endColumn = tokenizer.Column;
+                    tokenizer.Advance();
+                }
+
+                if (!UInt32.TryParse(number, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out value))
+                    return new ParseErrorExpression("Number too large");
+            }
+            else
+            {
+                while (Char.IsDigit(tokenizer.NextChar))
+                {
+                    number += tokenizer.NextChar;
+
+                    endLine = tokenizer.Line;
+                    endColumn = tokenizer.Column;
+                    tokenizer.Advance();
+                }
+
+                if (!UInt32.TryParse(number, out value))
+                    return new ParseErrorExpression("Number too large");
+            }
+
+            if (value > Int32.MaxValue && !isUnsigned)
+                return new ParseErrorExpression("Number too large");
+
+            var integerExpression = new IntegerConstantExpression((int)value);
+            integerExpression.Line = line;
+            integerExpression.Column = column;
+            integerExpression.EndLine = endLine;
+            integerExpression.EndColumn = endColumn;
+            return integerExpression;
         }
 
         private static ExpressionBase ParseClauseCore(PositionalTokenizer tokenizer)
@@ -341,21 +402,6 @@ namespace RATools.Parser.Internal
                     }
 
                 case '0':
-                    if (tokenizer.Match("0x"))
-                    {
-                        string hexNumber = "";
-                        while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
-                        {
-                            hexNumber += tokenizer.NextChar;
-                            tokenizer.Advance();
-                        }
-
-                        int hexValue = 0;
-                        Int32.TryParse(hexNumber, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out hexValue);
-                        return new IntegerConstantExpression(hexValue);
-                    }
-                    goto case '1';
-
                 case '1':
                 case '2':
                 case '3':
@@ -365,37 +411,23 @@ namespace RATools.Parser.Internal
                 case '7':
                 case '8':
                 case '9':
-                    {
-                        var number = tokenizer.ReadNumber();
-                        uint value;
-                        UInt32.TryParse(number.ToString(), out value);
-                        return new IntegerConstantExpression((int)value);
-                    }
+                    return ParseNumber(tokenizer, true);
 
                 case '-':
                     tokenizer.Advance();
                     if (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
                     {
-                        if (tokenizer.Match("0x"))
-                        {
-                            string hexNumber = "";
-                            while (Char.IsDigit(tokenizer.NextChar) || (tokenizer.NextChar >= 'A' && tokenizer.NextChar <= 'F') || (tokenizer.NextChar >= 'a' && tokenizer.NextChar <= 'f'))
-                            {
-                                hexNumber += tokenizer.NextChar;
-                                tokenizer.Advance();
-                            }
+                        var result = ParseNumber(tokenizer, false);
+                        if (result.Type == ExpressionType.ParseError)
+                            return result;
 
-                            int hexValue = 0;
-                            Int32.TryParse(hexNumber, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out hexValue);
-                            return new IntegerConstantExpression(-hexValue);
-                        }
-
-                        var number = tokenizer.ReadNumber();
-                        int value;
-                        Int32.TryParse(number.ToString(), out value);
-                        return new IntegerConstantExpression(-value);
+                        var integerExpression = (IntegerConstantExpression)result;
+                        var negativeIntegerExpression = new IntegerConstantExpression(-integerExpression.Value);
+                        integerExpression.CopyLocation(negativeIntegerExpression);
+                        negativeIntegerExpression.Column--;
+                        return negativeIntegerExpression;
                     }
-                    return ParseError(tokenizer, "Minus without value");
+                    return ParseError(tokenizer, "Minus without value", tokenizer.Line, tokenizer.Column - 1);
 
                 case '{':
                     tokenizer.Advance();
@@ -441,7 +473,7 @@ namespace RATools.Parser.Internal
                         var parameters = new List<ExpressionBase>();
                         ParseParameters(tokenizer, parameters);
 
-                        var functionCall = new FunctionCallExpression(new VariableExpression(identifier.ToString(), line, column), parameters);
+                        var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
                         functionCall.EndLine = tokenizer.Line;
                         functionCall.EndColumn = tokenizer.Column - 1;
                         return functionCall;
@@ -537,7 +569,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible mathematical operation", new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible mathematical operation", right);
                     break;
             }
 
@@ -561,7 +598,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible comparison", new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible comparison", right);
                     break;
             }
 
@@ -584,7 +626,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible logical condition", new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(right);
+
+                    right = new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible logical condition", right);
                     break;
             }
 
@@ -600,7 +647,8 @@ namespace RATools.Parser.Internal
             switch (value.Type)
             {
                 case ExpressionType.ParseError:
-                    return value;
+                    value = new KeywordExpression("=", joinerLine, joinerColumn);
+                    break;
 
                 case ExpressionType.Array:
                 case ExpressionType.Comparison:
@@ -614,7 +662,12 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    ParseError(tokenizer, "incompatible assignment", new KeywordExpression("=", joinerLine, joinerColumn));
+                    var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                    if (expressionTokenizer != null)
+                        expressionTokenizer.QueueExpression(value);
+
+                    value = new KeywordExpression("=", joinerLine, joinerColumn);
+                    ParseError(tokenizer, "incompatible assignment", value);
                     break;
             }
 
@@ -775,6 +828,23 @@ namespace RATools.Parser.Internal
                 return true;
 
             return !left.Equals(right);
+        }
+
+        protected static bool ExpressionsEqual(IEnumerable<ExpressionBase> left, IEnumerable<ExpressionBase> right)
+        {
+            var leftEnumerator = left.GetEnumerator();
+            var rightEnumerator = right.GetEnumerator();
+
+            while (leftEnumerator.MoveNext())
+            {
+                if (!rightEnumerator.MoveNext())
+                    return false;
+
+                if (leftEnumerator.Current != rightEnumerator.Current)
+                    return false;
+            }
+
+            return (!rightEnumerator.MoveNext());
         }
 
         /// <summary>

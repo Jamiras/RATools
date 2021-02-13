@@ -714,8 +714,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ComparisonExpression)obj;
-            return Operation == that.Operation && Left == that.Left && Right == that.Right;
+            var that = obj as ComparisonExpression;
+            return that != null && Operation == that.Operation && Left == that.Left && Right == that.Right;
         }
     }
 

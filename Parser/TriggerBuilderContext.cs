@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -112,38 +113,7 @@ namespace RATools.Parser
                     return false;
                 }
 
-                if (requirements.Count > 1 || requirements[0].Type == RequirementType.Measured)
-                {
-                    for (int i = 0; i < requirements.Count - 1; i++)
-                    {
-                        if (!requirements[i].IsCombining)
-                        {
-                            result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                            return false;
-                        }
-
-                        requirements[i].Operator = RequirementOperator.None;
-                    }
-
-                    if (requirements[requirements.Count - 1].Type == RequirementType.None)
-                    {
-                        requirements[requirements.Count - 1].Type = RequirementType.Measured;
-                    }
-                    else if (requirements[requirements.Count - 1].Type != RequirementType.Measured)
-                    {
-                        result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                        return false;
-                    }
-
-                    terms.Last().measured = requirements;
-                }
-                else
-                {
-                    terms.Last().field = requirements[0].Left;
-                }
-
-                result = null;
-                return true;
+                return ProcessMeasuredValue(requirements, expression, terms, out result);
             }
 
             IntegerConstantExpression integer = expression as IntegerConstantExpression;
@@ -218,8 +188,98 @@ namespace RATools.Parser
                 }
             }
 
-            result = new ParseErrorExpression("value must be a constant or a memory accessor", expression);
+            var conditionalExpression = expression as ConditionalExpression;
+            if (conditionalExpression != null)
+            {
+                var achievement = new ScriptInterpreterAchievementBuilder();
+                if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, expression, scope, out result))
+                    return false;
+
+                return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
+            }
+
+            result = new ParseErrorExpression("Value must be a constant or a memory accessor", expression);
             return false;
+        }
+
+        private static bool ProcessMeasuredValue(ICollection<Requirement> requirements, ExpressionBase expression, List<Term> terms, out ExpressionBase result)
+        {
+            var count = requirements.Count;
+            if (count == 0)
+            {
+                result = new ParseErrorExpression("value did not evaluate to a memory accessor", expression);
+                return false;
+            }
+
+            // if expression is a single term, just return it
+            if (count == 1 && requirements.First().Operator == RequirementOperator.None)
+            {
+                terms.Last().field = requirements.First().Left;
+                result = null;
+                return true;
+            }
+
+            // complex expression must be converted into a Measured statement
+            // if a Measured requirement does not exist, assign one
+            var measured = requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
+            if (measured == null)
+            {
+                measured = requirements.FirstOrDefault(r => r.Type == RequirementType.None);
+                if (measured == null)
+                {
+                    result = new ParseErrorExpression("value could not be converted into a measured statement", expression);
+                    return false;
+                }
+
+                measured.Type = RequirementType.Measured;
+            }
+
+            foreach (var requirement in requirements)
+            {
+                switch (requirement.Type)
+                {
+                    case RequirementType.Measured:
+                        if (requirement != measured)
+                        {
+                            result = new ParseErrorExpression("value contains multiple measured elements", expression);
+                            return false;
+                        }
+                        break;
+
+                    case RequirementType.MeasuredIf:
+                        continue;
+
+                    case RequirementType.ResetIf:
+                        // ResetIf are only allowed if the measured value has a target HitCount
+                        if (measured.HitCount == 0)
+                        {
+                            result = new ParseErrorExpression("value contains a never without a repeated", expression);
+                            return false;
+                        }
+                        break;
+
+                    case RequirementType.PauseIf:
+                        // PauseIf only allowed if the measured value has a target HitCount
+                        if (measured.HitCount == 0)
+                        {
+                            result = new ParseErrorExpression("value contains an unless without a repeated", expression);
+                            return false;
+                        }
+                        break;
+
+                    default:
+                        System.Diagnostics.Debug.Assert(requirement.IsCombining);
+
+                        // force Operator on combining requirement to None
+                        requirement.Operator = RequirementOperator.None;
+                        break;
+                }
+            }
+
+            terms.Last().measured = requirements;
+
+            result = null;
+            return true;
         }
 
         internal abstract class FunctionDefinition : FunctionDefinitionExpression
@@ -264,7 +324,7 @@ namespace RATools.Parser
         {
             var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
             if (functionDefinition == null)
-                return new ParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name, functionCall.FunctionName);
+                return new UnknownVariableParseErrorExpression("Unknown function: " + functionCall.FunctionName.Name, functionCall.FunctionName);
 
             var triggerBuilderFunction = functionDefinition as FunctionDefinition;
             if (triggerBuilderFunction == null)

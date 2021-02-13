@@ -108,8 +108,16 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ParseErrorExpression)obj;
-            return Message == that.Message;
+            var that = obj as ParseErrorExpression;
+            return that != null && Message == that.Message;
+        }
+    }
+
+    internal class UnknownVariableParseErrorExpression : ParseErrorExpression
+    {
+        public UnknownVariableParseErrorExpression(string message, ExpressionBase expression)
+            : base(message, expression)
+        {
         }
     }
 }

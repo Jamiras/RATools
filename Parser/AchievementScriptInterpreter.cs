@@ -16,7 +16,7 @@ namespace RATools.Parser
         bool IsAborted { get; }
     }
 
-    public partial class AchievementScriptInterpreter
+    public class AchievementScriptInterpreter
     {
         public AchievementScriptInterpreter()
         {
@@ -232,50 +232,126 @@ namespace RATools.Parser
         /// </returns>
         public bool Run(Tokenizer input)
         {
-            var expressionGroup = new AchievementScriptParser().Parse(input);
-            if (expressionGroup.Comments.Count > 0)
-            {
-                GameTitle = expressionGroup.Comments[0].Value.Substring(2).Trim();
+            var expressionGroups = new ExpressionGroupCollection();
+            expressionGroups.Parse(input);
 
-                foreach (var comment in expressionGroup.Comments)
+            if (Error == null)
+            {
+                foreach (var group in expressionGroups.Groups)
                 {
-                    if (comment.Value.Contains("#ID"))
-                    {
-                        ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
-                        break;
-                    }
+                    Error = group.ParseErrors.FirstOrDefault();
+                    if (Error != null)
+                        return false;
                 }
             }
 
-            InterpreterScope scope;
-            return Run(expressionGroup, null, out scope);
-        }
-
-        internal bool Run(ExpressionGroup expressionGroup, IScriptInterpreterCallback callback, out InterpreterScope scope)
-        { 
-            var parseError = expressionGroup.Expressions.OfType<ParseErrorExpression>().FirstOrDefault();
-            if (parseError != null)
+            GameTitle = null;
+            foreach (var comment in expressionGroups.Groups.First().Expressions.OfType<CommentExpression>())
             {
-                Error = parseError;
-                scope = null;
+                if (comment.Value.Contains("#ID"))
+                {
+                    ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
+                    break;
+                }
+                else if (GameTitle == null)
+                {
+                    GameTitle = comment.Value.Substring(2).Trim();
+                }
+            }
+
+            if (!Run(expressionGroups, null))
+            {
+                if (Error == null)
+                    Error = expressionGroups.Errors.FirstOrDefault();
+
                 return false;
             }
 
-            scope = new InterpreterScope(GetGlobalScope());
-            scope.Context = new AchievementScriptContext
-            {
-                Achievements = _achievements,
-                Leaderboards = _leaderboards,
-                RichPresence = _richPresence
-            };
+            return true;
+        }
 
-            if (!Evaluate(expressionGroup.Expressions, scope, callback))
-            {
-                var error = Error;
-                if (error != null)
-                    expressionGroup.Errors.Add(error);
+        internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
+        {
+            if (expressionGroups.Scope == null)
+                expressionGroups.Scope = new InterpreterScope(GetGlobalScope());
 
-                return false;
+            var scriptContext = new AchievementScriptContext();
+
+            expressionGroups.Scope.Context = scriptContext;
+            expressionGroups.ResetErrors();
+
+            bool result = true;
+            foreach (var expressionGroup in expressionGroups.Groups)
+            {
+                if (expressionGroup.NeedsEvaluated)
+                {
+                    if (scriptContext.Achievements == null)
+                        scriptContext.Achievements = new List<Achievement>();
+                    if (scriptContext.Leaderboards == null)
+                        scriptContext.Leaderboards = new List<Leaderboard>();
+                    if (scriptContext.RichPresence == null)
+                        scriptContext.RichPresence = new RichPresenceBuilder();
+
+                    if (!Evaluate(expressionGroup.Expressions, expressionGroups.Scope, callback))
+                    {
+                        var error = Error;
+                        if (error != null)
+                            expressionGroups.AddEvaluationError(error);
+
+                        result = false;
+                    }
+
+                    if (scriptContext.Achievements.Count > 0)
+                    {
+                        expressionGroup.GeneratedAchievements = scriptContext.Achievements;
+                        scriptContext.Achievements = null;
+                    }
+                    else if (expressionGroup.GeneratedAchievements != null)
+                    {
+                        expressionGroup.GeneratedAchievements = null;
+                    }
+
+                    if (scriptContext.Leaderboards.Count > 0)
+                    {
+                        expressionGroup.GeneratedLeaderboards = scriptContext.Leaderboards;
+                        scriptContext.Leaderboards = null;
+                    }
+                    else if (expressionGroup.GeneratedLeaderboards != null)
+                    {
+                        expressionGroup.GeneratedLeaderboards = null;
+                    }
+
+                    if (!scriptContext.RichPresence.IsEmpty)
+                    {
+                        expressionGroup.GeneratedRichPresence = scriptContext.RichPresence;
+                        scriptContext.RichPresence = null;
+                    }
+
+                    expressionGroup.MarkEvaluated();
+                }
+            }
+
+            _achievements.Clear();
+            _leaderboards.Clear();
+            _richPresence.Clear();
+
+            foreach (var expressionGroup in expressionGroups.Groups)
+            {
+                if (expressionGroup.GeneratedAchievements != null)
+                    _achievements.AddRange(expressionGroup.GeneratedAchievements);
+
+                if (expressionGroup.GeneratedLeaderboards != null)
+                    _leaderboards.AddRange(expressionGroup.GeneratedLeaderboards);
+
+                if (expressionGroup.GeneratedRichPresence != null)
+                {
+                    var error = _richPresence.Merge(expressionGroup.GeneratedRichPresence);
+                    if (error != null)
+                    {
+                        expressionGroups.AddEvaluationError(error);
+                        result = false;
+                    }
+                }
             }
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
@@ -284,7 +360,7 @@ namespace RATools.Parser
                 RichPresenceLine = _richPresence.Line;
             }
 
-            return true;
+            return result;
         }
 
         private void ExtractGameId(Token line)
@@ -363,6 +439,9 @@ namespace RATools.Parser
 
                 case ExpressionType.FunctionDefinition:
                     return EvaluateFunctionDefinition((FunctionDefinitionExpression)expression, scope);
+
+                case ExpressionType.Comment:
+                    return true;
 
                 default:
                     Error = new ParseErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);

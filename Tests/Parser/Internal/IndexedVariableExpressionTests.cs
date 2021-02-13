@@ -1,6 +1,8 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Test.Parser.Internal
@@ -248,6 +250,48 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index does not evaluate to an integer constant"));
+        }
+
+        [Test]
+        public void TestNestedExpressions()
+        {
+            var variable = new VariableExpression("variable1");
+            var index = new VariableExpression("variable2");
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(2));
+            Assert.That(nested.Contains(variable));
+            Assert.That(nested.Contains(index));
+        }
+
+        [Test]
+        public void TestGetDependencies()
+        {
+            var variable = new VariableExpression("variable1");
+            var index = new VariableExpression("variable2");
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(2));
+            Assert.That(dependencies.Contains("variable1"));
+            Assert.That(dependencies.Contains("variable2"));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var variable = new VariableExpression("variable1");
+            var index = new VariableExpression("variable2");
+            var expr = new IndexedVariableExpression(variable, index);
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(0));
         }
     }
 }

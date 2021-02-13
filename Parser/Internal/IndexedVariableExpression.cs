@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Text;
-using System.Linq;
 using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
     internal class IndexedVariableExpression : VariableExpression, INestedExpressions
     {
-        public IndexedVariableExpression(ExpressionBase variable, ExpressionBase index)
+        public IndexedVariableExpression(VariableExpression variable, ExpressionBase index)
             : base(String.Empty)
         {
             Variable = variable;
@@ -19,7 +18,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the variable expression.
         /// </summary>
-        public ExpressionBase Variable { get; private set; }
+        public VariableExpression Variable { get; private set; }
 
         /// <summary>
         /// Gets the index expression.
@@ -93,7 +92,7 @@ namespace RATools.Parser.Internal
 
                     if (value == null)
                     {
-                        result = new ParseErrorExpression("Unknown variable: " + variable.Name, variable);
+                        result = new UnknownVariableParseErrorExpression("Unknown variable: " + variable.Name, variable);
                         return null;
                     }
                 }
@@ -181,13 +180,32 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (IndexedVariableExpression)obj;
-            return Variable == that.Variable && Index == that.Index;
+            var that = obj as IndexedVariableExpression;
+            return that != null && Variable == that.Variable && Index == that.Index;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            return ExpressionGroup.GetExpressionsForLine(expressions, new[] { Variable, Index }, line);
+            get
+            {
+                yield return Variable;
+                yield return Index;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            var nested = Variable as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+
+            nested = Index as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
     }
 }

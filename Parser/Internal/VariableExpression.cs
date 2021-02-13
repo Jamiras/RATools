@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -32,9 +34,21 @@ namespace RATools.Parser.Internal
             builder.Append(Name);
         }
 
+        /// <summary>
+        /// Determines whether the specified <see cref="VariableExpressionBase" /> is equal to this instance.
+        /// </summary>
+        /// <param name="obj">The <see cref="VariableExpressionBase" /> to compare with this instance.</param>
+        /// <returns>
+        ///   <c>true</c> if the specified <see cref="VariableExpressionBase" /> is equal to this instance; otherwise, <c>false</c>.
+        /// </returns>
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = obj as VariableExpressionBase;
+            return that != null && Name == that.Name && GetType() == that.GetType();
+        }
     }
 
-    internal class VariableExpression : VariableExpressionBase
+    internal class VariableExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableExpression(string name)
             : base(name)
@@ -61,9 +75,9 @@ namespace RATools.Parser.Internal
             {
                 var func = scope.GetFunction(Name);
                 if (func != null)
-                    result = new ParseErrorExpression("Function used like a variable: " + Name, this);
+                    result = new UnknownVariableParseErrorExpression("Function used like a variable: " + Name, this);
                 else
-                    result = new ParseErrorExpression("Unknown variable: " + Name, this);
+                    result = new UnknownVariableParseErrorExpression("Unknown variable: " + Name, this);
 
                 return false;
             }
@@ -71,21 +85,25 @@ namespace RATools.Parser.Internal
             return value.ReplaceVariables(scope, out result);
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        protected override bool Equals(ExpressionBase obj)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            var that = (VariableExpression)obj;
-            return Name == that.Name;
+            get
+            {
+                return Enumerable.Empty<ExpressionBase>();
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            dependencies.Add(Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
     }
 
-    internal class VariableDefinitionExpression : VariableExpressionBase
+    internal class VariableDefinitionExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableDefinitionExpression(string name)
             : base(name)
@@ -104,17 +122,21 @@ namespace RATools.Parser.Internal
             EndColumn = variable.EndColumn;
         }
 
-        /// <summary>
-        /// Determines whether the specified <see cref="VariableExpression" /> is equal to this instance.
-        /// </summary>
-        /// <param name="obj">The <see cref="VariableExpression" /> to compare with this instance.</param>
-        /// <returns>
-        ///   <c>true</c> if the specified <see cref="VariableExpression" /> is equal to this instance; otherwise, <c>false</c>.
-        /// </returns>
-        protected override bool Equals(ExpressionBase obj)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            var that = (VariableDefinitionExpression)obj;
-            return Name == that.Name;
+            get
+            {
+                return Enumerable.Empty<ExpressionBase>();
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            modifies.Add(Name);
         }
     }
 }

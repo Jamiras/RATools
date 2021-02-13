@@ -64,7 +64,7 @@ namespace RATools.Parser.Functions
             if (error != null)
                 return error;
 
-            context.LastRequirement.HitCount = (ushort)count;
+            context.LastRequirement.HitCount = (uint)count;
             return null;
         }
 

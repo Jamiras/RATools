@@ -32,8 +32,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (CommentExpression)obj;
-            return (Value == that.Value);
+            var that = obj as CommentExpression;
+            return (that != null && Value == that.Value);
         }
     }
 }

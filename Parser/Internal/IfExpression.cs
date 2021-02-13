@@ -14,7 +14,7 @@ namespace RATools.Parser.Internal
             ElseExpressions = new List<ExpressionBase>();
         }
 
-        private KeywordExpression _keyword;
+        private KeywordExpression _keyword, _elseKeyword;
 
         /// <summary>
         /// Gets the condition expression.
@@ -57,8 +57,12 @@ namespace RATools.Parser.Internal
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
+            line = tokenizer.Line;
+            column = tokenizer.Column;
             if (tokenizer.Match("else"))
             {
+                ifExpression._elseKeyword = new KeywordExpression("else", line, column);
+
                 error = ExpressionBase.ParseStatementBlock(tokenizer, ifExpression.ElseExpressions);
                 if (error != null)
                     return error;
@@ -86,22 +90,67 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (IfExpression)obj;
-            return Condition == that.Condition && Expressions == that.Expressions && ElseExpressions == that.ElseExpressions;
+            var that = obj as IfExpression;
+            return that != null && Condition == that.Condition && ExpressionsEqual(Expressions, that.Expressions) && 
+                ExpressionsEqual(ElseExpressions, that.ElseExpressions);
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keyword != null && _keyword.Line == line)
-                expressions.Add(_keyword);
+            get
+            {
+                if (_keyword != null)
+                    yield return _keyword;
 
-            if (!ExpressionGroup.GetExpressionsForLine(expressions, new[] { Condition }, line))
-                return false;
+                if (Condition != null)
+                    yield return Condition;
 
-            if (!ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line))
-                return false;
+                foreach (var expression in Expressions)
+                    yield return expression;
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, ElseExpressions, line);
+                if (_elseKeyword != null)
+                    yield return _elseKeyword;
+
+                foreach (var expression in ElseExpressions)
+                    yield return expression;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            var nested = Condition as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+
+            foreach (var expression in Expressions)
+            {
+                nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+
+            foreach (var expression in ElseExpressions)
+            {
+                nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+        }
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            foreach (var expression in Expressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetModifications(modifies);
+            }
+
+            foreach (var expression in ElseExpressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetModifications(modifies);
+            }
         }
     }
 }

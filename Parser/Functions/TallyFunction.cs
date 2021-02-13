@@ -89,7 +89,7 @@ namespace RATools.Parser.Functions
 
             // set the target hitcount
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
-            context.LastRequirement.HitCount = (ushort)count.Value;
+            context.LastRequirement.HitCount = (uint)count.Value;
 
             return null;
         }

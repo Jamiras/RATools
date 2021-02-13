@@ -119,26 +119,36 @@ namespace RATools.ViewModels
 
         protected override void OnUpdateSyntax(ContentChangedEventArgs e)
         {
-            // show progress bar
-            UpdateProgress(1, 0);
+            bool needsUpdate = false;
 
             // parse immediately so we can update the syntax highlighting
-            var parser = new AchievementScriptParser();
-            _parsedContent = parser.Parse(Tokenizer.CreateTokenizer(e.Content));
-
-            // if more changes have been made, bail
-            if (e.IsAborted)
+            var tokenizer = Tokenizer.CreateTokenizer(e.Content);
+            if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
-                // make sure the progress bar is hidden
-                UpdateProgress(0, 0);
+                _parsedContent = new ExpressionGroupCollection();
+                lock (_parsedContent)
+                {
+                    _parsedContent.Parse(tokenizer);
+                    needsUpdate = true;
+                }
             }
-            else if (!e.IsWhitespaceOnlyChange)
+            else if (e.Type == ContentChangeType.Update)
             {
+                lock (_parsedContent)
+                {
+                    needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
+                }
+            }
+
+            if (needsUpdate && !e.IsAborted)
+            {
+                // running the script can take a lot of time, push that work onto a background thread and show progress bar
+                UpdateProgress(1, 0);
+
                 // make sure to at least show the script file in the editor list
                 if (!_owner.Editors.Any())
                     _owner.PopulateEditorList(null);
 
-                // running the script can take a lot of time, push that work onto a background thread
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(() =>
                 {
                     if (!e.IsAborted)
@@ -146,25 +156,29 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Run(_parsedContent, callback, out _scope);
+
+                        bool hadErrors, hasErrors;
+                        lock (_parsedContent)
+                        {
+                            hadErrors = _parsedContent.HasEvaluationErrors;
+                            hasErrors = interpreter.Run(_parsedContent, callback);
+                        }
 
                         if (!e.IsAborted)
                         {
                             UpdateProgress(100, 0);
+
+                            // if any errors were added or removed, update the highlighting
+                            if (hasErrors != hadErrors)
+                                UpdateSyntaxHighlighting(e);
 
                             // report any errors
                             UpdateErrorList();
 
                             if (!e.IsAborted)
                             {
-                                // wait a short while before updating the editor list
-                                System.Threading.Thread.Sleep(700);
-
-                                if (!e.IsAborted)
-                                {
-                                    // update the editor list
-                                    _owner.PopulateEditorList(interpreter);
-                                }
+                                // update the editor list
+                                _owner.PopulateEditorList(interpreter);
                             }
                         }
                     }
@@ -243,8 +257,7 @@ namespace RATools.ViewModels
             base.OnContentChanged(e);
         }
 
-        private ExpressionGroup _parsedContent;
-        private InterpreterScope _scope;
+        private ExpressionGroupCollection _parsedContent;
 
         private class ErrorsToolWindowViewModel : CodeReferencesToolWindowViewModel
         {
@@ -329,20 +342,20 @@ namespace RATools.ViewModels
             {
                 string tooltip = null;
 
-                if (_scope != null)
+                if (_parsedContent.Scope != null)
                 {
                     var variable = expression as VariableExpression;
                     if (variable != null)
                     {
-                        var value = _scope.GetVariable(variable.Name);
+                        var value = _parsedContent.Scope.GetVariable(variable.Name);
                         if (value != null)
                             tooltip = BuildTooltip(value);
                     }
 
-                    var functionCall = expression as FunctionCallExpression;
+                    var functionCall = expression as FunctionNameExpression;
                     if (functionCall != null)
                     {
-                        var function = _scope.GetFunction(functionCall.FunctionName.Name);
+                        var function = _parsedContent.Scope.GetFunction(functionCall.Name);
                         if (function != null && function.Expressions.Count == 1)
                             tooltip = BuildTooltip(function.Expressions.First());
                     }
@@ -360,6 +373,8 @@ namespace RATools.ViewModels
 
             base.OnFormatLine(e);
         }
+
+        static bool automaticKeys = false;
 
         protected override void OnKeyPressed(KeyPressedEventArgs e)
         {
@@ -389,7 +404,7 @@ namespace RATools.ViewModels
 
         private void GotoDefinitionAtCursor()
         {
-            if (_scope == null)
+            if (_parsedContent.Scope == null)
                 return;
 
             var expressions = new List<ExpressionBase>();
@@ -402,10 +417,10 @@ namespace RATools.ViewModels
                 if (column < expression.Column || column > expression.EndColumn + 1)
                     continue;
 
-                var functionCall = expression as FunctionCallExpression;
+                var functionCall = expression as FunctionNameExpression;
                 if (functionCall != null)
                 {
-                    var function = _scope.GetFunction(functionCall.FunctionName.Name);
+                    var function = _parsedContent.Scope.GetFunction(functionCall.Name);
                     if (function != null && function.Line != 0)
                     {
                         GotoLine(function.Name.Line);
@@ -419,7 +434,7 @@ namespace RATools.ViewModels
                 var variableReference = expression as VariableExpression;
                 if (variableReference != null)
                 {
-                    var variable = _scope.GetVariableDefinition(variableReference.Name);
+                    var variable = _parsedContent.Scope.GetVariableDefinition(variableReference.Name);
                     if (variable != null && variable.Line != 0)
                     {
                         MoveCursorTo(variable.Line, variable.Column, MoveCursorFlags.None);

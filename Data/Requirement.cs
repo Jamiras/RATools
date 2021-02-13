@@ -57,7 +57,7 @@ namespace RATools.Data
         /// <c>0</c> means the requirement must be true at the time the achievement triggers.
         /// Any other value indicates the number of frames a requirement must be true before the achievement can trigger.
         /// </remarks>
-        public ushort HitCount { get; set; }
+        public uint HitCount { get; set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.

@@ -64,7 +64,7 @@ namespace RATools.Parser.Internal
                 if (value.Type == ExpressionType.ParseError)
                     break;
 
-                dict.Entries.Add(new DictionaryEntry { Key = key, Value = value });
+                dict.Add(key, value);
 
                 SkipWhitespace(tokenizer);
                 if (tokenizer.NextChar == '}')
@@ -81,6 +81,15 @@ namespace RATools.Parser.Internal
 
             tokenizer.Advance();
             return dict;
+        }
+
+        /// <summary>
+        /// Adds an entry to the dictionary.
+        /// </summary>
+        /// <remarks>Does not check for duplicate keys.</remarks>
+        public void Add(ExpressionBase key, ExpressionBase value)
+        {
+            Entries.Add(new DictionaryEntry { Key = key, Value = value });
         }
 
         /// <summary>
@@ -184,19 +193,38 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (DictionaryExpression)obj;
-            return Entries == that.Entries;
+            var that = obj as DictionaryExpression;
+            return that != null && Entries == that.Entries;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get
+            {
+                foreach (var entry in Entries)
+                {
+                    yield return entry.Key;
+                    yield return entry.Value;
+                }
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
             foreach (var entry in Entries)
             {
-                if (line >= entry.Key.Line && line <= entry.Value.EndLine)
-                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry.Key, entry.Value }, line);
-            }
+                var nested = entry.Key as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
 
-            return true;
+                nested = entry.Value as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
 
         [DebuggerDisplay("{Key}: {Value}")]

@@ -84,6 +84,8 @@ namespace RATools.Parser.Internal
         {
             var function = new FunctionDefinitionExpression();
             function._keyword = new KeywordExpression("function", line, column);
+            function.Line = line;
+            function.Column = column;
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
@@ -156,6 +158,8 @@ namespace RATools.Parser.Internal
 
                 var returnExpression = new ReturnExpression(expression);
                 function.Expressions.Add(returnExpression);
+                function.EndLine = expression.EndLine;
+                function.EndColumn = expression.EndColumn;
                 return function;
             }
 
@@ -175,7 +179,14 @@ namespace RATools.Parser.Internal
             {
                 expression = ExpressionBase.Parse(tokenizer);
                 if (expression.Type == ExpressionType.ParseError)
+                {
+                    // the ExpressionTokenizer will capture the error, we should still return the incomplete FunctionDefinition
+                    if (tokenizer is ExpressionTokenizer)
+                        break;
+
+                    // not an ExpressionTokenizer, just return the error
                     return expression;
+                }
 
                 if (expression.Type == ExpressionType.Return)
                     seenReturn = true;
@@ -187,6 +198,8 @@ namespace RATools.Parser.Internal
                 ExpressionBase.SkipWhitespace(tokenizer);
             }
 
+            function.EndLine = tokenizer.Line;
+            function.EndColumn = tokenizer.Column;
             tokenizer.Advance();
             return function;
         }
@@ -315,30 +328,55 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (FunctionDefinitionExpression)obj;
-            return Name == that.Name && Parameters == that.Parameters && Expressions == that.Expressions;
+            var that = obj as FunctionDefinitionExpression;
+            return that != null && Name == that.Name && ExpressionsEqual(Parameters, that.Parameters) && 
+                ExpressionsEqual(Expressions, that.Expressions);
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keyword != null && _keyword.Line == line)
-                expressions.Add(_keyword);
-            if (Name.Line == line)
+            get
             {
-                var name = new FunctionDefinitionExpression(Name.Name);
-                Name.CopyLocation(name);
-                expressions.Add(name);
+                if (_keyword != null)
+                    yield return _keyword;
+
+                if (Name != null)
+                    yield return Name;
+
+                foreach (var parameter in Parameters)
+                    yield return parameter;
+
+                foreach (var expression in Expressions)
+                    yield return expression;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            foreach (var expression in Expressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
             }
 
             foreach (var parameter in Parameters)
+                dependencies.Remove(parameter.Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            modifies.Add(Name.Name);
+
+            foreach (var expression in Expressions)
             {
-                if (parameter.Line == line)
-                    expressions.Add(parameter);
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetModifications(modifies);
             }
 
-            ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
-
-            return true;
+            foreach (var parameter in Parameters)
+                modifies.Remove(parameter.Name);
         }
     }
 }

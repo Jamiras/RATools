@@ -23,7 +23,16 @@ namespace RATools.Parser.Internal
             if (Operation == ConditionalOperation.Not)
             {
                 builder.Append('!');
-                Right.AppendString(builder);
+                if (Right.Type == ExpressionType.Conditional || Right.Type == ExpressionType.Comparison)
+                {
+                    builder.Append('(');
+                    Right.AppendString(builder);
+                    builder.Append(')');
+                }
+                else
+                {
+                    Right.AppendString(builder);
+                }
                 return;
             }
 
@@ -152,8 +161,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ConditionalExpression)obj;
-            return Operation == that.Operation && Left == that.Left && Right == that.Right;
+            var that = obj as ConditionalExpression;
+            return that != null && Operation == that.Operation && Left == that.Left && Right == that.Right;
         }
     }
 

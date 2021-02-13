@@ -83,6 +83,48 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestParseNumberOverflow()
+        {
+            var tokenizer = CreateTokenizer("4294967295");
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expression).Value, Is.EqualTo(-1));
+
+            tokenizer = CreateTokenizer("4294967296");
+            expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+        }
+
+        [Test]
+        public void TestParseNumberOverflowHex()
+        {
+            var tokenizer = CreateTokenizer("0xFFFFFFFF");
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expression).Value, Is.EqualTo(-1));
+
+            tokenizer = CreateTokenizer("0x100000000");
+            expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+        }
+
+        [Test]
+        public void TestParseNumberOverflowNegative()
+        {
+            var tokenizer = CreateTokenizer("-2147483647");
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expression).Value, Is.EqualTo(-2147483647));
+
+            tokenizer = CreateTokenizer("-2147483648");
+            expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+        }
+
+        [Test]
         public void TestParseString()
         {
             var tokenizer = CreateTokenizer("\"This is a string.\"");

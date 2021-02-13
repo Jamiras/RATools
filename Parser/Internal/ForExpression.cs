@@ -97,29 +97,52 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ForExpression)obj;
-            return IteratorName == that.IteratorName && Range == that.Range && Expressions == that.Expressions;
+            var that = obj as ForExpression;
+            return that != null && IteratorName == that.IteratorName && Range == that.Range && ExpressionsEqual(Expressions, that.Expressions);
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
-            if (_keywordFor != null && _keywordFor.Line == line)
-                expressions.Add(_keywordFor);
-            if (IteratorName.Line == line)
-                expressions.Add(IteratorName);
-            if (_keywordIn != null && _keywordIn.Line == line)
-                expressions.Add(_keywordIn);
-
-            if (Range.Line == line)
+            get
             {
-                var nestedExpressions = Range as INestedExpressions;
-                if (nestedExpressions != null)
-                    nestedExpressions.GetExpressionsForLine(expressions, line);
-                else
-                    expressions.Add(Range);
+                if (_keywordFor != null)
+                    yield return _keywordFor;
+                if (IteratorName != null)
+                    yield return IteratorName;
+                if (_keywordIn != null)
+                    yield return _keywordIn;
+
+                yield return Range;
+
+                foreach (var expression in Expressions)
+                    yield return expression;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            var nested = Range as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+
+            foreach (var expression in Expressions)
+            {
+                nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
             }
 
-            return ExpressionGroup.GetExpressionsForLine(expressions, Expressions, line);
+            dependencies.Remove(IteratorName.Name);
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+            foreach (var expression in Expressions)
+            {
+                var nested = expression as INestedExpressions;
+                if (nested != null)
+                    nested.GetModifications(modifies);
+            }
         }
     }
 }

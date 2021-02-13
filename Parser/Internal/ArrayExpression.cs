@@ -84,19 +84,30 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = (ArrayExpression)obj;
-            return Entries == that.Entries;
+            var that = obj as ArrayExpression;
+            return that != null && Entries == that.Entries;
         }
 
-        bool INestedExpressions.GetExpressionsForLine(List<ExpressionBase> expressions, int line)
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get
+            {
+                return Entries;
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
             foreach (var entry in Entries)
             {
-                if (line >= entry.Line && line <= entry.EndLine)
-                    ExpressionGroup.GetExpressionsForLine(expressions, new[] { entry }, line);
+                var nested = entry as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
             }
+        }
 
-            return true;
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
     }
 }

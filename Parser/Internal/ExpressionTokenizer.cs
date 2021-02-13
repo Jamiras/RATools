@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System.Diagnostics;
 
 namespace RATools.Parser.Internal
 {
@@ -10,16 +11,47 @@ namespace RATools.Parser.Internal
             _expressionGroup = expressionGroup;
         }
 
-        private readonly ExpressionGroup _expressionGroup;
+        private ExpressionGroup _expressionGroup;
+
+        public void ChangeExpressionGroup(ExpressionGroup expressionGroup)
+        {
+            _expressionGroup = expressionGroup;
+        }
 
         public void AddComment(CommentExpression comment)
         {
-            _expressionGroup.Comments.Add(comment);
+            _expressionGroup.AddExpression(comment);
         }
 
         public void AddError(ParseErrorExpression error)
         {
-            _expressionGroup.Errors.Add(error);
+            _expressionGroup.AddParseError(error);
+        }
+
+        public void AdvanceToLine(int line)
+        {
+            while (Line < line && NextChar != '\0')
+                Advance();
+        }
+
+        private ExpressionBase _queuedExpression;
+
+        public void QueueExpression(ExpressionBase expression)
+        {
+            Debug.Assert(_queuedExpression == null);
+            _queuedExpression = expression;
+        }
+
+        public ExpressionBase DequeueExpression()
+        {
+            if (_queuedExpression != null)
+            {
+                var queuedExpression = _queuedExpression;
+                _queuedExpression = null;
+                return queuedExpression;
+            }
+
+            return null;
         }
     }
 }

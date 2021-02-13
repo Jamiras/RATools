@@ -3,6 +3,7 @@ using RATools.Parser.Internal;
 using System.Text;
 using System.Linq;
 using Jamiras.Components;
+using System.Collections.Generic;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -571,6 +572,48 @@ namespace RATools.Test.Parser.Internal
             Assert.That(functionCall.Evaluate(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(123));
+        }
+
+        [Test]
+        public void TestNestedExpressions()
+        {
+            var parameter = new VariableExpression("variable1");
+            var name = new FunctionNameExpression("func");
+            var expr = new FunctionCallExpression(name, new ExpressionBase[] { parameter });
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(2));
+            Assert.That(nested.Contains(name));
+            Assert.That(nested.Contains(parameter));
+        }
+
+        [Test]
+        public void TestGetDependencies()
+        {
+            var parameter = new VariableExpression("variable1");
+            var name = new FunctionNameExpression("func");
+            var expr = new FunctionCallExpression(name, new ExpressionBase[] { parameter });
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(2));
+            Assert.That(dependencies.Contains("func"));
+            Assert.That(dependencies.Contains("variable1"));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var parameter = new VariableExpression("variable1");
+            var name = new FunctionNameExpression("func");
+            var expr = new FunctionCallExpression(name, new ExpressionBase[] { parameter });
+
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            Assert.That(modifications.Count, Is.EqualTo(0));
         }
     }
 }
