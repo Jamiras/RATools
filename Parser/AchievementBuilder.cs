@@ -1356,21 +1356,41 @@ namespace RATools.Parser
                     break;
             }
 
+            // check for conflict
             if (conflicting)
             {
                 if (left.HitCount > 0 || right.HitCount > 0)
                     return false;
-                if (left.Type == RequirementType.PauseIf || right.Type == RequirementType.PauseIf)
+                if (left.Type == RequirementType.PauseIf)
                     return false;
-                if (left.Type == RequirementType.ResetIf || right.Type == RequirementType.ResetIf)
+                if (left.Type == RequirementType.ResetIf)
                     return false;
 
+                // conditions conflict with each other, trigger is impossible
                 merged = null;
                 return true;
             }
 
+            // when processing never() [ResetIf], invert the conditional operation as we expect the
+            // conditions to be false when the achievement triggers
+            if (left.Type == RequirementType.ResetIf)
+            {
+                switch (condition)
+                {
+                    case ConditionalOperation.And:
+                        // "never(A) && never(B)" => "never(A || B)"
+                        condition = ConditionalOperation.Or;
+                        break;
+                    case ConditionalOperation.Or:
+                        // "never(A) || never(B)" => "never(A && B)"
+                        condition = ConditionalOperation.And;
+                        break;
+                }
+            }
+
             if (condition == ConditionalOperation.Or)
             {
+                // "A || B" => keep the less restrictive condition (intersection)
                 if (useRight)
                 {
                     merged.Operator = right.Operator;
@@ -1389,6 +1409,7 @@ namespace RATools.Parser
             }
             else
             {
+                // "A && B" => keep the more restrictive condition (union)
                 if (useRight)
                     return true;
 
