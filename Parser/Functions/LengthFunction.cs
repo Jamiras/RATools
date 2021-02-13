@@ -23,7 +23,7 @@ namespace RATools.Parser.Functions
                     return true;
 
                 case ExpressionType.Dictionary:
-                    result = new IntegerConstantExpression(((DictionaryExpression)obj).Entries.Count);
+                    result = new IntegerConstantExpression(((DictionaryExpression)obj).Count);
                     return true;
 
                 case ExpressionType.StringConstant:

@@ -85,13 +85,13 @@ namespace RATools.Test.Parser.Functions
         {
             var scope = new InterpreterScope();
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(1), Value = new StringConstantExpression("One") });
+            dict.Add(new IntegerConstantExpression(1), new StringConstantExpression("One"));
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
             Assert.That(Evaluate("length(dict)", scope), Is.EqualTo(1));
 
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(5), Value = new StringConstantExpression("Five") });
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(9), Value = new StringConstantExpression("Nine") });
+            dict.Add(new IntegerConstantExpression(5), new StringConstantExpression("Five"));
+            dict.Add(new IntegerConstantExpression(9), new StringConstantExpression("Nine"));
 
             Assert.That(Evaluate("length(dict)", scope), Is.EqualTo(3));
         }

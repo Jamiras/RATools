@@ -38,7 +38,7 @@ namespace RATools.Test.Parser.Internal
             var key = new StringConstantExpression("key");
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+            dict.Add(key, value);
             var expr = new IndexedVariableExpression(variable, key);
 
             var scope = new InterpreterScope();
@@ -57,9 +57,9 @@ namespace RATools.Test.Parser.Internal
             var key = new StringConstantExpression("key");
             var value = new IntegerConstantExpression(99);
             var dict2 = new DictionaryExpression();
-            dict2.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+            dict2.Add(key, value);
             var dict1 = new DictionaryExpression();
-            dict1.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = dict2 });
+            dict1.Add(key, dict2);
             var expr2 = new IndexedVariableExpression(variable, key);
             var expr = new IndexedVariableExpression(expr2, key);
 
@@ -80,7 +80,7 @@ namespace RATools.Test.Parser.Internal
             var index = new VariableExpression("index");
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+            dict.Add(key, value);
             var expr = new IndexedVariableExpression(variable, index);
 
             var scope = new InterpreterScope();
@@ -135,7 +135,7 @@ namespace RATools.Test.Parser.Internal
             var index = new MathematicExpression(new IntegerConstantExpression(2), MathematicOperation.Add, new IntegerConstantExpression(4));
             var value = new IntegerConstantExpression(99);
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+            dict.Add(key, value);
             var expr = new IndexedVariableExpression(variable, index);
 
             var scope = new InterpreterScope();
@@ -160,7 +160,7 @@ namespace RATools.Test.Parser.Internal
 
             var variable = new VariableExpression("variable");
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(6), Value = value });
+            dict.Add(new IntegerConstantExpression(6), value);
 
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);

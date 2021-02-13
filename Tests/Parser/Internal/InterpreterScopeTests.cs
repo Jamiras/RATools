@@ -114,8 +114,8 @@ namespace RATools.Test.Parser.Internal
             var index = new IndexedVariableExpression(variable, key);
             scope.AssignVariable(index, value);
 
-            Assert.That(dict.Entries.Count, Is.EqualTo(1));
-            Assert.That(dict.Entries[0].Value, Is.SameAs(value));
+            Assert.That(dict.Count, Is.EqualTo(1));
+            Assert.That(dict[0].Value, Is.SameAs(value));
         }
 
         [Test]
@@ -126,14 +126,14 @@ namespace RATools.Test.Parser.Internal
             var value2 = new IntegerConstantExpression(98);
             var dict = new DictionaryExpression();
             var key = new IntegerConstantExpression(6);
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = key, Value = value });
+            dict.Add(key, value);
             var scope = new InterpreterScope();
             scope.AssignVariable(variable, dict);
 
             var index = new IndexedVariableExpression(variable, key);
             scope.AssignVariable(index, value2);
 
-            Assert.That(dict.Entries[0].Value, Is.SameAs(value2));
+            Assert.That(dict[0].Value, Is.SameAs(value2));
         }
 
         [Test]

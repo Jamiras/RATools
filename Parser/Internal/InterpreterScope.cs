@@ -126,17 +126,11 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <param name="value">The value.</param>
-        public void AssignVariable(VariableExpression variable, ExpressionBase value)
+        public ParseErrorExpression AssignVariable(VariableExpression variable, ExpressionBase value)
         {
             var indexedVariable = variable as IndexedVariableExpression;
             if (indexedVariable != null)
-            {
-                ExpressionBase result;
-                var entry = indexedVariable.GetDictionaryEntry(this, out result, true);
-                if (entry != null)
-                    entry.Value = value;
-                return;
-            }
+                return indexedVariable.Assign(this, value);
 
             // find the scope where the variable is defined and update it there.
             var scope = this;
@@ -145,7 +139,7 @@ namespace RATools.Parser.Internal
                 if (scope._variables.ContainsKey(variable.Name))
                 {
                     scope.DefineVariable(new VariableDefinitionExpression(variable), value);
-                    return;
+                    return null;
                 }
 
                 scope = GetParentScope(scope);
@@ -153,6 +147,7 @@ namespace RATools.Parser.Internal
 
             // variable not defined, store in the current scope.
             DefineVariable(new VariableDefinitionExpression(variable), value);
+            return null;
         }
 
         /// <summary>
