@@ -374,8 +374,6 @@ namespace RATools.ViewModels
             base.OnFormatLine(e);
         }
 
-        static bool automaticKeys = false;
-
         protected override void OnKeyPressed(KeyPressedEventArgs e)
         {
             if (e.Key == System.Windows.Input.Key.F12 && e.Modifiers == System.Windows.Input.ModifierKeys.None)
