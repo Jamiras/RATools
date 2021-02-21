@@ -47,127 +47,120 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var entry = GetDictionaryEntry(scope, out result, false);
-            if (entry == null)
+            ExpressionBase container, index;
+            GetContainerIndex(scope, out container, out index);
+
+            switch (container.Type)
+            {
+                case ExpressionType.Dictionary:
+                    result = ((DictionaryExpression)container).GetEntry(index);
+                    if (result == null)
+                    {
+                        var builder = new StringBuilder();
+                        builder.Append("No entry in dictionary for key: ");
+                        index.AppendString(builder);
+                        result = new ParseErrorExpression(builder.ToString(), Index);
+                        return false;
+                    }
+                    break;
+
+                case ExpressionType.Array:
+                    result = ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
+                    break;
+
+                case ExpressionType.ParseError:
+                    result = container;
+                    return false;
+
+                default:
+                    {
+                        var builder = new StringBuilder();
+                        builder.Append("Cannot index: ");
+                        Variable.AppendString(builder);
+                        builder.Append(" (");
+                        builder.Append(container.Type);
+                        builder.Append(')');
+                        result = new ParseErrorExpression(builder.ToString(), Variable);
+                    }
+                    return false;
+            }
+
+            if (result == null)
                 return false;
 
-            result = entry.Value;
             return result.ReplaceVariables(scope, out result);
         }
 
-        internal DictionaryExpression.DictionaryEntry GetDictionaryEntry(InterpreterScope scope, out ExpressionBase result, bool create)
+        public ParseErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
         {
-            ExpressionBase index;
-            if (Index.Type == ExpressionType.FunctionCall)
-            {
-                var expression = (FunctionCallExpression)Index;
-                if (!expression.ReplaceVariables(scope, out index))
-                {
-                    result = index;
-                    return null;
-                }
-            }
-            else if (!Index.ReplaceVariables(scope, out index))
-            {
-                result = index;
-                return null;
-            }
+            ExpressionBase container, index;
+            GetContainerIndex(scope, out container, out index);
 
-            ExpressionBase value;
-            var indexed = Variable as IndexedVariableExpression;
-            if (indexed != null)
+            switch (container.Type)
             {
-                var entry = indexed.GetDictionaryEntry(scope, out result, create);
-                if (entry == null)
-                    return null;
+                case ExpressionType.Dictionary:
+                    ((DictionaryExpression)container).Assign(index, newValue);
+                    break;
 
-                value = entry.Value;
-            }
-            else
-            {
-                var variable = Variable as VariableExpression;
-                if (variable != null)
-                {
-                    value = scope.GetVariable(variable.Name);
+                case ExpressionType.Array:
+                    ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value] = newValue;
+                    break;
 
-                    if (value == null)
-                    {
-                        result = new UnknownVariableParseErrorExpression("Unknown variable: " + variable.Name, variable);
-                        return null;
-                    }
-                }
-                else if (!Variable.ReplaceVariables(scope, out value))
-                {
-                    result = value;
-                    return null;
-                }
-            }
+                case ExpressionType.ParseError:
+                    return (ParseErrorExpression)container;
 
-            var dict = value as DictionaryExpression;
-            if (dict != null)
-            {
-                var entry = new DictionaryExpression.DictionaryEntry() { Key = index };
-                var entryIndex = dict.Entries.BinarySearch(entry, entry);
-                if (entryIndex >= 0)
-                {
-                    result = dict;
-                    return dict.Entries[entryIndex];
-                }
-
-                if (create)
-                {
-                    dict.Entries.Insert(~entryIndex, entry);
-                    result = dict;
-                    return entry;
-                }
-
-                var builder = new StringBuilder();
-                builder.Append("No entry in dictionary for key: ");
-                index.AppendString(builder);
-                result = new ParseErrorExpression(builder.ToString(), Index);
-            }
-            else
-            {
-                var array = value as ArrayExpression;
-                if (array != null)
-                {
-                    var intIndex = index as IntegerConstantExpression;
-                    if (intIndex == null)
-                    {
-                        result = new ParseErrorExpression("Index does not evaluate to an integer constant", index);
-                    }
-                    else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
-                    {
-                        result = new ParseErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
-                    }
-                    else
-                    {
-                        result = array;
-                        return new ArrayDictionaryEntryWrapper { Array = array, Key = index, Value = array.Entries[intIndex.Value] };
-                    }
-                }
-                else
-                {
+                default:
                     var builder = new StringBuilder();
                     builder.Append("Cannot index: ");
                     Variable.AppendString(builder);
                     builder.Append(" (");
-                    builder.Append(value.Type);
+                    builder.Append(container.Type);
                     builder.Append(')');
-                    result = new ParseErrorExpression(builder.ToString(), Variable);
-                }
+                    return new ParseErrorExpression(builder.ToString(), Variable);
             }
 
             return null;
         }
 
-        private class ArrayDictionaryEntryWrapper : DictionaryExpression.DictionaryEntry
+        private void GetContainerIndex(InterpreterScope scope, out ExpressionBase container, out ExpressionBase index)
         {
-            public ArrayExpression Array { get; set; }
-            public override ExpressionBase Value
+            if (Index.Type == ExpressionType.FunctionCall)
             {
-                get { return Array.Entries[((IntegerConstantExpression)Key).Value]; }
-                set { Array.Entries[((IntegerConstantExpression)Key).Value] = value; }
+                var expression = (FunctionCallExpression)Index;
+                if (!expression.ReplaceVariables(scope, out index))
+                {
+                    container = index;
+                    return;
+                }
+            }
+            else if (!Index.ReplaceVariables(scope, out index))
+            {
+                container = index;
+                return;
+            }
+
+            var indexed = Variable as IndexedVariableExpression;
+            if (indexed != null)
+            {
+                indexed.ReplaceVariables(scope, out container);
+                return;
+            }
+
+            container = scope.GetVariable(Variable.Name);
+            if (container == null)
+            {
+                container = new UnknownVariableParseErrorExpression("Unknown variable: " + Variable.Name, Variable);
+                return;
+            }
+
+            var array = container as ArrayExpression;
+            if (array != null)
+            {
+                var intIndex = index as IntegerConstantExpression;
+                if (intIndex == null)
+                    container = new ParseErrorExpression("Index does not evaluate to an integer constant", index);
+                else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
+                    container = new ParseErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
             }
         }
 

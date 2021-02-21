@@ -10,13 +10,136 @@ namespace RATools.Parser.Internal
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)
         {
-            Entries = new List<DictionaryEntry>();
+            _entries = new List<DictionaryEntry>();
+            _state = DictionaryState.ConstantSorted;
+        }
+
+        private readonly List<DictionaryEntry> _entries;
+
+        private enum DictionaryState
+        {
+            Unprocessed = 0,
+            ConstantSorted,
+            ConstantKeysSorted,
+            DynamicKeysUnsorted,
+        }
+        private DictionaryState _state;
+
+        internal void MarkUnprocessed()
+        {
+            _state = DictionaryState.Unprocessed;
         }
 
         /// <summary>
-        /// Gets the entries in the dictionary.
+        /// Gets the keys for the items in the dictionary.
         /// </summary>
-        public List<DictionaryEntry> Entries { get; private set; }
+        public IEnumerable<ExpressionBase> Keys
+        {
+            get
+            {
+                foreach (var entry in _entries)
+                    yield return entry.Key;
+            }
+        }
+
+        /// <summary>
+        /// Gets an enumerator for the items in the dictionary.
+        /// </summary>
+        public IEnumerable<KeyValuePair<ExpressionBase, ExpressionBase>> Entries
+        {
+            get
+            {
+                foreach (var entry in _entries)
+                    yield return new KeyValuePair<ExpressionBase, ExpressionBase>(entry.Key, entry.Value);
+            }
+        }
+
+        private DictionaryEntry GetEntry(ExpressionBase key, bool createIfNotFound)
+        {
+            if (_state == DictionaryState.Unprocessed)
+            {
+                var error = UpdateState();
+                if (error != null)
+                    return new DictionaryEntry { Value = error };
+            }
+
+            if (_state == DictionaryState.DynamicKeysUnsorted)
+            {
+                foreach (var entry in _entries)
+                {
+                    if (entry.Key == key)
+                        return entry;
+                }
+
+                if (createIfNotFound)
+                {
+                    var entry = new DictionaryEntry { Key = key };
+                    _entries.Add(entry);
+                    return entry;
+                }
+            }
+            else
+            {
+                var entry = new DictionaryEntry { Key = key };
+                var comparer = (IComparer<DictionaryEntry>)entry;
+                var index = _entries.BinarySearch(entry, comparer);
+                if (index >= 0)
+                    return _entries[index];
+
+                if (createIfNotFound)
+                {
+                    _entries.Insert(~index, entry);
+                    if (!IsConstant(key.Type))
+                        _state = DictionaryState.DynamicKeysUnsorted;
+
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        internal ExpressionBase GetEntry(ExpressionBase key)
+        {
+            var entry = GetEntry(key, false);
+            return (entry != null) ? entry.Value : null;
+        }
+
+        internal ParseErrorExpression Assign(ExpressionBase key, ExpressionBase value)
+        {
+            var entry = GetEntry(key, true);
+
+            var error = entry.Value as ParseErrorExpression;
+            if (error != null)
+                return error;
+
+            entry.Value = value;
+
+            if (_state == DictionaryState.ConstantSorted && !IsConstant(value.Type))
+                _state = DictionaryState.ConstantKeysSorted;
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the number of entries in the dictionary.
+        /// </summary>
+        public int Count
+        {
+            get { return _entries.Count; }
+        }
+
+        /// <summary>
+        /// Helper function for unit tests
+        /// </summary>
+        internal KeyValuePair<ExpressionBase, ExpressionBase> this[int index]
+        {
+            get
+            {
+                var entry = _entries[index];
+                return new KeyValuePair<ExpressionBase, ExpressionBase>(entry.Key, entry.Value);
+            }
+        }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -25,9 +148,9 @@ namespace RATools.Parser.Internal
         {
             builder.Append('{');
 
-            if (Entries.Count > 0)
+            if (_entries.Count > 0)
             {
-                foreach (var entry in Entries)
+                foreach (var entry in _entries)
                 {
                     entry.Key.AppendString(builder);
                     builder.Append(": ");
@@ -40,7 +163,7 @@ namespace RATools.Parser.Internal
             builder.Append('}');
         }
 
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static new ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
             SkipWhitespace(tokenizer);
 
@@ -89,7 +212,60 @@ namespace RATools.Parser.Internal
         /// <remarks>Does not check for duplicate keys.</remarks>
         public void Add(ExpressionBase key, ExpressionBase value)
         {
-            Entries.Add(new DictionaryEntry { Key = key, Value = value });
+            _entries.Add(new DictionaryEntry { Key = key, Value = value });
+            _state = DictionaryState.Unprocessed;
+        }
+
+        private static bool IsConstant(ExpressionType type)
+        {
+            switch (type)
+            {
+                case ExpressionType.StringConstant:
+                case ExpressionType.IntegerConstant:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        private ParseErrorExpression UpdateState()
+        {
+            if (_entries.Count == 0)
+            {
+                _state = DictionaryState.ConstantSorted;
+            }
+            else if (_entries.TrueForAll(e => IsConstant(e.Key.Type)))
+            {
+                // sort by key
+                var comparer = (IComparer<DictionaryEntry>)_entries[0];
+                _entries.Sort(comparer);
+
+                // check for duplicates
+                for (int i = 0; i < _entries.Count - 1; i++)
+                {
+                    if (comparer.Compare(_entries[i], _entries[i + 1]) == 0)
+                    {
+                        var entry = _entries[i + 1];
+                        StringBuilder builder = new StringBuilder();
+                        entry.Key.AppendString(builder);
+                        builder.Append(" already exists in dictionary");
+                        return new ParseErrorExpression(builder.ToString(), entry.Key);
+                    }
+                }
+
+                // check for constant values
+                if (_entries.TrueForAll(e => IsConstant(e.Value.Type)))
+                    _state = DictionaryState.ConstantSorted;
+                else
+                    _state = DictionaryState.ConstantKeysSorted;
+            }
+            else
+            {
+                _state = DictionaryState.DynamicKeysUnsorted;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -102,84 +278,93 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (Entries.Count == 0)
+            var newDict = new DictionaryExpression();
+            var entries = newDict._entries;
+
+            if (_state == DictionaryState.Unprocessed)
             {
-                result = new DictionaryExpression { Entries = new List<DictionaryEntry>() };
+                result = UpdateState();
+                if (result != null)
+                    return false;
+            }
+
+            // constant dictionary
+            if (_state == DictionaryState.ConstantSorted)
+            {
+                entries.AddRange(_entries);
+                result = newDict;
                 CopyLocation(result);
                 return true;
             }
 
+            // non-constant dictionary - have to evaluate
             var dictScope = new InterpreterScope(scope);
 
-            var entries = new List<DictionaryEntry>();
-            foreach (var entry in Entries)
+            foreach (var entry in _entries)
             {
                 ExpressionBase key, value;
                 key = entry.Key;
 
-                switch (key.Type)
+                if (!IsConstant(key.Type))
                 {
-                    case ExpressionType.StringConstant:
-                    case ExpressionType.IntegerConstant:
-                        // simple data types, do nothing
-                        break;
+                    dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
+                    if (!key.ReplaceVariables(dictScope, out value))
+                    {
+                        result = value;
+                        return false;
+                    }
 
-                    default:
-                        dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
-                        if (!key.ReplaceVariables(dictScope, out value))
-                        {
-                            result = value;
-                            return false;
-                        }
+                    if (!IsConstant(value.Type))
+                    {
+                        result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
+                        return false;
+                    }
 
-                        if (value.Type != ExpressionType.StringConstant && value.Type != ExpressionType.IntegerConstant)
-                        {
-                            result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
-                            return false;
-                        }
-
-                        key = value;
-                        break;
+                    key = value;
                 }
 
-                switch (entry.Value.Type)
+                if (IsConstant(entry.Value.Type))
                 {
-                    case ExpressionType.StringConstant:
-                    case ExpressionType.IntegerConstant:
-                        // simple data types, avoid overhead of generating an AssignmentExpression
-                        value = entry.Value;
-                        break;
+                    value = entry.Value;
+                }
+                else
+                {
+                    if (key.Type == ExpressionType.IntegerConstant)
+                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
+                    else // key.Type == ExpressionType.StringConstant
+                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
 
-                    default:
-                        if (key.Type == ExpressionType.IntegerConstant)
-                            dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
-                        else // key.Type == ExpressionType.StringConstant
-                            dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
-
-                        if (!entry.Value.ReplaceVariables(dictScope, out value))
-                        {
-                            result = value;
-                            return false;
-                        }
-                        break;
+                    if (!entry.Value.ReplaceVariables(dictScope, out value))
+                    {
+                        result = value;
+                        return false;
+                    }
                 }
 
                 var newEntry = new DictionaryEntry { Key = key, Value = value };
 
-                var index = entries.BinarySearch(newEntry, newEntry);
-                if (index >= 0)
+                if (_state == DictionaryState.ConstantKeysSorted)
                 {
-                    StringBuilder builder = new StringBuilder();
-                    key.AppendString(builder);
-                    builder.Append(" already exists in dictionary");
-                    result = new ParseErrorExpression(builder.ToString(), entry.Key);
-                    return false;
+                    entries.Add(newEntry);
                 }
+                else
+                {
+                    var index = entries.BinarySearch(newEntry, newEntry);
+                    if (index >= 0)
+                    {
+                        StringBuilder builder = new StringBuilder();
+                        key.AppendString(builder);
+                        builder.Append(" already exists in dictionary");
+                        result = new ParseErrorExpression(builder.ToString(), entry.Key);
+                        return false;
+                    }
 
-                entries.Insert(~index, newEntry);
+                    entries.Insert(~index, newEntry);
+                }
             }
 
-            result = new DictionaryExpression { Entries = entries };
+            newDict._state = DictionaryState.ConstantSorted;
+            result = newDict;
             CopyLocation(result);
             return true;
         }
@@ -194,14 +379,14 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as DictionaryExpression;
-            return that != null && Entries == that.Entries;
+            return that != null && _entries == that._entries;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
             {
-                foreach (var entry in Entries)
+                foreach (var entry in _entries)
                 {
                     yield return entry.Key;
                     yield return entry.Value;
@@ -211,7 +396,7 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
-            foreach (var entry in Entries)
+            foreach (var entry in _entries)
             {
                 var nested = entry.Key as INestedExpressions;
                 if (nested != null)
@@ -228,7 +413,7 @@ namespace RATools.Parser.Internal
         }
 
         [DebuggerDisplay("{Key}: {Value}")]
-        public class DictionaryEntry : IComparer<DictionaryEntry>
+        private class DictionaryEntry : IComparer<DictionaryEntry>
         {
             /// <summary>
             /// Gets or sets the key.
@@ -238,7 +423,7 @@ namespace RATools.Parser.Internal
             /// <summary>
             /// Gets or sets the value.
             /// </summary>
-            public virtual ExpressionBase Value { get; set; }
+            public ExpressionBase Value { get; set; }
 
             int IComparer<DictionaryEntry>.Compare(DictionaryEntry x, DictionaryEntry y)
             {

@@ -532,11 +532,7 @@ namespace RATools.Test.Parser.Internal
             scope.AddFunction(functionDefinition);
 
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry()
-            {
-                Key = new StringConstantExpression("key"),
-                Value = new IntegerConstantExpression(1)
-            });
+            dict.Add(new StringConstantExpression("key"), new IntegerConstantExpression(1));
             scope.AssignVariable(new VariableExpression("dict"), dict);
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new VariableExpression("dict") });
@@ -545,9 +541,9 @@ namespace RATools.Test.Parser.Internal
             Assert.That(functionCall.Evaluate(scope, out result), Is.True);
             Assert.That(result, Is.Null);
 
-            Assert.That(dict.Entries.Count(), Is.EqualTo(1));
-            Assert.That(dict.Entries[0].Value, Is.InstanceOf<IntegerConstantExpression>());
-            Assert.That(((IntegerConstantExpression)dict.Entries[0].Value).Value, Is.EqualTo(2));
+            Assert.That(dict.Count, Is.EqualTo(1));
+            Assert.That(dict[0].Value, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)dict[0].Value).Value, Is.EqualTo(2));
         }
 
         [Test]
@@ -559,11 +555,7 @@ namespace RATools.Test.Parser.Internal
             scope.AddFunction(functionDefinition);
 
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry()
-            {
-                Key = new StringConstantExpression("key"),
-                Value = new VariableExpression("variable")
-            });
+            dict.Add(new StringConstantExpression("key"), new VariableExpression("variable"));
             scope.AssignVariable(new VariableExpression("variable"), new IntegerConstantExpression(123));
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { dict });

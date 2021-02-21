@@ -94,7 +94,7 @@ namespace RATools.Test.Parser.Functions
         {
             var scope = new InterpreterScope();
             var dict = new DictionaryExpression();
-            dict.Entries.Add(new DictionaryExpression.DictionaryEntry { Key = new IntegerConstantExpression(1), Value = new StringConstantExpression("One") });
+            dict.Add(new IntegerConstantExpression(1), new StringConstantExpression("One"));
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
             Evaluate("array_push(dict)", scope, "array did not evaluate to an array");

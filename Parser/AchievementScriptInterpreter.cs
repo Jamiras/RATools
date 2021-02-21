@@ -418,8 +418,8 @@ namespace RATools.Parser
                         return false;
                     }
 
-                    scope.AssignVariable(assignment.Variable, result);
-                    return true;
+                    Error = scope.AssignVariable(assignment.Variable, result);
+                    return (Error == null);
 
                 case ExpressionType.FunctionCall:
                     return CallFunction((FunctionCallExpression)expression, scope);
@@ -498,12 +498,12 @@ namespace RATools.Parser
                 var iteratorScope = new InterpreterScope(scope);
                 var iteratorVariable = new VariableExpression(iterator.Name);
 
-                foreach (var entry in dict.Entries)
+                foreach (var entry in dict.Keys)
                 {
-                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry.Key);
+                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
 
                     ExpressionBase key;
-                    if (!entry.Key.ReplaceVariables(iteratorScope, out key))
+                    if (!entry.ReplaceVariables(iteratorScope, out key))
                     {
                         Error = key as ParseErrorExpression;
                         return false;
