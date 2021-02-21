@@ -95,9 +95,11 @@ namespace RATools.Parser.Internal
             while (insertAt > 0)
             {
                 var previous = _expressions[insertAt - 1];
-                if (previous.Line < expression.Line)
+                if (previous.Location.Start.Line < expression.Location.Start.Line)
                     break;
-                if (previous.Line == expression.Line && previous.Column < expression.Column)
+
+                if (previous.Location.Start.Line == expression.Location.Start.Line &&
+                    previous.Location.Start.Column < expression.Location.Start.Column)
                     break;
 
                 --insertAt;
@@ -110,7 +112,7 @@ namespace RATools.Parser.Internal
         {
             if (_expression != null)
             {
-                if (_expression.Line < expression.EndLine)
+                if (_expression.Location.Start.Line < expression.Location.End.Line)
                     return null;
                 // ASSERT: comment must be the last thing on a line, so we don't have to check columns
 
@@ -124,7 +126,7 @@ namespace RATools.Parser.Internal
                 return null;
 
             int index = _expressions.Count;
-            while (index > 0 && _expressions[index - 1].Line >= expression.EndLine)
+            while (index > 0 && _expressions[index - 1].Location.Start.Line >= expression.Location.End.Line)
                 --index;
 
             if (index != _expressions.Count)
@@ -230,19 +232,19 @@ namespace RATools.Parser.Internal
             var enumerator = Expressions.GetEnumerator();
             while (enumerator.MoveNext())
             {
-                if (enumerator.Current.Line < FirstLine)
-                    FirstLine = enumerator.Current.Line;
-                if (enumerator.Current.EndLine > LastLine)
-                    LastLine = enumerator.Current.EndLine;
+                if (enumerator.Current.Location.Start.Line < FirstLine)
+                    FirstLine = enumerator.Current.Location.Start.Line;
+                if (enumerator.Current.Location.End.Line > LastLine)
+                    LastLine = enumerator.Current.Location.End.Line;
             }
 
             enumerator = ParseErrors.GetEnumerator();
             while (enumerator.MoveNext())
             {
-                if (enumerator.Current.Line < FirstLine)
-                    FirstLine = enumerator.Current.Line;
-                if (enumerator.Current.EndLine > LastLine)
-                    LastLine = enumerator.Current.EndLine;
+                if (enumerator.Current.Location.Start.Line < FirstLine)
+                    FirstLine = enumerator.Current.Location.Start.Line;
+                if (enumerator.Current.Location.End.Line > LastLine)
+                    LastLine = enumerator.Current.Location.End.Line;
             }
         }
 
@@ -253,7 +255,7 @@ namespace RATools.Parser.Internal
             foreach (var error in ParseErrors)
             {
                 var innerError = error.InnermostError ?? error;
-                if (innerError.Line <= line && innerError.EndLine >= line)
+                if (innerError.Location.Start.Line <= line && innerError.Location.End.Line >= line)
                    expressions.Add(innerError);
             }
 
@@ -264,10 +266,10 @@ namespace RATools.Parser.Internal
         { 
             foreach (var expression in expressions)
             {
-                if (expression.EndLine < line)
+                if (expression.Location.End.Line < line)
                     continue;
 
-                if (expression.Line > line)
+                if (expression.Location.Start.Line > line)
                     break;
 
                 var nested = expression as INestedExpressions;

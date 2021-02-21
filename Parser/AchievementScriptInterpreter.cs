@@ -130,12 +130,12 @@ namespace RATools.Parser
                     return null;
 
                 var builder = new StringBuilder();
-                builder.AppendFormat("{0}:{1} {2}", Error.Line, Error.Column, Error.Message);
+                builder.AppendFormat("{0}:{1} {2}", Error.Location.Start.Line, Error.Location.Start.Column, Error.Message);
                 var error = Error.InnerError;
                 while (error != null)
                 {
                     builder.AppendLine();
-                    builder.AppendFormat("- {0}:{1} {2}", error.Line, error.Column, error.Message);
+                    builder.AppendFormat("- {0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
                     error = error.InnerError;
                 }
                 return builder.ToString();
@@ -150,7 +150,7 @@ namespace RATools.Parser
             var error = Error;
             while (error != null)
             {
-                for (int i = error.Line; i <= error.EndLine; i++)
+                for (int i = error.Location.Start.Line; i <= error.Location.End.Line; i++)
                 {
                     if (!neededLines.Contains(i))
                         neededLines.Add(i);
@@ -180,31 +180,31 @@ namespace RATools.Parser
             error = Error;
             while (error != null)
             {
-                builder.AppendFormat("{0}:{1} {2}", error.Line, error.Column, error.Message);
+                builder.AppendFormat("{0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
                 builder.AppendLine();
                 //for (int i = error.Line; i <= error.EndLine; i++)
-                int i = error.Line; // TODO: show all lines associated to error?
+                int i = error.Location.Start.Line; // TODO: show all lines associated to error?
                 {
-                    var line = lineDictionary[error.Line];
+                    var line = lineDictionary[error.Location.Start.Line];
 
                     builder.Append(":: ");
                     var startColumn = 0;
                     while (Char.IsWhiteSpace(line[startColumn]))
                         startColumn++;
 
-                    if (i == error.Line)
+                    if (i == error.Location.Start.Line)
                     {
                         builder.Append("{{color|#C0C0C0|");
-                        builder.Append(line.Substring(startColumn, error.Column - startColumn - 1));
+                        builder.Append(line.Substring(startColumn, error.Location.Start.Column - startColumn - 1));
                         builder.Append("}}");
-                        startColumn = error.Column - 1;
+                        startColumn = error.Location.Start.Column - 1;
                     }
 
-                    if (i == error.EndLine)
+                    if (i == error.Location.End.Line)
                     {
-                        builder.Append(line.Substring(startColumn, error.EndColumn - startColumn));
+                        builder.Append(line.Substring(startColumn, error.Location.End.Column - startColumn));
                         builder.Append("{{color|#C0C0C0|");
-                        builder.Append(line.Substring(error.EndColumn));
+                        builder.Append(line.Substring(error.Location.End.Column));
                         builder.Append("}}");
                     }
                     else
@@ -388,7 +388,7 @@ namespace RATools.Parser
 
                     int progress = (i * 100 / count);
                     if (progress > 0)
-                        callback.UpdateProgress(progress, expression.Line);
+                        callback.UpdateProgress(progress, expression.Location.Start.Line);
 
                     i++;
                 }

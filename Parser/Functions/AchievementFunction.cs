@@ -60,7 +60,7 @@ namespace RATools.Parser.Functions
 
             if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
             {
-                if (result.Column != trigger.Column || result.EndColumn != trigger.EndColumn || result.Line != trigger.Line || result.EndLine != trigger.EndLine)
+                if (result.Location.Start != trigger.Location.Start || result.Location.End != trigger.Location.End)
                 {
                     var error = (ParseErrorExpression)result;
                     result = new ParseErrorExpression(error.Message, trigger) { InnerError = error };
@@ -72,7 +72,7 @@ namespace RATools.Parser.Functions
             var newAchievement = achievement.ToAchievement();
             var functionCall = scope.GetOutermostContext<FunctionCallExpression>();
             if (functionCall != null)
-                newAchievement.SourceLine = functionCall.Line;
+                newAchievement.SourceLine = functionCall.Location.Start.Line;
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);

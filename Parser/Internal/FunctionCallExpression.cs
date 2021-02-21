@@ -18,8 +18,7 @@ namespace RATools.Parser.Internal
             FunctionName = functionName;
             Parameters = parameters;
 
-            Line = functionName.Line;
-            Column = functionName.Column;            
+            Location = new Jamiras.Components.TextRange(functionName.Location.Start.Line, functionName.Location.Start.Column, 0, 0);
         }
 
         /// <summary>
@@ -130,7 +129,7 @@ namespace RATools.Parser.Internal
             if (!functionDefinition.Evaluate(functionScope, out result))
             {
                 var error = result as ParseErrorExpression;
-                if (error.Line == 0)
+                if (error.Location.Start.Line == 0)
                     this.CopyLocation(error);
                 result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
@@ -153,7 +152,7 @@ namespace RATools.Parser.Internal
             if (Evaluate(scope, out result))
                 return true;
 
-            if (result.Line == 0)
+            if (result.Location.Start.Line == 0)
                 result = new ParseErrorExpression(result, FunctionName);
 
             return false;
@@ -419,10 +418,9 @@ namespace RATools.Parser.Internal
         }
 
         internal FunctionNameExpression(VariableExpression variable)
-            : base(variable.Name, variable.Line, variable.Column)
+            : base(variable.Name)
         {
-            EndLine = variable.EndLine;
-            EndColumn = variable.EndColumn;
+            Location = variable.Location;
         }
 
         public override string ToString()

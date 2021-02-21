@@ -42,7 +42,7 @@ namespace RATools.Parser.Functions
             {
                 if (step.Value > 0)
                 {
-                    result = new ParseErrorExpression("step must be negative if start is after stop", step.Line > 0 ? step : stop);
+                    result = new ParseErrorExpression("step must be negative if start is after stop", step.Location.Start.Line > 0 ? step : stop);
                     return false;
                 }
 

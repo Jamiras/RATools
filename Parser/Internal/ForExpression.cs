@@ -80,10 +80,7 @@ namespace RATools.Parser.Internal
 
             loop._keywordFor = keywordFor;
             loop._keywordIn = keywordIn;
-            loop.Line = keywordFor.Line;
-            loop.Column = keywordFor.Column;
-            loop.EndLine = tokenizer.Line;
-            loop.EndColumn = tokenizer.Column;
+            loop.Location = new TextRange(keywordFor.Location.Start, tokenizer.Location);
 
             return loop;
         }
