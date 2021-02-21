@@ -127,6 +127,17 @@ namespace RATools.Parser
             var mathematic = expression as MathematicExpression;
             if (mathematic != null)
             {
+                if (mathematic.Operation == MathematicOperation.Multiply || mathematic.Operation == MathematicOperation.Divide)
+                {
+                    var mathematicLeft = mathematic.Left as MathematicExpression;
+                    if (mathematicLeft != null && MathematicExpression.GetPriority(mathematicLeft.Operation) == MathematicPriority.Add)
+                    {
+                        var newLeft = new MathematicExpression(mathematicLeft.Left, mathematic.Operation, mathematic.Right);
+                        var newRight = new MathematicExpression(mathematicLeft.Right, mathematic.Operation, mathematic.Right);
+                        mathematic = new MathematicExpression(newLeft, mathematicLeft.Operation, newRight);
+                    }
+                }
+
                 if (!ProcessValueExpression(mathematic.Left, scope, terms, out result))
                     return false;
 

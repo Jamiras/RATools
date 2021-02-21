@@ -112,6 +112,7 @@
   <ItemGroup>
     <Compile Include="Data\RequirementTests.cs" />
     <Compile Include="Data\FieldTests.cs" />
+    <Compile Include="Parser\TriggerBuilderContextTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />
     <Compile Include="Parser\AchievementScriptInterpreterTests.cs" />
     <Compile Include="Parser\Functions\LengthFunctionTests.cs" />
