@@ -129,6 +129,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.Measured;
                     else if (tokenizer.Match("Q:"))
                         requirement.Type = RequirementType.MeasuredIf;
+                    else if (tokenizer.Match("Z:"))
+                        requirement.Type = RequirementType.ResetNextIf;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -379,253 +381,51 @@ namespace RATools.Parser
             }
         }
 
-        public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group,
-            NumberFormat numberFormat, int wrapWidth = Int32.MaxValue, int indent = 14)
+        public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> requirements,
+                                             NumberFormat numberFormat, int wrapWidth = Int32.MaxValue, int indent = 14)
         {
-            if (group.Any(r => r.Type == RequirementType.MeasuredIf) && group.Any(r => r.Type == RequirementType.Measured))
+            var groups = RequirementEx.Combine(requirements);
+
+            RequirementEx measured = null;
+            RequirementEx measuredIf = null;
+            foreach (var group in groups)
             {
-                // if both a Measured and MeasuredIf exist in the group, merge the MeasuredIf into the when parameter of the measured() call
-                var measuredIfBuilder = new StringBuilder();
-                var other = new List<Requirement>();
-
-                var combining = new List<Requirement>();
-
-                foreach (var requirement in group)
+                switch (group.Requirements.Last().Type)
                 {
-                    combining.Add(requirement);
-                    if (requirement.IsCombining)
-                        continue;
-
-                    if (requirement.Type == RequirementType.MeasuredIf)
-                    {
-                        if (measuredIfBuilder.Length > 0)
-                            measuredIfBuilder.Append(" && ");
-
-                        AppendStringGroup(measuredIfBuilder, combining, numberFormat, wrapWidth, indent, null);
-
-                        // remove "measured_if(" psuedo-function call
-                        measuredIfBuilder.Remove(0, 12);
-                        measuredIfBuilder.Length--;
-                    }
-                    else
-                    {
-                        other.AddRange(combining);
-                    }
-
-                    combining.Clear();
-                }
-
-                AppendStringGroup(builder, other, numberFormat, wrapWidth, indent, measuredIfBuilder.ToString());
-            }
-            else
-            {
-                AppendStringGroup(builder, group, numberFormat, wrapWidth, indent, null);
-            }
-        }
-
-        private static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> group,
-            NumberFormat numberFormat, int wrapWidth, int indent, string measuredIf)
-        {
-            bool needsAmpersand = false;
-            int width = wrapWidth - indent;
-
-            var enumerator = group.GetEnumerator();
-            while (enumerator.MoveNext())
-            {
-                var requirement = enumerator.Current;
-
-                var addSources = new StringBuilder();
-                var subSources = new StringBuilder();
-                var addHits = new StringBuilder();
-                var andNext = new StringBuilder();
-                var addAddress = new StringBuilder();
-                var resetNextIf = new StringBuilder();
-                bool isCombining = true;
-                RequirementType lastAndNext = RequirementType.None;
-                do
-                {
-                    // precedence is AddAddress
-                    //             > AddSource/SubSource
-                    //             > AndNext/OrNext
-                    //             > AddHits/ResetNextIf
-                    //             > ResetIf/PauseIf/Measured/MeasuredIf
-                    switch (requirement.Type)
-                    {
-                        case RequirementType.AddAddress:
-                            if (addAddress.Length > 0)
-                            {
-                                var builder2 = new StringBuilder();
-                                requirement.Left.AppendString(builder2, numberFormat, addAddress.ToString());
-                                addAddress = builder2;
-                            }
-                            else
-                            {
-                                requirement.Left.AppendString(addAddress, numberFormat);
-                            }
-                            addAddress.Append(" + ");
-                            break;
-
-                        case RequirementType.AddSource:
-                            if (addAddress.Length > 0)
-                            {
-                                addSources.Append('(');
-                                requirement.Left.AppendString(addSources, numberFormat, addAddress.ToString());
-                                addSources.Append(')');
-
-                                addAddress.Clear();
-                            }
-                            else
-                            {
-                                requirement.Left.AppendString(addSources, numberFormat);
-                            }
-
-                            addSources.Append(" + ");
-                            break;
-
-                        case RequirementType.SubSource:
-                            subSources.Append(" - ");
-                            if (addAddress.Length > 0)
-                            {
-                                subSources.Append('(');
-                                requirement.Left.AppendString(subSources, numberFormat, addAddress.ToString());
-                                subSources.Append(')');
-
-                                addAddress.Clear();
-                            }
-                            else
-                            {
-                                requirement.Left.AppendString(subSources, numberFormat);
-                            }
-                            break;
-
-                        case RequirementType.AndNext:
-                        case RequirementType.OrNext:
-                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
-                            {
-                                andNext.Append('(');
-                                requirement.AppendString(andNext, numberFormat,
-                                    addSources.Length > 0 ? addSources.ToString() : null,
-                                    subSources.Length > 0 ? subSources.ToString() : null,
-                                    null,
-                                    null,
-                                    addAddress.Length > 0 ? addAddress.ToString() : null);
-                                andNext.Append(')');
-
-                                addAddress.Clear();
-                                addSources.Clear();
-                                subSources.Clear();
-                            }
-                            else
-                            {
-                                requirement.AppendString(andNext, numberFormat);
-                            }
-
-                            if (lastAndNext != requirement.Type)
-                            {
-                                if (lastAndNext != RequirementType.None)
-                                {
-                                    andNext.Insert(0, '(');
-                                    andNext.Append(')');
-                                }
-
-                                lastAndNext = requirement.Type;
-                            }
-
-                            if (requirement.Type == RequirementType.OrNext)
-                                andNext.Append(" || ");
-                            else
-                                andNext.Append(" && ");
-
-                            break;
-
-                        case RequirementType.AddHits:
-                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
-                            {
-                                requirement.AppendString(addHits, numberFormat,
-                                    addSources.Length > 0 ? addSources.ToString() : null,
-                                    subSources.Length > 0 ? subSources.ToString() : null,
-                                    null,
-                                    andNext.Length > 0 ? andNext.ToString() : null,
-                                    addAddress.Length > 0 ? addAddress.ToString() : null);
-
-                                addAddress.Clear();
-                                addSources.Clear();
-                                subSources.Clear();
-                                andNext.Clear();
-                            }
-                            else
-                            {
-                                requirement.AppendString(addHits, numberFormat);
-                            }
-
-                            if (resetNextIf.Length > 0)
-                            {
-                                addHits.Append(" && never(");
-                                addHits.Append(resetNextIf);
-                                addHits.Append(')');
-                                resetNextIf.Clear();
-                            }
-
-                            addHits.Append(", ");
-                            break;
-
-                        case RequirementType.ResetNextIf:
-                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
-                            {
-                                requirement.AppendString(resetNextIf, numberFormat,
-                                    addSources.Length > 0 ? addSources.ToString() : null,
-                                    subSources.Length > 0 ? subSources.ToString() : null,
-                                    null,
-                                    andNext.Length > 0 ? andNext.ToString() : null,
-                                    addAddress.Length > 0 ? addAddress.ToString() : null);
-
-                                addAddress.Clear();
-                                addSources.Clear();
-                                subSources.Clear();
-                                andNext.Clear();
-                            }
-                            else
-                            {
-                                requirement.AppendString(resetNextIf, numberFormat);
-                            }
-                            // remove "resetnext_if(" and ")" - they'll get converted to "never()" when resetNextIf is used
-                            resetNextIf.Length--;
-                            resetNextIf.Remove(0, 13);
-                            break;
-
-                        default:
-                            isCombining = false;
-                            break;
-                    }
-
-                    if (!isCombining)
+                    case RequirementType.Measured:
+                        measured = group;
                         break;
 
-                    if (!enumerator.MoveNext())
-                        return;
+                    case RequirementType.MeasuredIf:
+                        measuredIf = group;
+                        break;
 
-                    requirement = enumerator.Current;
-                } while (true);
-
-                var definition = new StringBuilder();
-
-                requirement.AppendString(definition, numberFormat,
-                    addSources.Length > 0 ? addSources.ToString() : null,
-                    subSources.Length > 0 ? subSources.ToString() : null,
-                    addHits.Length > 0 ? addHits.ToString() : null,
-                    andNext.Length > 0 ? andNext.ToString() : null,
-                    addAddress.Length > 0 ? addAddress.ToString() : null,
-                    measuredIf);
-
-                if (resetNextIf.Length > 0)
-                {
-                    definition.Length--;
-                    definition.Append(" && never(");
-                    definition.Append(resetNextIf);
-                    definition.Append("))");
-                    resetNextIf.Clear();
+                    default:
+                        break;
                 }
+            }
 
+            string measuredIfString = null;
+            if (measuredIf != null && measured != null)
+            {
+                // if both a Measured and MeasuredIf exist, merge the MeasuredIf into the Measured group so
+                // it can be converted to a 'when' parameter of the measured() call
+                groups.Remove(measuredIf);
+
+                var measuredIfBuilder = new StringBuilder();
+                measuredIf.AppendString(measuredIfBuilder, numberFormat);
+
+                // remove "measured_if(" and ")" - they're not needed when used as a when clause
+                measuredIfBuilder.Length--;
+                measuredIfBuilder.Remove(0, 12);
+
+                measuredIfString = measuredIfBuilder.ToString();
+            }
+
+            int width = wrapWidth - indent;
+            bool needsAmpersand = false;
+            foreach (var group in groups)
+            {
                 if (needsAmpersand)
                 {
                     builder.Append(" && ");
@@ -636,31 +436,7 @@ namespace RATools.Parser
                     needsAmpersand = true;
                 }
 
-                while (definition.Length > wrapWidth)
-                {
-                    var index = width;
-                    while (index > 0 && definition[index] != ' ')
-                        index--;
-
-                    builder.Append(definition.ToString(), 0, index);
-                    builder.AppendLine();
-                    builder.Append(' ', indent);
-                    definition.Remove(0, index);
-                    width = wrapWidth - indent;
-                }
-
-                if (width - definition.Length < 0)
-                {
-                    builder.AppendLine();
-                    builder.Append(' ', indent);
-                    width = wrapWidth - indent;
-                }
-                else
-                {
-                    width -= definition.Length;
-                }
-
-                builder.Append(definition.ToString());
+                group.AppendString(builder, numberFormat, ref width, wrapWidth, indent, measuredIfString);
             }
         }
 
