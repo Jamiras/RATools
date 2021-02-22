@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -58,9 +59,76 @@ namespace RATools.Parser.Functions
             return BuildTriggerConditions(context, scope, comparison, count.Value);
         }
 
+        private static bool ExtractResetIf(ref ExpressionBase expression, out ExpressionBase neverExpression)
+        {
+            var condition = expression as ConditionalExpression;
+            if (condition != null && condition.Operation == ConditionalOperation.And)
+            {
+                var left = condition.Left;
+                if (ExtractResetIf(ref left, out neverExpression))
+                {
+                    if (left == null)
+                        expression = condition.Right;
+                    else
+                        condition.Left = left;
+                    return true;
+                }
+
+                var right = condition.Right;
+                if (ExtractResetIf(ref right, out neverExpression))
+                {
+                    if (right == null)
+                        expression = condition.Left;
+                    else
+                        condition.Right = right;
+                    return true;
+                }
+            }
+
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall != null && functionCall.FunctionName.Name == "never")
+            {
+                neverExpression = expression;
+                expression = null;
+                return true;
+            }
+
+            neverExpression = null;
+            return false;
+        }
+
         protected ParseErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
         {
-            ParseErrorExpression error = BuildTriggerCondition(context, scope, comparison);
+            ParseErrorExpression error;
+
+            ExpressionBase neverExpression;
+            if (ExtractResetIf(ref comparison, out neverExpression))
+            {
+                if (comparison == null)
+                {
+                    // only passed a never() expression, can't convert it to a ResetNextIf
+                    comparison = neverExpression;
+                }
+                else
+                {
+                    // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
+                    // from optimizing out the ResetIf
+                    var nestedContext = new TriggerBuilderContext();
+                    nestedContext.Trigger = new List<Requirement>();
+                    var innerScope = new InterpreterScope(scope);
+                    innerScope.Context = nestedContext;
+
+                    error = BuildTriggerCondition(nestedContext, innerScope, neverExpression);
+                    if (error != null)
+                        return error;
+
+                    nestedContext.LastRequirement.Type = RequirementType.ResetNextIf;
+                    foreach (var requirement in nestedContext.Trigger)
+                        context.Trigger.Add(requirement);
+                }
+            }
+
+            error = BuildTriggerCondition(context, scope, comparison);
             if (error != null)
                 return error;
 

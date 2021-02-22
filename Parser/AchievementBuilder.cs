@@ -341,6 +341,7 @@ namespace RATools.Parser
                 case RequirementType.Measured: builder.Append("M:"); break;
                 case RequirementType.MeasuredIf: builder.Append("Q:"); break;
                 case RequirementType.AddAddress: builder.Append("I:"); break;
+                case RequirementType.ResetNextIf: builder.Append("Z:"); break;
             }
 
             requirement.Left.Serialize(builder);
@@ -438,6 +439,7 @@ namespace RATools.Parser
                 var addHits = new StringBuilder();
                 var andNext = new StringBuilder();
                 var addAddress = new StringBuilder();
+                var resetNextIf = new StringBuilder();
                 bool isCombining = true;
                 RequirementType lastAndNext = RequirementType.None;
                 do
@@ -445,8 +447,8 @@ namespace RATools.Parser
                     // precedence is AddAddress
                     //             > AddSource/SubSource
                     //             > AndNext/OrNext
-                    //             > AddHits
-                    //             > ResetIf/PauseIf/Measured
+                    //             > AddHits/ResetNextIf
+                    //             > ResetIf/PauseIf/Measured/MeasuredIf
                     switch (requirement.Type)
                     {
                         case RequirementType.AddAddress:
@@ -556,7 +558,39 @@ namespace RATools.Parser
                                 requirement.AppendString(addHits, numberFormat);
                             }
 
+                            if (resetNextIf.Length > 0)
+                            {
+                                addHits.Append(" && never(");
+                                addHits.Append(resetNextIf);
+                                addHits.Append(')');
+                                resetNextIf.Clear();
+                            }
+
                             addHits.Append(", ");
+                            break;
+
+                        case RequirementType.ResetNextIf:
+                            if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0 || andNext.Length > 0)
+                            {
+                                requirement.AppendString(resetNextIf, numberFormat,
+                                    addSources.Length > 0 ? addSources.ToString() : null,
+                                    subSources.Length > 0 ? subSources.ToString() : null,
+                                    null,
+                                    andNext.Length > 0 ? andNext.ToString() : null,
+                                    addAddress.Length > 0 ? addAddress.ToString() : null);
+
+                                addAddress.Clear();
+                                addSources.Clear();
+                                subSources.Clear();
+                                andNext.Clear();
+                            }
+                            else
+                            {
+                                requirement.AppendString(resetNextIf, numberFormat);
+                            }
+                            // remove "resetnext_if(" and ")" - they'll get converted to "never()" when resetNextIf is used
+                            resetNextIf.Length--;
+                            resetNextIf.Remove(0, 13);
                             break;
 
                         default:
@@ -582,6 +616,15 @@ namespace RATools.Parser
                     andNext.Length > 0 ? andNext.ToString() : null,
                     addAddress.Length > 0 ? addAddress.ToString() : null,
                     measuredIf);
+
+                if (resetNextIf.Length > 0)
+                {
+                    definition.Length--;
+                    definition.Append(" && never(");
+                    definition.Append(resetNextIf);
+                    definition.Append("))");
+                    resetNextIf.Clear();
+                }
 
                 if (needsAmpersand)
                 {
