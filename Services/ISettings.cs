@@ -20,6 +20,11 @@ namespace RATools.Services
         string ApiKey { get; }
 
         /// <summary>
+        /// Gets the web Cookie for the user.
+        /// </summary>
+        string Cookie { get; }
+
+        /// <summary>
         /// Gets or sets a value indicating whether values should be displayed in hexadecimal.
         /// </summary>
         bool HexValues { get; set; }
