@@ -161,7 +161,7 @@ namespace RATools.ViewModels
                         lock (_parsedContent)
                         {
                             hadErrors = _parsedContent.HasEvaluationErrors;
-                            hasErrors = interpreter.Run(_parsedContent, callback);
+                            hasErrors = !interpreter.Run(_parsedContent, callback);
                         }
 
                         if (!e.IsAborted)
