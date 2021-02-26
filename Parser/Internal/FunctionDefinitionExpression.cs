@@ -271,6 +271,23 @@ namespace RATools.Parser.Internal
             return parameter;
         }
 
+        private ExpressionBase LocateParameter(InterpreterScope scope, string name)
+        {
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            if (functionCall != null)
+            {
+                var nameEnumerator = Parameters.GetEnumerator();
+                var valueEnumerator = functionCall.Parameters.GetEnumerator();
+                while (nameEnumerator.MoveNext() && valueEnumerator.MoveNext())
+                {
+                    if (nameEnumerator.Current.Name == name)
+                        return valueEnumerator.Current;
+                }
+            }
+
+            return null;
+        }
+
         /// <summary>
         /// Gets the integer parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
         /// </summary>
@@ -287,6 +304,10 @@ namespace RATools.Parser.Internal
             var typedParameter = parameter as IntegerConstantExpression;
             if (typedParameter == null)
             {
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null)
+                    parameter = originalParameter;
+
                 parseError = new ParseErrorExpression(name + " is not an integer", parameter);
                 return null;
             }
@@ -311,7 +332,39 @@ namespace RATools.Parser.Internal
             var typedParameter = parameter as StringConstantExpression;
             if (typedParameter == null)
             {
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null)
+                    parameter = originalParameter;
+
                 parseError = new ParseErrorExpression(name + " is not a string", parameter);
+                return null;
+            }
+
+            parseError = null;
+            return typedParameter;
+        }
+
+        /// <summary>
+        /// Gets the dictionary parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected DictionaryExpression GetDictionaryParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as DictionaryExpression;
+            if (typedParameter == null)
+            {
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null)
+                    parameter = originalParameter;
+
+                parseError = new ParseErrorExpression(name + " is not a dictionary", parameter);
                 return null;
             }
 

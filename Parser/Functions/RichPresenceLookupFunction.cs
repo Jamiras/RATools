@@ -29,18 +29,11 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            var parameter = GetParameter(scope, "dictionary", out result);
-            if (parameter == null)
-                return false;
-
-            var dictionary = parameter as DictionaryExpression;
+            var dictionary = GetDictionaryParameter(scope, "dictionary", out result);
             if (dictionary == null)
-            {
-                result = new ParseErrorExpression("dictionary is not a dictionary", parameter);
                 return false;
-            }
 
-            var fallback = GetParameter(scope, "fallback", out result);
+            var fallback = GetStringParameter(scope, "fallback", out result);
             if (fallback == null)
                 return false;
 
@@ -59,11 +52,11 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            var dictionary = GetParameter(scope, "dictionary", out result) as DictionaryExpression;
+            var dictionary = GetDictionaryParameter(scope, "dictionary", out result);
             if (dictionary == null)
                 return false;
 
-            var fallback = GetParameter(scope, "fallback", out result);
+            var fallback = GetStringParameter(scope, "fallback", out result);
             if (fallback == null)
                 return false;
 
