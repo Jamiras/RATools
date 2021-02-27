@@ -875,7 +875,15 @@ namespace RATools.Test.Parser
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 Fallback value is not a string"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback is not a string"));
+        }
+
+        [Test]
+        public void TestRichPresenceLookupInvalidFallbackVariable()
+        {
+            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, dict))", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback is not a string"));
         }
 
         [Test]

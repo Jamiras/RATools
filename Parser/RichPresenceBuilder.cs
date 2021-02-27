@@ -52,7 +52,7 @@ namespace RATools.Parser
             };
         }
 
-        public ParseErrorExpression AddLookupField(ExpressionBase func, string name, DictionaryExpression dict, ExpressionBase fallback)
+        public ParseErrorExpression AddLookupField(ExpressionBase func, string name, DictionaryExpression dict, StringConstantExpression fallback)
         {
             var tinyDict = new TinyDictionary<int, string>();
             foreach (var entry in dict.Entries)
@@ -68,15 +68,11 @@ namespace RATools.Parser
                 tinyDict[key.Value] = value.Value;
             }
 
-            var fallbackValue = fallback as StringConstantExpression;
-            if (fallbackValue == null)
-                return new ParseErrorExpression("Fallback value is not a string", fallback);
-
             _lookupFields[name] = new Lookup
             {
                 Func = func,
                 Entries = tinyDict,
-                Fallback = fallbackValue
+                Fallback = fallback
             };
 
             return null;
