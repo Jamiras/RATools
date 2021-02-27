@@ -30,42 +30,42 @@ namespace RATools.Services
         public string GetGamePage(int gameId)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.html", gameId));
-            var url = String.Format("http://retroachievements.org/Game/{0}", gameId);
-            return GetPage(filename, url);
+            var url = String.Format("https://retroachievements.org/game/{0}", gameId);
+            return GetPage(filename, url, false);
         }
 
         public string GetAchievementPage(int achievementId)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raAch{0}.html", achievementId));
-            var url = String.Format("http://retroachievements.org/Achievement/{0}", achievementId);
-            return GetPage(filename, url);
+            var url = String.Format("https://retroachievements.org/achievement/{0}", achievementId);
+            return GetPage(filename, url, false);
         }
 
         public string GetOpenTicketsPage(int pageIndex)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", pageIndex));
-            var url = "http://retroachievements.org/ticketmanager.php";
+            var url = "https://retroachievements.org/ticketmanager.php";
             if (pageIndex > 0)
                 url += "?u=&t=2041&o=" + (pageIndex * 100);
 
-            return GetPage(filename, url);
+            return GetPage(filename, url, true);
         }
 
         public string GetOpenTicketsForGame(int gameId)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTickets{0}.html", gameId));
-            var url = "http://retroachievements.org/ticketmanager.php?ampt=1&g=" + gameId;
-            return GetPage(filename, url);
+            var url = "https://retroachievements.org/ticketmanager.php?ampt=1&g=" + gameId;
+            return GetPage(filename, url, true);
         }
 
         public string GetTicketPage(int ticketId)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raTicket{0}.html", ticketId));
-            var url = "http://retroachievements.org/ticketmanager.php?i=" + ticketId;
-            return GetPage(filename, url);
+            var url = "https://retroachievements.org/ticketmanager.php?i=" + ticketId;
+            return GetPage(filename, url, true);
         }
 
-        private string GetPage(string filename, string url)
+        private string GetPage(string filename, string url, bool requiresCookie)
         {
             bool fileValid = false;
             if (_fileSystemService.FileExists(filename))
@@ -74,6 +74,14 @@ namespace RATools.Services
             if (!fileValid)
             {
                 var request = new HttpRequest(url);
+                if (requiresCookie)
+                {
+                    var settings = ServiceRepository.Instance.FindService<ISettings>();
+                    if (String.IsNullOrEmpty(settings.Cookie) || String.IsNullOrEmpty(settings.UserName))
+                        return null;
+                    request.Headers["Cookie"] = String.Format("RA_User={0}; RA_Cookie={1}", settings.UserName, settings.Cookie);
+                }
+
                 var response = _httpRequestService.Request(request);
                 if (response.Status != System.Net.HttpStatusCode.OK)
                     return null;
@@ -104,8 +112,8 @@ namespace RATools.Services
                 return null;
 
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Game{1}.html", user, gameId));
-            var url = String.Format("http://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z={0}&y={1}&u={2}&g={3}", apiUser, apiKey, user, gameId);
-            var page = GetPage(filename, url);
+            var url = String.Format("https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z={0}&y={1}&u={2}&g={3}", apiUser, apiKey, user, gameId);
+            var page = GetPage(filename, url, false);
             return new JsonObject(page);
         }
     }

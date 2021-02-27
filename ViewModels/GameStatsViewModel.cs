@@ -269,27 +269,33 @@ namespace RATools.ViewModels
                     NumberOfPlayers = Int32.Parse(players.ToString());
                 }
 
-                tokenizer.ReadTo("<a href='/Achievement/");
-                if (tokenizer.Match("<a href='/Achievement/"))
+                tokenizer.ReadTo("<a href='/achievement/");
+                if (tokenizer.Match("<a href='/achievement/"))
                 {
                     var achievementId = tokenizer.ReadTo("'>");
                     stats.Id = Int32.Parse(achievementId.ToString());
                     tokenizer.Advance(2);
 
-                    var achievementTitle = tokenizer.ReadTo("</a>");
+                    var achievementTitle = tokenizer.ReadTo("</a>").TrimRight();
                     Token achievementPoints = Token.Empty;
-                    for (int i = achievementTitle.Length - 1; i >= 0; i--)
+                    if (achievementTitle.EndsWith(")"))
                     {
-                        if (achievementTitle[i] == '(')
+                        for (int i = achievementTitle.Length - 1; i >= 0; i--)
                         {
-                            achievementPoints = achievementTitle.SubToken(i + 1, achievementTitle.Length - i - 2);
-                            achievementTitle = achievementTitle.SubToken(0, i);
-                            break;
+                            if (achievementTitle[i] == '(')
+                            {
+                                achievementPoints = achievementTitle.SubToken(i + 1, achievementTitle.Length - i - 2);
+                                achievementTitle = achievementTitle.SubToken(0, i);
+                                break;
+                            }
                         }
                     }
 
-                    stats.Title = achievementTitle.ToString();
-                    stats.Points = Int32.Parse(achievementPoints.ToString());
+                    stats.Title = achievementTitle.TrimRight().ToString();
+
+                    int points;
+                    if (Int32.TryParse(achievementPoints.ToString(), out points))
+                        stats.Points = points;
                 }
 
                 allStats.Add(stats);
@@ -318,7 +324,7 @@ namespace RATools.ViewModels
 
             var masters = new List<string>();
             tokenizer = Tokenizer.CreateTokenizer(gamePage);
-            tokenizer.ReadTo("<h3>High Scores</h3>");
+            tokenizer.ReadTo("<div id='highscores'");
             do
             {
                 tokenizer.ReadTo("<td class='user'>");
@@ -355,6 +361,13 @@ namespace RATools.ViewModels
             });
 
             Achievements = allStats;
+
+            if (allStats.Count == 0)
+            {
+                TopUsers = new List<UserStats>();
+                Progress.Label = String.Empty;
+                return;
+            }
 
             var nonHardcoreUsers = new List<string>();
             var userStats = new List<UserStats>();
@@ -473,6 +486,9 @@ namespace RATools.ViewModels
             var idleTime = TimeSpan.FromHours(4);
             foreach (var user in userStats)
             {
+                if (user.Achievements.Count == 0)
+                    continue;
+
                 var times = new List<DateTime>(user.Achievements.Count);
                 foreach (var achievement in user.Achievements)
                     times.Add(achievement.Value);

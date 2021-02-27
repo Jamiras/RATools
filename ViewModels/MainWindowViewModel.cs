@@ -475,6 +475,19 @@ namespace RATools.ViewModels
         public CommandBase OpenTicketsCommand { get; private set; }
         private void OpenTickets()
         {
+            var settings = ServiceRepository.Instance.FindService<ISettings>();
+            if (String.IsNullOrEmpty(settings.Cookie))
+            {
+                MessageBoxViewModel.ShowMessage("This feature requires a Cookie value to be set in the ini file.");
+                return;
+            }
+
+            if (String.IsNullOrEmpty(settings.UserName))
+            {
+                MessageBoxViewModel.ShowMessage("This feature requires a User value to be set in the ini file.");
+                return;
+            }
+
             var vm = new OpenTicketsViewModel();
             vm.ShowDialog();
         }

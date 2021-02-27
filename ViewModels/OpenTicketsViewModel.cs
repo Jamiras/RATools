@@ -8,6 +8,7 @@ using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace RATools.ViewModels
 {
@@ -68,21 +69,21 @@ namespace RATools.ViewModels
         public CommandBase<AchievementTickets> OpenAchievementCommand { get; private set; }
         private void OpenAchievement(AchievementTickets achievement)
         {
-            var url = "http://retroachievements.org/Achievement/" + achievement.AchievementId;
+            var url = "https://retroachievements.org/achievement/" + achievement.AchievementId;
             Process.Start(url);
         }
 
         public CommandBase<GameTickets> OpenGameCommand { get; private set; }
         private void OpenGame(GameTickets game)
         {
-            var url = "http://retroachievements.org/Game/" + game.GameId;
+            var url = "https://retroachievements.org/game/" + game.GameId;
             Process.Start(url);
         }
 
         public CommandBase<GameTickets> OpenGameTicketsCommand { get; private set; }
         private void OpenGameTickets(GameTickets game)
         {
-            var url = "http://retroachievements.org/ticketmanager.php?ampt=1&g=" + game.GameId;
+            var url = "https://retroachievements.org/ticketmanager.php?ampt=1&g=" + game.GameId;
             Process.Start(url);
         }
 
@@ -126,6 +127,18 @@ namespace RATools.ViewModels
                 var ticketsPage = RAWebCache.Instance.GetOpenTicketsPage(page);
                 if (ticketsPage == null)
                     return;
+
+                if (page == 0 && !ticketsPage.Contains("<title>Ticket"))
+                {
+                    _backgroundWorkerService.InvokeOnUiThread(() =>
+                    {
+                        MessageBoxViewModel.ShowMessage("Could not retrieve open tickets. Please make sure the Cookie value is up to date in your ini file.");
+                        Progress.Label = String.Empty;
+                    });
+                    var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", page));
+                    File.Delete(filename);
+                    return;
+                }
 
                 pageTickets = GetPageTickets(games, tickets, ticketsPage);
 
@@ -206,14 +219,14 @@ namespace RATools.ViewModels
 
                 var ticketId = Int32.Parse(tokenizer.ReadNumber().ToString());
 
-                tokenizer.ReadTo("<a href='/Achievement/");
+                tokenizer.ReadTo("<a href='/achievement/");
                 tokenizer.Advance(22);
                 var achievementId = Int32.Parse(tokenizer.ReadNumber().ToString());
                 tokenizer.ReadTo("/>");
                 tokenizer.Advance(2);
                 var achievementName = tokenizer.ReadTo("</a>");
 
-                tokenizer.ReadTo("<a href='/Game/");
+                tokenizer.ReadTo("<a href='/game/");
                 tokenizer.Advance(15);
                 var gameId = Int32.Parse(tokenizer.ReadNumber().ToString());
                 tokenizer.ReadTo("/>");

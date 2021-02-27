@@ -56,6 +56,10 @@ namespace RATools.Services
                 if (values.TryGetValue("ApiKey", out apiKey) && apiKey.Length > 0)
                     ApiKey = apiKey;
 
+                string cookie;
+                if (values.TryGetValue("Cookie", out cookie) && cookie.Length > 0)
+                    Cookie = cookie;
+
                 string colors;
                 if (values.TryGetValue("Colors", out colors) && colors.Length > 0)
                     Colors = colors;
@@ -87,6 +91,11 @@ namespace RATools.Services
             else
                 values["ApiKey"] = ApiKey;
 
+            if (String.IsNullOrEmpty(Cookie))
+                values.Remove("Cookie");
+            else
+                values["Cookie"] = Cookie;
+
             if (EmulatorDirectories.Count == 0)
                 values.Remove("EmulatorDirectories");
             else
@@ -108,6 +117,8 @@ namespace RATools.Services
         public string UserName { get; set; }
 
         public string ApiKey { get; set; }
+
+        public string Cookie { get; set; }
 
         public string Colors { get; set; }
 
