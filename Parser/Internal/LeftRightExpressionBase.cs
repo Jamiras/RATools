@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
+using Jamiras.Components;
 
 namespace RATools.Parser.Internal
 {
@@ -12,18 +13,9 @@ namespace RATools.Parser.Internal
             Right = right;
 
             if (left != null)
-            {
-                Line = left.Line;
-                Column = left.Column;
-            }
+                Location = new TextRange(left.Location.Start, right.Location.End);
             else
-            {
-                Line = right.Line;
-                Column = right.Column;
-            }
-
-            EndLine = right.EndLine;
-            EndColumn = right.EndColumn;
+                Location = right.Location;
         }
 
         /// <summary>
@@ -50,12 +42,10 @@ namespace RATools.Parser.Internal
             //   B   C    >    A   E          B = Left              E = Right.Right
             //      D E       B D             C = Right (newRoot)
             Right = newRoot.Left;
-            EndLine = Right.EndLine;
-            EndColumn = Right.EndColumn;
+            Location = new TextRange(Location.Start, Right.Location.End);
 
             newRoot.Left = this.Rebalance();
-            newRoot.Line = newRoot.Left.Line;
-            newRoot.Column = newRoot.Left.Column;
+            newRoot.Location = new TextRange(newRoot.Left.Location.Start, newRoot.Location.End);
 
             return newRoot;
         }

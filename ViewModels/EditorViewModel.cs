@@ -210,10 +210,10 @@ namespace RATools.ViewModels
                     {
                         errors.Push(new CodeReferenceViewModel
                         {
-                            StartLine = innerError.Line,
-                            StartColumn = innerError.Column,
-                            EndLine = innerError.EndLine,
-                            EndColumn = innerError.EndColumn,
+                            StartLine = innerError.Location.Start.Line,
+                            StartColumn = innerError.Location.Start.Column,
+                            EndLine = innerError.Location.End.Line,
+                            EndColumn = innerError.Location.End.Column,
                             Message = innerError.Message
                         });
 
@@ -280,9 +280,10 @@ namespace RATools.ViewModels
 
         private string BuildTooltip(ExpressionBase expression)
         {
-            if (expression.Line > 0 && expression.EndLine > 0)
+            if (expression.Location.Start.Line > 0 && expression.Location.End.Line > 0)
             {
-                var text = GetText(expression.Line, expression.Column, expression.EndLine, expression.EndColumn + 1);
+                var text = GetText(expression.Location.Start.Line, expression.Location.Start.Column,
+                    expression.Location.End.Line, expression.Location.End.Column + 1);
                 var builder = new StringBuilder();
                 bool lastCharWasWhitespace = true;
                 bool inComment = false;
@@ -361,8 +362,8 @@ namespace RATools.ViewModels
                     }
                 }
 
-                var expressionStart = (expression.Line == line) ? expression.Column : 1;
-                var expressionEnd = (expression.EndLine == line) ? expression.EndColumn : e.Line.Text.Length + 1;
+                var expressionStart = (expression.Location.Start.Line == line) ? expression.Location.Start.Column : 1;
+                var expressionEnd = (expression.Location.End.Line == line) ? expression.Location.End.Column : e.Line.Text.Length + 1;
 
                 var parseError = expression as ParseErrorExpression;
                 if (parseError != null)
@@ -412,18 +413,18 @@ namespace RATools.ViewModels
             var column = CursorColumn;
             foreach (var expression in expressions)
             {
-                if (column < expression.Column || column > expression.EndColumn + 1)
+                if (column < expression.Location.Start.Column || column > expression.Location.End.Column + 1)
                     continue;
 
                 var functionCall = expression as FunctionNameExpression;
                 if (functionCall != null)
                 {
                     var function = _parsedContent.Scope.GetFunction(functionCall.Name);
-                    if (function != null && function.Line != 0)
+                    if (function != null && function.Location.Start.Line != 0)
                     {
-                        GotoLine(function.Name.Line);
-                        MoveCursorTo(function.Name.Line, function.Name.Column, MoveCursorFlags.None);
-                        MoveCursorTo(function.Name.EndLine, function.Name.EndColumn + 1, MoveCursorFlags.Highlighting);
+                        GotoLine(function.Name.Location.Start.Line);
+                        MoveCursorTo(function.Name.Location.Start.Line, function.Name.Location.Start.Column, MoveCursorFlags.None);
+                        MoveCursorTo(function.Name.Location.End.Line, function.Name.Location.End.Column + 1, MoveCursorFlags.Highlighting);
                     }
 
                     break;
@@ -433,10 +434,10 @@ namespace RATools.ViewModels
                 if (variableReference != null)
                 {
                     var variable = _parsedContent.Scope.GetVariableDefinition(variableReference.Name);
-                    if (variable != null && variable.Line != 0)
+                    if (variable != null && variable.Location.Start.Line != 0)
                     {
-                        MoveCursorTo(variable.Line, variable.Column, MoveCursorFlags.None);
-                        MoveCursorTo(variable.EndLine, variable.EndColumn + 1, MoveCursorFlags.Highlighting);
+                        MoveCursorTo(variable.Location.Start.Line, variable.Location.Start.Column, MoveCursorFlags.None);
+                        MoveCursorTo(variable.Location.End.Line, variable.Location.End.Column + 1, MoveCursorFlags.Highlighting);
                     }
 
                     break;

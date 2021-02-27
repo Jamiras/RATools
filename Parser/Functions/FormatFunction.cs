@@ -49,16 +49,16 @@ namespace RATools.Parser.Functions
                 if (tokenizer.NextChar == '}')
                 {
                     result = new ParseErrorExpression("Empty parameter index",
-                                                      stringExpression.Line, stringExpression.Column + positionalTokenColumn,
-                                                      stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
                 }
                 var index = tokenizer.ReadNumber();
                 if (tokenizer.NextChar != '}')
                 {
                     result = new ParseErrorExpression("Invalid positional token",
-                                                      stringExpression.Line, stringExpression.Column + positionalTokenColumn,
-                                                      stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
                 }
                 tokenizer.Advance();
@@ -68,8 +68,8 @@ namespace RATools.Parser.Functions
                     || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
                 {
                     result = new ParseErrorExpression("Invalid parameter index: " + index.ToString(),
-                                                      stringExpression.Line, stringExpression.Column + positionalTokenColumn,
-                                                      stringExpression.Line, stringExpression.Column + tokenizer.Column - 1);
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
+                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
                 }
 

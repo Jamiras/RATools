@@ -407,38 +407,38 @@ namespace RATools.Test.Parser.Internal
                 );
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<AssignmentExpression>());
-            Assert.That(expression.Line, Is.EqualTo(4));
-            Assert.That(expression.Column, Is.EqualTo(1));
-            Assert.That(expression.EndLine, Is.EqualTo(4));
-            Assert.That(expression.EndColumn, Is.EqualTo(5));
+            Assert.That(expression.Location.Start.Line, Is.EqualTo(4));
+            Assert.That(expression.Location.Start.Column, Is.EqualTo(1));
+            Assert.That(expression.Location.End.Line, Is.EqualTo(4));
+            Assert.That(expression.Location.End.Column, Is.EqualTo(5));
 
             expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<AssignmentExpression>());
-            Assert.That(expression.Line, Is.EqualTo(5));
-            Assert.That(expression.Column, Is.EqualTo(3));
-            Assert.That(expression.EndLine, Is.EqualTo(5));
-            Assert.That(expression.EndColumn, Is.EqualTo(11));
+            Assert.That(expression.Location.Start.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.Start.Column, Is.EqualTo(3));
+            Assert.That(expression.Location.End.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.End.Column, Is.EqualTo(11));
 
             expression = ((AssignmentExpression)expression).Value;
             Assert.That(expression, Is.InstanceOf<MathematicExpression>());
-            Assert.That(expression.Line, Is.EqualTo(5));
-            Assert.That(expression.Column, Is.EqualTo(7));
-            Assert.That(expression.EndLine, Is.EqualTo(5));
-            Assert.That(expression.EndColumn, Is.EqualTo(11));
+            Assert.That(expression.Location.Start.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.Start.Column, Is.EqualTo(7));
+            Assert.That(expression.Location.End.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.End.Column, Is.EqualTo(11));
 
             expression = ((MathematicExpression)expression).Right;
             Assert.That(expression, Is.InstanceOf<IntegerConstantExpression>());
-            Assert.That(expression.Line, Is.EqualTo(5));
-            Assert.That(expression.Column, Is.EqualTo(11));
-            Assert.That(expression.EndLine, Is.EqualTo(5));
-            Assert.That(expression.EndColumn, Is.EqualTo(11));
+            Assert.That(expression.Location.Start.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.Start.Column, Is.EqualTo(11));
+            Assert.That(expression.Location.End.Line, Is.EqualTo(5));
+            Assert.That(expression.Location.End.Column, Is.EqualTo(11));
 
             expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ReturnExpression>());
-            Assert.That(expression.Line, Is.EqualTo(7));
-            Assert.That(expression.Column, Is.EqualTo(1));
-            Assert.That(expression.EndLine, Is.EqualTo(7));
-            Assert.That(expression.EndColumn, Is.EqualTo(8));
+            Assert.That(expression.Location.Start.Line, Is.EqualTo(7));
+            Assert.That(expression.Location.Start.Column, Is.EqualTo(1));
+            Assert.That(expression.Location.End.Line, Is.EqualTo(7));
+            Assert.That(expression.Location.End.Column, Is.EqualTo(8));
         }
     }
 }

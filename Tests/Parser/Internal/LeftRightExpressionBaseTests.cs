@@ -35,10 +35,7 @@ namespace RATools.Test.Parser.Internal
         {
             public TestExpression(int value, int column) : base(value)
             {
-                Line = column;
-                Column = column;
-                EndLine = column + 1;
-                EndColumn = column + 1;
+                Location = new Jamiras.Components.TextRange(column, column, column + 1, column + 1);
             }
         }
 
@@ -48,10 +45,10 @@ namespace RATools.Test.Parser.Internal
             var left = new TestExpression(1, 1);
             var right = new TestExpression(2, 3);
             var node = new LeftRightExpression(left, right);
-            Assert.That(node.Line, Is.EqualTo(left.Line));
-            Assert.That(node.Column, Is.EqualTo(left.Column));
-            Assert.That(node.EndLine, Is.EqualTo(right.EndLine));
-            Assert.That(node.EndColumn, Is.EqualTo(right.EndColumn));
+            Assert.That(node.Location.Start.Line, Is.EqualTo(left.Location.Start.Line));
+            Assert.That(node.Location.Start.Column, Is.EqualTo(left.Location.Start.Column));
+            Assert.That(node.Location.End.Line, Is.EqualTo(right.Location.End.Line));
+            Assert.That(node.Location.End.Column, Is.EqualTo(right.Location.End.Column));
         }
 
         [Test]
@@ -59,10 +56,10 @@ namespace RATools.Test.Parser.Internal
         {
             var right = new TestExpression(2, 3);
             var node = new LeftRightExpression(null, right);
-            Assert.That(node.Line, Is.EqualTo(right.Line));
-            Assert.That(node.Column, Is.EqualTo(right.Column));
-            Assert.That(node.EndLine, Is.EqualTo(right.EndLine));
-            Assert.That(node.EndColumn, Is.EqualTo(right.EndColumn));
+            Assert.That(node.Location.Start.Line, Is.EqualTo(right.Location.Start.Line));
+            Assert.That(node.Location.Start.Column, Is.EqualTo(right.Location.Start.Column));
+            Assert.That(node.Location.End.Line, Is.EqualTo(right.Location.End.Line));
+            Assert.That(node.Location.End.Column, Is.EqualTo(right.Location.End.Column));
         }
 
         [Test]
@@ -79,10 +76,10 @@ namespace RATools.Test.Parser.Internal
             var newNode = node.DoRebalance() as LeftRightExpression;
 
             Assert.That(newNode, Is.SameAs(right));
-            Assert.That(newNode.Line, Is.EqualTo(one.Line));
-            Assert.That(newNode.Column, Is.EqualTo(one.Column));
-            Assert.That(newNode.EndLine, Is.EqualTo(three.EndLine));
-            Assert.That(newNode.EndColumn, Is.EqualTo(three.EndColumn));
+            Assert.That(newNode.Location.Start.Line, Is.EqualTo(one.Location.Start.Line));
+            Assert.That(newNode.Location.Start.Column, Is.EqualTo(one.Location.Start.Column));
+            Assert.That(newNode.Location.End.Line, Is.EqualTo(three.Location.End.Line));
+            Assert.That(newNode.Location.End.Column, Is.EqualTo(three.Location.End.Column));
 
             Assert.That(newNode.Right, Is.SameAs(three));
 
@@ -91,10 +88,10 @@ namespace RATools.Test.Parser.Internal
             Assert.That(newLeft.Left, Is.SameAs(one));
             Assert.That(newLeft.Right, Is.SameAs(two));
 
-            Assert.That(newLeft.Line, Is.EqualTo(one.Line));
-            Assert.That(newLeft.Column, Is.EqualTo(one.Column));
-            Assert.That(newLeft.EndLine, Is.EqualTo(two.EndLine));
-            Assert.That(newLeft.EndColumn, Is.EqualTo(two.EndColumn));
+            Assert.That(newLeft.Location.Start.Line, Is.EqualTo(one.Location.Start.Line));
+            Assert.That(newLeft.Location.Start.Column, Is.EqualTo(one.Location.Start.Column));
+            Assert.That(newLeft.Location.End.Line, Is.EqualTo(two.Location.End.Line));
+            Assert.That(newLeft.Location.End.Column, Is.EqualTo(two.Location.End.Column));
         }
 
         [Test]

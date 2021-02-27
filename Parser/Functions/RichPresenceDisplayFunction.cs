@@ -44,7 +44,7 @@ namespace RATools.Parser.Functions
             richPresence.DisplayString = displayString;
             var functionCall = scope.GetContext<FunctionCallExpression>();
             if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
-                richPresence.Line = functionCall.Line;
+                richPresence.Line = functionCall.Location.Start.Line;
             return true;
         }
 

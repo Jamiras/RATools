@@ -13,10 +13,7 @@ namespace RATools.Parser.Internal
         internal KeywordExpression(string keyword, int line, int column)
             : this(keyword)
         {
-            Line = line;
-            EndLine = line;
-            Column = column;
-            EndColumn = column + keyword.Length - 1;
+            Location = new Jamiras.Components.TextRange(line, column, line, column + keyword.Length - 1);
         }
 
         /// <summary>

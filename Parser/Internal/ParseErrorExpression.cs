@@ -13,24 +13,19 @@ namespace RATools.Parser.Internal
         public ParseErrorExpression(string message, int line, int column, int endLine, int endColumn)
             : this(message)
         {
-            Line = line;
-            Column = column;
-            EndLine = endLine;
-            EndColumn = endColumn;
+            Location = new Jamiras.Components.TextRange(line, column, endLine, endColumn);
         }
 
         public ParseErrorExpression(string message, ExpressionBase expression)
-            : this(message, expression.Line, expression.Column, expression.EndLine, expression.EndColumn)
+            : this(message)
         {
+            Location = expression.Location;
         }
 
         public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
             : base(ExpressionType.ParseError)
         {
-            Line = expression.Line;
-            Column = expression.Column;
-            EndLine = expression.EndLine;
-            EndColumn = expression.EndColumn;
+            Location = expression.Location;
 
             var parseError = error as ParseErrorExpression;
             if (parseError != null)
@@ -38,12 +33,9 @@ namespace RATools.Parser.Internal
                 Message = parseError.Message;
                 InnerError = parseError.InnerError;
 
-                if (parseError.Line != 0)
+                if (parseError.Location.Start.Line != 0)
                 {
-                    Line = parseError.Line;
-                    Column = parseError.Column;
-                    EndLine = parseError.EndLine;
-                    EndColumn = parseError.EndColumn;
+                    Location = parseError.Location;
                 }
             }
             else
@@ -54,8 +46,7 @@ namespace RATools.Parser.Internal
 
         public static ParseErrorExpression WrapError(ParseErrorExpression error, string message, ExpressionBase expression)
         {
-            if (error.EndColumn == expression.EndColumn && error.Column == expression.Column &&
-                error.EndLine == expression.EndLine && error.Line == expression.Line)
+            if (error.Location.End == expression.Location.End && error.Location.Start == expression.Location.Start)
             {
                 return error;
             }

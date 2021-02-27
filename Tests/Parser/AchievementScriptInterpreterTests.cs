@@ -40,7 +40,7 @@ namespace RATools.Test.Parser
             while (err.InnerError != null)
                 err = err.InnerError;
 
-            return string.Format("{0}:{1} {2}", err.Line, err.Column, err.Message);
+            return string.Format("{0}:{1} {2}", err.Location.Start.Line, err.Location.Start.Column, err.Message);
         }
 
         private static string GetRequirements(Achievement achievement)

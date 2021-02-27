@@ -63,7 +63,7 @@ namespace RATools.Parser.Functions
 
             var functionCall = scope.GetContext<FunctionCallExpression>();
             if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
-                leaderboard.SourceLine = functionCall.Line;
+                leaderboard.SourceLine = functionCall.Location.Start.Line;
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);

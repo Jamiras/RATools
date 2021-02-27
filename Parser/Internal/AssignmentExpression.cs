@@ -17,10 +17,7 @@ namespace RATools.Parser.Internal
             Variable = variable;
             Value = value;
 
-            Line = Variable.Line;
-            Column = Variable.Column;
-            EndLine = value.EndLine;
-            EndColumn = value.EndColumn;
+            Location = new Jamiras.Components.TextRange(Variable.Location.Start, value.Location.End);
         }
 
         /// <summary>

@@ -21,38 +21,15 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ExpressionType Type { get; private set; }
 
-        /// <summary>
-        /// Gets the line where this expression started.
-        /// </summary>
-        public int Line { get; protected set; }
-
-        /// <summary>
-        /// Gets the column where this expression started.
-        /// </summary>
-        public int Column { get; protected set; }
-
-        /// <summary>
-        /// Gets the line where this expression ended.
-        /// </summary>
-        public int EndLine { get; protected set; }
-
-        /// <summary>
-        /// Gets the column where this expression ended.
-        /// </summary>
-        public int EndColumn { get; protected set; }
+        public TextRange Location { get; protected set; }
 
         /// <summary>
         /// Copies the location of this expression into another expression.
         /// </summary>
         internal void CopyLocation(ExpressionBase source)
         {
-            if (Line != 0)
-            {
-                source.Line = Line;
-                source.Column = Column;
-                source.EndLine = EndLine;
-                source.EndColumn = EndColumn;
-            }
+            if (!Location.IsEmpty)
+                source.Location = Location;
         }
 
         /// <summary>
@@ -87,7 +64,10 @@ namespace RATools.Parser.Internal
                     if (comment.Length > 0 && comment[comment.Length - 1] == '\r')
                         comment = comment.SubToken(0, comment.Length - 1);
 
-                    expressionTokenizer.AddComment(new CommentExpression("//" + comment.ToString()) { Line = line, Column = column, EndLine = line, EndColumn = column + comment.Length + 1 });
+                    expressionTokenizer.AddComment(new CommentExpression("//" + comment.ToString()) 
+                    {
+                        Location = new TextRange(line, column, line, column + comment.Length + 1)
+                    });
                 }
                 else
                 {
@@ -263,47 +243,43 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    if (clause.EndColumn == 0)
-                    {
-                        clause.EndLine = clauseEndLine;
-                        clause.EndColumn = clauseEndColumn;
-                    }
+                    if (clause.Location.End.Column == 0)
+                        clause.Location = new TextRange(clause.Location.Start, new TextLocation(clauseEndLine, clauseEndColumn));
+
                     return clause;
             }
 
             clause = clause.Rebalance();
 
-            Debug.Assert(clause.Line != 0);
-            Debug.Assert(clause.Column != 0);
-            Debug.Assert(clause.EndLine != 0);
-            Debug.Assert(clause.EndColumn != 0);
+            Debug.Assert(clause.Location.Start.Line != 0);
+            Debug.Assert(clause.Location.Start.Column != 0);
+            Debug.Assert(clause.Location.End.Line != 0);
+            Debug.Assert(clause.Location.End.Column != 0);
 
             return clause;
         }
 
         internal void AdjustLines(int amount)
         {
-            Line += amount;
-            EndLine += amount;
+            Location = new TextRange(Location.Start.Line + amount, Location.Start.Column, Location.End.Line + amount, Location.End.Column);
         }
 
         protected static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
-            var line = tokenizer.Line;
-            var column = tokenizer.Column;
+            var start = tokenizer.Location;
 
             var clause = ParseClauseCore(tokenizer);
 
-            if (clause.Column == 0)
+            var end = clause.Location.End;
+            if (end.Column == 0 || clause.Location.Start.Column == 0)
             {
-                clause.Line = line;
-                clause.Column = column;
-            }
+                if (clause.Location.Start.Column != 0)
+                    start = clause.Location.Start;
 
-            if (clause.EndColumn == 0)
-            {
-                clause.EndLine = tokenizer.Line;
-                clause.EndColumn = (tokenizer.Column > 1) ? tokenizer.Column - 1 : 1;
+                if (end.Line == 0)
+                    end = new TextLocation(tokenizer.Line, (tokenizer.Column > 1) ? tokenizer.Column - 1 : 1);
+
+                clause.Location = new TextRange(start, end);
             }
 
             return clause;
@@ -351,10 +327,7 @@ namespace RATools.Parser.Internal
                 return new ParseErrorExpression("Number too large");
 
             var integerExpression = new IntegerConstantExpression((int)value);
-            integerExpression.Line = line;
-            integerExpression.Column = column;
-            integerExpression.EndLine = endLine;
-            integerExpression.EndColumn = endColumn;
+            integerExpression.Location = new TextRange(line, column, endLine, endColumn);
             return integerExpression;
         }
 
@@ -424,7 +397,11 @@ namespace RATools.Parser.Internal
                         var integerExpression = (IntegerConstantExpression)result;
                         var negativeIntegerExpression = new IntegerConstantExpression(-integerExpression.Value);
                         integerExpression.CopyLocation(negativeIntegerExpression);
-                        negativeIntegerExpression.Column--;
+                        integerExpression.Location = new TextRange(
+                            negativeIntegerExpression.Location.Start.Line,
+                            negativeIntegerExpression.Location.Start.Column - 1,
+                            negativeIntegerExpression.Location.End.Line,
+                            negativeIntegerExpression.Location.End.Column);
                         return negativeIntegerExpression;
                     }
                     return ParseError(tokenizer, "Minus without value", tokenizer.Line, tokenizer.Column - 1);
@@ -474,8 +451,7 @@ namespace RATools.Parser.Internal
                         ParseParameters(tokenizer, parameters);
 
                         var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
-                        functionCall.EndLine = tokenizer.Line;
-                        functionCall.EndColumn = tokenizer.Column - 1;
+                        functionCall.Location = new TextRange(line, column, tokenizer.Line, tokenizer.Column - 1);
                         return functionCall;
                     }
 

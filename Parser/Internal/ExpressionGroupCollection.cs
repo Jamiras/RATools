@@ -157,14 +157,14 @@ namespace RATools.Parser.Internal
                 for (int j = _evaluationErrors.Count - 1; j >= 0; j--)
                 {
                     var error = _evaluationErrors[j];
-                    if (error.EndLine >= group.FirstLine && error.Line <= group.LastLine)
+                    if (error.Location.End.Line >= group.FirstLine && error.Location.Start.Line <= group.LastLine)
                     {
                         _evaluationErrors.RemoveAt(j);
                     }
                     else if (error.InnerError != null)
                     {
                         error = error.InnermostError;
-                        if (error.EndLine >= group.FirstLine && error.Line <= group.LastLine)
+                        if (error.Location.End.Line >= group.FirstLine && error.Location.Start.Line <= group.LastLine)
                             _evaluationErrors.RemoveAt(j);
                     }
                 }
@@ -338,7 +338,8 @@ namespace RATools.Parser.Internal
             foreach (var error in _evaluationErrors)
             {
                 var unknownVariableError = error.InnermostError as UnknownVariableParseErrorExpression;
-                if (unknownVariableError != null && unknownVariableError.Line <= line && unknownVariableError.EndLine >= line)
+                if (unknownVariableError != null && unknownVariableError.Location.Start.Line <= line &&
+                    unknownVariableError.Location.End.Line >= line)
                 {
                     if (!expressions.Contains(unknownVariableError))
                         expressions.Add(unknownVariableError);
@@ -350,12 +351,14 @@ namespace RATools.Parser.Internal
                 var scan = error;
                 do
                 {
-                    if (scan.Line <= line && scan.EndLine >= line)
+                    if (scan.Location.Start.Line <= line && scan.Location.End.Line >= line)
                     {
                         // scan is more significant than current error, use it
                         mostSignificantError = scan;
                     }
-                    else if (mostSignificantError != null && scan.Line >= mostSignificantError.Line && scan.EndLine < mostSignificantError.EndLine)
+                    else if (mostSignificantError != null &&
+                        scan.Location.Start.Line >= mostSignificantError.Location.Start.Line &&
+                        scan.Location.End.Line < mostSignificantError.Location.End.Line)
                     {
                         // scan is more significant than current error, but not part of line, ignore it
                         mostSignificantError = null;

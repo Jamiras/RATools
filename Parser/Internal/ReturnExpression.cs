@@ -9,19 +9,14 @@ namespace RATools.Parser.Internal
             : base(ExpressionType.Return)
         {
             Value = value;
-
-            Line = value.Line;
-            Column = value.Column;
-            EndLine = value.EndLine;
-            EndColumn = value.EndColumn;
+            Location = value.Location;
         }
 
         public ReturnExpression(KeywordExpression keyword, ExpressionBase value)
             : this(value)
         {
             _keyword = keyword;
-            Line = keyword.Line;
-            Column = keyword.Column;
+            Location = new Jamiras.Components.TextRange(keyword.Location.Start, value.Location.End);
         }
 
         internal KeywordExpression Keyword

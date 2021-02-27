@@ -15,10 +15,7 @@ namespace RATools.Parser.Internal
         internal VariableExpressionBase(string name, int line, int column)
             : this(name)
         {
-            Line = line;
-            EndLine = line;
-            Column = column;
-            EndColumn = column + name.Length - 1;
+            Location = new Jamiras.Components.TextRange(line, column, line, column + name.Length - 1);
         }
 
         /// <summary>
@@ -116,10 +113,9 @@ namespace RATools.Parser.Internal
         }
 
         internal VariableDefinitionExpression(VariableExpression variable)
-            : base(variable.Name, variable.Line, variable.Column)
+            : base(variable.Name)
         {
-            EndLine = variable.EndLine;
-            EndColumn = variable.EndColumn;
+            Location = variable.Location;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
