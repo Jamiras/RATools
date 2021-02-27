@@ -1,3 +1,12 @@
+v1.8.0 - 27 Feb 2020
+* dynamic recompilation (only process the parts of the script affected by changes)
+* several other optimizations around script processing
+* several minor improvements to better report the actual cause of an error
+* update analysis queries for website changes (NOTE: ticket list now requires setting a Cookie value in the ini file)
+* fix multiplication not being distributed over complex term
+* fix wrong condition being removed when two never() conditions overlap
+* fix PauseIf being removed from alt if it also exists in core
+
 v1.7.0 - 31 Jul 2020
 * allow customization of editor colors
 * make editor more responsive for complex scripts by moving evaluation of script to background thread
