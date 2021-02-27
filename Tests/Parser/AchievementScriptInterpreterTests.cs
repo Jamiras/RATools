@@ -1010,5 +1010,46 @@ namespace RATools.Test.Parser
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("never(repeated(2, byte(0x001234) == 1 && byte(0x001235) == 2))"));
         }
+
+        [Test]
+        public void TestRepeatedNever()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.CoreRequirements.ElementAt(0).Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(achievement.CoreRequirements.ElementAt(0).HitCount, Is.EqualTo(0));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).Type, Is.EqualTo(RequirementType.None));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).HitCount, Is.EqualTo(2));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
+
+            // reverse the order - never should still appear first in the definition, but be displayed last
+            parser = Parse("achievement(\"T\", \"D\", 5, repeated(2, never(byte(0x2345) == 2) && byte(0x1234) == 1))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            achievement = parser.Achievements.First();
+            Assert.That(achievement.CoreRequirements.ElementAt(0).Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(achievement.CoreRequirements.ElementAt(0).HitCount, Is.EqualTo(0));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).Type, Is.EqualTo(RequirementType.None));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).HitCount, Is.EqualTo(2));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
+        }
+
+        [Test]
+        public void TestRepeatedNeverNested()
+        {
+            var parser = Parse("achievement(\"T\", \"D\", 5, repeated(2, byte(0x1234) == 1 && never(repeated(3, byte(0x2345) == 2 && never(byte(0x3456) == 3)))))");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.CoreRequirements.ElementAt(0).Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(achievement.CoreRequirements.ElementAt(0).HitCount, Is.EqualTo(0));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(achievement.CoreRequirements.ElementAt(1).HitCount, Is.EqualTo(3));
+            Assert.That(achievement.CoreRequirements.ElementAt(2).Type, Is.EqualTo(RequirementType.None));
+            Assert.That(achievement.CoreRequirements.ElementAt(2).HitCount, Is.EqualTo(2));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("repeated(2, byte(0x001234) == 1 && never(repeated(3, byte(0x002345) == 2 && never(byte(0x003456) == 3))))"));
+        }
     }
 }

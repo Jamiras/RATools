@@ -37,6 +37,7 @@ namespace RATools.Data
                     case RequirementType.AndNext:
                     case RequirementType.OrNext:
                     case RequirementType.AddAddress:
+                    case RequirementType.ResetNextIf:
                         return true;
 
                     default:
@@ -74,25 +75,26 @@ namespace RATools.Data
         /// </summary>
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
             string addSources = null, string subSources = null, string addHits = null, 
-            string andNext = null, string addAddress = null, string measuredIf = null)
+            string andNext = null, string addAddress = null, string measuredIf = null,
+            string resetNextIf = null)
         {
             switch (Type)
             {
                 case RequirementType.ResetIf:
                     builder.Append("never(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     builder.Append(')');
                     break;
 
                 case RequirementType.PauseIf:
                     builder.Append("unless(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     builder.Append(')');
                     break;
 
                 case RequirementType.Measured:
                     builder.Append("measured(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     if (measuredIf != null)
                     {
                         builder.Append(", when=");
@@ -104,25 +106,32 @@ namespace RATools.Data
                 case RequirementType.MeasuredIf:
                     // this is displayed in the achievement details page and doesn't accurately represent the syntax
                     builder.Append("measured_if(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     builder.Append(')');
                     break;
 
                 case RequirementType.AddAddress:
                     // this is displayed in the achievement details page and doesn't accurately represent the syntax
                     builder.Append("addaddress(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     builder.Append(") ->");
                     break;
 
+                case RequirementType.ResetNextIf:
+                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
+                    builder.Append("resetnext_if(");
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+                    builder.Append(')');
+                    break;
+
                 default:
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     break;
             }
         }
 
         private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
-            string addSources, string subSources, string addHits, string andNext, string addAddress)
+            string addSources, string subSources, string addHits, string andNext, string addAddress, string resetNextIf)
         {
             if (HitCount == 0)
             {
@@ -148,6 +157,13 @@ namespace RATools.Data
                     builder.AppendFormat("repeated({0}, ", HitCount);
 
                 AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+
+                if (resetNextIf != null)
+                {
+                    builder.Append(" && never(");
+                    builder.Append(resetNextIf);
+                    builder.Append(")");
+                }
 
                 builder.Append(')');
             }
@@ -513,5 +529,10 @@ namespace RATools.Data
         /// Adds the Left part of the requirement to the addresses in the next requirement.
         /// </summary>
         AddAddress,
+
+        /// <summary>
+        /// Resets any HitCounts on the next requirement group if true.
+        /// </summary>
+        ResetNextIf,
     }
 }
