@@ -117,6 +117,7 @@ namespace RATools.Tests.Data
         [TestCase("p0xH001234", FieldSize.Byte, FieldType.PriorValue, 0x1234)]
         [TestCase("b0xH001234", FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234)]
         [TestCase("4660", FieldSize.None, FieldType.Value, 0x1234)]
+        [TestCase("h4660", FieldSize.None, FieldType.Value, 0x4660)]
         [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456)]
         public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, int value)
         {

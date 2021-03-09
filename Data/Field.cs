@@ -309,6 +309,11 @@ namespace RATools.Data
                 fieldType = FieldType.BinaryCodedDecimal;
                 tokenizer.Advance();
             }
+            else if (tokenizer.NextChar == 'h')
+            {
+                tokenizer.Advance();
+                return new Field { Type = FieldType.Value, Value = ReadHexNumber(tokenizer) };
+            }
 
             if (!tokenizer.Match("0x"))
                 return new Field { Type = FieldType.Value, Value = ReadNumber(tokenizer) };
@@ -369,10 +374,15 @@ namespace RATools.Data
                 case ' ': size = FieldSize.Word; tokenizer.Advance(); break;
             }
 
-            uint address = 0;
+            return new Field { Size = size, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+        }
+
+        private static uint ReadHexNumber(Tokenizer tokenizer)
+        {
+            uint value = 0;
             do
             {
-                uint charValue = 255;
+                uint charValue;
                 switch (tokenizer.NextChar)
                 {
                     case '0': charValue = 0; break;
@@ -397,17 +407,15 @@ namespace RATools.Data
                     case 'E': charValue = 14; break;
                     case 'f':
                     case 'F': charValue = 15; break;
+                    default:
+                        return value;
                 }
 
-                if (charValue == 255)
-                    break;
-
                 tokenizer.Advance();
-                address <<= 4;
-                address += charValue;
-            } while (true);
 
-            return new Field { Size = size, Type = fieldType, Value = address };
+                value <<= 4;
+                value += charValue;
+            } while (true);
         }
 
         private static uint ReadNumber(Tokenizer tokenizer)
