@@ -120,7 +120,6 @@
     <Compile Include="Parser\Functions\MeasuredFunctionTests.cs" />
     <Compile Include="Parser\Functions\MemoryAccessorFunctionTests.cs" />
     <Compile Include="Parser\Functions\FormatFunctionTests.cs" />
-    <Compile Include="Parser\Functions\BitCountFunctionTests.cs" />
     <Compile Include="Parser\Functions\ArrayPushFunctionTests.cs" />
     <Compile Include="Parser\Functions\FlagConditionFunctionTests.cs" />
     <Compile Include="Parser\Functions\TallyFunctionTests.cs" />

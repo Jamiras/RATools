@@ -73,7 +73,6 @@
     <Compile Include="Parser\Functions\MeasuredFunction.cs" />
     <Compile Include="Parser\Functions\FlagConditionFunction.cs" />
     <Compile Include="Parser\Functions\AlwaysTrueFunction.cs" />
-    <Compile Include="Parser\Functions\BitCountFunction.cs" />
     <Compile Include="Parser\Functions\RangeFunction.cs" />
     <Compile Include="Parser\Functions\TallyFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />

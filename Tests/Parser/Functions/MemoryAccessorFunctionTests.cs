@@ -91,40 +91,34 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        public void TestSizes()
+        [TestCase("byte(0x1234)", FieldSize.Byte)]
+        [TestCase("bit0(0x1234)", FieldSize.Bit0)]
+        [TestCase("bit1(0x1234)", FieldSize.Bit1)]
+        [TestCase("bit2(0x1234)", FieldSize.Bit2)]
+        [TestCase("bit3(0x1234)", FieldSize.Bit3)]
+        [TestCase("bit4(0x1234)", FieldSize.Bit4)]
+        [TestCase("bit5(0x1234)", FieldSize.Bit5)]
+        [TestCase("bit6(0x1234)", FieldSize.Bit6)]
+        [TestCase("bit7(0x1234)", FieldSize.Bit7)]
+        [TestCase("low4(0x1234)", FieldSize.LowNibble)]
+        [TestCase("high4(0x1234)", FieldSize.HighNibble)]
+        [TestCase("word(0x1234)", FieldSize.Word)]
+        [TestCase("tbyte(0x1234)", FieldSize.TByte)]
+        [TestCase("dword(0x1234)", FieldSize.DWord)]
+        [TestCase("bit(0,0x1234)", FieldSize.Bit0)]
+        [TestCase("bit(1,0x1234)", FieldSize.Bit1)]
+        [TestCase("bit(2,0x1234)", FieldSize.Bit2)]
+        [TestCase("bit(3,0x1234)", FieldSize.Bit3)]
+        [TestCase("bit(4,0x1234)", FieldSize.Bit4)]
+        [TestCase("bit(5,0x1234)", FieldSize.Bit5)]
+        [TestCase("bit(6,0x1234)", FieldSize.Bit6)]
+        [TestCase("bit(7,0x1234)", FieldSize.Bit7)]
+        [TestCase("bitcount(0x1234)", FieldSize.BitCount)]
+        public void TestSize(string func, FieldSize expectedSize)
         {
-            var sizes = new Dictionary<string, FieldSize>
-            {
-                {"byte(0x1234)", FieldSize.Byte },
-                {"bit0(0x1234)", FieldSize.Bit0 },
-                {"bit1(0x1234)", FieldSize.Bit1 },
-                {"bit2(0x1234)", FieldSize.Bit2 },
-                {"bit3(0x1234)", FieldSize.Bit3 },
-                {"bit4(0x1234)", FieldSize.Bit4 },
-                {"bit5(0x1234)", FieldSize.Bit5 },
-                {"bit6(0x1234)", FieldSize.Bit6 },
-                {"bit7(0x1234)", FieldSize.Bit7 },
-                {"low4(0x1234)", FieldSize.LowNibble },
-                {"high4(0x1234)", FieldSize.HighNibble },
-                {"word(0x1234)", FieldSize.Word },
-                {"tbyte(0x1234)", FieldSize.TByte },
-                {"dword(0x1234)", FieldSize.DWord },
-                {"bit(0,0x1234)", FieldSize.Bit0 },
-                {"bit(1,0x1234)", FieldSize.Bit1 },
-                {"bit(2,0x1234)", FieldSize.Bit2 },
-                {"bit(3,0x1234)", FieldSize.Bit3 },
-                {"bit(4,0x1234)", FieldSize.Bit4 },
-                {"bit(5,0x1234)", FieldSize.Bit5 },
-                {"bit(6,0x1234)", FieldSize.Bit6 },
-                {"bit(7,0x1234)", FieldSize.Bit7 },
-            };
-
-            foreach (var kvp in sizes)
-            {
-                var requirements = Evaluate(kvp.Key);
-                Assert.That(requirements.Count, Is.EqualTo(1), kvp.Key);
-                Assert.That(requirements[0].Left.Size, Is.EqualTo(kvp.Value), kvp.Key);
-            }
+            var requirements = Evaluate(func);
+            Assert.That(requirements.Count, Is.EqualTo(1));
+            Assert.That(requirements[0].Left.Size, Is.EqualTo(expectedSize));
         }
 
         [Test]

@@ -169,6 +169,7 @@ namespace RATools.Test.Parser
         [Test]
         [TestCase("0xS00627e=1", "bit6(0x00627E) == 1")]
         [TestCase("d0xS00627e=0", "prev(bit6(0x00627E)) == 0")]
+        [TestCase("p0xK00627e=0", "prior(bitcount(0x00627E)) == 0")]
         [TestCase("0xS00627e=1_d0xS00627e=0", "bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0")]
         [TestCase("0xH000028=3", "byte(0x000028) == 3")]
         [TestCase("0xU00616a=8", "high4(0x00616A) == 8")]
@@ -207,6 +208,7 @@ namespace RATools.Test.Parser
         [Test]
         [TestCase("bit6(0x00627E) == 1", "0xS00627e=1")]
         [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
+        [TestCase("prior(bitcount(0x00627E)) == 0", "p0xK00627e=0")]
         [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
         [TestCase("byte(0x000028) == 3", "0xH000028=3")]
         [TestCase("3 == byte(0x000028)", "0xH000028=3")] // prefer constants on right
@@ -340,10 +342,10 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1000", "always_false()")] // can never be true
         [TestCase("byte(0x001234) > 256", "always_false()")] // can never be true
         [TestCase("byte(0x001234) < 256", "always_true()")] // always true
-        [TestCase("bitcount(byte(0x1234)) == 9", "always_false()")] // bitcount can never return more than 8
-        [TestCase("bitcount(byte(0x1234)) + bitcount(byte(0x1235)) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
-        [TestCase("bitcount(byte(0x1234)) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
-        [TestCase("bitcount(byte(0x1234)) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
+        [TestCase("bitcount(0x1234) == 9", "always_false()")] // bitcount can never return more than 8
+        [TestCase("bitcount(0x1234) + bitcount(0x1235) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
+        [TestCase("bitcount(0x1234) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
+        [TestCase("bitcount(0x1234) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         // ==== NormalizeBCD ====
         [TestCase("bcd(byte(0x1234)) == 20", "byte(0x001234) == 32")]
         [TestCase("bcd(byte(0x1234)) == 100", "always_false()")] // BCD of a byte cannot exceed 99
