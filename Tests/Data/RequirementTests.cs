@@ -179,6 +179,7 @@ namespace RATools.Tests.Data
                     case RequirementType.MeasuredIf:
                     case RequirementType.PauseIf:
                     case RequirementType.ResetIf:
+                    case RequirementType.Trigger:
                         Assert.IsFalse(requirement.IsCombining, e.ToString());
                         break;
 
