@@ -324,7 +324,26 @@ namespace RATools.ViewModels
 
             var masters = new List<string>();
             tokenizer = Tokenizer.CreateTokenizer(gamePage);
-            tokenizer.ReadTo("<div id='highscores'");
+
+            tokenizer.ReadTo("<div id='latestmasters'");
+            var latestMasters = tokenizer.ReadTo("<div id='highscores'");
+
+            var tokenizer2 = Tokenizer.CreateTokenizer(latestMasters);
+            do
+            {
+                tokenizer2.ReadTo("<td class='user'>");
+                if (tokenizer2.NextChar == '\0')
+                    break;
+
+                tokenizer2.ReadTo("<a href='");
+                tokenizer2.ReadTo('>');
+                tokenizer2.Advance();
+
+                var userName = tokenizer2.ReadTo('<');
+
+                masters.Add(userName.ToString());
+            } while (true);
+
             do
             {
                 tokenizer.ReadTo("<td class='user'>");
@@ -345,7 +364,8 @@ namespace RATools.ViewModels
                 if (points != masteryPoints)
                     break;
 
-                masters.Add(userName.ToString());
+                if (!masters.Contains(userName.ToString()))
+                    masters.Add(userName.ToString());
             } while (true);
 
             Progress.Label = "Fetching user stats";
