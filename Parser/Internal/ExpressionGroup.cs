@@ -250,7 +250,7 @@ namespace RATools.Parser.Internal
 
         public bool GetExpressionsForLine(List<ExpressionBase> expressions, int line)
         {
-            bool result = GetExpressionsForLine(expressions, Expressions, line);
+            GetExpressionsForLine(expressions, Expressions, line);
 
             foreach (var error in ParseErrors)
             {
@@ -259,10 +259,10 @@ namespace RATools.Parser.Internal
                    expressions.Add(innerError);
             }
 
-            return result;
+            return (expressions.Count > 0);
         }
 
-        public static bool GetExpressionsForLine(List<ExpressionBase> matchingExpressions, IEnumerable<ExpressionBase> expressions, int line)
+        private static void GetExpressionsForLine(List<ExpressionBase> matchingExpressions, IEnumerable<ExpressionBase> expressions, int line)
         { 
             foreach (var expression in expressions)
             {
@@ -270,21 +270,14 @@ namespace RATools.Parser.Internal
                     continue;
 
                 if (expression.Location.Start.Line > line)
-                    break;
+                    continue;
 
                 var nested = expression as INestedExpressions;
                 if (nested != null && nested.NestedExpressions.Any())
-                {
-                    if (!GetExpressionsForLine(matchingExpressions, nested.NestedExpressions, line))
-                        return false;
-                }
+                    GetExpressionsForLine(matchingExpressions, nested.NestedExpressions, line);
                 else
-                {
                     matchingExpressions.Add(expression);
-                }
             }
-
-            return true;
         }
 
         public bool ExpressionsMatch(ExpressionGroup that)
