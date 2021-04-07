@@ -36,28 +36,50 @@ namespace RATools.Parser
             if (condition == null)
                 return true;
 
-            // not a not, just recurse
-            if (condition.Operation != ConditionalOperation.Not)
+            var parent = new KeyValuePair<ConditionalExpression, ConditionalExpression>();
+            var queue = new Queue<KeyValuePair<ConditionalExpression, ConditionalExpression>>();
+            do
             {
-                var left = condition.Left;
-                if (!NormalizeNots(ref left, out error))
-                    return false;
+                if (condition.Operation == ConditionalOperation.Not)
+                {
+                    // found a not - eliminate it
+                    var invertedExpression = condition.Right;
+                    if (!InvertExpression(ref invertedExpression, out error))
+                        return false;
 
-                var right = condition.Right;
-                if (!NormalizeNots(ref right, out error))
-                    return false;
+                    if (parent.Key == null) // root item
+                        expression = invertedExpression;
+                    else if (ReferenceEquals(parent.Key.Left, condition))
+                        parent.Key.Left = invertedExpression;
+                    else
+                        parent.Key.Right = invertedExpression;
+                }
+                else
+                {
+                    // not a not, check for nested conditions
+                    var left = condition.Left as ConditionalExpression;
+                    if (left != null)
+                        queue.Enqueue(new KeyValuePair<ConditionalExpression, ConditionalExpression>(condition, left));
 
-                if (!ReferenceEquals(left, condition.Left) || !ReferenceEquals(right, condition.Right))
-                    expression = new ConditionalExpression(left, condition.Operation, right);
+                    var right = condition.Right as ConditionalExpression;
+                    if (right != null)
+                        queue.Enqueue(new KeyValuePair<ConditionalExpression, ConditionalExpression>(condition, right));
+                }
 
-                return true;
-            }
+                if (queue.Count == 0)
+                    break;
 
-            // found a not - eliminate it
-            var operand = ((ConditionalExpression)expression).Right;
+                parent = queue.Dequeue();
+                condition = parent.Value;
+            } while (true);
 
+            return true;
+        }
+
+        private static bool InvertExpression(ref ExpressionBase expression, out ParseErrorExpression error)
+        {
             // logical inversion
-            condition = operand as ConditionalExpression;
+            var condition = expression as ConditionalExpression;
             if (condition != null)
             {
                 switch (condition.Operation)
@@ -91,7 +113,7 @@ namespace RATools.Parser
             }
 
             // comparative inversion
-            var comparison = operand as ComparisonExpression;
+            var comparison = expression as ComparisonExpression;
             if (comparison != null)
             {
                 // !(A == B) => A != B, !(A < B) => A >= B, ...
@@ -103,24 +125,26 @@ namespace RATools.Parser
                 return NormalizeNots(ref expression, out error);
             }
 
-            var function = operand as FunctionCallExpression;
+            var function = expression as FunctionCallExpression;
             if (function != null)
             {
                 if (function.FunctionName.Name == "always_true")
                 {
                     expression = new FunctionCallExpression("always_false", function.Parameters);
+                    error = null;
                     return true;
                 }
 
                 if (function.FunctionName.Name == "always_false")
                 {
                     expression = new FunctionCallExpression("always_true", function.Parameters);
+                    error = null;
                     return true;
                 }
             }
 
             // unsupported inversion
-            error = new ParseErrorExpression("! operator cannot be applied to " + operand.Type, operand);
+            error = new ParseErrorExpression("! operator cannot be applied to " + expression.Type, expression);
             return false;
         }
 
