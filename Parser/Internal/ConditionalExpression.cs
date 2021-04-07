@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -74,8 +75,30 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase left = null;
-            if (Left != null && !Left.ReplaceVariables(scope, out left))
+            if (Operation == ConditionalOperation.Not)
+            {
+                var invertedExpression = Right;
+                if (invertedExpression.Type == ExpressionType.FunctionCall)
+                {
+                    if (!Right.ReplaceVariables(scope, out invertedExpression))
+                    {
+                        result = invertedExpression;
+                        return false;
+                    }
+                }
+
+                invertedExpression = InvertExpression(invertedExpression);
+                if (invertedExpression.Type == ExpressionType.ParseError)
+                {
+                    result = invertedExpression;
+                    return false;
+                }
+
+                return invertedExpression.ReplaceVariables(scope, out result);
+            }
+
+            ExpressionBase left;
+            if (!Left.ReplaceVariables(scope, out left))
             {
                 result = left;
                 return false;
@@ -91,6 +114,63 @@ namespace RATools.Parser.Internal
             result = new ConditionalExpression(left, Operation, right);
             CopyLocation(result);
             return true;
+        }
+
+        private static ExpressionBase InvertExpression(ExpressionBase expression)
+        {
+            // logical inversion
+            var condition = expression as ConditionalExpression;
+            if (condition != null)
+            {
+                switch (condition.Operation)
+                {
+                    case ConditionalOperation.Not:
+                        // !(!A) => A
+                        return condition.Right;
+
+                    case ConditionalOperation.And:
+                        // !(A && B) => !A || !B
+                        return new ConditionalExpression(
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
+                            ConditionalOperation.Or,
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+
+                    case ConditionalOperation.Or:
+                        // !(A || B) => !A && !B
+                        return new ConditionalExpression(
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
+                            ConditionalOperation.And,
+                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+
+                    default:
+                        throw new NotImplementedException("Unsupported condition operation");
+                }
+            }
+
+            // comparative inversion
+            var comparison = expression as ComparisonExpression;
+            if (comparison != null)
+            {
+                // !(A == B) => A != B, !(A < B) => A >= B, ...
+                return new ComparisonExpression(
+                    comparison.Left,
+                    ComparisonExpression.GetOppositeComparisonOperation(comparison.Operation),
+                    comparison.Right);
+            }
+
+            // special handling for built-in functions
+            var function = expression as FunctionCallExpression;
+            if (function != null)
+            {
+                if (function.FunctionName.Name == "always_true")
+                    return new FunctionCallExpression("always_false", function.Parameters);
+
+                if (function.FunctionName.Name == "always_false")
+                    return new FunctionCallExpression("always_true", function.Parameters);
+            }
+
+            // unsupported inversion
+            return new ParseErrorExpression("! operator cannot be applied to " + expression.Type, expression);
         }
 
         /// <summary>

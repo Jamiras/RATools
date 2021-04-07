@@ -1,4 +1,8 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
+using RATools.Data;
+using RATools.Parser;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -41,6 +45,50 @@ namespace RATools.Test.Parser.Internal
             Assert.That(((ConditionalExpression)result).Left, Is.EqualTo(value1));
             Assert.That(((ConditionalExpression)result).Operation, Is.EqualTo(expr.Operation));
             Assert.That(((ConditionalExpression)result).Right, Is.EqualTo(value2));
+        }
+
+        [Test]
+        [TestCase("A == B", "A == B")]
+        [TestCase("!(A == B)", "A != B")]
+        [TestCase("!(A != B)", "A == B")]
+        [TestCase("!(A < B)", "A >= B")]
+        [TestCase("!(A <= B)", "A > B")]
+        [TestCase("!(A > B)", "A <= B")]
+        [TestCase("!(A >= B)", "A < B")]
+        [TestCase("!(A == 1 || B == 1)", "A != 1 && B != 1")]
+        [TestCase("!(A == 1 || B == 1 || C == 1)", "A != 1 && B != 1 && C != 1")]
+        [TestCase("!(A == 1 && B == 1)", "A != 1 || B != 1")]
+        [TestCase("!(A == 1 && B == 1 && C == 1)", "A != 1 || B != 1 || C != 1")]
+        [TestCase("!(!(A == B))", "A == B")]
+        [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
+        [TestCase("!always_true()", "always_false()")]
+        [TestCase("!always_false()", "always_true()")]
+        [TestCase("!(always_false() || A == 1)", "always_true() && A != 1")]
+        public void TestReplaceVariablesNormalizeNots(string input, string expected)
+        {
+            input = input.Replace("A", "byte(10)");
+            input = input.Replace("B", "byte(11)");
+            input = input.Replace("C", "byte(12)");
+
+            expected = expected.Replace("A", "byte(10)");
+            expected = expected.Replace("B", "byte(11)");
+            expected = expected.Replace("C", "byte(12)");
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer);
+
+            var scope = new InterpreterScope();
+            scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
+            scope.AddFunction(new AlwaysTrueFunction());
+            scope.AddFunction(new AlwaysFalseFunction());
+            scope.Context = new TriggerBuilderContext();
+
+            ExpressionBase result;
+            Assert.That(expression.ReplaceVariables(scope, out result), Is.True);
+
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
         [Test]
