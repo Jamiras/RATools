@@ -192,6 +192,64 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void GetExpressionsForLine()
+        {
+            var group = Parse("// a\n// b\n// c").Groups.First();
+            var lines = new List<ExpressionBase>();
+
+            Assert.That(group.GetExpressionsForLine(lines, 0), Is.False);
+            Assert.That(lines.Count, Is.EqualTo(0));
+
+            Assert.That(group.GetExpressionsForLine(lines, 4), Is.False);
+            Assert.That(lines.Count, Is.EqualTo(0));
+
+            Assert.That(group.GetExpressionsForLine(lines, 2), Is.True);
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.InstanceOf<CommentExpression>());
+            Assert.That(((CommentExpression)lines[0]).Value, Is.EqualTo("// b"));
+        }
+
+        [Test]
+        public void GetExpressionsForLineParseError()
+        {
+            var group = Parse("function a()\n{\n  func2()\n}\n").Groups.First();
+            group.AddParseError(new ParseErrorExpression("Oops", 3, 8, 3, 9));
+            var lines = new List<ExpressionBase>();
+
+            Assert.That(group.GetExpressionsForLine(lines, 3), Is.True);
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0], Is.InstanceOf<FunctionNameExpression>());
+            Assert.That(lines[1], Is.InstanceOf<ParseErrorExpression>());
+
+            lines.Clear();
+            Assert.That(group.GetExpressionsForLine(lines, 1), Is.True);
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0], Is.InstanceOf<KeywordExpression>());
+            Assert.That(lines[1], Is.InstanceOf<VariableDefinitionExpression>());
+        }
+
+        [Test]
+        public void GetExpressionsForLineOutOfOrder()
+        {
+            // dictionary items are sorted by key, so the expressions aren't in line order. make sure we can find them
+            var group = Parse("a = {\n  1: \"one\",\n  3:\"three\",\n  2:\"two\"\n}\n").Groups.First();
+            var lines = new List<ExpressionBase>();
+
+            Assert.That(group.GetExpressionsForLine(lines, 4), Is.True);
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(lines[1], Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((IntegerConstantExpression)lines[0]).Value, Is.EqualTo(2));
+
+            lines.Clear();
+            Assert.That(group.GetExpressionsForLine(lines, 3), Is.True);
+            Assert.That(lines.Count, Is.EqualTo(2));
+            Assert.That(lines[0], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(lines[1], Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((IntegerConstantExpression)lines[0]).Value, Is.EqualTo(3));
+        }
+
+        [Test]
         [TestCase("a = b", "a = b", true)]
         [TestCase("a = b", "b = a", false)]
         [TestCase("a = b", "a = b + 1", false)]
