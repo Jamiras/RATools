@@ -27,103 +27,6 @@ namespace RATools.Parser
             }
         }
 
-        private static bool NormalizeNots(ref ExpressionBase expression, out ParseErrorExpression error)
-        {
-            error = null;
-
-            // not a condition - don't need to worry about it
-            var condition = expression as ConditionalExpression;
-            if (condition == null)
-                return true;
-
-            // not a not, just recurse
-            if (condition.Operation != ConditionalOperation.Not)
-            {
-                var left = condition.Left;
-                if (!NormalizeNots(ref left, out error))
-                    return false;
-
-                var right = condition.Right;
-                if (!NormalizeNots(ref right, out error))
-                    return false;
-
-                if (!ReferenceEquals(left, condition.Left) || !ReferenceEquals(right, condition.Right))
-                    expression = new ConditionalExpression(left, condition.Operation, right);
-
-                return true;
-            }
-
-            // found a not - eliminate it
-            var operand = ((ConditionalExpression)expression).Right;
-
-            // logical inversion
-            condition = operand as ConditionalExpression;
-            if (condition != null)
-            {
-                switch (condition.Operation)
-                {
-                    case ConditionalOperation.Not:
-                        // !(!A) => A
-                        expression = condition.Right;
-                        break;
-
-                    case ConditionalOperation.And:
-                        // !(A && B) => !A || !B
-                        expression = new ConditionalExpression(
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
-                            ConditionalOperation.Or,
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
-                        break;
-
-                    case ConditionalOperation.Or:
-                        // !(A || B) => !A && !B
-                        expression = new ConditionalExpression(
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
-                            ConditionalOperation.And,
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
-                        break;
-
-                    default:
-                        throw new NotImplementedException("Unsupported condition operation");
-                }
-
-                return NormalizeNots(ref expression, out error);
-            }
-
-            // comparative inversion
-            var comparison = operand as ComparisonExpression;
-            if (comparison != null)
-            {
-                // !(A == B) => A != B, !(A < B) => A >= B, ...
-                expression = new ComparisonExpression(
-                    comparison.Left,
-                    ComparisonExpression.GetOppositeComparisonOperation(comparison.Operation),
-                    comparison.Right);
-
-                return NormalizeNots(ref expression, out error);
-            }
-
-            var function = operand as FunctionCallExpression;
-            if (function != null)
-            {
-                if (function.FunctionName.Name == "always_true")
-                {
-                    expression = new FunctionCallExpression("always_false", function.Parameters);
-                    return true;
-                }
-
-                if (function.FunctionName.Name == "always_false")
-                {
-                    expression = new FunctionCallExpression("always_true", function.Parameters);
-                    return true;
-                }
-            }
-
-            // unsupported inversion
-            error = new ParseErrorExpression("! operator cannot be applied to " + operand.Type, operand);
-            return false;
-        }
-
         private static void FlattenOrClause(ExpressionBase clause, List<ExpressionBase> flattened)
         {
             var condition = clause as ConditionalExpression;
@@ -369,9 +272,6 @@ namespace RATools.Parser
 
         internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
         {
-            if (!NormalizeNots(ref expression, out error))
-                return false;
-
             var andedConditions = new List<ExpressionBase>();
             var orConditions = new List<ExpressionBase>();
             if (!SortConditions(expression, andedConditions, orConditions, out error))

@@ -525,33 +525,6 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        [TestCase("A == B", "A == B")]
-        [TestCase("!(A == B)", "A != B")]
-        [TestCase("!(A != B)", "A == B")]
-        [TestCase("!(A < B)", "A >= B")]
-        [TestCase("!(A <= B)", "A > B")]
-        [TestCase("!(A > B)", "A <= B")]
-        [TestCase("!(A >= B)", "A < B")]
-        [TestCase("!(A == 1 || B == 1)", "A != 1 && B != 1")]
-        [TestCase("!(A == 1 && B == 1)", "A != 1 || B != 1")]
-        [TestCase("!(!(A == B))", "A == B")]
-        [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
-        public void TestNormalizeNots(string input, string expected)
-        {
-            input = input.Replace("A", "byte(0x00000A)");
-            input = input.Replace("B", "byte(0x00000B)");
-            input = input.Replace("C", "byte(0x00000C)");
-
-            expected = expected.Replace("A", "byte(0x00000A)");
-            expected = expected.Replace("B", "byte(0x00000B)");
-            expected = expected.Replace("C", "byte(0x00000C)");
-
-            var achievement = CreateAchievement(input);
-            // NOTE: not optimized - that's tested separately in TestOptimize
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
-        }
-
-        [Test]
         // ==== CrossMultiplyOrConditions ====
         [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
         [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
