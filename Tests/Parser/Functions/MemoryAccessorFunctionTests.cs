@@ -147,6 +147,11 @@ namespace RATools.Test.Parser.Functions
         [TestCase("byte(word(word(0x1234)))", "byte(word(word(0x001234) + 0x000000) + 0x000000)")] // double direct pointer
         [TestCase("byte(0x1234 + word(word(0x2345) + 10))", "byte(word(word(0x002345) + 0x00000A) + 0x001234)")] // double indirect pointer
         [TestCase("byte(prev(word(0x1234)))", "byte(prev(word(0x001234)) + 0x000000)")] // direct pointer using prev data
+        [TestCase("byte(word(0x1234) * 2)", "byte(word(0x001234) * 0x00000002 + 0x000000)")] // scaled direct pointer [unexpected]
+        [TestCase("byte(word(0x2345) * 2 + 0x1234)", "byte(word(0x002345) * 0x00000002 + 0x001234)")] // scaled array index
+        [TestCase("byte(0x1234 + word(0x2345) * 2)", "byte(word(0x002345) * 0x00000002 + 0x001234)")] // scaled array index
+        [TestCase("byte(word(word(0x2345) * 2 + 0x1234) * 4 + 0x3456)",
+                  "byte(word(word(0x002345) * 0x00000002 + 0x001234) * 0x00000004 + 0x003456)")] // double scaled array index
         public void TestAddAddress(string input, string expected)
         {
             var requirements = Evaluate(input);
@@ -163,7 +168,6 @@ namespace RATools.Test.Parser.Functions
         [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
         [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "Cannot construct single address lookup from multiple memory references")]
         [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(4660) == 3)")]
-        [TestCase("byte(word(0x1234) * 3)", "Cannot convert to an address: word(4660) * 3")]
         [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(4660) == 3")]
         [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(4660) == 3 && 2 > 1")]
         [TestCase("byte(word(0x1234) - 10)", "Negative relative offset not supported")]

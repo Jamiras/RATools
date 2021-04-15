@@ -366,6 +366,9 @@ namespace RATools.Parser
                         case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
                         case RequirementOperator.GreaterThan: builder.Append('>'); break;
                         case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                        case RequirementOperator.Multiply: builder.Append("*"); break;
+                        case RequirementOperator.Divide: builder.Append("/"); break;
+                        case RequirementOperator.LogicalAnd: builder.Append("&"); break;
                         case RequirementOperator.None: return;
                     }
 

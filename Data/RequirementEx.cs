@@ -28,7 +28,28 @@ namespace RATools.Data
             }
         }
 
-        private static void AppendField(StringBuilder builder, Field field, NumberFormat numberFormat, StringBuilder addAddress)
+        private static void AppendFieldModifier(StringBuilder builder, Requirement requirement, NumberFormat numberFormat)
+        {
+            switch (requirement.Operator)
+            {
+                case RequirementOperator.Multiply:
+                    builder.Append(" * ");
+                    requirement.Right.AppendString(builder, numberFormat);
+                    break;
+
+                case RequirementOperator.Divide:
+                    builder.Append(" / ");
+                    requirement.Right.AppendString(builder, numberFormat);
+                    break;
+
+                case RequirementOperator.LogicalAnd:
+                    builder.Append(" & ");
+                    requirement.Right.AppendString(builder, numberFormat);
+                    break;
+            }
+        }
+
+        private static void AppendField(StringBuilder builder, Requirement requirement, NumberFormat numberFormat, StringBuilder addAddress)
         {
             if (addAddress.Length > 0)
             {
@@ -38,14 +59,16 @@ namespace RATools.Data
                 if (!ReferenceEquals(addAddress, builder))
                     builder.Append('(');
 
-                field.AppendString(builder, numberFormat, addAddressString);
+                requirement.Left.AppendString(builder, numberFormat, addAddressString);
+                AppendFieldModifier(builder, requirement, numberFormat);
 
                 if (!ReferenceEquals(addAddress, builder))
                     builder.Append(')');
             }
             else
             {
-                field.AppendString(builder, numberFormat);
+                requirement.Left.AppendString(builder, numberFormat);
+                AppendFieldModifier(builder, requirement, numberFormat);
             }
         }
 
@@ -140,18 +163,18 @@ namespace RATools.Data
                 switch (requirement.Type)
                 {
                     case RequirementType.AddAddress:
-                        AppendField(addAddress, requirement.Left, numberFormat, addAddress);
+                        AppendField(addAddress, requirement, numberFormat, addAddress);
                         addAddress.Append(" + ");
                         break;
 
                     case RequirementType.AddSource:
-                        AppendField(addSources, requirement.Left, numberFormat, addAddress);
+                        AppendField(addSources, requirement, numberFormat, addAddress);
                         addSources.Append(" + ");
                         break;
 
                     case RequirementType.SubSource:
                         subSources.Append(" - ");
-                        AppendField(subSources, requirement.Left, numberFormat, addAddress);
+                        AppendField(subSources, requirement, numberFormat, addAddress);
                         break;
 
                     case RequirementType.AndNext:

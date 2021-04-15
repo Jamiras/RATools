@@ -261,6 +261,16 @@ namespace RATools.Data
                     builder.Append(" >= ");
                     break;
 
+                case RequirementOperator.Multiply:
+                    builder.Append(" * ");
+                    break;
+                case RequirementOperator.Divide:
+                    builder.Append(" / ");
+                    break;
+                case RequirementOperator.LogicalAnd:
+                    builder.Append(" & ");
+                    break;
+
                 case RequirementOperator.None:
                     return;
             }
@@ -468,6 +478,21 @@ namespace RATools.Data
         /// The left value is greater than or equal to the right value.
         /// </summary>
         GreaterThanOrEqual,
+
+        /// <summary>
+        /// The left value is multiplied by the right value. (combining conditions only)
+        /// </summary>
+        Multiply,
+
+        /// <summary>
+        /// The left value is divided by the right value. (combining conditions only)
+        /// </summary>
+        Divide,
+
+        /// <summary>
+        /// The left value is masked by the right value. (combining conditions only)
+        /// </summary>
+        LogicalAnd,
     }
 
     /// <summary>

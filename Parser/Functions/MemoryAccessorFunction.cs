@@ -87,13 +87,11 @@ namespace RATools.Parser.Functions
                 return null;
             }
 
+            IntegerConstantExpression offsetConstant = null;
+            IntegerConstantExpression scalarConstant = null;
+
             var funcCall = address as FunctionCallExpression;
-            if (funcCall != null)
-            {
-                // a memory reference without an offset has to be generated with a 0 offset.
-                integerConstant = new IntegerConstantExpression(0);
-            }
-            else
+            if (funcCall == null)
             {
                 var mathematic = address as MathematicExpression;
                 if (mathematic != null &&
@@ -102,24 +100,24 @@ namespace RATools.Parser.Functions
                     if (CountMathematicMemoryAccessors(mathematic, 2) >= 2)
                         return new ParseErrorExpression("Cannot construct single address lookup from multiple memory references", address);
 
-                    integerConstant = mathematic.Right as IntegerConstantExpression;
-                    if (integerConstant != null)
+                    offsetConstant = mathematic.Right as IntegerConstantExpression;
+                    if (offsetConstant != null)
                     {
-                        funcCall = mathematic.Left as FunctionCallExpression;
+                        address = mathematic.Left;
                     }
                     else
                     {
-                        integerConstant = mathematic.Left as IntegerConstantExpression;
-                        if (integerConstant != null)
-                            funcCall = mathematic.Right as FunctionCallExpression;
+                        offsetConstant = mathematic.Left as IntegerConstantExpression;
+                        if (offsetConstant != null)
+                            address = mathematic.Right;
                     }
 
-                    if (integerConstant != null)
+                    if (offsetConstant != null)
                     {
                         if (mathematic.Operation == MathematicOperation.Subtract)
-                            integerConstant = new IntegerConstantExpression(-integerConstant.Value);
+                            offsetConstant = new IntegerConstantExpression(-offsetConstant.Value);
 
-                        if (integerConstant.Value < 0)
+                        if (offsetConstant.Value < 0)
                         {
                             // Negative relative offsets can actually be handled by the runtime through overflow
                             // addition, but the editor generates an error if the offset is larger than the
@@ -127,7 +125,26 @@ namespace RATools.Parser.Functions
                             return new ParseErrorExpression("Negative relative offset not supported", address);
                         }
                     }
+
+                    mathematic = address as MathematicExpression;
                 }
+
+                if (mathematic != null && mathematic.Operation == MathematicOperation.Multiply)
+                {
+                    scalarConstant = mathematic.Right as IntegerConstantExpression;
+                    if (scalarConstant != null)
+                    {
+                        address = mathematic.Left;
+                    }
+                    else
+                    {
+                        scalarConstant = mathematic.Left as IntegerConstantExpression;
+                        if (scalarConstant != null)
+                            address = mathematic.Right;
+                    }
+                }
+
+                funcCall = address as FunctionCallExpression;
             }
 
             if (funcCall != null)
@@ -141,14 +158,26 @@ namespace RATools.Parser.Functions
                         if (error != null)
                             return error;
 
-                        context.LastRequirement.Type = RequirementType.AddAddress;
+                        var lastRequirement = context.LastRequirement;
+                        lastRequirement.Type = RequirementType.AddAddress;
 
-                        requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)integerConstant.Value };
+                        if (scalarConstant != null && scalarConstant.Value != 1)
+                        {
+                            lastRequirement.Operator = RequirementOperator.Multiply;
+                            lastRequirement.Right = new Field { Size = FieldSize.DWord, Type = FieldType.Value, Value = (uint)scalarConstant.Value };
+                        }
+
+                        // a memory reference without an offset has to be generated with a 0 offset.
+                        uint offset = (offsetConstant != null) ? (uint)offsetConstant.Value : 0;
+
+                        requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = offset };
                         context.Trigger.Add(requirement);
                         return null;
                     }
                 }
             }
+
+            address = functionCall.Parameters.First();
 
             var builder = new StringBuilder();
             builder.Append("Cannot convert to an address: ");
