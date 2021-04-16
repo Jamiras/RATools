@@ -47,6 +47,50 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets whether or not the requirement can be scaled.
+        /// </summary>
+        public bool IsScalable
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                    case RequirementType.AddAddress:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets whether or not the requirement is comparing two values.
+        /// </summary>
+        public bool IsComparison
+        {
+            get
+            {
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                    case RequirementOperator.NotEqual:
+                    case RequirementOperator.LessThan:
+                    case RequirementOperator.LessThanOrEqual:
+                    case RequirementOperator.GreaterThan:
+                    case RequirementOperator.GreaterThanOrEqual:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Gets or sets the requirement operator.
         /// </summary>
         public RequirementOperator Operator { get; set; }
@@ -191,11 +235,12 @@ namespace RATools.Data
                 builder.Append(andNext);
             }
 
+            string suffix = null;
             switch (Type)
             {
                 case RequirementType.AddSource:
                     Left.AppendString(builder, numberFormat);
-                    builder.Append(" + ");
+                    suffix = " + ";
                     break;
 
                 case RequirementType.SubSource:
@@ -272,10 +317,15 @@ namespace RATools.Data
                     break;
 
                 case RequirementOperator.None:
+                    if (suffix != null)
+                        builder.Append(suffix);
                     return;
             }
 
             Right.AppendString(builder, numberFormat, addAddress);
+
+            if (suffix != null)
+                builder.Append(suffix);
         }
 
         /// <summary>

@@ -383,13 +383,59 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
+            ParseErrorExpression error;
+            var context = scope.GetContext<TriggerBuilderContext>();
+
             var operation = mathematic.Operation;
-            if (operation != MathematicOperation.Add && operation != MathematicOperation.Subtract)
-                return new ParseErrorExpression("Cannot normalize expression to eliminate " + MathematicExpression.GetOperatorType(operation), mathematic);
+            switch (operation)
+            {
+                case MathematicOperation.Add:
+                case MathematicOperation.Subtract:
+                    break;
+
+                case MathematicOperation.Multiply:
+                case MathematicOperation.Divide:
+                    // generate the condition for the right side
+                    Field operand;
+                    if (mathematic.Right.Type == ExpressionType.IntegerConstant)
+                    {
+                        operand = new Field
+                        {
+                            Size = FieldSize.DWord,
+                            Type = FieldType.Value,
+                            Value = (uint)((IntegerConstantExpression)mathematic.Right).Value
+                        };
+                    }
+                    else
+                    {
+                        var requirements = new List<Requirement>();
+                        var innerContext = new TriggerBuilderContext() { Trigger = requirements };
+                        var innerScope = new InterpreterScope(scope) { Context = innerContext };
+
+                        error = ExecuteAchievementExpression(mathematic.Right, innerScope);
+                        if (error != null)
+                            return error;
+                        if (requirements.Count > 1)
+                            return new ParseErrorExpression("Multiplication by complex value not supported", mathematic);
+
+                        operand = requirements[0].Left;
+                    }
+
+                    // generate the conditions for the left side
+                    error = ExecuteAchievementExpression(mathematic.Left, scope);
+                    if (error != null)
+                        return error;
+
+                    context.LastRequirement.Operator = (operation == MathematicOperation.Multiply) ?
+                        RequirementOperator.Multiply : RequirementOperator.Divide;
+                    context.LastRequirement.Right = operand;
+                    return null;
+
+                default:
+                    return new ParseErrorExpression("Cannot normalize expression to eliminate " + MathematicExpression.GetOperatorType(operation), mathematic);
+            }
 
             var left = mathematic.Left;
-            var context = scope.GetContext<TriggerBuilderContext>();
-            ParseErrorExpression error;
 
             ExpressionBase right;
             if (!mathematic.Right.ReplaceVariables(scope, out right))
@@ -459,11 +505,15 @@ namespace RATools.Parser
             if (operation == MathematicOperation.Add)
             {
                 // adding two memory accessors - make sure previous is AddSource or SubSource
-                if (context.LastRequirement.Type != RequirementType.SubSource)
+                var lastRequirement = context.LastRequirement;
+                if (lastRequirement.Type != RequirementType.SubSource)
                 {
-                    context.LastRequirement.Type = RequirementType.AddSource;
-                    context.LastRequirement.Operator = RequirementOperator.None;
-                    context.LastRequirement.Right = new Field();
+                    lastRequirement.Type = RequirementType.AddSource;
+                    if (lastRequirement.IsComparison)
+                    {
+                        lastRequirement.Operator = RequirementOperator.None;
+                        lastRequirement.Right = new Field();
+                    }
                 }
             }
             else
@@ -488,6 +538,17 @@ namespace RATools.Parser
             error = ExecuteAchievementExpression(right, scope);
             if (error != null)
                 error = new ParseErrorExpression(error.Message, mathematic);
+
+            // make sure the mathematic expression doesn't result in a comparison
+            {
+                var lastRequirement = context.LastRequirement;
+                if (lastRequirement.IsComparison)
+                {
+                    lastRequirement.Operator = RequirementOperator.None;
+                    lastRequirement.Right = new Field();
+                }
+            }
+
             return error;
         }
 
@@ -691,9 +752,43 @@ namespace RATools.Parser
             {
                 int newValue = integerRight.Value;
 
-                var requirement = context.LastRequirement;
-                requirement.Operator = op;
-                requirement.Right = new Field { Size = requirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
+                var lastRequirement = context.LastRequirement;
+                if (lastRequirement.Operator != RequirementOperator.None)
+                {
+                    // try to rearrange so the last requirement doesn't have a modifier
+                    for (int i = context.Trigger.Count - 2; i >= 0; --i)
+                    {
+                        var requirement = context.Trigger.ElementAt(i);
+                        if (requirement.Type == RequirementType.AddSource && requirement.Operator == RequirementOperator.None)
+                        {
+                            context.Trigger.Remove(lastRequirement);
+                            context.Trigger.Add(new Requirement { Left = requirement.Left });
+                            requirement.Left = lastRequirement.Left;
+                            requirement.Operator = lastRequirement.Operator;
+                            requirement.Right = lastRequirement.Right;
+                            lastRequirement = context.LastRequirement;
+                            break;
+                        }
+
+                        if (requirement.Type != RequirementType.AddSource &&
+                            requirement.Type != RequirementType.SubSource &&
+                            requirement.Type != RequirementType.AddAddress)
+                        {
+                            break;
+                        }
+                    }
+
+                    if (lastRequirement.Operator != RequirementOperator.None)
+                    {
+                        // last requirement still has a modifier, have to add a dummy condition.
+                        lastRequirement.Type = RequirementType.AddSource;
+                        context.Trigger.Add(new Requirement { Left = new Field { Size = lastRequirement.Left.Size, Type = FieldType.Value, Value = 0 } });
+                        lastRequirement = context.LastRequirement;
+                    }
+                }
+
+                lastRequirement.Operator = op;
+                lastRequirement.Right = new Field { Size = lastRequirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
             }
             else
             {
