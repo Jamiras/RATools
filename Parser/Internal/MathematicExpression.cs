@@ -455,6 +455,9 @@ namespace RATools.Parser.Internal
                     mathematic.Left = mathematicLeft = BubbleUpIntegerConstant(mathematicLeft);
                     if (mathematicLeft.Right is IntegerConstantExpression)
                     {
+                        if (mathematic.Right is IntegerConstantExpression)
+                            return mathematic;
+
                         mathematic.Left = mathematicLeft.Left;
                         mathematicLeft.Left = BubbleUpIntegerConstant(mathematic);
                         mathematic = mathematicLeft;

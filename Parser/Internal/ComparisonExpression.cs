@@ -80,6 +80,21 @@ namespace RATools.Parser.Internal
             var mathematicLeft = comparisonExpression.Left as MathematicExpression;
             if (mathematicLeft == null)
             {
+                // if left side is an integer and the right side is not, swap the sides
+                if (comparisonExpression.Left.Type == ExpressionType.IntegerConstant &&
+                    comparisonExpression.Right.Type != ExpressionType.IntegerConstant)
+                {
+                    var operation = InvertComparisonOperation(comparisonExpression.Operation);
+                    comparisonExpression = new ComparisonExpression(comparisonExpression.Right, operation, comparisonExpression.Left);
+
+                    // recurse if necessary
+                    if (comparisonExpression.Left.Type == ExpressionType.Mathematic)
+                        return MoveConstantsToRightHandSide(comparisonExpression, scope, out result);
+
+                    result = comparisonExpression;
+                    return true;
+                }
+
                 result = comparisonExpression;
                 return true;
             }
@@ -134,7 +149,8 @@ namespace RATools.Parser.Internal
                                 return false;
 
                             case ComparisonOperation.LessThan:
-                                // a * 10 < 9999 becomes a < 999
+                                // a * 10 < 9999 becomes a <= 999
+                                comparisonOperation = ComparisonOperation.LessThanOrEqual;
                                 break;
 
                             case ComparisonOperation.LessThanOrEqual:
