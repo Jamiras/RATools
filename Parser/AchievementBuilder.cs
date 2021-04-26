@@ -137,21 +137,13 @@ namespace RATools.Parser
                     requirement.Left = Field.Deserialize(tokenizer);
 
                     requirement.Operator = ReadOperator(tokenizer);
-                    requirement.Right = Field.Deserialize(tokenizer);
+                    if (requirement.Operator != RequirementOperator.None)
+                        requirement.Right = Field.Deserialize(tokenizer);
 
-                    switch (requirement.Type)
+                    if (requirement.IsScalable && requirement.IsComparison)
                     {
-                        case RequirementType.AddSource:
-                        case RequirementType.SubSource:
-                        case RequirementType.AddAddress:
-                            requirement.Operator = RequirementOperator.None;
-                            requirement.Right = new Field();
-                            break;
-
-                        default:
-                            if (requirement.Right.Size == FieldSize.None)
-                                requirement.Right = new Field { Type = requirement.Right.Type, Size = requirement.Left.Size, Value = requirement.Right.Value };
-                            break;
+                        requirement.Operator = RequirementOperator.None;
+                        requirement.Right = new Field();
                     }
 
                     if (tokenizer.NextChar == '.')
@@ -239,29 +231,113 @@ namespace RATools.Parser
                         return RequirementOperator.GreaterThanOrEqual;
                     }
                     return RequirementOperator.GreaterThan;
+
+                case '*':
+                    tokenizer.Advance();
+                    return RequirementOperator.Multiply;
+
+                case '/':
+                    tokenizer.Advance();
+                    return RequirementOperator.Divide;
+
+                case '&':
+                    tokenizer.Advance();
+                    return RequirementOperator.LogicalAnd;
             }
 
             return RequirementOperator.None;
         }
 
-        private static bool HasNewFeatures(IEnumerable<Requirement> requirements)
+        private static int MinimumVersion(IEnumerable<Requirement> requirements)
         {
+            int minVer = 0;
+
             foreach (var requirement in requirements)
             {
-                if (requirement.Type == RequirementType.AddAddress ||
-                    requirement.Type == RequirementType.Measured)
+                switch (requirement.Type)
                 {
-                    return true;
+                    case RequirementType.AndNext:
+                        // 0.76 21 Jun 2019
+                        if (minVer < 76)
+                            minVer = 76;
+                        break;
+
+                    case RequirementType.AddAddress:
+                    case RequirementType.Measured:
+                        // 0.77 30 Nov 2019
+                        if (minVer < 77)
+                            minVer = 77;
+                        break;
+
+                    case RequirementType.MeasuredIf:
+                    case RequirementType.OrNext:
+                        // 0.78 18 May 2019
+                        if (minVer < 78)
+                            minVer = 78;
+                        break;
+
+                    case RequirementType.ResetNextIf:
+                        // 0.79 TBD
+                        if (minVer < 79)
+                            minVer = 79;
+                        break;
+
+                    default:
+                        break;
                 }
 
-                if (requirement.Left.Size == FieldSize.TByte ||
-                    requirement.Right.Size == FieldSize.TByte)
+                switch (requirement.Operator)
                 {
-                    return true;
+                    case RequirementOperator.Multiply:
+                    case RequirementOperator.Divide:
+                    case RequirementOperator.LogicalAnd:
+                        // 0.78 18 May 2019
+                        if (minVer < 78)
+                            minVer = 78;
+                        break;
+
+                    default:
+                        break;
+                }
+
+                foreach (var type in new FieldType[] { requirement.Left.Type, requirement.Right.Type })
+                {
+                    switch (type)
+                    {
+                        case FieldType.PriorValue:
+                            // 0.76 21 Jun 2019
+                            if (minVer < 76)
+                                minVer = 76;
+                            break;
+
+                        default:
+                            break;
+                    }
+                }
+
+                foreach (var size in new FieldSize[] { requirement.Left.Size, requirement.Right.Size })
+                {
+                    switch (size)
+                    {
+                        case FieldSize.TByte:
+                            // 0.77 30 Nov 2019
+                            if (minVer < 77)
+                                minVer = 77;
+                            break;
+
+                        case FieldSize.BitCount:
+                            // 0.78 18 May 2019
+                            if (minVer < 78)
+                                minVer = 78;
+                            break;
+
+                        default:
+                            break;
+                    }
                 }
             }
 
-            return false;
+            return minVer;
         }
 
         /// <summary>
@@ -285,22 +361,17 @@ namespace RATools.Parser
             var builder = new StringBuilder();
 
             // if no new features are found, prefer the legacy format for greatest compatibility with older versions of RetroArch
-            bool preferLegacyFormat = !HasNewFeatures(core);
-            if (preferLegacyFormat)
+            int minimumVersion = MinimumVersion(core);
+            foreach (var group in alts)
             {
-                foreach (var group in alts)
-                {
-                    if (HasNewFeatures(core))
-                    {
-                        preferLegacyFormat = false;
-                        break;
-                    }
-                }
+                int altMinimumVersion = MinimumVersion(group);
+                if (altMinimumVersion > minimumVersion)
+                    minimumVersion = altMinimumVersion;
             }
 
             foreach (Requirement requirement in core)
             {
-                SerializeRequirement(requirement, builder, preferLegacyFormat);
+                SerializeRequirement(requirement, builder, minimumVersion);
                 builder.Append('_');
             }
 
@@ -321,7 +392,7 @@ namespace RATools.Parser
 
                 foreach (Requirement requirement in alt)
                 {
-                    SerializeRequirement(requirement, builder, preferLegacyFormat);
+                    SerializeRequirement(requirement, builder, minimumVersion);
                     builder.Append('_');
                 }
 
@@ -331,7 +402,7 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, bool preferLegacyFormat)
+        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, int minimumVersion)
         {
             switch (requirement.Type)
             {
@@ -356,9 +427,19 @@ namespace RATools.Parser
                 case RequirementType.AddSource:
                 case RequirementType.SubSource:
                 case RequirementType.AddAddress:
-                    if (preferLegacyFormat)
-                        builder.Append("=0");
-                    break;
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.Multiply: builder.Append('*'); break;
+                        case RequirementOperator.Divide: builder.Append('/'); break;
+                        case RequirementOperator.LogicalAnd: builder.Append('&'); break;
+                        default:
+                            if (minimumVersion < 77)
+                                builder.Append("=0");
+                            return;
+                    }
+
+                    requirement.Right.Serialize(builder);
+                    return;
 
                 default:
                     switch (requirement.Operator)
