@@ -168,6 +168,12 @@ namespace RATools.Data
                     builder.Append(')');
                     break;
 
+                case RequirementType.Trigger:
+                    builder.Append("trigger_when(");
+                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+                    builder.Append(')');
+                    break;
+
                 default:
                     AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     break;
@@ -609,5 +615,10 @@ namespace RATools.Data
         /// Resets any HitCounts on the next requirement group if true.
         /// </summary>
         ResetNextIf,
+
+        /// <summary>
+        /// While all non-Trigger conditions are true, a challenge indicator will be displayed.
+        /// </summary>
+        Trigger,
     }
 }

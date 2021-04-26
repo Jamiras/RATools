@@ -159,7 +159,7 @@ namespace RATools.Data
                 //             > AddSource/SubSource
                 //             > AndNext/OrNext
                 //             > AddHits/ResetNextIf
-                //             > ResetIf/PauseIf/Measured/MeasuredIf
+                //             > ResetIf/PauseIf/Measured/MeasuredIf/Trigger
                 switch (requirement.Type)
                 {
                     case RequirementType.AddAddress:

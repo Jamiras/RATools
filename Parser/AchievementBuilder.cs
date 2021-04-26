@@ -131,6 +131,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.MeasuredIf;
                     else if (tokenizer.Match("Z:"))
                         requirement.Type = RequirementType.ResetNextIf;
+                    else if (tokenizer.Match("T:"))
+                        requirement.Type = RequirementType.Trigger;
 
                     requirement.Left = Field.Deserialize(tokenizer);
 
@@ -415,6 +417,7 @@ namespace RATools.Parser
                 case RequirementType.MeasuredIf: builder.Append("Q:"); break;
                 case RequirementType.AddAddress: builder.Append("I:"); break;
                 case RequirementType.ResetNextIf: builder.Append("Z:"); break;
+                case RequirementType.Trigger: builder.Append("T:"); break;
             }
 
             requirement.Left.Serialize(builder);

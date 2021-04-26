@@ -7,21 +7,23 @@ namespace RATools.Parser.Functions
 {
     internal class FlagConditionFunction : ComparisonModificationFunction
     {
-        public FlagConditionFunction(string name, RequirementType type)
+        public FlagConditionFunction(string name, RequirementType type, ConditionalOperation splitOn)
             : base(name)
         {
             _type = type;
+            _splitOn = splitOn;
         }
 
         private readonly RequirementType _type;
+        private readonly ConditionalOperation _splitOn;
 
-        private static void GetOrConditions(List<ExpressionBase> conditions, ExpressionBase expression)
+        private static void SplitConditions(List<ExpressionBase> conditions, ExpressionBase expression, ConditionalOperation op)
         {
             var condition = expression as ConditionalExpression;
-            if (condition != null && condition.Operation == ConditionalOperation.Or)
+            if (condition != null && condition.Operation == op)
             {
-                GetOrConditions(conditions, condition.Left);
-                GetOrConditions(conditions, condition.Right);
+                SplitConditions(conditions, condition.Left, op);
+                SplitConditions(conditions, condition.Right, op);
             }
             else
             {
@@ -29,23 +31,37 @@ namespace RATools.Parser.Functions
             }
         }
 
-        private bool ConvertToAndChain(InterpreterScope scope, ConditionalExpression condition, out ExpressionBase result)
+        private bool SplitConditions(InterpreterScope scope, ConditionalExpression condition, out ExpressionBase result)
         {
             var conditions = new List<ExpressionBase>();
-            GetOrConditions(conditions, condition.Left);
-            GetOrConditions(conditions, condition.Right);
+            SplitConditions(conditions, condition.Left, _splitOn);
+            SplitConditions(conditions, condition.Right, _splitOn);
 
-            if (!conditions[0].ReplaceVariables(scope, out result))
-                return false;
-
-            ExpressionBase andChain = new FunctionCallExpression(Name.Name, new ExpressionBase[] { result });
-            for (int i = 1; i < conditions.Count; i++)
+            ExpressionBase andChain = null;
+            for (int i = 0; i < conditions.Count; i++)
             {
                 if (!conditions[i].ReplaceVariables(scope, out result))
                     return false;
 
-                result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { result });
-                andChain = new ConditionalExpression(andChain, ConditionalOperation.And, result);
+                bool wrap = true;
+                if (_splitOn == ConditionalOperation.And)
+                {
+                    var functionCallExpression = result as FunctionCallExpression;
+                    if (functionCallExpression != null)
+                    {
+                        var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
+                        if (functionDefinition is FlagConditionFunction)
+                            wrap = false;
+                    }
+                }
+
+                if (wrap)
+                    result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { result });
+
+                if (andChain == null)
+                    andChain = result;
+                else
+                    andChain = new ConditionalExpression(andChain, ConditionalOperation.And, result);
             }
 
             result = andChain;
@@ -58,10 +74,13 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
+            // never(A || B) => never(A) && never(B)
+            // unless(A || B) => unless(A) && unless(B)
+            // trigger_when(A && B) => trigger_when(A) && trigger_when(B)
             var condition = comparison as ConditionalExpression;
-            if (condition != null && condition.Operation == ConditionalOperation.Or)
+            if (condition != null && condition.Operation == _splitOn)
             {
-                if (!ConvertToAndChain(scope, condition, out result))
+                if (!SplitConditions(scope, condition, out result))
                     return false;
 
                 CopyLocation(result);

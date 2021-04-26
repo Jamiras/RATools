@@ -944,11 +944,11 @@ namespace RATools.Test.Parser
         [TestCase("word(0x1234) * 10 + 10 == 10000", true, "word(0x001234) == 999")]
         [TestCase("word(0x1234) * 10 - 10 == 10000", true, "word(0x001234) == 1001")]
         [TestCase("word(0x1234) * 10 + byte(0x1235) == 10000", true, "(word(0x001234) * 10 + byte(0x001235)) == 10000")]
-        [TestCase("byte(0x1235) + word(0x1234) * 10 == 10000", true, "(word(0x001234) * 10 + byte(0x001235)) == 10000")]
-        [TestCase("word(0x1234) * 10 + byte(0x1235) * 2 == 10000", true, "(word(0x001234) * 10 + byte(0x001235) * 2 + 0) == 10000")]
+        [TestCase("byte(0x1235) + word(0x1234) * 10 == 10000", true, "(word(0x001234) * 10 + byte(0x001235)) == 10000")] // multiplication can't be on last condition, reorder them
+        [TestCase("word(0x1234) * 10 + byte(0x1235) * 2 == 10000", true, "(word(0x001234) * 10 + byte(0x001235) * 2 + 0) == 10000")] // multiplication can't be on last condition, add an extra dummy condition
         [TestCase("(word(0x1234) - 1) * 4 < 100", true, "word(0x001234) < 26")]
         [TestCase("(word(0x1234) - 1) / 4 < 100", true, "word(0x001234) < 401")]
-        [TestCase("(word(0x1234) - 1) * 4 < 99", true, "word(0x001234) < 25")]
+        [TestCase("(word(0x1234) - 1) * 4 < 99", true, "word(0x001234) <= 25")]
         public void TestMultiplicationInExpression(string input, bool expectedResult, string output)
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")\n", expectedResult);
