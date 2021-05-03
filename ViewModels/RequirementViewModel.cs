@@ -123,6 +123,10 @@ namespace RATools.ViewModels
                     builder.Append("AddHits ");
                     break;
 
+                case RequirementType.SubHits:
+                    builder.Append("SubHits ");
+                    break;
+
                 case RequirementType.AndNext:
                     builder.Append("AndNext ");
                     break;
