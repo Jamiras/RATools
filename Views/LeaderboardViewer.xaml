@@ -27,21 +27,35 @@
                 <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description}" FontSize="12"
                            Style="{StaticResource editorSubtitle}" />
 
-                <TextBlock Grid.Row="2" Margin="4,0,0,2" VerticalAlignment="Bottom" FontSize="10">
-                    <TextBlock.Style>
-                        <Style TargetType="{x:Type TextBlock}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SourceLine}" Value="0">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                    <Hyperlink Command="{Binding Path=DataContext.Game.GoToSourceCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type views:MainWindow}}}" 
-                                CommandParameter="{Binding SourceLine}" Style="{StaticResource subtleHyperlink}">
-                        <TextBlock Text="Source" />
-                    </Hyperlink>
-                </TextBlock>
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="4,0,0,2" VerticalAlignment="Bottom" Orientation="Horizontal">
+                    <TextBlock FontSize="10" Margin="0,0,25,0">
+                        <TextBlock.Style>
+                            <Style TargetType="{x:Type TextBlock}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SourceLine}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                        <Hyperlink Command="{Binding Path=DataContext.Game.GoToSourceCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type views:MainWindow}}}"
+                                    CommandParameter="{Binding SourceLine}" Style="{StaticResource subtleHyperlink}">
+                            <TextBlock Text="Source" />
+                        </Hyperlink>
+                    </TextBlock>
+
+                    <TextBlock FontSize="10" Margin="0,0,25,0">
+                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyTitleToClipboardCommand}">
+                            <TextBlock Text="Copy Title to Clipboard" />
+                        </Hyperlink>
+                    </TextBlock>
+
+                    <TextBlock FontSize="10">
+                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyDescriptionToClipboardCommand}">
+                            <TextBlock Text="Copy Description to Clipboard" />
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
                 
                 <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
                               Template="{StaticResource themedScrollViewerTemplate}">
