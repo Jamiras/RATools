@@ -119,6 +119,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.SubSource;
                     else if (tokenizer.Match("C:"))
                         requirement.Type = RequirementType.AddHits;
+                    else if (tokenizer.Match("D:"))
+                        requirement.Type = RequirementType.SubHits;
                     else if (tokenizer.Match("N:"))
                         requirement.Type = RequirementType.AndNext;
                     else if (tokenizer.Match("O:"))
@@ -411,6 +413,7 @@ namespace RATools.Parser
                 case RequirementType.AddSource: builder.Append("A:"); break;
                 case RequirementType.SubSource: builder.Append("B:"); break;
                 case RequirementType.AddHits: builder.Append("C:"); break;
+                case RequirementType.SubHits: builder.Append("D:"); break;
                 case RequirementType.AndNext: builder.Append("N:"); break;
                 case RequirementType.OrNext: builder.Append("O:"); break;
                 case RequirementType.Measured: builder.Append("M:"); break;

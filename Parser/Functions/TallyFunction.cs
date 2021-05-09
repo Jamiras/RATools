@@ -39,9 +39,12 @@ namespace RATools.Parser.Functions
             if (varargs.Entries.Count == 1 && varargs.Entries[0] is ArrayExpression)
                 varargs = (ArrayExpression)varargs.Entries[0];
 
+            var tallyScope = new InterpreterScope(scope);
+            tallyScope.Context = this;
+
             foreach (var entry in varargs.Entries)
             {
-                if (!entry.ReplaceVariables(scope, out result))
+                if (!entry.ReplaceVariables(tallyScope, out result))
                     return false;
 
                 parameters.Add(result);
@@ -54,24 +57,55 @@ namespace RATools.Parser.Functions
 
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
+            ExpressionBase result;
+            int addHitsClauses = 0;
+            int subHitsClauses = 0;
+
             var requirements = new List<ICollection<Requirement>>();
             for (int i = 1; i < functionCall.Parameters.Count; ++i)
             {
                 var condition = functionCall.Parameters.ElementAt(i);
                 var conditionRequirements = new List<Requirement>();
                 var nestedContext = new TriggerBuilderContext() { Trigger = conditionRequirements };
+                var modifier = RequirementType.AddHits;
+
+                var funcCall = condition as FunctionCallExpression;
+                if (funcCall != null && funcCall.FunctionName.Name == "deduct")
+                {
+                    var deductScope = funcCall.GetParameters(scope.GetFunction(funcCall.FunctionName.Name), scope, out result);
+                    if (deductScope == null)
+                        return (ParseErrorExpression)result;
+
+                    condition = deductScope.GetVariable("comparison");
+                    modifier = RequirementType.SubHits;
+                    ++subHitsClauses;
+                }
+                else
+                {
+                    ++addHitsClauses;
+                }
 
                 var error = BuildTriggerCondition(nestedContext, scope, condition);
                 if (error != null)
                     return error;
 
-                conditionRequirements.Last().Type = RequirementType.AddHits;
+                conditionRequirements.Last().Type = modifier;
                 requirements.Add(conditionRequirements);
             }
 
             // if no requirements were generated, we're done
             if (requirements.Count == 0)
                 return null;
+
+            // if there's any SubHits clauses, add a dummy clause for the final count, regardless of whether
+            // the AddHits clauses have hit targets.
+            if (subHitsClauses > 0)
+            {
+                if (addHitsClauses == 0)
+                    return new ParseErrorExpression("tally requires at least one non-deducted item");
+
+                requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
+            }
 
             // the last item cannot have its own HitCount as it will hold the HitCount for the group.
             // if necessary, find one without a HitCount and make it the last.
@@ -90,6 +124,45 @@ namespace RATools.Parser.Functions
             // set the target hitcount
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
             context.LastRequirement.HitCount = (uint)count.Value;
+
+            return null;
+        }
+    }
+
+    internal class DeductFunction : ComparisonModificationFunction
+    {
+        public DeductFunction()
+            : base("deduct")
+        {
+        }
+
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            var tally = scope.GetContext<TallyFunction>(); // explicitly in tally clause
+            if (tally == null)
+            {
+                var assignment = scope.GetInterpreterContext<AssignmentExpression>(); // in generic assignment clause - may be used byte rich_presence_display - will determine later
+                if (assignment == null)
+                {
+                    result = new ParseErrorExpression(Name.Name + " has no meaning outside of a tally call");
+                    return false;
+                }
+            }
+
+            return base.ReplaceVariables(scope, out result);
+        }
+
+        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
+        {
+            var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
+            foreach (var requirementEx in requirementsEx)
+            {
+                var lastCondition = requirementEx.Requirements.Last();
+                if (lastCondition.Type != RequirementType.None)
+                    return new ParseErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
+
+                lastCondition.Type = RequirementType.SubHits;
+            }
 
             return null;
         }

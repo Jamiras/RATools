@@ -32,6 +32,7 @@ namespace RATools.Data
                 switch (Type)
                 {
                     case RequirementType.AddHits:
+                    case RequirementType.SubHits:
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
                     case RequirementType.AndNext:
@@ -585,6 +586,11 @@ namespace RATools.Data
         /// Adds the HitsCounts from this requirement to the next requirement.
         /// </summary>
         AddHits,
+
+        /// <summary>
+        /// Subtracts the HitsCounts from this requirement from the next requirement.
+        /// </summary>
+        SubHits,
 
         /// <summary>
         /// This requirement must also be true for the next requirement to be true.

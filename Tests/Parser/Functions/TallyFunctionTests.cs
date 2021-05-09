@@ -413,5 +413,88 @@ namespace RATools.Test.Parser.Functions
             Evaluate("tally(4, unless(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
             Evaluate("tally(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", errorMessage);
         }
+
+        [Test]
+        public void TestSimpleDeduct()
+        {
+            var requirements = Evaluate("tally(4, byte(0x1234) == 56, deduct(byte(0x2345) == 99))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("99"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.SubHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestMultipleDeduct()
+        {
+            var requirements = Evaluate("tally(10, byte(0x1234) == 56, deduct(byte(0x2345) == 99), byte(0x5555) == 0, deduct(byte(0x5555) == 1))");
+            Assert.That(requirements.Count, Is.EqualTo(5));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("99"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.SubHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x005555)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x005555)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.SubHits));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[4].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[4].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[4].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[4].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[4].HitCount, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void TestRepeatedDeduct()
+        {
+            var requirements = Evaluate("tally(4, byte(0x1234) == 56, deduct(repeated(10, byte(0x2345) == 99)))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("99"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.SubHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(10));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestOnlyDeduct()
+        {
+            Evaluate("tally(4, deduct(byte(0x2345) == 99), deduct(byte(0x2345) == 99))",
+                "tally requires at least one non-deducted item");
+        }
     }
 }

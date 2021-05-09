@@ -45,6 +45,8 @@ namespace RATools.Parser.Functions
             {
                 if (requirement.Type == RequirementType.AddHits)
                     return new ParseErrorExpression("tally not allowed in subclause");
+                if (requirement.Type == RequirementType.SubHits)
+                    return new ParseErrorExpression("tally not allowed in subclause");
             }
 
             return null;

@@ -158,7 +158,7 @@ namespace RATools.Data
                 // precedence is AddAddress
                 //             > AddSource/SubSource
                 //             > AndNext/OrNext
-                //             > AddHits/ResetNextIf
+                //             > AddHits/SubHits/ResetNextIf
                 //             > ResetIf/PauseIf/Measured/MeasuredIf/Trigger
                 switch (requirement.Type)
                 {
@@ -183,6 +183,7 @@ namespace RATools.Data
                         break;
 
                     case RequirementType.AddHits:
+                    case RequirementType.SubHits:
                         AppendModifyHits(addHits, requirement, numberFormat, addSources, subSources, addAddress, andNext, resetNextIf);
                         addHits.Append(", ");
                         break;
@@ -352,6 +353,7 @@ namespace RATools.Data
                 switch (requirement.Type)
                 {
                     case RequirementType.AddHits:
+                    case RequirementType.SubHits:
                         // an always_false() condition will never generate a hit
                         if (requirement.Evaluate() == false)
                             continue;
