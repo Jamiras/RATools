@@ -19,6 +19,9 @@ namespace RATools.ViewModels
             Title = leaderboard.Title;
             Description = leaderboard.Description;
 
+            CopyTitleToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Title));
+            CopyDescriptionToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Description));
+
             var groups = new List<LeaderboardGroupViewModel>();
 
             var achievementBuilder = new AchievementBuilder();
@@ -106,6 +109,9 @@ namespace RATools.ViewModels
         {
             get { return _leaderboard.SourceLine; }
         }
+
+        public CommandBase CopyTitleToClipboardCommand { get; private set; }
+        public CommandBase CopyDescriptionToClipboardCommand { get; private set; }
 
         public class LeaderboardGroupViewModel
         {
