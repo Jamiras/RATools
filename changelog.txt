@@ -1,4 +1,15 @@
-v1.8.0 - 27 Feb 2020
+v1.8.1 - 9 May 2021
+* add trigger_when() function
+* add deduct() helper for tally() function
+* support scaling for modifier conditions (AddSource, SubSource, AddAddress)
+* support for hex constants (hXX) when deconstructing rich presence and leaderboards from server data
+* add copy to clipboard links for leaderboard title/description
+* fix bitcount() not being allowed in prev() and prior() functions
+* fix syntax highlighting in dictionary when not ordered by key
+* fix stack overflow evaluating very long chain of ANDed conditions
+* fix issue simplifying comparison with multiple constants
+
+v1.8.0 - 27 Feb 2021
 * dynamic recompilation (only process the parts of the script affected by changes)
 * several other optimizations around script processing
 * several minor improvements to better report the actual cause of an error
