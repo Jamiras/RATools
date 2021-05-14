@@ -202,6 +202,15 @@ namespace RATools.Parser
         /// </summary>
         public void Commit(string author, StringBuilder warning, Achievement achievementToValidate)
         {
+            double version = 0.30;
+
+            foreach (var achievement in _achievements)
+            {
+                var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
+                if (Double.Parse(achievementMinimumVersion) > version)
+                    _version = achievementMinimumVersion;
+            }
+
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
                 writer.WriteLine(_version);
