@@ -87,7 +87,7 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        public void TestHitCount()
+        public void TestHitTarget()
         {
             var requirements = Evaluate("disable_when(repeated(6, byte(0x1234) == 56))");
             Assert.That(requirements.Count, Is.EqualTo(1));

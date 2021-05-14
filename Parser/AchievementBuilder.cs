@@ -2081,6 +2081,113 @@ namespace RATools.Parser
             return null;
         }
 
+        private static void NormalizeResetNextIfs(List<List<RequirementEx>> groups)
+        {
+            RequirementEx resetNextIf = null;
+            var resetNextIfClauses = new List<RequirementEx>();
+            var resetNextIsForPause = false;
+            foreach (var group in groups)
+            {
+                foreach (var requirementEx in group)
+                {
+                    var lastRequirement = requirementEx.Requirements.Last();
+                    if (lastRequirement.HitCount > 0)
+                    {
+                        bool hasResetNextIf = false;
+
+                        foreach (var requirement in requirementEx.Requirements)
+                        {
+                            if (requirement.Type == RequirementType.ResetNextIf)
+                            {
+                                hasResetNextIf = true;
+
+                                var subclause = new RequirementEx();
+                                foreach (var requirement2 in requirementEx.Requirements)
+                                {
+                                    subclause.Requirements.Add(requirement2);
+                                    if (requirement2.Type == RequirementType.ResetNextIf)
+                                        break;
+                                }
+
+                                if (resetNextIf == null)
+                                {
+                                    resetNextIf = subclause;
+                                }
+                                else if (resetNextIf != subclause)
+                                {
+                                    // can only extract ResetNextIf if it's identical
+                                    return;
+                                }
+                            }
+                        }
+
+                        // hit target on non-ResetNextIf clause, can't extract the ResetNextIf (if we even find one)
+                        if (!hasResetNextIf)
+                            return;
+
+                        resetNextIfClauses.Add(requirementEx);
+
+                        resetNextIsForPause |= (lastRequirement.Type == RequirementType.PauseIf);
+                    }
+                }
+            }
+
+            // did not find a ResetNextIf
+            if (resetNextIf == null)
+                return;
+
+            // remove the common clause from each complex clause
+            foreach (var requirementEx in resetNextIfClauses)
+                requirementEx.Requirements.RemoveRange(0, resetNextIf.Requirements.Count);
+
+            // change the ResetNextIf to a ResetIf
+            resetNextIf.Requirements.Last().Type = RequirementType.ResetIf;
+
+            // if the reset is for a pause, it has to be moved to a separate group or it can't be evaluated
+            if (resetNextIsForPause)
+            {
+                var newGroup = new List<RequirementEx>();
+                newGroup.Add(resetNextIf);
+                groups.Add(newGroup);
+
+                if (groups.Count > 2)
+                {
+                    // if alt groups already exist, add the an always false condition to prevent the new alt group
+                    // from ever being true. otherwise, just add it as is and it'll always be true.
+                    var newClause = new RequirementEx();
+                    newClause.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                    newGroup.Add(newClause);
+                }
+                else
+                {
+                    // if alt groups don't exist, let the new group always be true, but add an always false
+                    // second group to prevent it from being collapsed back into core. the always false group
+                    // will be optimized out later.
+                    var newClause = new RequirementEx();
+                    newClause.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+
+                    newGroup = new List<RequirementEx>();
+                    newGroup.Add(newClause);
+                    groups.Add(newGroup);
+                }
+            }
+            else
+            {
+                // reset is not for a pause, insert it where the ResetNextIf was
+                foreach (var group in groups)
+                {
+                    for (int i = 0; i < group.Count; ++i)
+                    {
+                        if (resetNextIfClauses.Contains(group[i]))
+                        {
+                            group.Insert(i, resetNextIf);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
         public string Optimize()
         {
             if (_core.Count == 0 && _alts.Count == 0)
@@ -2091,6 +2198,9 @@ namespace RATools.Parser
             groups.Add(RequirementEx.Combine(_core));
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(RequirementEx.Combine(_alts[i]));
+
+            // attempt to extract ResetNextIf into alt group
+            NormalizeResetNextIfs(groups);
 
             // convert ResetIfs and PauseIfs without HitCounts to standard requirements
             bool hasHitCount = HasHitCount(groups);
