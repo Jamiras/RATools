@@ -887,20 +887,6 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestLeaderboard()
-        {
-            var parser = Parse("leaderboard(\"T\", \"D\", byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567))");
-            Assert.That(parser.Leaderboards.Count(), Is.EqualTo(1));
-            var leaderboard = parser.Leaderboards.First();
-            Assert.That(leaderboard.Title, Is.EqualTo("T"));
-            Assert.That(leaderboard.Description, Is.EqualTo("D"));
-            Assert.That(leaderboard.Start, Is.EqualTo("0xH001234=1"));
-            Assert.That(leaderboard.Cancel, Is.EqualTo("0xH001234=2"));
-            Assert.That(leaderboard.Submit, Is.EqualTo("0xH001234=3"));
-            Assert.That(leaderboard.Value, Is.EqualTo("0xH004567"));
-        }
-
-        [Test]
         public void TestFunctionCallInFunctionInExpression()
         {
             var parser = Parse("function foo() {\n" +

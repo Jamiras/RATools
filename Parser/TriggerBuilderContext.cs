@@ -257,9 +257,6 @@ namespace RATools.Parser
                         }
                         break;
 
-                    case RequirementType.MeasuredIf:
-                        continue;
-
                     case RequirementType.ResetIf:
                         // ResetIf are only allowed if the measured value has a target HitCount
                         if (measured.HitCount == 0)
@@ -279,10 +276,6 @@ namespace RATools.Parser
                         break;
 
                     default:
-                        System.Diagnostics.Debug.Assert(requirement.IsCombining);
-
-                        // force Operator on combining requirement to None
-                        requirement.Operator = RequirementOperator.None;
                         break;
                 }
             }
