@@ -250,6 +250,19 @@ namespace RATools.Parser
             return RequirementOperator.None;
         }
 
+        public static string GetMinimumVersion(Achievement achievement)
+        {
+            int minimumVersion = MinimumVersion(achievement.CoreRequirements);
+            foreach (var group in achievement.AlternateRequirements)
+            {
+                int altMinimumVersion = MinimumVersion(group);
+                if (altMinimumVersion > minimumVersion)
+                    minimumVersion = altMinimumVersion;
+            }
+
+            return String.Format("0.{0}", minimumVersion);
+        }
+
         private static int MinimumVersion(IEnumerable<Requirement> requirements)
         {
             int minVer = 0;
