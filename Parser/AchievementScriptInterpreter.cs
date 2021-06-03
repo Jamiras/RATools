@@ -98,6 +98,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new FlagConditionFunction("unless", RequirementType.PauseIf, ConditionalOperation.Or));
                 _globalScope.AddFunction(new FlagConditionFunction("trigger_when", RequirementType.Trigger, ConditionalOperation.And));
                 _globalScope.AddFunction(new MeasuredFunction());
+                _globalScope.AddFunction(new DisableWhenFunction());
 
                 _globalScope.AddFunction(new AchievementFunction());
                 _globalScope.AddFunction(new LeaderboardFunction());

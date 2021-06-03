@@ -70,6 +70,7 @@
     <Compile Include="Parser\Functions\AlwaysFalseFunction.cs" />
     <Compile Include="Parser\Functions\BitFunction.cs" />
     <Compile Include="Parser\Functions\ComparisonModificationFunction.cs" />
+    <Compile Include="Parser\Functions\DisableWhenFunction.cs" />
     <Compile Include="Parser\Functions\MeasuredFunction.cs" />
     <Compile Include="Parser\Functions\FlagConditionFunction.cs" />
     <Compile Include="Parser\Functions\AlwaysTrueFunction.cs" />

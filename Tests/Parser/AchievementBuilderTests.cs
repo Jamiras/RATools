@@ -4,7 +4,6 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Internal;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Test.Parser
 {
@@ -396,6 +395,21 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && unless(once(byte(0x2345) == 0x2345))", "byte(0x001234) == 1")] // condition becomes always_false(), and unless(always_false()) can be eliminated
+        // ==== NormalizeResetNextIfs ===
+        [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
+                  "never(byte(0x002345) == 2) && repeated(2, byte(0x001234) == 1)")] // ResetNextIf can be turned into a ResetIf
+        [TestCase("unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
+                  "unless(repeated(2, byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+        [TestCase("byte(0x2222) == 2 || unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
+                  "byte(0x002222) == 2 || unless(repeated(2, byte(0x001234) == 1)) || (never(byte(0x002345) == 2) && always_false())")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an always false alt group
+        [TestCase("once(byte(0x2222) == 2) && repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
+                  "once(byte(0x002222) == 2) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))")] // ResetNextIf cannot be turned into a ResetIf
+        [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 2))",
+                  "never(byte(0x002345) == 2) && repeated(2, byte(0x001234) == 1) && repeated(3, byte(0x001234) == 3)")] // similar ResetNextIfs can be turned into a ResetIf
+        [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 3))",
+                  "repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2)) && repeated(3, byte(0x001234) == 3 && never(byte(0x002345) == 3))")] // dissimilar ResetNextIfs cannot be turned into a ResetIf
+        [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2)",
+                  "unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
