@@ -824,95 +824,83 @@ namespace RATools.Parser
         {
             var alwaysTrue = new List<RequirementEx>();
             var alwaysFalse = new List<RequirementEx>();
-            bool? result;
 
             foreach (var requirementEx in requirements)
             {
+                // if there's modifier conditions, assume it can't be always_true() or always_false()
                 if (requirementEx.Requirements.Count > 1)
                     continue;
 
                 var requirement = requirementEx.Requirements[0];
-                if (requirement.HitCount > 1)
+
+                // see if the requirement can be simplified down to an always_true() or always_false().
+                var result = NormalizeBCD(requirement);
+                if (result == null)
+                    result = requirement.Evaluate();
+                if (result == null)
+                    result = NormalizeLimits(requirement);
+
+                // any condition with a HitCount greater than 1 cannot be always_true(), so create a copy
+                // without the HitCount and double-check.
+                if (result == null && requirement.HitCount > 1)
                 {
-                    // any condition with a HitCount cannot be always true or false, evaluate the condition 
-                    // without the HitCount, and if that is always true or false, replace with the equivalent
-                    var clone = new Requirement
+                    var normalizedRequirement = new Requirement
                     {
                         Left = requirement.Left,
                         Operator = requirement.Operator,
                         Right = requirement.Right,
                     };
 
-                    result = clone.Evaluate();
-                    if (result == true)
-                    {
-                        var alwaysTrueRequirement = AlwaysTrueFunction.CreateAlwaysTrueRequirement();
-                        requirement.Left = alwaysTrueRequirement.Left;
-                        requirement.Operator = alwaysTrueRequirement.Operator;
-                        requirement.Right = alwaysTrueRequirement.Right;
-                    }
-                    else if (result == false)
-                    {
-                        var alwaysFalseRequirement = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
-                        requirement.Left = alwaysFalseRequirement.Left;
-                        requirement.Operator = alwaysFalseRequirement.Operator;
-                        requirement.Right = alwaysFalseRequirement.Right;
-                    }
+                    result = normalizedRequirement.Evaluate();
                 }
-                else
+
+                if (result == true)
                 {
-                    result = requirement.Evaluate();
-                    if (result == true)
+                    // replace with simplified logic (keeping any HitCounts or flags)
+                    var alwaysTrueRequirement = AlwaysTrueFunction.CreateAlwaysTrueRequirement();
+                    requirement.Left = alwaysTrueRequirement.Left;
+                    requirement.Operator = alwaysTrueRequirement.Operator;
+                    requirement.Right = alwaysTrueRequirement.Right;
+
+                    if (requirement.HitCount <= 1)
                     {
                         if (requirement.Type == RequirementType.PauseIf)
                         {
                             // a PauseIf for a condition that is always true will permanently disable the group.
                             // replace the entire group with an always_false() clause
-                            var newRequirementEx = new RequirementEx();
-                            newRequirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                            requirementEx.Requirements[0] = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
                             requirements.Clear();
-                            requirements.Add(newRequirementEx);
+                            requirements.Add(requirementEx);
                             return;
                         }
                         else if (requirement.Type == RequirementType.ResetIf)
                         {
                             // a ResetIf for a condition that is always true will invalidate the trigger (not just the group).
                             // since we can't fully invalidate the trigger from here, replace the entire group with a ResetIf(always_true())
-                            var newRequirementEx = new RequirementEx();
-                            newRequirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
-                            newRequirementEx.Requirements[0].Type = RequirementType.ResetIf;
+                            requirementEx.Requirements[0] = alwaysTrueRequirement; // this discards HitCounts
+                            requirementEx.Requirements[0].Type = RequirementType.ResetIf;
                             requirements.Clear();
-                            requirements.Add(newRequirementEx);
+                            requirements.Add(requirementEx);
                             return;
                         }
 
                         alwaysTrue.Add(requirementEx);
-                        continue;
-                    }
-                    else if (result == false)
-                    {
-                        // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
-                        // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
-                        if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
-                            alwaysTrue.Add(requirementEx);
-                        else
-                            alwaysFalse.Add(requirementEx);
-
-                        continue;
                     }
                 }
-
-                result = NormalizeBCD(requirement);
-                if (result == null)
-                    result = NormalizeLimits(requirement);
-
-                if (result != null)
+                else if (result == false)
                 {
-                    if (result == true)
+                    // replace with simplified logic (keeping any HitCounts or flags)
+                    var alwaysFalseRequirement = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
+                    requirement.Left = alwaysFalseRequirement.Left;
+                    requirement.Operator = alwaysFalseRequirement.Operator;
+                    requirement.Right = alwaysFalseRequirement.Right;
+
+                    // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
+                    // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
+                    if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
                         alwaysTrue.Add(requirementEx);
                     else
                         alwaysFalse.Add(requirementEx);
-                    continue;
                 }
             }
 
