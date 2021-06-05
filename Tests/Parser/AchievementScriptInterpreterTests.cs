@@ -1025,5 +1025,47 @@ namespace RATools.Test.Parser
             Assert.That(GetRequirements(achievement),
                 Is.EqualTo("once(byte(0x002222) == 0) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
         }
+
+
+        [Test]
+        public void TestDefaultParameterPassthrough()
+        {
+            var parser = Parse("function a(id = 0, badge = \"0\")\n" +
+                               "{" +
+                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == 1, id=id, badge=badge)\n" +
+                               "}\n" +
+                               "\n" +
+                               "achievement(\"T\", \"D\", 5, byte(0x1234) == 1)\n" +
+                               "a()\n" +
+                               "a(id = 10)\n" +
+                               "a(badge = \"5555\")\n" +
+                               "a(20, \"12345\")\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(5));
+
+            // calling achievement() directly without a badge or id
+            var achievement = parser.Achievements.ElementAt(0);
+            Assert.That(achievement.Id, Is.EqualTo(0));
+            Assert.That(achievement.BadgeName, Is.EqualTo("0"));
+
+            // calling achievement() indirectly without a badge or id
+            achievement = parser.Achievements.ElementAt(1);
+            Assert.That(achievement.Id, Is.EqualTo(0));
+            Assert.That(achievement.BadgeName, Is.EqualTo("0"));
+
+            // calling achievement() indirectly without a badge
+            achievement = parser.Achievements.ElementAt(2);
+            Assert.That(achievement.Id, Is.EqualTo(10));
+            Assert.That(achievement.BadgeName, Is.EqualTo("0"));
+
+            // calling achievement() indirectly without an id
+            achievement = parser.Achievements.ElementAt(3);
+            Assert.That(achievement.Id, Is.EqualTo(0));
+            Assert.That(achievement.BadgeName, Is.EqualTo("5555"));
+
+            // calling achievement() indirectly
+            achievement = parser.Achievements.ElementAt(4);
+            Assert.That(achievement.Id, Is.EqualTo(20));
+            Assert.That(achievement.BadgeName, Is.EqualTo("12345"));
+        }
     }
 }
