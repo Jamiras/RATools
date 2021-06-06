@@ -138,6 +138,9 @@ namespace RATools.ViewModels
                 {
                     needsUpdate = _parsedContent.Update(tokenizer, e.AffectedLines);
                 }
+
+                if (!needsUpdate && !e.IsAborted)
+                    UpdateErrorList();
             }
 
             if (needsUpdate && !e.IsAborted)
