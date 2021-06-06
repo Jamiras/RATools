@@ -2126,7 +2126,17 @@ namespace RATools.Parser
 
             // remove the common clause from each complex clause
             foreach (var requirementEx in resetNextIfClauses)
+            {
                 requirementEx.Requirements.RemoveRange(0, resetNextIf.Requirements.Count);
+                do
+                {
+                    int index = requirementEx.Requirements.FindIndex(r => r.Type == RequirementType.ResetNextIf);
+                    if (index == -1)
+                        break;
+
+                    requirementEx.Requirements.RemoveRange(index - resetNextIf.Requirements.Count + 1, resetNextIf.Requirements.Count);
+                } while (true);
+            }
 
             // change the ResetNextIf to a ResetIf
             resetNextIf.Requirements.Last().Type = RequirementType.ResetIf;
