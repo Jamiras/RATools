@@ -32,7 +32,7 @@ namespace RATools.Test.Parser
             return parser;
         }
 
-        private static InterpreterScope Evaluate(string script)
+        private static InterpreterScope Evaluate(string script, string expectedError = null)
         {
             var groups = new ExpressionGroupCollection();
             groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
@@ -40,8 +40,15 @@ namespace RATools.Test.Parser
             groups.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(script)));
 
             var interpreter = new AchievementScriptInterpreter();
-            Assert.That(interpreter.Run(groups, null), Is.True);
 
+            if (expectedError != null)
+            {
+                Assert.That(interpreter.Run(groups, null), Is.False);
+                Assert.That(interpreter.ErrorMessage, Is.EqualTo(expectedError));
+                return null;
+            }
+
+            Assert.That(interpreter.Run(groups, null), Is.True);
             return groups.Scope;
         }
 
@@ -1038,6 +1045,17 @@ namespace RATools.Test.Parser
             achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement),
                 Is.EqualTo("once(byte(0x002222) == 0) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
+        }
+
+        [Test]
+        public void TestAssignVariableToFunctionWithNoReturn()
+        {
+            Evaluate(
+                "function a(i) { b = i }\n" +
+                "c = a(3)",
+
+                "2:5 a did not return a value"
+            );
         }
 
         [Test]

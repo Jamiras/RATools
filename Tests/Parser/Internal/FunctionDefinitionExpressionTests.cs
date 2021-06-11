@@ -38,7 +38,7 @@ namespace RATools.Test.Parser.Internal
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             tokenizer.Match("function");
-            var expr = FunctionDefinitionExpression.Parse(tokenizer);
+            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
             return (FunctionDefinitionExpression)expr;
         }
@@ -89,7 +89,7 @@ namespace RATools.Test.Parser.Internal
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"));
             tokenizer.Match("function");
-            var expr = FunctionDefinitionExpression.Parse(tokenizer);
+            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
             Assert.That(((ParseErrorExpression)expr).Message, Is.EqualTo("Expected conditional statement following if"));
@@ -101,7 +101,7 @@ namespace RATools.Test.Parser.Internal
             var group = new ExpressionGroup();
             var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"), group);
             tokenizer.Match("function");
-            var expr = FunctionDefinitionExpression.Parse(tokenizer);
+            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
             Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));

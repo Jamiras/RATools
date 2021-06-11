@@ -139,4 +139,46 @@ namespace RATools.Parser.Internal
             modifies.Add(Name);
         }
     }
+
+    internal class VariableReferenceExpression : ExpressionBase
+    {
+        public VariableReferenceExpression(VariableDefinitionExpression variable, ExpressionBase expression)
+            : base(ExpressionType.VariableReference)
+        {
+            Variable = variable;
+            Expression = expression;
+        }
+
+        public VariableDefinitionExpression Variable { get; private set; }
+
+        public ExpressionBase Expression { get; private set; }
+
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Expression.ReplaceVariables(scope, out result);
+        }
+
+        protected override bool Equals(ExpressionBase obj)
+        {
+            var that = obj as VariableReferenceExpression;
+            return (that != null && Expression == that.Expression);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="System.String" /> that represents this instance.
+        /// </summary>
+        public override string ToString()
+        {
+            var builder = new StringBuilder();
+            builder.Append(Expression.Type);
+            builder.Append(" Reference: ");
+            AppendString(builder);
+            return builder.ToString();
+        }
+
+        internal override void AppendString(StringBuilder builder)
+        {
+            builder.Append(Variable.Name);
+        }
+    }
 }

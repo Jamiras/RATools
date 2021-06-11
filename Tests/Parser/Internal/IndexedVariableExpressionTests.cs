@@ -150,10 +150,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestReplaceVariablesIndexFunctionCall()
         {
-            var input = "function func(i) => 6";
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("function");
-            var functionDefinition = (FunctionDefinitionExpression)FunctionDefinitionExpression.Parse(tokenizer);
+            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => 6");
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value = new IntegerConstantExpression(98);

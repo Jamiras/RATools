@@ -17,9 +17,6 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (!IsInTriggerClause(scope, out result))
-                return false;
-
             var count = GetIntegerParameter(scope, "count", out result);
             if (count == null)
                 return false;
@@ -36,8 +33,18 @@ namespace RATools.Parser.Functions
             parameters.Add(count);
 
             // special case - if there's a single array parameter, assume it's a list of conditions
-            if (varargs.Entries.Count == 1 && varargs.Entries[0] is ArrayExpression)
-                varargs = (ArrayExpression)varargs.Entries[0];
+            if (varargs.Entries.Count == 1)
+            {
+                var arrayExpression = varargs.Entries[0] as ArrayExpression;
+                if (arrayExpression == null)
+                {
+                    var referenceExpression = varargs.Entries[0] as VariableReferenceExpression;
+                    if (referenceExpression != null)
+                        arrayExpression = referenceExpression.Expression as ArrayExpression;
+                }
+                if (arrayExpression != null)
+                    varargs = arrayExpression;
+            }
 
             var tallyScope = new InterpreterScope(scope);
             tallyScope.Context = this;

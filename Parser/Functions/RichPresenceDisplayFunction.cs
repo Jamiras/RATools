@@ -1,5 +1,4 @@
 ﻿using RATools.Parser.Internal;
-using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -20,12 +19,18 @@ namespace RATools.Parser.Functions
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var context = scope.GetContext<AchievementScriptContext>();
-            Debug.Assert(context != null);
-
-            scope = new InterpreterScope(scope);
-            scope.Context = new RichPresenceDisplayContext
+            if (context == null)
             {
-                RichPresence = context.RichPresence,
+                result = new ParseErrorExpression(Name.Name + " has no meaning outside of an achievement script");
+                return false;
+            }
+
+            scope = new InterpreterScope(scope)
+            {
+                Context = new RichPresenceDisplayContext
+                {
+                    RichPresence = context.RichPresence,
+                }
             };
 
             if (!base.Evaluate(scope, out result))
@@ -58,28 +63,6 @@ namespace RATools.Parser.Functions
             public FunctionDefinition(string name)
                 : base(name)
             {
-            }
-
-            protected bool IsInRichPresenceDisplayClause(InterpreterScope scope, out ExpressionBase result)
-            {
-                var richPresence = scope.GetContext<RichPresenceDisplayContext>(); // explicitly in rich_presence_display clause
-                if (richPresence == null)
-                {
-                    var assignment = scope.GetInterpreterContext<AssignmentExpression>(); // in generic assignment clause - may be used byte rich_presence_display - will determine later
-                    if (assignment == null)
-                    {
-                        result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
-                        return false;
-                    }
-                }
-
-                result = null;
-                return true;
-            }
-
-            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-            {
-                return IsInRichPresenceDisplayClause(scope, out result);
             }
 
             public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

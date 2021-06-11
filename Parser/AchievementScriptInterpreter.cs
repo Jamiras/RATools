@@ -276,7 +276,10 @@ namespace RATools.Parser
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
         {
             if (expressionGroups.Scope == null)
-                expressionGroups.Scope = new InterpreterScope(GetGlobalScope());
+            {
+                var scriptScope = new InterpreterScope(GetGlobalScope()) { Context = this };
+                expressionGroups.Scope = new InterpreterScope(scriptScope);
+            }
 
             var scriptContext = new AchievementScriptContext();
 
@@ -580,7 +583,7 @@ namespace RATools.Parser
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
         {
             ExpressionBase result;
-            bool success = (scope.GetInterpreterContext<AssignmentExpression>() != null) ? expression.ReplaceVariables(scope, out result) : expression.Invoke(scope, out result);
+            bool success = expression.Invoke(scope, out result);
             if (!success)
             {
                 if (scope.GetInterpreterContext<FunctionCallExpression>() != null)

@@ -91,16 +91,20 @@ namespace RATools.Test.Parser.Functions
             Evaluate("array_push(dict, 1)", scope, "array did not evaluate to an array");
         }
 
+        private void AddHappyFunction(InterpreterScope scope)
+        {
+            scope.AddFunction(UserFunctionDefinitionExpression.ParseForTest(
+                "function happy(num1) => num1"
+            ));
+        }
+
         [Test]
         public void TestPushFunctionCall()
         {
             var scope = new InterpreterScope();
             var array = new ArrayExpression();
             scope.DefineVariable(new VariableDefinitionExpression("arr"), array);
-            var happyFunc = new FunctionDefinitionExpression("happy");
-            happyFunc.Parameters.Add(new VariableDefinitionExpression("num1"));
-            happyFunc.Expressions.Add(new ReturnExpression(new VariableExpression("num1")));
-            scope.AddFunction(happyFunc);
+            AddHappyFunction(scope);
 
             Evaluate("array_push(arr, happy(1))", scope);
 
@@ -116,10 +120,7 @@ namespace RATools.Test.Parser.Functions
             var scope = new InterpreterScope();
             var array = new ArrayExpression();
             scope.DefineVariable(new VariableDefinitionExpression("arr"), array);
-            var happyFunc = new FunctionDefinitionExpression("happy");
-            happyFunc.Parameters.Add(new VariableDefinitionExpression("num1"));
-            happyFunc.Expressions.Add(new ReturnExpression(new VariableExpression("num1")));
-            scope.AddFunction(happyFunc);
+            AddHappyFunction(scope);
 
             Evaluate("array_push(arr, happy(1) == 2)", scope);
 
@@ -136,10 +137,7 @@ namespace RATools.Test.Parser.Functions
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             var array = new ArrayExpression();
             scope.DefineVariable(new VariableDefinitionExpression("arr"), array);
-            var happyFunc = new FunctionDefinitionExpression("happy");
-            happyFunc.Parameters.Add(new VariableDefinitionExpression("num1"));
-            happyFunc.Expressions.Add(new ReturnExpression(new VariableExpression("num1")));
-            scope.AddFunction(happyFunc);
+            AddHappyFunction(scope);
 
             Evaluate("array_push(arr, byte(1) == 2)", scope);
 

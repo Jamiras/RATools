@@ -131,10 +131,9 @@ namespace RATools.Test.Parser.Functions
             var scope = new InterpreterScope();
             var array = new ArrayExpression();
             scope.DefineVariable(new VariableDefinitionExpression("arr"), array);
-            var happyFunc = new FunctionDefinitionExpression("happy");
-            happyFunc.Parameters.Add(new VariableDefinitionExpression("str1"));
-            happyFunc.Expressions.Add(new ReturnExpression(new MathematicExpression(new VariableExpression("str1"), MathematicOperation.Add, new StringConstantExpression("rama"))));
-            scope.AddFunction(happyFunc);
+            scope.AddFunction(UserFunctionDefinitionExpression.ParseForTest(
+                "function happy(val) => val + \"rama\""
+            ));
 
             Assert.That(Evaluate("length(happy(\"banana\"))", scope), Is.EqualTo(10));
         }

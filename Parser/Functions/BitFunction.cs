@@ -14,24 +14,6 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("address"));
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!IsInTriggerClause(scope, out result))
-                return false;
-
-            var index = GetIntegerParameter(scope, "index", out result);
-            if (index == null)
-                return false;
-
-            var address = GetIntegerParameter(scope, "address", out result);
-            if (address == null)
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { index, address });
-            CopyLocation(result);
-            return true;
-        }
-
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var address = ((IntegerConstantExpression)functionCall.Parameters.ElementAt(1)).Value;
