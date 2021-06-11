@@ -34,13 +34,26 @@ namespace RATools.Test.Parser.Internal
             // NOTE: does not output Expressions block
         }
 
-        private FunctionDefinitionExpression Parse(string input)
+        private FunctionDefinitionExpression Parse(string input, string expectedError = null)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             tokenizer.Match("function");
             var expr = FunctionDefinitionExpression.Parse(tokenizer);
-            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
-            return (FunctionDefinitionExpression)expr;
+
+            if (expectedError != null)
+            {
+                Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
+
+                var error = (ParseErrorExpression)expr;
+                var formattedErrorMessage = string.Format("{0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
+                Assert.That(formattedErrorMessage, Is.EqualTo(expectedError));
+                return null;
+            }
+            else
+            {
+                Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
+                return (FunctionDefinitionExpression)expr;
+            }
         }
 
         [Test]
@@ -68,6 +81,80 @@ namespace RATools.Test.Parser.Internal
             var builder = new StringBuilder();
             expr.Expressions.First().AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+        }
+
+        [Test]
+        public void TestParseDefaultParameters()
+        {
+            var expr = Parse("function func(i, j = 2) { k = i + j }");
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expr.DefaultParameters["j"]).Value, Is.EqualTo(2));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            var builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("k = i + j"));
+        }
+
+        [Test]
+        public void TestParseNonDefaultAfterDefaultParameters()
+        {
+            Parse("function func(i, j = 2, k) { l = i + j + k }",
+                "1:26 Non-default parameter k appears after default parameters");
+        }
+
+        [Test]
+        public void TestParseDefaultParameterComplex()
+        {
+            var expr = Parse("function func(i, j = 4 * 3 + 2) { k = i + j }");
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)expr.DefaultParameters["j"]).Value, Is.EqualTo(14));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            var builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("k = i + j"));
+        }
+
+        [Test]
+        public void TestParseDefaultParameterMemoryReferece()
+        {
+            var expr = Parse("function func(i, j = byte(0x1234)) { k = i + j }");
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<FunctionCallExpression>());
+
+            var builder = new StringBuilder();
+            expr.DefaultParameters["j"].AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("byte(4660)"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("k = i + j"));
+        }
+
+        [Test]
+        public void TestParseDefaultParameterNonConstant()
+        {
+            Parse("function func(i, j = i + 2) { k = i + j }",
+                "1:27 Default value for j is not constant");
         }
 
         [Test]

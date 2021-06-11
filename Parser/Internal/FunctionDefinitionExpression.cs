@@ -94,17 +94,11 @@ namespace RATools.Parser.Internal
             var functionName = tokenizer.ReadIdentifier();
             function.Name = new VariableDefinitionExpression(functionName.ToString(), line, column);
             if (functionName.IsEmpty)
-            {
-                ExpressionBase.ParseError(tokenizer, "Invalid function name");
-                return function;
-            }
+                return ExpressionBase.ParseError(tokenizer, "Invalid function name");
 
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != '(')
-            {
-                ExpressionBase.ParseError(tokenizer, "Expected '(' after function name", function.Name);
-                return function;
-            }
+                return ExpressionBase.ParseError(tokenizer, "Expected '(' after function name", function.Name);
             tokenizer.Advance();
 
             ExpressionBase.SkipWhitespace(tokenizer);
@@ -117,22 +111,41 @@ namespace RATools.Parser.Internal
 
                     var parameter = tokenizer.ReadIdentifier();
                     if (parameter.IsEmpty)
-                    {
-                        ExpressionBase.ParseError(tokenizer, "Invalid parameter name", line, column);
-                        return function;
-                    }
+                        return ExpressionBase.ParseError(tokenizer, "Invalid parameter name", line, column);
 
-                    function.Parameters.Add(new VariableDefinitionExpression(parameter.ToString(), line, column));
+                    var variableDefinition = new VariableDefinitionExpression(parameter.ToString(), line, column);
+                    function.Parameters.Add(variableDefinition);
 
                     ExpressionBase.SkipWhitespace(tokenizer);
+                    if (tokenizer.NextChar == '=')
+                    {
+                        tokenizer.Advance();
+                        ExpressionBase.SkipWhitespace(tokenizer);
+
+                        var value = ExpressionBase.Parse(tokenizer);
+                        if (value.Type == ExpressionType.ParseError)
+                            return ExpressionBase.ParseError(tokenizer, "Invalid default value for " + parameter.ToString(), value);
+
+                        var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+                        scope.Context = new TriggerBuilderContext(); // prevent errors passing memory references as default parameters
+
+                        ExpressionBase evaluated;
+                        if (!value.ReplaceVariables(scope, out evaluated))
+                            return ExpressionBase.ParseError(tokenizer, "Default value for " + parameter.ToString() + " is not constant", evaluated);
+
+                        function.DefaultParameters[parameter.ToString()] = evaluated;
+                    }
+                    else if (function.DefaultParameters.Count > 0)
+                    {
+                        return ExpressionBase.ParseError(tokenizer,
+                            string.Format("Non-default parameter {0} appears after default parameters", parameter.ToString()), variableDefinition);
+                    }
+
                     if (tokenizer.NextChar == ')')
                         break;
 
                     if (tokenizer.NextChar != ',')
-                    {
-                        ExpressionBase.ParseError(tokenizer, "Expected ',' or ')' after parameter name, found: " + tokenizer.NextChar);
-                        return function;
-                    }
+                        return ExpressionBase.ParseError(tokenizer, "Expected ',' or ')' after parameter, found: " + tokenizer.NextChar);
 
                     tokenizer.Advance();
                     ExpressionBase.SkipWhitespace(tokenizer);
@@ -162,10 +175,7 @@ namespace RATools.Parser.Internal
             }
 
             if (tokenizer.NextChar != '{')
-            {
-                ExpressionBase.ParseError(tokenizer, "Expected '{' after function declaration", function.Name);
-                return function;
-            }
+                return ExpressionBase.ParseError(tokenizer, "Expected '{' after function declaration", function.Name);
 
             line = tokenizer.Line;
             column = tokenizer.Column;
