@@ -379,7 +379,23 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as DictionaryExpression;
-            return that != null && _entries == that._entries;
+            if (that == null || _entries.Count != that._entries.Count)
+                return false;
+
+            if (ReferenceEquals(_entries, that._entries))
+                return true;
+
+            var unmatched = new List<DictionaryEntry>(that._entries);
+            foreach (var kvp in _entries)
+            {
+                int i = unmatched.FindIndex(e => e.Key == kvp.Key);
+                if (i == -1|| unmatched[i].Value != kvp.Value)
+                    return false;
+
+                unmatched.RemoveAt(i);
+            }
+
+            return true;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

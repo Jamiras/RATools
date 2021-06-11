@@ -31,6 +31,8 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ICollection<ExpressionBase> Parameters { get; private set; }
 
+        private bool _fullyExpanded = false;
+
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
@@ -85,6 +87,14 @@ namespace RATools.Parser.Internal
         /// </returns>
         public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
+            bool inAssignment = (scope.GetInterpreterContext<AssignmentExpression>() != null);
+            if (inAssignment && _fullyExpanded)
+            {
+                // this function call is already fully expanded, allow it to be assigned without re-evaluating
+                scope.ReturnValue = result = this;
+                return true;
+            }
+
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
@@ -103,10 +113,23 @@ namespace RATools.Parser.Internal
             }
 
             functionScope.Context = this;
-            if (functionScope.GetInterpreterContext<AssignmentExpression>() != null)
+            if (inAssignment)
             {
                 // in assignment, just replace variables
                 functionDefinition.ReplaceVariables(functionScope, out result);
+
+                if (result.Type == ExpressionType.FunctionCall)
+                {
+                    // if the result is a function call, check for any variable references. it can't be marked
+                    // as fully expanded if any variable references are present.
+                    var functionCall = (FunctionCallExpression)result;
+                    if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
+                        functionCall._fullyExpanded = true;
+
+                    // if there was no change, also mark the source as fully expanded.
+                    if (result == this)
+                        _fullyExpanded = true;
+                }
             }
             else
             {
