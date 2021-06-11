@@ -94,6 +94,12 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
+            if (result == null)
+            {
+                result = new ParseErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
+                return false;
+            }
+
             CopyLocation(result);
             return true;
         }

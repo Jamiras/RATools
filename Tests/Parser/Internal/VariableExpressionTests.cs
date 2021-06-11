@@ -43,9 +43,9 @@ namespace RATools.Test.Parser.Internal
             scope.AddFunction(new FunctionDefinitionExpression("func"));
 
             ExpressionBase result;
-            Assert.That(variable.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Function used like a variable: func"));
+            Assert.That(variable.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<FunctionReferenceExpression>());
+            Assert.That(((FunctionReferenceExpression)result).Name, Is.EqualTo("func"));
         }
 
         [Test]

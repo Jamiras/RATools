@@ -72,10 +72,14 @@ namespace RATools.Parser.Internal
             {
                 var func = scope.GetFunction(Name);
                 if (func != null)
-                    result = new UnknownVariableParseErrorExpression("Function used like a variable: " + Name, this);
-                else
-                    result = new UnknownVariableParseErrorExpression("Unknown variable: " + Name, this);
+                {
+                    // special wrapper for returning a function as a variable
+                    result = new FunctionReferenceExpression(Name);
+                    result.CopyLocation(this);
+                    return true;
+                }
 
+                result = new UnknownVariableParseErrorExpression("Unknown variable: " + Name, this);
                 return false;
             }
 

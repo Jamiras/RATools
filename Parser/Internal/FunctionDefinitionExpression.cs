@@ -429,4 +429,16 @@ namespace RATools.Parser.Internal
                 modifies.Remove(parameter.Name);
         }
     }
+
+    internal class FunctionReferenceExpression : VariableExpressionBase
+    {
+        public FunctionReferenceExpression(string name)
+            : base(name)
+        {
+        }
+        public override string ToString()
+        {
+            return "FunctionReference: " + Name;
+        }
+    }
 }

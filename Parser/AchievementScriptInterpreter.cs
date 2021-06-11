@@ -411,17 +411,7 @@ namespace RATools.Parser
             switch (expression.Type)
             {
                 case ExpressionType.Assignment:
-                    var assignment = (AssignmentExpression)expression;
-                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
-
-                    ExpressionBase result;
-                    if (!assignment.Value.ReplaceVariables(assignmentScope, out result))
-                    {
-                        Error = result as ParseErrorExpression;
-                        return false;
-                    }
-
-                    Error = scope.AssignVariable(assignment.Variable, result);
+                    Error = ((AssignmentExpression)expression).Evaluate(scope);
                     return (Error == null);
 
                 case ExpressionType.FunctionCall:

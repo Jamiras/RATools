@@ -89,6 +89,10 @@ namespace RATools.Parser.Internal
                 }
             }
 
+            var functionReference = GetVariable(functionName) as FunctionReferenceExpression;
+            if (functionReference != null)
+                return GetFunction(functionReference.Name);
+
             return null;
         }
 
