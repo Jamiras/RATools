@@ -2,11 +2,9 @@
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Test.Parser.Functions
 {
@@ -150,6 +148,46 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[3].Right.ToString(), Is.EqualTo("55"));
             Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.PauseIf));
             Assert.That(requirements[3].HitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestTally()
+        {
+            // ResetNextIf has to proceed each clause of the tally
+            var requirements = Evaluate("disable_when(" +
+                "tally(3, once(byte(0x1234) == 56), byte(0x1235) == 55, repeated(2, byte(0x1236) == 54))," +
+                "until=byte(0x2345) == 1)");
+            Assert.That(requirements.Count, Is.EqualTo(6));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x001236)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("54"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(2));
+            Assert.That(requirements[4].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[4].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[4].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[4].Type, Is.EqualTo(RequirementType.ResetNextIf));
+            Assert.That(requirements[4].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[5].Left.ToString(), Is.EqualTo("byte(0x001235)"));
+            Assert.That(requirements[5].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[5].Right.ToString(), Is.EqualTo("55"));
+            Assert.That(requirements[5].Type, Is.EqualTo(RequirementType.PauseIf));
+            Assert.That(requirements[5].HitCount, Is.EqualTo(3));
         }
     }
 }

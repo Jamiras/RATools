@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -34,6 +35,7 @@ namespace RATools.Parser.Functions
         {
             var until = functionCall.Parameters.ElementAt(1);
 
+            // build the reset next clause
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, until, scope, out result))
@@ -43,6 +45,7 @@ namespace RATools.Parser.Functions
             if (error != null)
                 return new ParseErrorExpression(error.Message, until);
 
+            var resetNextClause = new List<Requirement>();
             if (builder.CoreRequirements.Count > 0 && builder.CoreRequirements.First().Evaluate() != false)
             {
                 foreach (var requirement in builder.CoreRequirements)
@@ -50,16 +53,42 @@ namespace RATools.Parser.Functions
                     if (requirement.Type == RequirementType.None)
                         requirement.Type = RequirementType.AndNext;
 
-                    context.Trigger.Add(requirement);
+                    resetNextClause.Add(requirement);
                 }
 
-                context.LastRequirement.Type = RequirementType.ResetNextIf;
+                resetNextClause.Last().Type = RequirementType.ResetNextIf;
             }
 
-            error = base.BuildTrigger(context, scope, functionCall);
+            // build the when clause
+            var whenContext = new TriggerBuilderContext { Trigger = new List<Requirement>() };
+            error = base.BuildTrigger(whenContext, scope, functionCall);
             if (error != null)
                 return error;
 
+            // 'reset next' clause first
+            foreach (var resetRequirement in resetNextClause)
+                context.Trigger.Add(resetRequirement);
+
+            // then 'when' clause. make sure to insert the 'reset next' clause after each addhits/subhits
+            // as they break up the 'reset next' scope.
+            foreach (var whenRequirement in whenContext.Trigger)
+            {
+                context.Trigger.Add(whenRequirement);
+
+                switch (whenRequirement.Type)
+                {
+                    case RequirementType.AddHits:
+                    case RequirementType.SubHits:
+                        foreach (var resetRequirement in resetNextClause)
+                            context.Trigger.Add(resetRequirement);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            // disable_when is a pause lock - if a hitcount was not specified assume the first hit is enough
             if (context.LastRequirement.HitCount == 0)
                 context.LastRequirement.HitCount = 1;
 

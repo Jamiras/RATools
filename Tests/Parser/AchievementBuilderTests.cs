@@ -410,6 +410,8 @@ namespace RATools.Test.Parser
                   "repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2)) && repeated(3, byte(0x001234) == 3 && never(byte(0x002345) == 3))")] // dissimilar ResetNextIfs cannot be turned into a ResetIf
         [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2)",
                   "unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+        [TestCase("disable_when(tally(2, byte(0x1234) == 1, byte(0x1234) == 2), until=byte(0x2345) == 2)",
+                  "unless(tally(2, byte(0x001234) == 1, byte(0x001234) == 2)) && (never(byte(0x002345) == 2))")] // tally will generate similar ResetNextIfs which can be turned into a ResetIf, but has to be moved into an alt group
         // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
