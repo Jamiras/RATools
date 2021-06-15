@@ -382,7 +382,7 @@ namespace RATools.ViewModels
             {
                 if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
                     achievement.BadgeName = Local.BadgeName;
-                else if (!String.IsNullOrEmpty(Core.BadgeName) || Core.BadgeName != "0")
+                else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
                     achievement.BadgeName = Core.BadgeName;
             }
 
