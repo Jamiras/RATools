@@ -38,6 +38,8 @@ namespace RATools.Parser
         public string DisplayString { get; set; }
         public int Line { get; set; }
 
+        public bool DisableLookupCollapsing { get; set; }
+
         public void AddConditionalDisplayString(string condition, string displayString)
         {
             _conditionalDisplayStrings.Add(String.Format("?{0}?{1}", condition, displayString));
@@ -90,15 +92,7 @@ namespace RATools.Parser
                 builder.Append("Lookup:");
                 builder.AppendLine(lookup.Key);
 
-                var list = new List<int>(lookup.Value.Entries.Keys);
-                list.Sort();
-
-                foreach (var key in list)
-                {
-                    builder.Append(key);
-                    builder.Append('=');
-                    builder.AppendLine(lookup.Value.Entries[key]);
-                }
+                AppendRichPresenceLookupEntries(builder, lookup.Value.Entries);
 
                 if (lookup.Value.Fallback != null && !String.IsNullOrEmpty(lookup.Value.Fallback.Value))
                 {
@@ -126,6 +120,111 @@ namespace RATools.Parser
             builder.AppendLine(DisplayString);
 
             return builder.ToString();
+        }
+
+        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries)
+        {
+            // determine how many entries have the same values
+            var sharedValues = new HashSet<string>();
+            var sharedValueCount = 0;
+
+            if (!DisableLookupCollapsing)
+            {
+                var uniqueValues = new HashSet<string>();
+                foreach (var value in entries.Values)
+                {
+                    if (!uniqueValues.Add(value))
+                    {
+                        sharedValues.Add(value);
+                        sharedValueCount++;
+                    }
+                }
+            }
+
+            // if there are at least 10 entries and at least 20% of the lookup is repeated, or if there
+            // are less than 10 entries and at least half of the lookup is repeated, then generate ranges
+            bool useRanges;
+            if (entries.Count >= 10)
+                useRanges = (sharedValueCount > entries.Count / 5);
+            else
+                useRanges = (sharedValueCount > entries.Count / 2);
+
+            // get an ordered set of keys for the lookup
+            var list = new List<int>(entries.Keys);
+            list.Sort();
+
+            if (!useRanges)
+            {
+                // just dump each entry as its own line
+                foreach (var key in list)
+                {
+                    builder.Append(key);
+                    builder.Append('=');
+                    builder.AppendLine(entries[key]);
+                }
+            }
+            else
+            {
+                // remove the lowest entry from the list and generate a row for it
+                list.Reverse();
+                while (list.Count > 0)
+                {
+                    var key = list[list.Count - 1];
+                    list.RemoveAt(list.Count - 1);
+
+                    var value = entries[key];
+                    if (!sharedValues.Contains(value))
+                    {
+                        // singular entry, just dump it
+                        builder.Append(key);
+                    }
+                    else
+                    {
+                        // shared entry, get the other keys (and remove them from the list
+                        // so they don't get separate entries)
+                        var keys = new List<int>();
+
+                        foreach (var kvp in entries)
+                        {
+                            if (kvp.Value == value)
+                            {
+                                list.Remove(kvp.Key);
+                                keys.Add(kvp.Key);
+                            }
+                        }
+
+                        // build the list of ranges for the entry
+                        keys.Sort();
+
+                        int i = 0;
+                        while (i < keys.Count)
+                        {
+                            var first = i;
+                            var next = keys[first] + 1;
+                            while (i + 1 < keys.Count && keys[i + 1] == next)
+                            {
+                                next++;
+                                i++;
+                            }
+
+                            if (first > 0)
+                                builder.Append(',');
+
+                            builder.Append(keys[first]);
+                            if (i != first)
+                            {
+                                builder.Append('-');
+                                builder.Append(keys[i]);
+                            }
+
+                            i++;
+                        }
+                    }
+
+                    builder.Append('=');
+                    builder.AppendLine(value);
+                }
+            }
         }
 
         public bool IsEmpty
