@@ -37,6 +37,7 @@ namespace RATools.Test.Parser.Functions
 
             ExpressionBase evaluated;
             Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
+            funcCall = evaluated as FunctionCallExpression;
 
             if (expectedError == null)
             {
@@ -109,6 +110,35 @@ namespace RATools.Test.Parser.Functions
         public void TestNonConditionFunction()
         {
             Evaluate("once(byte(0x1234))", "comparison did not evaluate to a valid comparison");
+        }
+
+        [Test]
+        public void TestFunctionReference()
+        {
+            string input = "once(f)";
+
+            var requirements = new List<Requirement>();
+            var funcDef = new OnceFunction();
+
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
+
+            ExpressionBase error;
+            scope = funcCall.GetParameters(funcDef, scope, out error);
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
+
+            ExpressionBase evaluated;
+            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
+            funcCall = evaluated as FunctionCallExpression;
+
+            var parseError = funcDef.BuildTrigger(context, scope, funcCall);
+            Assert.That(parseError, Is.Not.Null);
+            Assert.That(parseError.InnermostError.Message, Is.EqualTo("Function used like a variable"));
         }
 
         [Test]
