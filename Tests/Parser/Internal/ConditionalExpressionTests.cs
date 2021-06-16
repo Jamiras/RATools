@@ -126,6 +126,8 @@ namespace RATools.Test.Parser.Internal
         [TestCase("A || (B && C) || D", "A || ((B && C) || D)")] // ungrouped tree is right-weighted
         [TestCase("A && B && C || D && E && F", "(A && (B && C)) || (D && (E && F))")] // AND has higher priority than OR
         [TestCase("(A && B && C) || (D && E && F)", "(A && (B && C)) || (D && (E && F))")]
+        [TestCase("A && B || C && D || E && F", "(A && B) || ((C && D) || (E && F))")] // AND has higher priority than OR
+        [TestCase("(A && B || C) && (D || E && F)", "((A && B) || C) && (D || (E && F))")] // AND has higher priority than OR
         public void TestRebalance(string input, string expected)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));

@@ -44,6 +44,15 @@ namespace RATools.Parser.Internal
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
+        /// <remarks>
+        /// Called after parsing an expression to ensure the logical tree correctly represents the order
+        /// of operations for evaluating the expression. NOTE: may modify the original Expression object,
+        /// so the original Expression object should not be used after calling. Should normally be called
+        /// as a self-referential replacement:
+        ///
+        ///     expr = expr.Rebalance()
+        ///
+        /// </remarks>
         internal virtual ExpressionBase Rebalance()
         {
             return this;
