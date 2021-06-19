@@ -292,32 +292,16 @@ namespace RATools.Parser
             {
             }
 
-            protected bool IsInTriggerClause(InterpreterScope scope, out ExpressionBase result)
-            {
-                var triggerContext = scope.GetContext<TriggerBuilderContext>();
-                if (triggerContext == null) // explicitly in trigger clause
-                {
-                    var assignment = scope.GetInterpreterContext<AssignmentExpression>();
-                    if (assignment == null) // in generic assignment clause - may be used in a trigger - will determine later
-                    {
-                        result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                        return false;
-                    }
-                }
-
-                result = null;
-                return true;
-            }
-
-            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-            {
-                return IsInTriggerClause(scope, out result);
-            }
-
             public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
             {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
-                return false;
+                var context = scope.GetInterpreterContext<TriggerBuilderContext>();
+                if (context == null)
+                {
+                    result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
+                    return false;
+                }
+
+                return ReplaceVariables(scope, out result);
             }
 
             public abstract ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);

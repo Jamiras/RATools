@@ -359,8 +359,11 @@ namespace RATools.Parser
                     return ExecuteAchievementMathematic((MathematicExpression)expression, scope);
 
                 case ExpressionType.Variable:
-                    if (!((VariableExpression)expression).ReplaceVariables(scope, out operand))
+                    if (!expression.ReplaceVariables(scope, out operand))
                         return new ParseErrorExpression(operand, expression);
+
+                    if (expression is FunctionReferenceExpression)
+                        return new ParseErrorExpression("Function used like a variable", expression);
 
                     return ExecuteAchievementExpression(operand, scope);
             }

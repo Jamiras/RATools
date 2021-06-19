@@ -31,6 +31,8 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ICollection<ExpressionBase> Parameters { get; private set; }
 
+        private bool _fullyExpanded = false;
+
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
@@ -62,35 +64,12 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var functionDefinition = scope.GetFunction(FunctionName.Name);
-            if (functionDefinition == null)
-            {
-                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
-                return false;
-            }
-
-            var functionScope = GetParameters(functionDefinition, scope, out result);
-            if (functionScope == null)
+            if (!Evaluate(scope, out result))
                 return false;
 
-            var error = result as ParseErrorExpression;
-            if (error != null)
+            if (result == null)
             {
-                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
-                return false;
-            }
-
-            if (functionScope.Depth >= 100)
-            {
-                result = new ParseErrorExpression("Maximum recursion depth exceeded", this);
-                return false;
-            }
-
-            functionScope.Context = this;
-            if (!functionDefinition.ReplaceVariables(functionScope, out result))
-            {
-                error = result as ParseErrorExpression;
-                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
+                result = new ParseErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
                 return false;
             }
 
@@ -108,6 +87,14 @@ namespace RATools.Parser.Internal
         /// </returns>
         public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
+            bool inAssignment = (scope.GetInterpreterContext<AssignmentExpression>() != null);
+            if (inAssignment && _fullyExpanded)
+            {
+                // this function call is already fully expanded, allow it to be assigned without re-evaluating
+                scope.ReturnValue = result = this;
+                return true;
+            }
+
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
@@ -116,7 +103,7 @@ namespace RATools.Parser.Internal
             }
 
             var functionScope = GetParameters(functionDefinition, scope, out result);
-            if (functionScope == null)
+            if (functionScope == null || result is ParseErrorExpression)
                 return false;
 
             if (functionScope.Depth >= 100)
@@ -126,9 +113,33 @@ namespace RATools.Parser.Internal
             }
 
             functionScope.Context = this;
-            if (!functionDefinition.Evaluate(functionScope, out result))
+            if (inAssignment)
             {
-                var error = result as ParseErrorExpression;
+                // in assignment, just replace variables
+                functionDefinition.ReplaceVariables(functionScope, out result);
+
+                if (result.Type == ExpressionType.FunctionCall)
+                {
+                    // if the result is a function call, check for any variable references. it can't be marked
+                    // as fully expanded if any variable references are present.
+                    var functionCall = (FunctionCallExpression)result;
+                    if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
+                        functionCall._fullyExpanded = true;
+
+                    // if there was no change, also mark the source as fully expanded.
+                    if (result == this)
+                        _fullyExpanded = true;
+                }
+            }
+            else
+            {
+                // not in assignment, evaluate the function
+                functionDefinition.Evaluate(functionScope, out result);
+            }
+
+            var error = result as ParseErrorExpression;
+            if (error != null)
+            {
                 if (error.Location.Start.Line == 0)
                     this.CopyLocation(error);
                 result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
@@ -178,7 +189,11 @@ namespace RATools.Parser.Internal
                     // assume it has already been evaluated and pass it by reference. this is magnitudes
                     // more performant, and allows the function to modify the data in the container.
                     if (value.Type == ExpressionType.Dictionary || value.Type == ExpressionType.Array)
+                    {
+                        value = scope.GetVariableReference(variable.Name);
+                        assignment.Value.CopyLocation(value);
                         return value;
+                    }
                 }
             }
 
@@ -405,6 +420,7 @@ namespace RATools.Parser.Internal
         {
         }
     }
+
     internal class FunctionNameExpression : VariableExpressionBase, INestedExpressions
     {
         public FunctionNameExpression(string name)

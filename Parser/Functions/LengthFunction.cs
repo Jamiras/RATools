@@ -10,6 +10,11 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("object"));
         }
 
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var obj = GetParameter(scope, "object", out result);

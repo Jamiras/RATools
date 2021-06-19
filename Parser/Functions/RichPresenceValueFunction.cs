@@ -18,9 +18,6 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (!IsInRichPresenceDisplayClause(scope, out result))
-                return false;
-
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
                 return false;

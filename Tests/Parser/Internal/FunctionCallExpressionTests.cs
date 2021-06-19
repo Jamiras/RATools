@@ -75,11 +75,9 @@ namespace RATools.Test.Parser.Internal
 
         private FunctionDefinitionExpression Parse(string input)
         {
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("function");
-            var expr = FunctionDefinitionExpression.Parse(tokenizer);
-            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
-            return (FunctionDefinitionExpression)expr;
+            var def = UserFunctionDefinitionExpression.ParseForTest(input);
+            Assert.That(def, Is.Not.Null);
+            return (FunctionDefinitionExpression)def;
         }
 
         [Test]
@@ -402,7 +400,7 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        public void TestReplaceVariablesMethod()
+        public void TestReplaceVariablesNoReturnValue()
         {
             var functionDefinition = Parse("function func(i) { j = i }");
             var scope = new InterpreterScope();
@@ -495,7 +493,7 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        public void TestEvaluateMethod()
+        public void TestEvaluateNoReturnValue()
         {
             var functionDefinition = Parse("function func(i) { j = i }");
             var scope = new InterpreterScope();

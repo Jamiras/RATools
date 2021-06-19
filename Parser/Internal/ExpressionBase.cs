@@ -26,10 +26,10 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Copies the location of this expression into another expression.
         /// </summary>
-        internal void CopyLocation(ExpressionBase source)
+        internal void CopyLocation(ExpressionBase target)
         {
             if (!Location.IsEmpty)
-                source.Location = Location;
+                target.Location = Location;
         }
 
         /// <summary>
@@ -437,7 +437,7 @@ namespace RATools.Parser.Internal
                     }
 
                     if (identifier == "function")
-                        return FunctionDefinitionExpression.Parse(tokenizer, line, column);
+                        return UserFunctionDefinitionExpression.Parse(tokenizer, line, column);
                     if (identifier == "for")
                         return ForExpression.Parse(tokenizer, line, column);
                     if (identifier == "if")
@@ -859,7 +859,7 @@ namespace RATools.Parser.Internal
         None = 0,
 
         /// <summary>
-        /// A variable reference.
+        /// A variable definition.
         /// </summary>
         Variable,
 
@@ -942,5 +942,10 @@ namespace RATools.Parser.Internal
         /// A parse error.
         /// </summary>
         ParseError,
+
+        /// <summary>
+        /// A reference to a variable.
+        /// </summary>
+        VariableReference,
     }
 }

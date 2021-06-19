@@ -153,6 +153,10 @@ namespace RATools.Parser.Internal
                 return;
             }
 
+            var variableReference = container as VariableReferenceExpression;
+            if (variableReference != null)
+                container = variableReference.Expression;
+
             var array = container as ArrayExpression;
             if (array != null)
             {

@@ -10,16 +10,6 @@ namespace RATools.Parser.Functions
         {
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!IsInTriggerClause(scope, out result))
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[0]);
-            CopyLocation(result);
-            return true;
-        }
-
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             context.Trigger.Add(CreateAlwaysFalseRequirement());

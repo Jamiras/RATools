@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -89,6 +90,10 @@ namespace RATools.Parser.Internal
                 }
             }
 
+            var functionReference = GetVariable(functionName) as FunctionReferenceExpression;
+            if (functionReference != null)
+                return GetFunction(functionReference.Name);
+
             return null;
         }
 
@@ -141,6 +146,27 @@ namespace RATools.Parser.Internal
             var parentScope = GetParentScope(this);
             if (parentScope != null)
                 return parentScope.GetVariableDefinition(variableName);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets a reference to a variable.
+        /// </summary>
+        /// <param name="variableName">Name of the variable.</param>
+        /// <returns>Reference to the variable, <c>null</c> if not found.</returns>
+        public ExpressionBase GetVariableReference(string variableName)
+        {
+            VariableDefinitionPair variable;
+            if (_variables != null && _variables.TryGetValue(variableName, out variable))
+                return new VariableReferenceExpression(variable.Key, variable.Value);
+
+            if (_variable.Key != null && _variable.Key.Name == variableName)
+                return new VariableReferenceExpression(_variable.Key, _variable.Value);
+
+            var parentScope = GetParentScope(this);
+            if (parentScope != null)
+                return parentScope.GetVariableReference(variableName);
 
             return null;
         }

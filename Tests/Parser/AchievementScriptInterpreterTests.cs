@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Test.Parser
@@ -29,6 +30,26 @@ namespace RATools.Test.Parser
             }
 
             return parser;
+        }
+
+        private static InterpreterScope Evaluate(string script, string expectedError = null)
+        {
+            var groups = new ExpressionGroupCollection();
+            groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            groups.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(script)));
+
+            var interpreter = new AchievementScriptInterpreter();
+
+            if (expectedError != null)
+            {
+                Assert.That(interpreter.Run(groups, null), Is.False);
+                Assert.That(interpreter.ErrorMessage, Is.EqualTo(expectedError));
+                return null;
+            }
+
+            Assert.That(interpreter.Run(groups, null), Is.True);
+            return groups.Scope;
         }
 
         private static string GetInnerErrorMessage(AchievementScriptInterpreter parser)
@@ -1026,6 +1047,54 @@ namespace RATools.Test.Parser
                 Is.EqualTo("once(byte(0x002222) == 0) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
         }
 
+        [Test]
+        public void TestAssignVariableToFunctionWithNoReturn()
+        {
+            Evaluate(
+                "function a(i) { b = i }\n" +
+                "c = a(3)",
+
+                "2:5 a did not return a value"
+            );
+        }
+
+        [Test]
+        public void TestAssignFunctionToVariable()
+        {
+            var scope = Evaluate(
+                "function a(i) => i + 1\n" +
+                "b = a\n" +
+                "c = b\n" +
+                "d = c(3)\n");
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<FunctionReferenceExpression>());
+            Assert.That(((FunctionReferenceExpression)b).Name, Is.EqualTo("a"));
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<FunctionReferenceExpression>());
+            Assert.That(((FunctionReferenceExpression)c).Name, Is.EqualTo("a"));
+
+            var d = scope.GetVariable("d");
+            Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
+            var integerConstant = (IntegerConstantExpression)d;
+            Assert.That(integerConstant.Value, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestPassFunctionToFunction()
+        {
+            var scope = Evaluate(
+                "function a(i) => i + 1\n" +
+                "function b(f,i) => f(i)\n" +
+                "function c(i) => b(a,i)\n" +
+                "d = c(3)\n");
+
+            var d = scope.GetVariable("d");
+            Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
+            var integerConstant = (IntegerConstantExpression)d;
+            Assert.That(integerConstant.Value, Is.EqualTo(4));
+        }
 
         [Test]
         public void TestDefaultParameterPassthrough()

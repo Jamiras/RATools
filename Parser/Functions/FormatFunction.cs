@@ -19,6 +19,11 @@ namespace RATools.Parser.Functions
         {
         }
 
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var stringExpression = GetStringParameter(scope, "format_string", out result);

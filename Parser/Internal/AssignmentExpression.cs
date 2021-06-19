@@ -64,6 +64,24 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Updates the provided scope with the new variable value.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values and function parameters.</param>
+        /// <returns>
+        ///   <c>null</c> if successful, or a <see cref="ParseErrorExpression" /> if not.
+        /// </returns>
+        public ParseErrorExpression Evaluate(InterpreterScope scope)
+        {
+            var assignmentScope = new InterpreterScope(scope) { Context = this };
+
+            ExpressionBase result;
+            if (!Value.ReplaceVariables(assignmentScope, out result))
+                return (ParseErrorExpression)result;
+
+            return scope.AssignVariable(Variable, result);
+        }
+
+        /// <summary>
         /// Determines whether the specified <see cref="AssignmentExpression" /> is equal to this instance.
         /// </summary>
         /// <param name="obj">The <see cref="AssignmentExpression" /> to compare with this instance.</param>

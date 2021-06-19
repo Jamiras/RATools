@@ -17,20 +17,6 @@ namespace RATools.Parser.Functions
 
         public FieldSize Size { get; private set; }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!IsInTriggerClause(scope, out result))
-                return false;
-
-            var address = GetParameter(scope, "address", out result);
-            if (address == null)
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { address });
-            CopyLocation(result);
-            return true;
-        }
-
         public static bool ContainsMemoryAccessor(ExpressionBase expression)
         {
             var funcCall = expression as FunctionCallExpression;

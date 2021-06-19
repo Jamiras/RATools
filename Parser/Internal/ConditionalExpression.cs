@@ -75,30 +75,8 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (Operation == ConditionalOperation.Not)
-            {
-                var invertedExpression = Right;
-                if (invertedExpression.Type == ExpressionType.FunctionCall)
-                {
-                    if (!Right.ReplaceVariables(scope, out invertedExpression))
-                    {
-                        result = invertedExpression;
-                        return false;
-                    }
-                }
-
-                invertedExpression = InvertExpression(invertedExpression);
-                if (invertedExpression.Type == ExpressionType.ParseError)
-                {
-                    result = invertedExpression;
-                    return false;
-                }
-
-                return invertedExpression.ReplaceVariables(scope, out result);
-            }
-
-            ExpressionBase left;
-            if (!Left.ReplaceVariables(scope, out left))
+            ExpressionBase left = null;
+            if (Left != null && !Left.ReplaceVariables(scope, out left))
             {
                 result = left;
                 return false;
@@ -109,6 +87,16 @@ namespace RATools.Parser.Internal
             {
                 result = right;
                 return false;
+            }
+
+            if (Operation == ConditionalOperation.Not)
+            {
+                result = InvertExpression(right);
+                if (result.Type == ExpressionType.ParseError)
+                    return false;
+
+                // InvertExpression may distribute Nots to subnodes, recurse
+                return result.ReplaceVariables(scope, out result);
             }
 
             result = new ConditionalExpression(left, Operation, right);

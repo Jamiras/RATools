@@ -13,10 +13,11 @@ namespace RATools.Parser.Functions
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var arrayExpression = GetParameter(scope, "array", out result);
+            var arrayExpression = GetReferenceParameter(scope, "array", out result);
             if (arrayExpression == null)
                 return false;
-            var array = arrayExpression as ArrayExpression;
+
+            var array = arrayExpression.Expression as ArrayExpression;
             if (array == null)
             {
                 result = new ParseErrorExpression("array did not evaluate to an array", arrayExpression);
@@ -26,9 +27,13 @@ namespace RATools.Parser.Functions
             var value = GetParameter(scope, "value", out result);
             if (value == null)
                 return false;
-            // don't call ReplaceVariables, we don't want to evaluate the item being added here
 
-            array.Entries.Add(value);
+            var variableExpression = new VariableExpression("array_push(" + arrayExpression.Variable.Name + ")");
+            var assignScope = new InterpreterScope(scope) { Context = new AssignmentExpression(variableExpression, value) };
+            if (!value.ReplaceVariables(assignScope, out result))
+                return false;
+
+            array.Entries.Add(result);
             result = null;
             return true;
         }

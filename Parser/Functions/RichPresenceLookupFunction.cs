@@ -16,32 +16,6 @@ namespace RATools.Parser.Functions
             DefaultParameters["fallback"] = new StringConstantExpression("");
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!IsInRichPresenceDisplayClause(scope, out result))
-                return false;
-
-            var name = GetStringParameter(scope, "name", out result);
-            if (name == null)
-                return false;
-
-            var expression = GetParameter(scope, "expression", out result);
-            if (expression == null)
-                return false;
-
-            var dictionary = GetDictionaryParameter(scope, "dictionary", out result);
-            if (dictionary == null)
-                return false;
-
-            var fallback = GetStringParameter(scope, "fallback", out result);
-            if (fallback == null)
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, dictionary, fallback });
-            CopyLocation(result);
-            return true;
-        }
-
         public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
             var name = GetStringParameter(scope, "name", out result);

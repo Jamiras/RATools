@@ -20,24 +20,6 @@ namespace RATools.Parser.Functions
         {
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!IsInTriggerClause(scope, out result))
-                return false;
-
-            var count = GetIntegerParameter(scope, "count", out result);
-            if (count == null)
-                return false;
-
-            var comparison = GetParameter(scope, "comparison", out result);
-            if (comparison == null)
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { count, comparison });
-            CopyLocation(result);
-            return true;
-        }
-
         protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
             // not actually modifying requirements, but allows us to do some validation

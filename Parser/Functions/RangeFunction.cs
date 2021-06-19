@@ -16,6 +16,11 @@ namespace RATools.Parser.Functions
             DefaultParameters["step"] = new IntegerConstantExpression(1);
         }
 
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var start = GetIntegerParameter(scope, "start", out result);
