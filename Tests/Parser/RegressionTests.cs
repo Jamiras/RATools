@@ -189,7 +189,16 @@ namespace RATools.Test.Parser
                         using (var fileWriter = new StreamWriter(file))
                         {
                             fileWriter.WriteLine("=== Rich Presence ===");
-                            fileWriter.WriteLine(interpreter.RichPresence);
+
+                            if (Double.Parse(localAchievements.Version) < 0.79)
+                            {
+                                interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
+                                fileWriter.WriteLine(interpreter.RichPresenceBuilder.ToString());
+                            }
+                            else
+                            {
+                                fileWriter.WriteLine(interpreter.RichPresence);
+                            }
                         }
                     }
                 }

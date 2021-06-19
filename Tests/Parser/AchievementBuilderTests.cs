@@ -231,7 +231,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "B:d0xH001234=0_A:0xH001234=0_0xH002345=6")]
         [TestCase("once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_0xO20770f=0.1.")]
         [TestCase("never(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_R:0xO20770f=0")]
-        [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "I:0x 001111_B:d0xH000000_I:0x 001111_0xH000000>1")]
+        [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder
@@ -538,6 +538,11 @@ namespace RATools.Test.Parser
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
         [TestCase("low4(0x001234) == 12 && high4(0x001234) == 8", "byte(0x001234) == 140")]
+        // ==== MergeAddSourceConstants ====
+        [TestCase("word(word(0x001234) + 138) + 1 >= word(0x2345)",             // AddAddress compared to a non-AddAddress will generate an extra condition
+                  "((word(word(0x001234) + 0x00008A)) + 1) >= word(0x002345)")] // to prevent the AddAddress from affecting the non-AddAddress. merge the +1 into that
+        [TestCase("never(once(prev(byte(1)) - 1 == byte(1)) && repeated(10, always_true())",
+                  "never(repeated(10, (once((prev(byte(0x000001)) - 1) == byte(0x000001))) && always_true()))")] // don't merge the -1 in the prev clause with the 1 in the always_true clause
         // ==== Complex ====
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
@@ -638,27 +643,34 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 0x00000A) > prev(byte(WA + 0x00000A))")] // simple compare to prev of same address
-        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 0x00000A) > byte(WA + 0x00000B)")] // simple compare to neighboring address
-        [TestCase("byte(WA + 10) > byte(WB + 10)", "(byte(WB + 0x00000A) - (byte(WA + 0x00000A))) > 256")] // complex compare using differing addresses
-        [TestCase("byte(WA) == byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) == 0")] // complex compare using differing addresses
-        [TestCase("byte(WA) != byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) != 0")] // complex compare using differing addresses
-        [TestCase("byte(WA) > byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) > 256")] // complex compare using differing addresses
-        [TestCase("byte(WA) >= byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000)) - 1) >= 256")] // complex compare using differing addresses
-        [TestCase("byte(WA) < byte(WB)", "((byte(WB + 0x000000)) + 256 - (byte(WA + 0x000000))) > 256")] // complex compare using differing addresses
-        [TestCase("byte(WA) <= byte(WB)", "((byte(WB + 0x000000)) + 256 - (byte(WA + 0x000000))) >= 256")] // complex compare using differing addresses
-        [TestCase("byte(WA + 10) > byte(WB) + 10", "(256 + byte(WA + 0x00000A) - (byte(WB + 0x000000))) > 266")] // complex compare using differing addresses
-        [TestCase("byte(WA) > word(WB)", "(word(WB + 0x000000) - (byte(WA + 0x000000))) > 65536")] // complex compare using differing addresses
-        [TestCase("word(WA) > byte(WB)", "(byte(WB + 0x000000) - (word(WA + 0x000000))) > 65536")] // complex compare using differing addresses
-        [TestCase("word(WA) > word(WB)", "(word(WB + 0x000000) - (word(WA + 0x000000))) > 65536")] // complex compare using differing addresses
-        [TestCase("byte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (byte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
-        [TestCase("tbyte(WA) > word(WB)", "(word(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
-        [TestCase("tbyte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777216")] // complex compare using differing addresses
+        [TestCase("byte(WA) > prev(byte(WA))", "byte(WA + 0x000000) > prev(byte(WA + 0x000000))")] // simple compare to prev of same address
+        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 0x00000A) > prev(byte(WA + 0x00000A))")] // simple compare to prev of same address with offset
+        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 0x00000A) > byte(WA + 0x00000B)")] // same base, different offsets
+        [TestCase("byte(WA + 10) > byte(WB + 10)", "(byte(WB + 0x00000A) - (byte(WA + 0x00000A))) > 255")] // different bases, same offset
+        [TestCase("byte(WA) == byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) == 0")] // becomes B-A==0
+        [TestCase("byte(WA) != byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) != 0")] // becomes B-A!=0
+        [TestCase("byte(WA) > byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) > 255")] // becomes B-A>M
+        [TestCase("byte(WA) >= byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000)) - 1) >= 255")] // becomes B-A-1>=M
+        [TestCase("byte(WA) < byte(WB)", "((byte(WB + 0x000000)) + 255 - (byte(WA + 0x000000))) > 255")] // becomes B-A+M>M
+        [TestCase("byte(WA) <= byte(WB)", "((byte(WB + 0x000000)) + 255 - (byte(WA + 0x000000))) >= 255")] // becomes B-A+M>=M
+        [TestCase("byte(WA + 10) + 20 > byte(WB)", "((byte(word(0x001234) + 0x00000A)) + 275 - (byte(word(0x002345) + 0x000000))) > 255")] // A+N>B becomes A+N+M-B>M
+        [TestCase("byte(WA + 10) > byte(WB) - 20", "((byte(word(0x001234) + 0x00000A)) + 275 - (byte(word(0x002345) + 0x000000))) > 255")] // inverted to A+N>B, becomes A+N+M-B>M
+        [TestCase("byte(WA + 10) - 20 > byte(WB)", "((byte(word(0x002345) + 0x000000)) + 20 - (byte(word(0x001234) + 0x00000A))) > 255")] // inverted to B+N<A, becomes A+N-B>M
+        [TestCase("byte(WA + 10) > byte(WB) + 20", "((byte(word(0x002345) + 0x000000)) + 20 - (byte(word(0x001234) + 0x00000A))) > 255")] // inverted to B+N<A, becomes A+N-B>M
+        [TestCase("word(WA) > word(WB)", "(word(WB + 0x000000) - (word(WA + 0x000000))) > 65535")] // different addresses (16-bit)
+        [TestCase("byte(WA) > word(WB)", "(word(WB + 0x000000) - (byte(WA + 0x000000))) > 65535")] // different sizes and addresses
+        [TestCase("word(WA) > byte(WB)", "(byte(WB + 0x000000) - (word(WA + 0x000000))) > 65535")] // different sizes and addresses
+        [TestCase("tbyte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777215")] // different addresses (24-bit)
+        [TestCase("byte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (byte(WA + 0x000000))) > 16777215")] // different sizes and addresses
+        [TestCase("tbyte(WA) > word(WB)", "(word(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777215")] // different sizes and addresses
+        [TestCase("byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2)",  // simple compare to prev of same address (double indirect)
+            "byte(word(WA + 0x00000A) + 0x000002) > prev(byte(word(WA + 0x00000A) + 0x000002))")]
         public void TestAddAddressAcrossCondition(string input, string expected)
         {
             input = input.Replace("WA", "word(0x1234)");
             input = input.Replace("WB", "word(0x2345)");
             var achievement = CreateAchievement(input);
+            achievement.Optimize();
 
             expected = expected.Replace("WA", "word(0x001234)");
             expected = expected.Replace("WB", "word(0x002345)");

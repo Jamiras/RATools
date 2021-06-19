@@ -31,14 +31,15 @@ namespace RATools.Parser
             _fileSystemService = fileSystemService;
             _achievements = new List<Achievement>();
             _filename = filename;
-            _version = "0.030";
+            Version = "0.030";
 
             Read();
         }
 
         private readonly IFileSystemService _fileSystemService;
         private readonly string _filename;
-        private string _version;
+
+        public string Version { get; private set; }
 
         /// <summary>
         /// Gets the title of the associated game.
@@ -64,7 +65,7 @@ namespace RATools.Parser
 
             using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
             {
-                _version = reader.ReadLine();
+                Version = reader.ReadLine();
                 Title = reader.ReadLine();
 
                 while (!reader.EndOfStream)
@@ -208,12 +209,12 @@ namespace RATools.Parser
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
                 if (Double.Parse(achievementMinimumVersion) > version)
-                    _version = achievementMinimumVersion;
+                    Version = achievementMinimumVersion;
             }
 
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
-                writer.WriteLine(_version);
+                writer.WriteLine(Version);
                 writer.WriteLine(Title);
 
                 foreach (var achievement in _achievements)

@@ -1842,6 +1842,79 @@ namespace RATools.Parser
             }
         }
 
+        private static void MergeAddSourceConstants(IList<RequirementEx> group)
+        {
+            foreach (var requirementEx in group)
+            {
+                uint addSourceConstantTotal = 0;
+                var addSourceConstants = new List<Requirement>();
+                var toRemove = new List<Requirement>();
+                bool isAddAddress = false;
+                foreach (var requirement in requirementEx.Requirements)
+                {
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.AddSource:
+                            if (!isAddAddress && requirement.Left.Type == FieldType.Value)
+                            {
+                                addSourceConstantTotal += requirement.Left.Value;
+                                addSourceConstants.Add(requirement);
+                            }
+                            break;
+
+                        case RequirementType.SubSource:
+                            if (!isAddAddress && requirement.Left.Type == FieldType.Value)
+                            {
+                                addSourceConstantTotal -= requirement.Left.Value;
+                                addSourceConstants.Add(requirement);
+                            }
+                            break;
+
+                        case RequirementType.AddAddress:
+                            isAddAddress = true;
+                            continue;
+
+                        default:
+                            // anything other than AddAddress is lower priority than AddSource or SubSource
+                            // so process the merge now and reset the counters
+                            if (addSourceConstants.Count > 0)
+                            {
+                                MergeAddSourceConstants(requirement, toRemove, addSourceConstants, addSourceConstantTotal);
+
+                                addSourceConstants.Clear();
+                                addSourceConstantTotal = 0;
+                            }
+                            break;
+                    }
+
+                    isAddAddress = false;
+                }
+
+                if (!isAddAddress && addSourceConstants.Count > 0)
+                    MergeAddSourceConstants(requirementEx.Requirements.Last(), toRemove, addSourceConstants, addSourceConstantTotal);
+
+                foreach (var requirement in toRemove)
+                    requirementEx.Requirements.Remove(requirement);
+            }
+        }
+
+        private static void MergeAddSourceConstants(Requirement requirement, List<Requirement> toRemove,
+            List<Requirement> addSourceConstants, uint addSourceConstantTotal)
+        {
+            if (requirement.Left.Type == FieldType.Value)
+            {
+                requirement.Left = new Field
+                {
+                    Type = FieldType.Value,
+                    Size = requirement.Left.Size,
+                    Value = requirement.Left.Value + addSourceConstantTotal
+                };
+
+                toRemove.AddRange(addSourceConstants);
+            }
+        }
+
+
         private static bool IsMergable(Requirement requirement)
         {
             if (requirement.Operator != RequirementOperator.Equal)
@@ -2197,6 +2270,9 @@ namespace RATools.Parser
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(RequirementEx.Combine(_alts[i]));
 
+            foreach (var group in groups)
+                MergeAddSourceConstants(group);
+
             // attempt to extract ResetNextIf into alt group
             NormalizeResetNextIfs(groups);
 
@@ -2206,8 +2282,8 @@ namespace RATools.Parser
 
             // clamp memory reference comparisons to bounds; identify comparisons that can never
             // be true, or are always true; ensures constants are on the right
-            for (int i = groups.Count - 1; i >= 0; i--)
-                NormalizeComparisons(groups[i]);
+            foreach (var group in groups)
+                NormalizeComparisons(group);
 
             // remove duplicates within a set of requirements
             RemoveDuplicates(groups[0], null);

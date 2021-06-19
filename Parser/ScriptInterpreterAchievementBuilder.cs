@@ -596,115 +596,153 @@ namespace RATools.Parser
         private static ParseErrorExpression HandleAddAddressComparison(ExpressionBase comparison,
             IList<Requirement> requirements, RequirementOperator op, Requirement extraRequirement)
         {
-            var requirement = requirements.Last();
+            // determine how long the AddAddress chain is
+            var rightIndex = requirements.Count;
+            while (requirements[rightIndex - 1].Type == RequirementType.AddAddress)
+                rightIndex--;
 
-            // if right side is an AddAddress chain, it must match the left side
-            var addAddressRequirements = new List<Requirement>();
-            do
+            // attempt to match the AddAddress chain with the previous conditions
+            bool match = true;
+            var distance = requirements.Count - rightIndex;
+            var leftIndex = rightIndex - 1;
+            var leftStop = leftIndex - distance;
+            var requirement = requirements[leftIndex]; // last element of left side
+            while (leftIndex > leftStop)
             {
-                addAddressRequirements.Add(requirement);
-                requirements.RemoveAt(requirements.Count - 1);
-
-                requirement = requirements.Last();
-            } while (requirement.Type == RequirementType.AddAddress);
-
-            // if the right side has at least as many conditions as the left, compare them to make 
-            // sure the AddAddress values are the same at each step of the chain.
-            bool match = (requirements.Count >= addAddressRequirements.Count);
-            if (match)
-            {
-                for (int i = 0; i < addAddressRequirements.Count; i++)
+                // if the AddAddress portion doesn't match, skip over any remaining AddAddresses
+                // for the previous condition, and bail
+                if (requirements[leftIndex - 1] != requirements[leftIndex + distance])
                 {
-                    var previousRequirement = requirements[requirements.Count - addAddressRequirements.Count - 1 + i];
-                    if (previousRequirement != addAddressRequirements[i])
-                    {
-                        match = false;
-                        break;
-                    }
+                    while (leftIndex > 0 && requirements[leftIndex - 1].Type == RequirementType.AddAddress)
+                        --leftIndex;
+
+                    match = false;
+                    break;
                 }
+
+                --leftIndex;
             }
 
+            // if the AddAddress chains match, then merge the conditions
             if (match)
             {
-                // AddAddress chains match, merge the conditions
+                while (requirements.Count > rightIndex)
+                    requirements.RemoveAt(requirements.Count - 1);
+
                 requirement.Operator = op;
                 requirement.Right = extraRequirement.Left;
+                return null;
             }
-            else
-            {
-                // AddAddress chains were not the same. Attempt to rearrange the logic using SubSource
-                // A == B   =>   A - B     == 0   =>   B - A     == 0   =>   -A + B     == 0
-                // A != B   =>   A - B     != 0   =>   B - A     != 0   =>   -A + B     != 0
-                // A >  B   =>   A - B + M >  0   =>   B - A     >  M   =>   -A + B     >  M
-                // A >= B   =>   A - B + M >= 0   =>   B - A - 1 >= M   =>   -A - 1 + B >= M
-                // A <  B   =>   A - B     >  M   =>   B - A + M >  M   =>   -A + B + M >  M
-                // A <= B   =>   A - B     >= M   =>   B - A + M >= M   =>   -A + B + M >= M
 
-                var maxValue = Math.Max(Field.GetMaxValue(requirement.Left.Size), Field.GetMaxValue(extraRequirement.Left.Size));
+            // put the extra requirement back. we couldn't merge it with the left condition
+            requirements.Add(extraRequirement);
+
+            // AddAddress chains were not the same. Attempt to rearrange the logic using SubSource
+            //           (if A cannot be moved)                        (if A can be moved)
+            // A == B   ~>   A - B + 0 == 0   ~>   B - A     == 0   ~>   -A + B     == 0
+            // A != B   ~>   A - B + 0 != 0   ~>   B - A     != 0   ~>   -A + B     != 0
+            // A >  B   ~>   A - B + M >  M   ~>   B - A     <  0   ~>   -A + B     >  M  [leverage underflow]
+            // A >= B   ~>   A - B + M >= M   ~>   B - A     <= 0   ~>   -A - 1 + B >= M  [leverage underflow]
+            // A <  B   ~>   A - B + 0 >  M   ~>   B - A + M >  M   ~>   -A + B + M >  M  [avoid underflow]
+            // A <= B   ~>   A - B + 0 >= M   ~>   B - A + M >= M   ~>   -A + B + M >= M  [avoid underflow]
+
+            // calculate M
+            uint maxValue = 0;
+            if (op != RequirementOperator.Equal && op != RequirementOperator.NotEqual)
+            {
+                maxValue = Math.Max(Field.GetMaxValue(requirement.Left.Size), Field.GetMaxValue(extraRequirement.Left.Size));
                 if (maxValue == 0xFFFFFFFF)
                     return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison for 32-bit values", comparison);
+            }
 
-                // Change A to -A
-                requirement.Type = RequirementType.SubSource;
+            // if A is preceded by an AddSource or SubSource, we can't change it to a SubSource
+            Requirement prevReq = null;
+            bool cannotBeChanged = false;
 
-                // Put B back
-                int insertIndex = requirements.Count;
-                for (int i = addAddressRequirements.Count -1; i >= 0; --i)
-                    requirements.Add(addAddressRequirements[i]);
+            if (leftIndex > 0)
+            {
+                prevReq = requirements[leftIndex - 1];
+                cannotBeChanged =
+                    (prevReq.Type == RequirementType.AddSource || prevReq.Type == RequirementType.SubSource);
+            }
 
-                requirement = extraRequirement;
-                requirements.Add(requirement);
+            if (cannotBeChanged)
+            {
+                requirement.Type = RequirementType.AddSource;
+                extraRequirement.Type = RequirementType.SubSource;
 
+                uint leftValue = 0;
                 switch (op)
                 {
-                    case RequirementOperator.Equal:
-                    case RequirementOperator.NotEqual:
-                        requirement.Operator = op;
-                        requirement.Right = new Field { Type = FieldType.Value, Value = 0 };
-                        break;
-
                     case RequirementOperator.GreaterThan:
-                        requirement.Operator = op;
-                        requirement.Right = new Field { Type = FieldType.Value, Value = maxValue + 1 };
-                        break;
-
                     case RequirementOperator.GreaterThanOrEqual:
-                        requirement.Operator = op;
-                        requirement.Right = new Field { Type = FieldType.Value, Value = maxValue + 1 };
-
-                        requirement = new Requirement
-                        {
-                            Type = RequirementType.SubSource,
-                            Left = new Field { Type = FieldType.Value, Value = 1 },
-                        };
-                        requirements.Insert(insertIndex, requirement);
+                        leftValue = maxValue;
                         break;
 
                     case RequirementOperator.LessThan:
-                        requirement.Type = RequirementType.AddSource;
-                        requirement = new Requirement
-                        {
-                            Left = new Field { Type = FieldType.Value, Value = maxValue + 1 },
-                            Operator = RequirementOperator.GreaterThan,
-                            Right = new Field { Type = FieldType.Value, Value = maxValue + 1 }
-                        };
-                        requirements.Add(requirement);
+                        op = RequirementOperator.GreaterThan;
                         break;
 
                     case RequirementOperator.LessThanOrEqual:
-                        requirement.Type = RequirementType.AddSource;
-                        requirement = new Requirement
-                        {
-                            Left = new Field { Type = FieldType.Value, Value = maxValue + 1 },
-                            Operator = RequirementOperator.GreaterThanOrEqual,
-                            Right = new Field { Type = FieldType.Value, Value = maxValue + 1 }
-                        };
-                        requirements.Add(requirement);
-                        break;
-
-                    default:
+                        op = RequirementOperator.GreaterThanOrEqual;
                         break;
                 }
+
+                // if preceeded by a constant, merge the constant into the final condition
+                if (prevReq.Left.Type == FieldType.Value)
+                {
+                    if (prevReq.Type == RequirementType.AddSource)
+                        leftValue += prevReq.Left.Value;
+                    else if (prevReq.Left.Value < leftValue)
+                        leftValue -= prevReq.Left.Value;
+                    else
+                        maxValue += prevReq.Left.Value;
+
+                    requirements.RemoveAt(leftIndex - 1);
+                }
+
+                extraRequirement = new Requirement();
+                extraRequirement.Left = new Field { Type = FieldType.Value, Value = leftValue };
+                extraRequirement.Operator = op;
+                extraRequirement.Right = new Field { Type = FieldType.Value, Value = maxValue };
+
+                requirements.Add(extraRequirement);
+                return null;
+            }
+
+            // if A can be changed, make it a SubSource
+            requirement.Type = RequirementType.SubSource;
+
+            switch (op)
+            {
+                case RequirementOperator.GreaterThanOrEqual: // -A - 1 + B >= M
+                    // subtract 1 from (B-A) in case B==A, so the result will still be negative
+                    requirements.Insert(rightIndex, new Requirement
+                    {
+                        Type = RequirementType.SubSource,
+                        Left = new Field { Type = FieldType.Value, Value = 1 }
+                    });
+                    goto case RequirementOperator.GreaterThan;
+
+                case RequirementOperator.Equal:              // -A + B     == 0
+                case RequirementOperator.NotEqual:           // -A + B     != 0
+                case RequirementOperator.GreaterThan:        // -A + B     >  M
+                    extraRequirement.Operator = op;
+                    extraRequirement.Right = new Field { Type = FieldType.Value, Value = maxValue };
+                    break;
+
+                case RequirementOperator.LessThan:           // -A + B + M >  M
+                case RequirementOperator.LessThanOrEqual:    // -A + B + M >= M
+                    extraRequirement.Type = RequirementType.AddSource;
+
+                    extraRequirement = new Requirement();
+                    extraRequirement.Left = extraRequirement.Right =
+                        new Field { Type = FieldType.Value, Value = maxValue };
+                    extraRequirement.Operator = (op == RequirementOperator.LessThan) ?
+                        RequirementOperator.GreaterThan : RequirementOperator.GreaterThanOrEqual;
+
+                    requirements.Add(extraRequirement);
+                    break;
             }
 
             return null;
