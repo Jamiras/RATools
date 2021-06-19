@@ -373,17 +373,26 @@ namespace RATools.ViewModels
 
             if (achievement.Id == 0)
             {
-                if (Local.Id > 0)
+                // script doesn't provide an ID. see if one is available
+                if (Core.Id > 0)
+                    Id = achievement.Id = Core.Id;
+                else if (Unofficial.Id > 0)
+                    Id = achievement.Id = Unofficial.Id;
+                else if (Local.Id > 0)
                     Id = achievement.Id = Local.Id;
                 else if (Id > 0)
                     achievement.Id = Id;
             }
+
             if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
             {
+                // script doesn't provide a badge. see if one is available.
                 if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
                     achievement.BadgeName = Local.BadgeName;
                 else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
                     achievement.BadgeName = Core.BadgeName;
+                else if (!String.IsNullOrEmpty(Unofficial.BadgeName) && Unofficial.BadgeName != "0")
+                    achievement.BadgeName = Unofficial.BadgeName;
             }
 
             _owner.UpdateLocal(achievement, Local.Achievement, warning, validateAll);
