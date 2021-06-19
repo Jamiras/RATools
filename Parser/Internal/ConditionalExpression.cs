@@ -171,13 +171,20 @@ namespace RATools.Parser.Internal
         {
             if (!Right.IsLogicalUnit)
             {
+                // the tree will be built weighted to the right. AND has higher priority than OR, so if an
+                // ungrouped AND is followed by an OR, shift them around so the AND will be evaluated first
+                //
+                //   A && B || C  ~>  (A && B) || C
+                //
+                //     &&                      ||
+                //   A      ||           &&       C
+                //        B    C       A    B
                 if (Operation == ConditionalOperation.And)
                 {
                     var conditionalRight = Right as ConditionalExpression;
                     if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
                     {
                         // enforce order of operations
-                        // A && B || C => (A && B) || C
                         return Rebalance(conditionalRight);
                     }
                 }

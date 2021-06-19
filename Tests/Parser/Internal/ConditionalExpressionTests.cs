@@ -91,22 +91,54 @@ namespace RATools.Test.Parser.Internal
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
-        [Test]
-        public void TestRebalanceConditional()
+        private static void SetLogicalUnit(ExpressionBase expressionBase)
         {
-            // "A && B || C" => "(A && B) || C"
-            var variable1 = new VariableExpression("variable1");
-            var variable2 = new VariableExpression("variable2");
-            var value = new IntegerConstantExpression(99);
-            var conditional = new ConditionalExpression(value, ConditionalOperation.And, variable2);
-            var expr = new ComparisonExpression(variable1, ComparisonOperation.LessThan, conditional);
+            var leftRight = expressionBase as LeftRightExpressionBase;
+            if (leftRight != null)
+            {
+                if (leftRight.Left != null) // ignore Not
+                {
+                    leftRight.IsLogicalUnit = true;
+                    SetLogicalUnit(leftRight.Left);
+                }
 
-            var result = expr.Rebalance() as ConditionalExpression;
-            Assert.That(result, Is.Not.Null);
-            var expected = new ComparisonExpression(expr.Left, expr.Operation, value);
-            Assert.That(result.Left, Is.EqualTo(expected));
-            Assert.That(result.Operation, Is.EqualTo(ConditionalOperation.And));
-            Assert.That(result.Right, Is.EqualTo(variable2));
+                SetLogicalUnit(leftRight.Right);
+            }
+        }
+
+        [Test]
+        [TestCase("A && B || C", "(A && B) || C")] // AND has higher priority than OR
+        [TestCase("A && (B || C)", "A && (B || C)")]
+        [TestCase("A || B && C", "A || (B && C)")] // AND has higher priority than OR
+        [TestCase("A || (B && C)", "A || (B && C)")]
+        [TestCase("A && B && C", "A && (B && C)")] // ungrouped tree is right-weighted
+        [TestCase("A && (B && C)", "A && (B && C)")]
+        [TestCase("!A && B || C", "(!A && B) || C")] // AND has higher priority than OR
+        [TestCase("A && !B || C", "(A && !B) || C")] // AND has higher priority than OR
+        [TestCase("A && B || !C", "(A && B) || !C")] // AND has higher priority than OR
+        [TestCase("A && B || C && D", "(A && B) || (C && D)")] // AND has higher priority than OR
+        [TestCase("(A && B) || (C && D)", "(A && B) || (C && D)")]
+        [TestCase("A && B || (C && D)", "(A && B) || (C && D)")] // AND has higher priority than OR
+        [TestCase("A && (B || C) && D", "A && ((B || C) && D)")] // ungrouped tree is right-weighted
+        [TestCase("A || B && C || D", "A || ((B && C) || D)")] // AND has higher priority than OR
+        [TestCase("(A || B) && (C || D)", "(A || B) && (C || D)")]
+        [TestCase("A || B && (C || D)", "A || (B && (C || D))")]
+        [TestCase("A || (B && C) || D", "A || ((B && C) || D)")] // ungrouped tree is right-weighted
+        [TestCase("A && B && C || D && E && F", "(A && (B && C)) || (D && (E && F))")] // AND has higher priority than OR
+        [TestCase("(A && B && C) || (D && E && F)", "(A && (B && C)) || (D && (E && F))")]
+        [TestCase("A && B || C && D || E && F", "(A && B) || ((C && D) || (E && F))")] // AND has higher priority than OR
+        [TestCase("(A && B || C) && (D || E && F)", "((A && B) || C) && (D || (E && F))")] // AND has higher priority than OR
+        public void TestRebalance(string input, string expected)
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer);
+
+            var rebalanced = expression.Rebalance();
+            SetLogicalUnit(rebalanced); // force parenthesis for evaluation
+
+            var builder = new StringBuilder();
+            rebalanced.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
     }
 }
