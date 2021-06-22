@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -373,7 +374,7 @@ namespace RATools.Parser.Internal
         /// </remarks>
         internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
         {
-            var locationStart = new TextLocation(line, column);
+            var locationStart = new TextLocation(line, column); // location of 'function' keyword
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
@@ -383,13 +384,19 @@ namespace RATools.Parser.Internal
             var functionName = tokenizer.ReadIdentifier();
             var functionNameVariable = new VariableDefinitionExpression(functionName.ToString(), line, column);
             var function = new UserFunctionDefinitionExpression(functionNameVariable);
+            function.Location = new TextRange(locationStart.Line, locationStart.Column, 0, 0);
 
             if (functionName.IsEmpty)
                 return ExpressionBase.ParseError(tokenizer, "Invalid function name");
 
+            return function.Parse(tokenizer);
+        }
+
+        private new ExpressionBase Parse(PositionalTokenizer tokenizer)
+        {
             ExpressionBase.SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != '(')
-                return ExpressionBase.ParseError(tokenizer, "Expected '(' after function name", function.Name);
+                return ExpressionBase.ParseError(tokenizer, "Expected '(' after function name", Name);
             tokenizer.Advance();
 
             ExpressionBase.SkipWhitespace(tokenizer);
@@ -397,15 +404,15 @@ namespace RATools.Parser.Internal
             {
                 do
                 {
-                    line = tokenizer.Line;
-                    column = tokenizer.Column;
+                    var line = tokenizer.Line;
+                    var column = tokenizer.Column;
 
                     var parameter = tokenizer.ReadIdentifier();
                     if (parameter.IsEmpty)
                         return ExpressionBase.ParseError(tokenizer, "Invalid parameter name", line, column);
 
                     var variableDefinition = new VariableDefinitionExpression(parameter.ToString(), line, column);
-                    function.Parameters.Add(variableDefinition);
+                    Parameters.Add(variableDefinition);
 
                     ExpressionBase.SkipWhitespace(tokenizer);
 
@@ -425,9 +432,9 @@ namespace RATools.Parser.Internal
                         if (!value.ReplaceVariables(scope, out evaluated))
                             return ExpressionBase.ParseError(tokenizer, "Default value for " + parameter.ToString() + " is not constant", evaluated);
 
-                        function.DefaultParameters[parameter.ToString()] = evaluated;
+                        DefaultParameters[parameter.ToString()] = evaluated;
                     }
-                    else if (function.DefaultParameters.Count > 0)
+                    else if (DefaultParameters.Count > 0)
                     {
                         return ExpressionBase.ParseError(tokenizer,
                             string.Format("Non-default parameter {0} appears after default parameters", parameter.ToString()), variableDefinition);
@@ -450,24 +457,10 @@ namespace RATools.Parser.Internal
             ExpressionBase expression;
 
             if (tokenizer.Match("=>"))
-            {
-                ExpressionBase.SkipWhitespace(tokenizer);
-
-                expression = ExpressionBase.Parse(tokenizer);
-                if (expression.Type == ExpressionType.ParseError)
-                    return expression;
-
-                if (expression.Type == ExpressionType.Return)
-                    return new ParseErrorExpression("Return statement is implied by =>", ((ReturnExpression)expression).Keyword);
-
-                var returnExpression = new ReturnExpression(expression);
-                function.Expressions.Add(returnExpression);
-                function.Location = new TextRange(function.Location.Start, expression.Location.End);
-                return function;
-            }
+                return ParseShorthandBody(tokenizer);
 
             if (tokenizer.NextChar != '{')
-                return ExpressionBase.ParseError(tokenizer, "Expected '{' after function declaration", function.Name);
+                return ExpressionBase.ParseError(tokenizer, "Expected '{' after function declaration", Name);
 
             tokenizer.Advance();
             ExpressionBase.SkipWhitespace(tokenizer);
@@ -491,14 +484,101 @@ namespace RATools.Parser.Internal
                 else if (seenReturn)
                     ExpressionBase.ParseError(tokenizer, "Expression after return statement", expression);
 
-                function.Expressions.Add(expression);
+                Expressions.Add(expression);
 
                 ExpressionBase.SkipWhitespace(tokenizer);
             }
 
-            function.Location = new TextRange(locationStart, tokenizer.Location);
+            Location = new TextRange(Location.Start, tokenizer.Location);
             tokenizer.Advance();
-            return function;
+            return this;
+        }
+
+        private ExpressionBase ParseShorthandBody(PositionalTokenizer tokenizer)
+        {
+            ExpressionBase.SkipWhitespace(tokenizer);
+
+            var expression = ExpressionBase.Parse(tokenizer);
+            if (expression.Type == ExpressionType.ParseError)
+                return expression;
+
+            if (expression.Type == ExpressionType.Return)
+                return new ParseErrorExpression("Return statement is implied by =>", ((ReturnExpression)expression).Keyword);
+
+            var returnExpression = new ReturnExpression(expression);
+            Expressions.Add(returnExpression);
+            Location = new TextRange(Location.Start, expression.Location.End);
+            return this;
+        }
+
+        /// <summary>
+        /// Determines if the tokenizer is pointing at a parameter list for an anonymous function.
+        /// </summary>
+        internal static bool IsAnonymousParameterList(PositionalTokenizer tokenizer)
+        {
+            var result = false;
+
+            tokenizer.PushState();
+
+            if (tokenizer.Match("("))
+            {
+                tokenizer.SkipWhitespace();
+
+                do
+                {
+                    tokenizer.ReadIdentifier();
+                    tokenizer.SkipWhitespace();
+
+                    if (tokenizer.NextChar != ',')
+                        break;
+
+                    tokenizer.Advance();
+                    tokenizer.SkipWhitespace();
+                } while (true);
+
+                if (tokenizer.Match(")"))
+                {
+                    tokenizer.SkipWhitespace();
+                    result = (tokenizer.NextChar == '{' || tokenizer.Match("=>"));
+                }
+            }
+
+            tokenizer.PopState();
+
+            return result;
+        }
+
+        private static VariableDefinitionExpression CreateAnonymousFunctionName(int line, int column)
+        {
+            return new VariableDefinitionExpression(String.Format("AnonymousFunction@{0},{1}", line, column));
+        }
+
+        /// <summary>
+        /// Parses an anonymous function definition in the format "(a) => body" or "(a) { body }"
+        /// </summary>
+        internal static ExpressionBase ParseAnonymous(PositionalTokenizer tokenizer)
+        {
+            var name = CreateAnonymousFunctionName(tokenizer.Line, tokenizer.Column);
+            var function = new UserFunctionDefinitionExpression(name);
+            function.Location = new TextRange(tokenizer.Line, tokenizer.Column, 0, 0);
+            return function.Parse(tokenizer);
+        }
+
+        /// <summary>
+        /// Parses an anonymous function definition in the format "a => body" where <paramref name="parameter"/> 
+        /// is "a" and <paramref name="tokenizer"/> is pointing at "body".
+        /// </summary>
+        internal static ExpressionBase ParseAnonymous(PositionalTokenizer tokenizer, ExpressionBase parameter)
+        {
+            var variable = parameter as VariableExpression;
+            if (variable == null)
+                return new ParseErrorExpression("Cannot create anonymous function from " + parameter.Type);
+
+            var name = CreateAnonymousFunctionName(parameter.Location.Start.Line, parameter.Location.Start.Column);
+            var function = new UserFunctionDefinitionExpression(name);
+            function.Location = parameter.Location;
+            function.Parameters.Add(new VariableDefinitionExpression(variable.Name, variable.Location.Start.Line, variable.Location.Start.Column));
+            return function.ParseShorthandBody(tokenizer);
         }
 
         /// <summary>

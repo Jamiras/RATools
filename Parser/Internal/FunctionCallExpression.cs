@@ -169,7 +169,7 @@ namespace RATools.Parser.Internal
             return false;
         }
 
-        private static ExpressionBase GetParameter(InterpreterScope scope, AssignmentExpression assignment)
+        private static ExpressionBase GetParameter(InterpreterScope parameterScope, InterpreterScope scope, AssignmentExpression assignment)
         {
             ExpressionBase value = assignment.Value;
 
@@ -203,6 +203,14 @@ namespace RATools.Parser.Internal
                 case ExpressionType.StringConstant:
                     // already a basic type, do nothing
                     break;
+
+                case ExpressionType.FunctionDefinition:
+                    // anonymous function, convert to function reference
+                    var functionDefinition = (FunctionDefinitionExpression)value;
+                    parameterScope.AddFunction(functionDefinition);
+                    value = new FunctionReferenceExpression(functionDefinition.Name.Name);
+                    assignment.Value.CopyLocation(value);
+                    return value;
 
                 default:
                     // not a basic type, evaluate it
@@ -243,7 +251,7 @@ namespace RATools.Parser.Internal
                     return true;
                 }
 
-                value = GetParameter(parameterScope, assignedParameter);
+                value = GetParameter(parameterScope, parameterScope, assignedParameter);
                 error = value as ParseErrorExpression;
                 if (error != null)
                     return true;
@@ -313,7 +321,7 @@ namespace RATools.Parser.Internal
                         return null;
                     }
 
-                    var value = GetParameter(scope, assignedParameter);
+                    var value = GetParameter(parameterScope, scope, assignedParameter);
                     error = value as ParseErrorExpression;
                     if (error != null)
                         return null;
@@ -338,7 +346,7 @@ namespace RATools.Parser.Internal
                     var variableName = (index < parameterCount) ? function.Parameters.ElementAt(index).Name : "...";
 
                     assignedParameter = new AssignmentExpression(new VariableExpression(variableName), parameter);
-                    var value = GetParameter(scope, assignedParameter);
+                    var value = GetParameter(parameterScope, scope, assignedParameter);
                     error = value as ParseErrorExpression;
                     if (error != null)
                         return null;
