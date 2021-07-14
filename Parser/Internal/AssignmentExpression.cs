@@ -73,10 +73,19 @@ namespace RATools.Parser.Internal
         public ParseErrorExpression Evaluate(InterpreterScope scope)
         {
             var assignmentScope = new InterpreterScope(scope) { Context = this };
-
             ExpressionBase result;
-            if (!Value.ReplaceVariables(assignmentScope, out result))
-                return (ParseErrorExpression)result;
+
+            var functionDefinition = Value as FunctionDefinitionExpression;
+            if (functionDefinition != null)
+            {
+                scope.AddFunction(functionDefinition);
+                result = new FunctionReferenceExpression(functionDefinition.Name.Name);
+            }
+            else
+            {
+                if (!Value.ReplaceVariables(assignmentScope, out result))
+                    return (ParseErrorExpression)result;
+            }
 
             return scope.AssignVariable(Variable, result);
         }

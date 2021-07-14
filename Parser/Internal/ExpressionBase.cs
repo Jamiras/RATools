@@ -649,6 +649,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.Conditional:
                 case ExpressionType.Dictionary:
                 case ExpressionType.FunctionCall:
+                case ExpressionType.FunctionDefinition:
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
