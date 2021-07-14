@@ -115,6 +115,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new AlwaysTrueFunction());
                 _globalScope.AddFunction(new AlwaysFalseFunction());
 
+                _globalScope.AddFunction(new AllOfFunction());
                 _globalScope.AddFunction(new AnyOfFunction());
 
                 _globalScope.AddFunction(new RangeFunction());
