@@ -152,40 +152,6 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        [TestCase("byte(0x1234) - 1 == 4", "byte(0x001234) == 5")]
-        [TestCase("byte(0x1234) + 1 == 4", "byte(0x001234) == 3")]
-        [TestCase("byte(0x1234) * 2 == 4", "byte(0x001234) == 2")]
-        [TestCase("byte(0x1234) / 2 == 4", "byte(0x001234) == 8")]
-        [TestCase("byte(0x1234) * 2 + 1 == byte(0x4321) * 2 + 1", "byte(0x001234) == byte(0x004321)")]
-        [TestCase("byte(0x1234) + 2 - 1 == byte(0x4321) + 1", "byte(0x001234) == byte(0x004321)")]
-        [TestCase("byte(0x1234) + 3 == prev(byte(0x1234))", "(3 + byte(0x001234)) == prev(byte(0x001234))")] // value decreases by 3
-        [TestCase("byte(0x1234) == prev(byte(0x1234)) - 3", "(3 + byte(0x001234)) == prev(byte(0x001234))")] // value decreases by 3
-        [TestCase("prev(byte(0x1234)) - byte(0x1234) == 3", "(prev(byte(0x001234)) - byte(0x001234)) == 3")] // value decreases by 3
-        [TestCase("byte(0x1234) - 3 == prev(byte(0x1234))", "(byte(0x001234) - 3) == prev(byte(0x001234))")] // value increases by 3
-        [TestCase("byte(0x1234) == prev(byte(0x1234)) + 3", "(byte(0x001234) - 3) == prev(byte(0x001234))")] // value increases by 3
-        [TestCase("byte(0x1234) - prev(byte(0x1234)) == 3", "(byte(0x001234) - prev(byte(0x001234))) == 3")] // value increases by 3
-        [TestCase("byte(0x1234) + 1 == byte(0x4321) - 1", "(2 + byte(0x001234)) == byte(0x004321)")] // modifiers on different addresses
-        [TestCase("(word(0x1234) - 1) * 4 > (prev(word(0x1234)) - 1) * 4", "word(0x001234) > prev(word(0x001234))")]
-        [TestCase("(word(0x1234) - 1) / 4 > (prev(word(0x1234)) - 1) / 4", "word(0x001234) > prev(word(0x001234))")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) + bit4(0x1234)", "(4 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 4")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) - bit4(0x1234)", "(bit1(0x001234) + bit2(0x001234) + bit4(0x001234)) > bit3(0x001234)")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) > bit3(0x1234) + bit4(0x1234) + 1", "(4 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 5")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) + 3 > bit3(0x1234) + bit4(0x1234) + 5", "(4 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) > 6")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) < bit3(0x1234) + bit4(0x1234) + 1", "(4 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 5")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) - bit3(0x1234) - bit4(0x1234) < 1", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 3")]
-        [TestCase("bit1(0x1234) + bit2(0x1234) + 2 - bit3(0x1234) - bit4(0x1234) < 3", "(2 + bit1(0x001234) + bit2(0x001234) - bit4(0x001234) - bit3(0x001234)) < 3")]
-        [TestCase("byte(0x1234) + 1 - byte(0x2345) >= 2", "(255 + byte(0x001234) - byte(0x002345)) >= 256")] // 254 added to both sides to prevent underflow
-        [TestCase("byte(0x1234) + 1 - byte(0x2345) < 2", "(1 + byte(0x001234) - byte(0x002345)) < 2")]
-        public void TestTransitiveCondition(string trigger, string expectedRequirement)
-        {
-            var parser = Parse("achievement(\"T\", \"D\", 5, " + trigger + ")");
-            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
-
-            var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo(expectedRequirement));
-        }
-
-        [Test]
         public void TestDictionaryLookup()
         {
             var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +
@@ -638,42 +604,6 @@ namespace RATools.Test.Parser
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) - byte(0x001235)) == 1"));
-        }
-
-        [Test]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) == 3", "(byte(0x001234) - byte(0x001235)) == 2")] // no underflow on direct comparison
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) != 3", "(byte(0x001234) - byte(0x001235)) != 2")]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) >= 3", "(255 + byte(0x001234) - byte(0x001235)) >= 257")] // potential underflow of 255, move +1 to other side and adjust both
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) >  3", "(255 + byte(0x001234) - byte(0x001235)) > 257")]
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) <= 3", "(1 + byte(0x001234) - byte(0x001235)) <= 3")] // explicit offset supercedes underflow for less than comparisons
-        [TestCase("byte(0x1234) + 1 - byte(0x1235) <  3", "(1 + byte(0x001234) - byte(0x001235)) < 3")]
-        [TestCase("byte(0x1234) - byte(0x1235) <= 3", "(255 + byte(0x001234) - byte(0x001235)) <= 258")] // potential underflow of 255, no offset
-        [TestCase("byte(0x1234) - byte(0x1235) <  3", "(255 + byte(0x001234) - byte(0x001235)) < 258")]
-        [TestCase("5 - byte(0x1234) < 2", "(5 - byte(0x001234)) < 2")] // only 4 and 5 are valid values - don't modify the expression
-        [TestCase("5 - byte(0x1234) == 2", "byte(0x001234) == 3")] // only 3 is a valid value, automatically normalize the expression
-        [TestCase("300 - byte(0x1234) < 100", "byte(0x001234) > 200")] // no underflow, expression can be inverted
-        [TestCase("byte(0x1234) - byte(0x2345) - byte(0x3456) < 100", "(510 + byte(0x001234) - byte(0x003456) - byte(0x002345)) < 610")] // double underflow - add 255*2 to both sides
-        [TestCase("700 + byte(0x1234) - byte(0x2345) - byte(0x3456) < 100", "(byte(0x002345) + byte(0x003456) - byte(0x001234)) > 600")] // suffient modifier to prevent underflow, just rearrange the operations
-        [TestCase("byte(0x1234) - byte(0x2345) - byte(0x3456) < -600", "(byte(0x002345) + byte(0x003456) - byte(0x001234)) > 600")] // comparison to negative, underflow 
-        public void TestUnderflowAdjustment(string input, string expected)
-        {
-            // SubSource(mem) can cause wraparound, so if modifiers are present when doing a
-            // less than comparison, assume they're there to prevent the wraparound and don't
-            // transfer them to the right side.
-            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")");
-            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
-
-            var achievement = parser.Achievements.First();
-            Assert.That(GetRequirements(achievement), Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void TestUnderflowAdjustmentImpossible()
-        {
-            var input = "5 + byte(0x1234) == 2";
-
-            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Expression can never be true"));
         }
 
         [Test]

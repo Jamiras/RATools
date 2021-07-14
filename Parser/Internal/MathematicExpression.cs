@@ -27,7 +27,17 @@ namespace RATools.Parser.Internal
             builder.Append(GetOperatorCharacter(Operation));
 
             builder.Append(' ');
-            Right.AppendString(builder);
+
+            if (Operation != MathematicOperation.Add && Right.Type == ExpressionType.Mathematic)
+            {
+                builder.Append('(');
+                Right.AppendString(builder);
+                builder.Append(')');
+            }
+            else
+            {
+                Right.AppendString(builder);
+            }
         }
 
         internal static char GetOperatorCharacter(MathematicOperation operation)

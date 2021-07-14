@@ -158,7 +158,8 @@ namespace RATools.Data
                 // precedence is AddAddress
                 //             > AddSource/SubSource
                 //             > AndNext/OrNext
-                //             > AddHits/SubHits/ResetNextIf
+                //             > ResetNextIf
+                //             > AddHits/SubHits
                 //             > ResetIf/PauseIf/Measured/MeasuredIf/Trigger
                 switch (requirement.Type)
                 {

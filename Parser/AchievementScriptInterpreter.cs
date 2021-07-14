@@ -25,6 +25,10 @@ namespace RATools.Parser
             _richPresence = new RichPresenceBuilder();
         }
 
+        internal RichPresenceBuilder RichPresenceBuilder
+        {
+            get { return _richPresence; }
+        }
         private readonly RichPresenceBuilder _richPresence;
 
         /// <summary>
