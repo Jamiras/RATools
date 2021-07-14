@@ -2,15 +2,19 @@
 
 namespace RATools.Parser.Functions
 {
-    internal class AllOfFunction : IterableJoiningFunction
+    internal class NoneOfFunction : IterableJoiningFunction
     {
-        public AllOfFunction()
-            : base("all_of")
+        public NoneOfFunction()
+            : base("none_of")
         {
         }
 
         protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
         {
+            right = ConditionalExpression.InvertExpression(right);
+            if (right.Type == ExpressionType.ParseError)
+                return right;
+
             right.IsLogicalUnit = true;
 
             if (left == null)

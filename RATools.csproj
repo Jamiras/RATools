@@ -63,6 +63,7 @@
     <Compile Include="Data\Requirement.cs" />
     <Compile Include="Data\RequirementEx.cs" />
     <Compile Include="Parser\AchievementScriptContext.cs" />
+    <Compile Include="Parser\Functions\NoneOfFunction.cs" />
     <Compile Include="Parser\Functions\AllOfFunction.cs" />
     <Compile Include="Parser\Functions\AnyOfFunction.cs" />
     <Compile Include="Parser\Functions\LengthFunction.cs" />

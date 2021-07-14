@@ -11,6 +11,11 @@ namespace RATools.Parser.Functions
 
         protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
         {
+            right.IsLogicalUnit = true;
+
+            if (left == null)
+                return right;
+
             return new ConditionalExpression(left, ConditionalOperation.Or, right);
         }
 

@@ -112,6 +112,7 @@
   <ItemGroup>
     <Compile Include="Data\RequirementTests.cs" />
     <Compile Include="Data\FieldTests.cs" />
+    <Compile Include="Parser\Functions\NoneOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\AllOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\LeaderboardFunctionTests.cs" />
     <Compile Include="Parser\Functions\DisableWhenFunctionTests.cs" />

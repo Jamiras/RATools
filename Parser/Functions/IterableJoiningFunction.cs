@@ -83,12 +83,13 @@ namespace RATools.Parser.Functions
 
                 if (!predicate.Evaluate(iteratorScope, out result))
                     return false;
-                result.IsLogicalUnit = true;
 
-                if (expression == null)
-                    expression = result;
-                else
-                    expression = Combine(expression, result);
+                expression = Combine(expression, result);
+                if (expression.Type == ExpressionType.ParseError)
+                {
+                    result = expression;
+                    return false;
+                }
             }
 
             if (expression != null)
