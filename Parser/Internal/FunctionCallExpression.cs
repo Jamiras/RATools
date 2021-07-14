@@ -102,21 +102,21 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            var functionScope = GetParameters(functionDefinition, scope, out result);
-            if (functionScope == null || result is ParseErrorExpression)
+            var functionParametersScope = GetParameters(functionDefinition, scope, out result);
+            if (functionParametersScope == null || result is ParseErrorExpression)
                 return false;
 
-            if (functionScope.Depth >= 100)
+            if (functionParametersScope.Depth >= 100)
             {
                 result = new ParseErrorExpression("Maximum recursion depth exceeded", this);
                 return false;
             }
 
-            functionScope.Context = this;
+            functionParametersScope.Context = this;
             if (inAssignment)
             {
                 // in assignment, just replace variables
-                functionDefinition.ReplaceVariables(functionScope, out result);
+                functionDefinition.ReplaceVariables(functionParametersScope, out result);
 
                 if (result.Type == ExpressionType.FunctionCall)
                 {
@@ -126,15 +126,25 @@ namespace RATools.Parser.Internal
                     if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
                         functionCall._fullyExpanded = true;
 
+                    // if any of the parameters are an anonymous function, replace the reference with the definition
+                    // otherwise the definition will be lost
+                    if (functionCall.Parameters.Any(p => p is FunctionReferenceExpression))
+                        functionCall.ReplaceAnonymousFunctionReferencesWithDefinitions(functionParametersScope);
+
                     // if there was no change, also mark the source as fully expanded.
                     if (result == this)
                         _fullyExpanded = true;
+
+                    // when expanding the parameters, a new functionCall object will be created without a name
+                    // location. if that has happened, replace the temporary name object with the real one.
+                    if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
+                        functionCall.FunctionName = FunctionName;
                 }
             }
             else
             {
                 // not in assignment, evaluate the function
-                functionDefinition.Evaluate(functionScope, out result);
+                functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
             var error = result as ParseErrorExpression;
@@ -148,6 +158,22 @@ namespace RATools.Parser.Internal
 
             scope.ReturnValue = result;
             return true;
+        }
+
+        private void ReplaceAnonymousFunctionReferencesWithDefinitions(InterpreterScope scope)
+        {
+            var newParameters = new ExpressionBase[Parameters.Count];
+            for (int i = 0; i < newParameters.Length; ++i)
+            {
+                var parameter = Parameters.ElementAt(i);
+                var functionReference = parameter as FunctionReferenceExpression;
+                if (functionReference != null && scope.ProvidesFunction(functionReference.Name))
+                    parameter = scope.GetFunction(functionReference.Name);
+
+                newParameters[i] = parameter;
+            }
+
+            Parameters = newParameters;
         }
 
         /// <summary>

@@ -63,6 +63,7 @@
     <Compile Include="Data\Requirement.cs" />
     <Compile Include="Data\RequirementEx.cs" />
     <Compile Include="Parser\AchievementScriptContext.cs" />
+    <Compile Include="Parser\Functions\AnyOfFunction.cs" />
     <Compile Include="Parser\Functions\LengthFunction.cs" />
     <Compile Include="Parser\Functions\ArrayPopFunction.cs" />
     <Compile Include="Parser\Functions\ArrayPushFunction.cs" />
@@ -75,6 +76,7 @@
     <Compile Include="Parser\Functions\FlagConditionFunction.cs" />
     <Compile Include="Parser\Functions\AlwaysTrueFunction.cs" />
     <Compile Include="Parser\Functions\RangeFunction.cs" />
+    <Compile Include="Parser\Functions\IterableJoiningFunction.cs" />
     <Compile Include="Parser\Functions\TallyFunction.cs" />
     <Compile Include="Parser\Functions\RichPresenceConditionalDisplayFunction.cs" />
     <Compile Include="Parser\Functions\FormatFunction.cs" />

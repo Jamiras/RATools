@@ -61,6 +61,14 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Determines if the specified function is provided by this InterpreterScope object.
+        /// </summary>
+        public bool ProvidesFunction(string functionName)
+        {
+            return (_functions != null && _functions.ContainsKey(functionName));
+        }
+
+        /// <summary>
         /// Gets the function definition for a function.
         /// </summary>
         /// <param name="functionName">Name of the function.</param>
