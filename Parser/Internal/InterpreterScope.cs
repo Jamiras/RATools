@@ -71,6 +71,10 @@ namespace RATools.Parser.Internal
             if (_functions != null && _functions.TryGetValue(functionName, out function))
                 return function;
 
+            var functionReference = GetVariable(functionName) as FunctionReferenceExpression;
+            if (functionReference != null)
+                return GetFunction(functionReference.Name);
+
             var parentScope = GetParentScope(this);
             if (parentScope != null)
             {
@@ -89,10 +93,6 @@ namespace RATools.Parser.Internal
                     return function;
                 }
             }
-
-            var functionReference = GetVariable(functionName) as FunctionReferenceExpression;
-            if (functionReference != null)
-                return GetFunction(functionReference.Name);
 
             return null;
         }

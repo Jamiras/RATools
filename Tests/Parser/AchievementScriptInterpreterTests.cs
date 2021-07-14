@@ -37,7 +37,7 @@ namespace RATools.Test.Parser
             var groups = new ExpressionGroupCollection();
             groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
 
-            groups.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(script)));
+            groups.Parse(Tokenizer.CreateTokenizer(script));
 
             var interpreter = new AchievementScriptInterpreter();
 
@@ -48,7 +48,9 @@ namespace RATools.Test.Parser
                 return null;
             }
 
-            Assert.That(interpreter.Run(groups, null), Is.True);
+            if (!interpreter.Run(groups, null))
+                Assert.Fail(interpreter.ErrorMessage);
+
             return groups.Scope;
         }
 
@@ -1065,6 +1067,24 @@ namespace RATools.Test.Parser
             achievement = parser.Achievements.ElementAt(4);
             Assert.That(achievement.Id, Is.EqualTo(20));
             Assert.That(achievement.BadgeName, Is.EqualTo("12345"));
+        }
+
+        [Test]
+        [TestCase("b = function a(i) => i + 1\nc = b(3)")] // full function definition
+        [TestCase("b = (i) => i + 1\nc = b(3)")] // anonymous function definition
+        [TestCase("b = (i) { return i + 1 }\nc = b(3)")] // anonymous long-form function definition
+        [TestCase("b = (i, j) => i + j\nc = b(3, 1)")] // anonymous multiple parameter function definition
+        [TestCase("b = i => i + 1\nc = b(3)")] // anonymous function definition without parenthesis
+        [TestCase("a = i => i + 1\nb = (f,i) => f(i)\nc = b(a, 3)")] // anonymous function passed as parameter
+        [TestCase("b = (f,i) => f(i)\nc = b(i => i + 1, 3)")] // anonymous function defined as parameter
+        public void TestAnonymousFunction(string definition)
+        {
+            var scope = Evaluate(definition);
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
+            var integerConstant = (IntegerConstantExpression)c;
+            Assert.That(integerConstant.Value, Is.EqualTo(4));
         }
     }
 }

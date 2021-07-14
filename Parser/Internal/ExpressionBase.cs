@@ -176,6 +176,11 @@ namespace RATools.Parser.Internal
                         tokenizer.Advance();
                         clause = ParseComparison(tokenizer, clause, ComparisonOperation.Equal, joinerLine, joinerColumn);
                     }
+                    else if (tokenizer.NextChar == '>')
+                    {
+                        tokenizer.Advance();
+                        clause = UserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
+                    }
                     else
                     {
                         clause = ParseAssignment(tokenizer, clause, joinerLine, joinerColumn);
@@ -355,6 +360,9 @@ namespace RATools.Parser.Internal
                     return new ConditionalExpression(null, ConditionalOperation.Not, clause);
 
                 case '(':
+                    if (UserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
+                        return UserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
+
                     tokenizer.Advance();
                     clause = ExpressionBase.Parse(tokenizer);
                     if (clause.Type == ExpressionType.ParseError)
@@ -370,6 +378,7 @@ namespace RATools.Parser.Internal
 
                     clause.IsLogicalUnit = true;
                     tokenizer.Advance();
+
                     return clause;
 
                 case '"':
