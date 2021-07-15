@@ -22,8 +22,8 @@ namespace RATools.Parser.Functions
             if (!inputs.ReplaceVariables(scope, out result))
                 return false;
 
-            inputs = result;
-            if (!(inputs is IIterableExpression))
+            var iterableInputs = inputs as IIterableExpression;
+            if (iterableInputs == null)
             {
                 result = new ParseErrorExpression("Cannot iterate over " + inputs.ToString(), inputs);
                 return false;
@@ -40,48 +40,33 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { inputs, predicate });
-            CopyLocation(result);
-            return true;
-        }
-
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
-        {
-            var inputs = GetParameter(scope, "inputs", out result) as IIterableExpression;
-            if (inputs == null)
-                return false;
-
-            var predicateReference = GetParameter(scope, "predicate", out result) as FunctionReferenceExpression;
-            if (predicateReference == null)
-                return false;
-
-            var predicate = scope.GetFunction(predicateReference.Name);
+            var predicateFunction = scope.GetFunction(functionReference.Name);
             if (predicate == null)
             {
-                result = new ParseErrorExpression("Could not locate function: " + predicateReference.Name, predicateReference);
+                result = new ParseErrorExpression("Could not locate function: " + functionReference.Name, functionReference);
                 return false;
             }
 
-            if ((predicate.Parameters.Count - predicate.DefaultParameters.Count) != 1)
+            if ((predicateFunction.Parameters.Count - predicateFunction.DefaultParameters.Count) != 1)
             {
                 result = new ParseErrorExpression("predicate function must accept a single parameter");
                 return false;
             }
 
             var iteratorScope = new InterpreterScope(scope);
-            var predicateParameter = new VariableExpression(predicate.Parameters.First().Name);
-            foreach (var kvp in predicate.DefaultParameters)
+            var predicateParameter = new VariableExpression(predicateFunction.Parameters.First().Name);
+            foreach (var kvp in predicateFunction.DefaultParameters)
                 iteratorScope.AssignVariable(new VariableExpression(kvp.Key), kvp.Value);
 
             ExpressionBase expression = null;
-            foreach (var input in inputs.IterableExpressions())
+            foreach (var input in iterableInputs.IterableExpressions())
             {
                 if (!input.ReplaceVariables(iteratorScope, out result))
                     return false;
 
                 iteratorScope.AssignVariable(predicateParameter, result);
 
-                if (!predicate.Evaluate(iteratorScope, out result))
+                if (!predicateFunction.Evaluate(iteratorScope, out result))
                     return false;
 
                 expression = Combine(expression, result);
@@ -97,6 +82,7 @@ namespace RATools.Parser.Functions
             else
                 result = GenerateEmptyResult();
 
+            result.IsLogicalUnit = true;
             return true;
         }
 
