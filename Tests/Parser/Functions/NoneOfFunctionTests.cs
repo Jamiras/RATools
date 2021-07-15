@@ -32,7 +32,7 @@ namespace RATools.Test.Parser.Functions
                 return builder.RequirementsDebugString;
             }
 
-            return parser.ErrorMessage;
+            return parser.Error.InnermostError.Message;
         }
 
         [Test]

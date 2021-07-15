@@ -214,7 +214,9 @@ namespace RATools.Parser.Internal
                     break;
 
                 case ExpressionType.FunctionDefinition:
-                    // anonymous function, do nothing
+                    var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
+                    if (anonymousFunction != null)
+                        anonymousFunction.CaptureVariables(parameterScope);
                     break;
 
                 default:
@@ -275,7 +277,7 @@ namespace RATools.Parser.Internal
         /// <returns>The new scope, <c>null</c> if an error occurred - see <paramref name="error"/> for error details.</returns>
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
-            var parameterScope = new InterpreterScope(scope);
+            var parameterScope = function.CreateCaptureScope(scope);
 
             // optimization for no parameter function
             if (function.Parameters.Count == 0 && Parameters.Count == 0)

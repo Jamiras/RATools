@@ -179,7 +179,7 @@ namespace RATools.Parser.Internal
                     else if (tokenizer.NextChar == '>')
                     {
                         tokenizer.Advance();
-                        clause = UserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
+                        clause = AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
                     }
                     else
                     {
@@ -360,8 +360,8 @@ namespace RATools.Parser.Internal
                     return new ConditionalExpression(null, ConditionalOperation.Not, clause);
 
                 case '(':
-                    if (UserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
-                        return UserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
+                    if (AnonymousUserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
+                        return AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
 
                     tokenizer.Advance();
                     clause = ExpressionBase.Parse(tokenizer);

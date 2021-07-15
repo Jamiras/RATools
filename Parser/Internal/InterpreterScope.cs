@@ -1,10 +1,12 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace RATools.Parser.Internal
 {
     using VariableDefinitionPair = KeyValuePair<VariableDefinitionExpression, ExpressionBase>;
 
+    [DebuggerDisplay("\\{Context={Context} Vars={VariableCount} Funcs={FunctionCount} Depth={Depth}\\}")]
     internal class InterpreterScope
     {
         public InterpreterScope()
@@ -37,26 +39,61 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private static InterpreterScope GetParentScope(InterpreterScope scope)
+        internal int FunctionCount
         {
-            if (scope.Context is FunctionCallExpression)
+            get
             {
-                // function call starts a new local scope, jump over any other local scopes to the script scope
-                InterpreterScope outermostScriptScope = null;
+                if (_functions != null)
+                    return _functions.Count;
 
+                return 0;
+            }
+        }
+
+        private IEnumerable<InterpreterScope> VisibleScopes
+        {
+            get
+            {
+                var scope = this;
                 do
                 {
-                    if (scope.Context is AchievementScriptContext)
-                        outermostScriptScope = scope;
+                    yield return scope;
 
-                    if (scope._parent == null)
-                        return outermostScriptScope ?? scope;
+                    var functionCall = scope.Context as FunctionCallExpression;
+                    if (functionCall == null)
+                    {
+                        // not a function call - scope is not limiting
+                    }
+                    else if (AnonymousUserFunctionDefinitionExpression.IsAnonymousFunctionName(functionCall.FunctionName.Name))
+                    {
+                        // anonymous function may capture variables from outer scope
+                    }
+                    else
+                    {
+                        // function call starts a new local scope, jump over any other local scopes to the script scope
+                        InterpreterScope outermostScriptScope = null;
+
+                        do
+                        {
+                            if (scope.Context is AchievementScriptContext)
+                                outermostScriptScope = scope;
+
+                            if (scope._parent == null)
+                                break;
+
+                            scope = scope._parent;
+                        } while (true);
+
+                        if (outermostScriptScope != null)
+                            yield return outermostScriptScope;
+
+                        if (scope != outermostScriptScope)
+                            yield return scope;
+                    }
 
                     scope = scope._parent;
-                } while (true);
+                } while (scope != null);
             }
-
-            return scope._parent;
         }
 
         /// <summary>
@@ -66,28 +103,23 @@ namespace RATools.Parser.Internal
         /// <returns>Requested <see cref="FunctionDefinitionExpression"/>, <c>null</c> if not found.</returns>
         public FunctionDefinitionExpression GetFunction(string functionName)
         {
-            FunctionDefinitionExpression function;
-            if (_functions != null && _functions.TryGetValue(functionName, out function))
-                return function;
-
-            var functionVariable = GetVariableDefinitionPair(functionName);
-            if (functionVariable.Key != null)
+            foreach (var scope in VisibleScopes)
             {
-                var functionDefinition = functionVariable.Value as FunctionDefinitionExpression;
-                if (functionDefinition != null)
-                    return functionDefinition;
-
-                var functionReference = functionVariable.Value as FunctionReferenceExpression;
-                if (functionReference != null)
-                    return GetFunction(functionReference.Name);
-            }
-
-            var parentScope = GetParentScope(this);
-            if (parentScope != null)
-            {
-                function = parentScope.GetFunction(functionName);
-                if (function != null)
+                FunctionDefinitionExpression function;
+                if (scope._functions != null && scope._functions.TryGetValue(functionName, out function))
                     return function;
+
+                var functionVariable = scope.GetVariableDefinitionPair(functionName);
+                if (functionVariable.Key != null)
+                {
+                    var functionDefinition = functionVariable.Value as FunctionDefinitionExpression;
+                    if (functionDefinition != null)
+                        return functionDefinition;
+
+                    var functionReference = functionVariable.Value as FunctionReferenceExpression;
+                    if (functionReference != null)
+                        return scope.GetFunction(functionReference.Name);
+                }
             }
 
             return null;
@@ -123,13 +155,12 @@ namespace RATools.Parser.Internal
         /// <returns>Value of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariable(string variableName)
         {
-            var variable = GetVariableDefinitionPair(variableName);
-            if (variable.Key != null)
-                return variable.Value;
-
-            var parentScope = GetParentScope(this);
-            if (parentScope != null)
-                return parentScope.GetVariable(variableName);
+            foreach (var scope in VisibleScopes)
+            {
+                var variable = scope.GetVariableDefinitionPair(variableName);
+                if (variable.Key != null)
+                    return variable.Value;
+            }
 
             return null;
         }
@@ -141,13 +172,12 @@ namespace RATools.Parser.Internal
         /// <returns>Definition of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariableDefinition(string variableName)
         {
-            var variable = GetVariableDefinitionPair(variableName);
-            if (variable.Key != null)
-                return variable.Key;
-
-            var parentScope = GetParentScope(this);
-            if (parentScope != null)
-                return parentScope.GetVariableDefinition(variableName);
+            foreach (var scope in VisibleScopes)
+            {
+                var variable = scope.GetVariableDefinitionPair(variableName);
+                if (variable.Key != null)
+                    return variable.Key;
+            }
 
             return null;
         }
@@ -159,13 +189,12 @@ namespace RATools.Parser.Internal
         /// <returns>Reference to the variable, <c>null</c> if not found.</returns>
         public VariableReferenceExpression GetVariableReference(string variableName)
         {
-            var variable = GetVariableDefinitionPair(variableName);
-            if (variable.Key != null)
-                return new VariableReferenceExpression(variable.Key, variable.Value);
-
-            var parentScope = GetParentScope(this);
-            if (parentScope != null)
-                return parentScope.GetVariableReference(variableName);
+            foreach (var scope in VisibleScopes)
+            {
+                var variable = scope.GetVariableDefinitionPair(variableName);
+                if (variable.Key != null)
+                    return new VariableReferenceExpression(variable.Key, variable.Value);
+            }
 
             return null;
         }
@@ -184,8 +213,7 @@ namespace RATools.Parser.Internal
             var variableDefinition = new VariableDefinitionExpression(variable);
 
             // find the scope where the variable is defined and update it there.
-            var scope = this;
-            do
+            foreach (var scope in VisibleScopes)
             {
                 if (scope._variables != null && scope._variables.ContainsKey(variable.Name))
                 {
@@ -198,9 +226,7 @@ namespace RATools.Parser.Internal
                     scope._variable = new VariableDefinitionPair(variableDefinition, value);
                     return null;
                 }
-
-                scope = GetParentScope(scope);
-            } while (scope != null);
+            }
 
             // variable not defined, store in the current scope.
             DefineVariable(variableDefinition, value);

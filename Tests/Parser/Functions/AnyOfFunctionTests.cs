@@ -32,7 +32,7 @@ namespace RATools.Test.Parser.Functions
                 return builder.RequirementsDebugString;
             }
 
-            return parser.ErrorMessage;
+            return parser.Error.InnermostError.Message;
         }
 
         [Test]
@@ -47,6 +47,13 @@ namespace RATools.Test.Parser.Functions
         {
             Assert.That(Evaluate("any_of([1], a => byte(0x1234) == a)"),
                 Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
+        public void TestNonIterable()
+        {
+            Assert.That(Evaluate("any_of(1, a => byte(0x1234) == a)"),
+                Is.EqualTo("Cannot iterate over IntegerConstant: 1"));
         }
 
         [Test]
@@ -110,6 +117,20 @@ namespace RATools.Test.Parser.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.RequirementsDebugString, Is.EqualTo(
                 "byte(0x000001) == 17 || byte(0x000002) == 17 || byte(0x000003) == 17"));
+        }
+
+        [Test]
+        public void TestPredicateWithNoParameters()
+        {
+            Assert.That(Evaluate("any_of([1], () => byte(0x1234) == 1)"),
+                Is.EqualTo("predicate function must accept a single parameter"));
+        }
+
+        [Test]
+        public void TestPredicateWithExtraParameters()
+        {
+            Assert.That(Evaluate("any_of([1], (a, b) => byte(0x1234) == a)"),
+                Is.EqualTo("predicate function must accept a single parameter"));
         }
     }
 }
