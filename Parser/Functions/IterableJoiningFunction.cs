@@ -15,58 +15,45 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var inputs = GetParameter(scope, "inputs", out result);
+            var value = GetParameter(scope, "inputs", out result);
+            if (value == null)
+                return false;
+
+            if (!value.ReplaceVariables(scope, out result))
+                return false;
+
+            var inputs = result as IIterableExpression;
             if (inputs == null)
-                return false;
-
-            if (!inputs.ReplaceVariables(scope, out result))
-                return false;
-
-            var iterableInputs = inputs as IIterableExpression;
-            if (iterableInputs == null)
             {
-                result = new ParseErrorExpression("Cannot iterate over " + inputs.ToString(), inputs);
+                result = new ParseErrorExpression("Cannot iterate over " + result.ToString(), result);
                 return false;
             }
 
-            var predicate = GetParameter(scope, "predicate", out result);
+            var predicate = GetFunctionParameter(scope, "predicate", out result);
             if (predicate == null)
                 return false;
 
-            var functionReference = predicate as FunctionReferenceExpression;
-            if (functionReference == null)
-            {
-                result = new ParseErrorExpression("predicate must be a function reference");
-                return false;
-            }
-
-            var predicateFunction = scope.GetFunction(functionReference.Name);
-            if (predicate == null)
-            {
-                result = new ParseErrorExpression("Could not locate function: " + functionReference.Name, functionReference);
-                return false;
-            }
-
-            if ((predicateFunction.Parameters.Count - predicateFunction.DefaultParameters.Count) != 1)
+            if ((predicate.Parameters.Count - predicate.DefaultParameters.Count) != 1)
             {
                 result = new ParseErrorExpression("predicate function must accept a single parameter");
                 return false;
             }
 
-            var iteratorScope = new InterpreterScope(scope);
-            var predicateParameter = new VariableExpression(predicateFunction.Parameters.First().Name);
-            foreach (var kvp in predicateFunction.DefaultParameters)
+            var iteratorScope = predicate.CreateCaptureScope(scope);
+
+            var predicateParameter = new VariableExpression(predicate.Parameters.First().Name);
+            foreach (var kvp in predicate.DefaultParameters)
                 iteratorScope.AssignVariable(new VariableExpression(kvp.Key), kvp.Value);
 
             ExpressionBase expression = null;
-            foreach (var input in iterableInputs.IterableExpressions())
+            foreach (var input in inputs.IterableExpressions())
             {
                 if (!input.ReplaceVariables(iteratorScope, out result))
                     return false;
 
                 iteratorScope.AssignVariable(predicateParameter, result);
 
-                if (!predicateFunction.Evaluate(iteratorScope, out result))
+                if (!predicate.Evaluate(iteratorScope, out result))
                     return false;
 
                 expression = Combine(expression, result);

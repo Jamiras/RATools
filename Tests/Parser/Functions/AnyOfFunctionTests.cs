@@ -77,5 +77,39 @@ namespace RATools.Test.Parser.Functions
             Assert.That(Evaluate("any_of({1:\"One\",2:\"Two\",3:\"Three\"}, a => byte(0x1234) == a)"),
                 Is.EqualTo("byte(0x001234) == 1 || byte(0x001234) == 2 || byte(0x001234) == 3"));
         }
+
+        [Test]
+        public void TestScopedVariable()
+        {
+            var script = "function ItemInInventory(id) => any_of(range(0x1200, 0x1208, step=2), addr => word(addr) == id)\n" +
+                "achievement(\"title\", \"desc\", 5, ItemInInventory(17))";
+            var tokenizer = Tokenizer.CreateTokenizer(script);
+            var parser = new AchievementScriptInterpreter();
+
+            if (!parser.Run(tokenizer))
+                Assert.Fail(parser.ErrorMessage);
+
+            var achievement = parser.Achievements.First();
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.RequirementsDebugString, Is.EqualTo(
+                "word(0x001200) == 17 || word(0x001202) == 17 || word(0x001204) == 17 || word(0x001206) == 17 || word(0x001208) == 17"));
+        }
+
+        [Test]
+        public void TestPredicateWithDefaultParameter()
+        {
+            var script = "function p(addr, id=17) => byte(addr) == id\n" +
+                "achievement(\"title\", \"desc\", 5, any_of([1, 2, 3], p))";
+            var tokenizer = Tokenizer.CreateTokenizer(script);
+            var parser = new AchievementScriptInterpreter();
+
+            if (!parser.Run(tokenizer))
+                Assert.Fail(parser.ErrorMessage);
+
+            var achievement = parser.Achievements.First();
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.RequirementsDebugString, Is.EqualTo(
+                "byte(0x000001) == 17 || byte(0x000002) == 17 || byte(0x000003) == 17"));
+        }
     }
 }

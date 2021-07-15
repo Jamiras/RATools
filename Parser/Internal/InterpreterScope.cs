@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -61,14 +60,6 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Determines if the specified function is provided by this InterpreterScope object.
-        /// </summary>
-        public bool ProvidesFunction(string functionName)
-        {
-            return (_functions != null && _functions.ContainsKey(functionName));
-        }
-
-        /// <summary>
         /// Gets the function definition for a function.
         /// </summary>
         /// <param name="functionName">Name of the function.</param>
@@ -79,27 +70,24 @@ namespace RATools.Parser.Internal
             if (_functions != null && _functions.TryGetValue(functionName, out function))
                 return function;
 
-            var functionReference = GetVariable(functionName) as FunctionReferenceExpression;
-            if (functionReference != null)
-                return GetFunction(functionReference.Name);
+            var functionVariable = GetVariableDefinitionPair(functionName);
+            if (functionVariable.Key != null)
+            {
+                var functionDefinition = functionVariable.Value as FunctionDefinitionExpression;
+                if (functionDefinition != null)
+                    return functionDefinition;
+
+                var functionReference = functionVariable.Value as FunctionReferenceExpression;
+                if (functionReference != null)
+                    return GetFunction(functionReference.Name);
+            }
 
             var parentScope = GetParentScope(this);
             if (parentScope != null)
             {
                 function = parentScope.GetFunction(functionName);
                 if (function != null)
-                {
-                    // if found, and the current scope is a function call, store for faster future lookups
-                    if (Context is FunctionCallExpression)
-                    {
-                        if (_functions == null)
-                            _functions = new Dictionary<string, FunctionDefinitionExpression>();
-
-                        _functions.Add(functionName, function);
-                    }
-
                     return function;
-                }
             }
 
             return null;
@@ -116,6 +104,18 @@ namespace RATools.Parser.Internal
             _functions[function.Name.Name] = function;
         }
 
+        private VariableDefinitionPair GetVariableDefinitionPair(string variableName)
+        {
+            VariableDefinitionPair variable;
+            if (_variables != null && _variables.TryGetValue(variableName, out variable))
+                return variable;
+
+            if (_variable.Key != null && _variable.Key.Name == variableName)
+                return _variable;
+
+            return new VariableDefinitionPair();
+        }
+
         /// <summary>
         /// Gets the value of a variable.
         /// </summary>
@@ -123,12 +123,9 @@ namespace RATools.Parser.Internal
         /// <returns>Value of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariable(string variableName)
         {
-            VariableDefinitionPair variable;
-            if (_variables != null && _variables.TryGetValue(variableName, out variable))
+            var variable = GetVariableDefinitionPair(variableName);
+            if (variable.Key != null)
                 return variable.Value;
-
-            if (_variable.Key != null && _variable.Key.Name == variableName)
-                return _variable.Value;
 
             var parentScope = GetParentScope(this);
             if (parentScope != null)
@@ -144,12 +141,9 @@ namespace RATools.Parser.Internal
         /// <returns>Definition of the variable, <c>null</c> if not found.</returns>
         public ExpressionBase GetVariableDefinition(string variableName)
         {
-            VariableDefinitionPair variable;
-            if (_variables != null && _variables.TryGetValue(variableName, out variable))
+            var variable = GetVariableDefinitionPair(variableName);
+            if (variable.Key != null)
                 return variable.Key;
-
-            if (_variable.Key != null && _variable.Key.Name == variableName)
-                return _variable.Key;
 
             var parentScope = GetParentScope(this);
             if (parentScope != null)
@@ -163,14 +157,11 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="variableName">Name of the variable.</param>
         /// <returns>Reference to the variable, <c>null</c> if not found.</returns>
-        public ExpressionBase GetVariableReference(string variableName)
+        public VariableReferenceExpression GetVariableReference(string variableName)
         {
-            VariableDefinitionPair variable;
-            if (_variables != null && _variables.TryGetValue(variableName, out variable))
+            var variable = GetVariableDefinitionPair(variableName);
+            if (variable.Key != null)
                 return new VariableReferenceExpression(variable.Key, variable.Value);
-
-            if (_variable.Key != null && _variable.Key.Name == variableName)
-                return new VariableReferenceExpression(_variable.Key, _variable.Value);
 
             var parentScope = GetParentScope(this);
             if (parentScope != null)
@@ -316,7 +307,7 @@ namespace RATools.Parser.Internal
             {
                 foreach (var name in names)
                 {
-                    KeyValuePair<VariableDefinitionExpression, ExpressionBase> variable;
+                    VariableDefinitionPair variable;
                     if (_variables.TryGetValue(name, out variable))
                         UpdateVariable(name, newGroup.Expressions);
                 }

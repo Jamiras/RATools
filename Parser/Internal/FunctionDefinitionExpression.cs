@@ -134,7 +134,7 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Gets the  parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// Gets a parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
         /// </summary>
         /// <param name="scope">The scope.</param>
         /// <param name="name">The name of the parameter.</param>
@@ -289,6 +289,84 @@ namespace RATools.Parser.Internal
 
             parseError = null;
             return typedParameter;
+        }
+
+        protected FunctionDefinitionExpression GetFunctionParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = scope.GetVariable(name);
+            if (parameter == null)
+            {
+                parseError = new ParseErrorExpression("No value provided for " + name + " parameter");
+                return null;
+            }
+
+            var functionDefinition = parameter as FunctionDefinitionExpression;
+            if (functionDefinition == null)
+            {
+                var functionReference = parameter as FunctionReferenceExpression;
+                if (functionReference == null)
+                {
+                    parseError = new ParseErrorExpression(name + " must be a function reference");
+                    return null;
+                }
+
+                functionDefinition = scope.GetFunction(functionReference.Name);
+                if (functionDefinition == null)
+                {
+                    parseError = new ParseErrorExpression("Undefined function: " + functionReference.Name);
+                    return null;
+                }
+            }
+
+            parseError = null;
+            return functionDefinition;
+        }
+
+
+        /// <summary>
+        /// Creates an <see cref="InterpreterScope"/> with all variables required for the function call.
+        /// </summary>
+        public InterpreterScope CreateCaptureScope(InterpreterScope scope)
+        {
+            var captureScope = new InterpreterScope(scope);
+
+            // only have to capture variables for anonymous functions
+            var userFunctionDefinition = this as UserFunctionDefinitionExpression;
+            if (userFunctionDefinition == null || !userFunctionDefinition.IsAnonymousFunction)
+                return captureScope;
+
+            // Initialize the new scope object with a FunctionCall context so we can determine which
+            // variables have to be captured. The FunctionCall context will only see the globals.
+            captureScope.Context = new FunctionCallExpression(Name.Name, new ExpressionBase[0]);
+
+            // if the anonymous function is being passed to another function, it should be able
+            // to see the variables visible to the function it's being passed to. temporarily hide
+            // the FunctionCall context for the function to be called.
+            var passingToFunctionContext = scope.Context as FunctionCallExpression;
+            if (passingToFunctionContext != null)
+                scope.Context = null;
+
+            var possibleDependencies = new HashSet<string>();
+            ((INestedExpressions)this).GetDependencies(possibleDependencies);
+            foreach (var dependency in possibleDependencies)
+            {
+                if (captureScope.GetVariable(dependency) == null)
+                {
+                    // the variable is not visible to the function scope. check to see if it's visible
+                    // in the calling scope. if it is, create a copy for the function call.
+                    var variable = scope.GetVariableReference(dependency);
+                    if (variable != null)
+                        captureScope.DefineVariable(variable.Variable, variable.Expression);
+                }
+            }
+
+            // restore the FunctionCall context for the function to be called.
+            if (passingToFunctionContext != null)
+                scope.Context = passingToFunctionContext;
+
+            // change the context to the function definition and return the new context
+            captureScope.Context = this;
+            return captureScope;
         }
 
         /// <summary>
@@ -551,6 +629,14 @@ namespace RATools.Parser.Internal
         private static VariableDefinitionExpression CreateAnonymousFunctionName(int line, int column)
         {
             return new VariableDefinitionExpression(String.Format("AnonymousFunction@{0},{1}", line, column));
+        }
+
+        public bool IsAnonymousFunction
+        {
+            get
+            {
+                return Name.Name.StartsWith("AnonymousFunction@");
+            }
         }
 
         /// <summary>

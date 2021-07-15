@@ -98,7 +98,11 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                if (scope.GetVariable(FunctionName.Name) != null)
+                    result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
+                else
+                    result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+
                 return false;
             }
 
@@ -125,11 +129,6 @@ namespace RATools.Parser.Internal
                     var functionCall = (FunctionCallExpression)result;
                     if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
                         functionCall._fullyExpanded = true;
-
-                    // if any of the parameters are an anonymous function, replace the reference with the definition
-                    // otherwise the definition will be lost
-                    if (functionCall.Parameters.Any(p => p is FunctionReferenceExpression))
-                        functionCall.ReplaceAnonymousFunctionReferencesWithDefinitions(functionParametersScope);
 
                     // if there was no change, also mark the source as fully expanded.
                     if (result == this)
@@ -158,22 +157,6 @@ namespace RATools.Parser.Internal
 
             scope.ReturnValue = result;
             return true;
-        }
-
-        private void ReplaceAnonymousFunctionReferencesWithDefinitions(InterpreterScope scope)
-        {
-            var newParameters = new ExpressionBase[Parameters.Count];
-            for (int i = 0; i < newParameters.Length; ++i)
-            {
-                var parameter = Parameters.ElementAt(i);
-                var functionReference = parameter as FunctionReferenceExpression;
-                if (functionReference != null && scope.ProvidesFunction(functionReference.Name))
-                    parameter = scope.GetFunction(functionReference.Name);
-
-                newParameters[i] = parameter;
-            }
-
-            Parameters = newParameters;
         }
 
         /// <summary>
@@ -231,12 +214,8 @@ namespace RATools.Parser.Internal
                     break;
 
                 case ExpressionType.FunctionDefinition:
-                    // anonymous function, convert to function reference
-                    var functionDefinition = (FunctionDefinitionExpression)value;
-                    parameterScope.AddFunction(functionDefinition);
-                    value = new FunctionReferenceExpression(functionDefinition.Name.Name);
-                    assignment.Value.CopyLocation(value);
-                    return value;
+                    // anonymous function, do nothing
+                    break;
 
                 default:
                     // not a basic type, evaluate it
