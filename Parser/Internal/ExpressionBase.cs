@@ -179,7 +179,7 @@ namespace RATools.Parser.Internal
                     else if (tokenizer.NextChar == '>')
                     {
                         tokenizer.Advance();
-                        clause = UserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
+                        clause = AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
                     }
                     else
                     {
@@ -236,8 +236,6 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
-                        if (clause.Type == ExpressionType.ParseError)
-                            return clause;
                     }
                     break;
 
@@ -251,8 +249,6 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
-                        if (clause.Type == ExpressionType.ParseError)
-                            return clause;
                     }
                     break;
 
@@ -262,6 +258,9 @@ namespace RATools.Parser.Internal
 
                     return clause;
             }
+
+            if (clause.Type == ExpressionType.ParseError)
+                return clause;
 
             clause = clause.Rebalance();
 
@@ -360,8 +359,8 @@ namespace RATools.Parser.Internal
                     return new ConditionalExpression(null, ConditionalOperation.Not, clause);
 
                 case '(':
-                    if (UserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
-                        return UserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
+                    if (AnonymousUserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
+                        return AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
 
                     tokenizer.Advance();
                     clause = ExpressionBase.Parse(tokenizer);

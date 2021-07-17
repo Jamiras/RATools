@@ -95,6 +95,8 @@ namespace RATools.Parser.Internal
                 if (result.Type == ExpressionType.ParseError)
                     return false;
 
+                CopyLocation(result);
+
                 // InvertExpression may distribute Nots to subnodes, recurse
                 return result.ReplaceVariables(scope, out result);
             }
@@ -104,7 +106,7 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        private static ExpressionBase InvertExpression(ExpressionBase expression)
+        internal static ExpressionBase InvertExpression(ExpressionBase expression)
         {
             // logical inversion
             var condition = expression as ConditionalExpression;

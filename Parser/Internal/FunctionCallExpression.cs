@@ -98,25 +98,29 @@ namespace RATools.Parser.Internal
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
-                result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                if (scope.GetVariable(FunctionName.Name) != null)
+                    result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
+                else
+                    result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+
                 return false;
             }
 
-            var functionScope = GetParameters(functionDefinition, scope, out result);
-            if (functionScope == null || result is ParseErrorExpression)
+            var functionParametersScope = GetParameters(functionDefinition, scope, out result);
+            if (functionParametersScope == null || result is ParseErrorExpression)
                 return false;
 
-            if (functionScope.Depth >= 100)
+            if (functionParametersScope.Depth >= 100)
             {
                 result = new ParseErrorExpression("Maximum recursion depth exceeded", this);
                 return false;
             }
 
-            functionScope.Context = this;
+            functionParametersScope.Context = this;
             if (inAssignment)
             {
                 // in assignment, just replace variables
-                functionDefinition.ReplaceVariables(functionScope, out result);
+                functionDefinition.ReplaceVariables(functionParametersScope, out result);
 
                 if (result.Type == ExpressionType.FunctionCall)
                 {
@@ -129,12 +133,17 @@ namespace RATools.Parser.Internal
                     // if there was no change, also mark the source as fully expanded.
                     if (result == this)
                         _fullyExpanded = true;
+
+                    // when expanding the parameters, a new functionCall object will be created without a name
+                    // location. if that has happened, replace the temporary name object with the real one.
+                    if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
+                        functionCall.FunctionName = FunctionName;
                 }
             }
             else
             {
                 // not in assignment, evaluate the function
-                functionDefinition.Evaluate(functionScope, out result);
+                functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
             var error = result as ParseErrorExpression;
@@ -205,12 +214,10 @@ namespace RATools.Parser.Internal
                     break;
 
                 case ExpressionType.FunctionDefinition:
-                    // anonymous function, convert to function reference
-                    var functionDefinition = (FunctionDefinitionExpression)value;
-                    parameterScope.AddFunction(functionDefinition);
-                    value = new FunctionReferenceExpression(functionDefinition.Name.Name);
-                    assignment.Value.CopyLocation(value);
-                    return value;
+                    var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
+                    if (anonymousFunction != null)
+                        anonymousFunction.CaptureVariables(parameterScope);
+                    break;
 
                 default:
                     // not a basic type, evaluate it
@@ -270,7 +277,7 @@ namespace RATools.Parser.Internal
         /// <returns>The new scope, <c>null</c> if an error occurred - see <paramref name="error"/> for error details.</returns>
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
-            var parameterScope = new InterpreterScope(scope);
+            var parameterScope = function.CreateCaptureScope(scope);
 
             // optimization for no parameter function
             if (function.Parameters.Count == 0 && Parameters.Count == 0)

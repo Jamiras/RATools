@@ -115,6 +115,11 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new AlwaysTrueFunction());
                 _globalScope.AddFunction(new AlwaysFalseFunction());
 
+                _globalScope.AddFunction(new AllOfFunction());
+                _globalScope.AddFunction(new AnyOfFunction());
+                _globalScope.AddFunction(new NoneOfFunction());
+                _globalScope.AddFunction(new SumOfFunction());
+
                 _globalScope.AddFunction(new RangeFunction());
                 _globalScope.AddFunction(new FormatFunction());
                 _globalScope.AddFunction(new LengthFunction());
@@ -491,52 +496,14 @@ namespace RATools.Parser
                 return false;
             }
 
-            var dict = range as DictionaryExpression;
-            if (dict != null)
+            var iterableExpression = range as IIterableExpression;
+            if (iterableExpression != null)
             {
                 var iterator = forExpression.IteratorName;
                 var iteratorScope = new InterpreterScope(scope);
                 var iteratorVariable = new VariableExpression(iterator.Name);
 
-                foreach (var entry in dict.Keys)
-                {
-                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
-
-                    ExpressionBase key;
-                    if (!entry.ReplaceVariables(iteratorScope, out key))
-                    {
-                        Error = key as ParseErrorExpression;
-                        return false;
-                    }
-
-                    var loopScope = new InterpreterScope(scope);
-                    loopScope.DefineVariable(iterator, key);
-
-                    if (!Evaluate(forExpression.Expressions, loopScope))
-                        return false;
-
-                    if (loopScope.IsComplete)
-                    {
-                        if (loopScope.ReturnValue != null)
-                        {
-                            scope.ReturnValue = loopScope.ReturnValue;
-                            scope.IsComplete = true;
-                        }
-                        break;
-                    }
-                }
-
-                return true;
-            }
-
-            var array = range as ArrayExpression;
-            if (array != null)
-            {
-                var iterator = forExpression.IteratorName;
-                var iteratorScope = new InterpreterScope(scope);
-                var iteratorVariable = new VariableExpression(iterator.Name);
-
-                foreach (var entry in array.Entries)
+                foreach (var entry in iterableExpression.IterableExpressions())
                 {
                     iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
 

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ArrayExpression : ExpressionBase, INestedExpressions
+    internal class ArrayExpression : ExpressionBase, INestedExpressions, IIterableExpression
     {
         public ArrayExpression()
             : base(ExpressionType.Array)
@@ -108,6 +108,11 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+        }
+
+        IEnumerable<ExpressionBase> IIterableExpression.IterableExpressions()
+        {
+            return Entries;
         }
     }
 }

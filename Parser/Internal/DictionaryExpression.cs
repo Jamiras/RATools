@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class DictionaryExpression : ExpressionBase, INestedExpressions
+    internal class DictionaryExpression : ExpressionBase, INestedExpressions, IIterableExpression
     {
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)
@@ -426,6 +426,11 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+        }
+
+        IEnumerable<ExpressionBase> IIterableExpression.IterableExpressions()
+        {
+            return Keys;
         }
 
         [DebuggerDisplay("{Key}: {Value}")]

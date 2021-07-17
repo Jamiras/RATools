@@ -1076,6 +1076,7 @@ namespace RATools.Test.Parser
         [TestCase("b = (i, j) => i + j\nc = b(3, 1)")] // anonymous multiple parameter function definition
         [TestCase("b = i => i + 1\nc = b(3)")] // anonymous function definition without parenthesis
         [TestCase("a = i => i + 1\nb = (f,i) => f(i)\nc = b(a, 3)")] // anonymous function passed as parameter
+        [TestCase("a = f => f(1)\nb = n => a(i => i + n)\nc = b(3)")] // anonymous function captures variable
         [TestCase("b = (f,i) => f(i)\nc = b(i => i + 1, 3)")] // anonymous function defined as parameter
         public void TestAnonymousFunction(string definition)
         {

@@ -142,4 +142,9 @@ namespace RATools.Parser.Internal
             }
         }
     }
+
+    internal interface IIterableExpression
+    {
+        IEnumerable<ExpressionBase> IterableExpressions();
+    }
 }
