@@ -236,8 +236,6 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
-                        if (clause.Type == ExpressionType.ParseError)
-                            return clause;
                     }
                     break;
 
@@ -251,8 +249,6 @@ namespace RATools.Parser.Internal
                     {
                         tokenizer.Advance();
                         clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
-                        if (clause.Type == ExpressionType.ParseError)
-                            return clause;
                     }
                     break;
 
@@ -262,6 +258,9 @@ namespace RATools.Parser.Internal
 
                     return clause;
             }
+
+            if (clause.Type == ExpressionType.ParseError)
+                return clause;
 
             clause = clause.Rebalance();
 
