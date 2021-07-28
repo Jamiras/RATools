@@ -897,7 +897,7 @@ namespace RATools.Parser
                 return context.CallFunction(functionCall, scope);
             }
 
-            return ExecuteAchievementClause(evaluated, scope);
+            return ExecuteAchievementExpression(evaluated, scope);
         }
     }
 }

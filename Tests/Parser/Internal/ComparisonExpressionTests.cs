@@ -72,6 +72,8 @@ namespace RATools.Test.Parser.Internal
         [TestCase("byte(1) - 3 == prev(byte(1))", "byte(1) - 3 == prev(byte(1))")] // value increases by 3
         [TestCase("byte(1) == prev(byte(1)) + 3", "byte(1) - 3 == prev(byte(1))")] // value increases by 3
         [TestCase("byte(1) - prev(byte(1)) == 3", "byte(1) - prev(byte(1)) == 3")] // value increases by 3
+        [TestCase("0 + byte(1) + 0 == 9", "byte(1) == 9")] // 0s should be removed without reordering
+        [TestCase("0 + byte(1) - 9 == 0", "byte(1) == 9")] // 9 should be moved to right hand side, then 0s removed
         public void TestReplaceVariables(string input, string expected)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);

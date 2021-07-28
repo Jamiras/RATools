@@ -155,6 +155,16 @@ namespace RATools.Parser.Internal
             return MergeOperands(left, right, out result);
         }
 
+        /// <summary>
+        /// Attempts to merge the operands without evaluating them.
+        /// </summary>
+        internal ExpressionBase MergeOperands()
+        {
+            ExpressionBase result;
+            MergeOperands(Left, Right, out result);
+            return result;
+        }
+
         private bool MergeOperands(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
         { 
             var integerLeft = left as IntegerConstantExpression;
