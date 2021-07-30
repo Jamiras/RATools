@@ -305,12 +305,18 @@ namespace RATools.Parser.Internal
 
         public void AddEvaluationError(ParseErrorExpression error)
         {
-            _evaluationErrors.Add(error);
+            lock (_evaluationErrors)
+            {
+                _evaluationErrors.Add(error);
+            }
         }
 
         public void ResetErrors()
         {
-            _evaluationErrors.Clear();
+            lock (_evaluationErrors)
+            {
+                _evaluationErrors.Clear();
+            }
         }
 
         public IEnumerable<ParseErrorExpression> Errors
@@ -335,45 +341,48 @@ namespace RATools.Parser.Internal
             foreach (var group in GetGroupsForLine(line))
                 result |= group.GetExpressionsForLine(expressions, line);
 
-            foreach (var error in _evaluationErrors)
+            lock (_evaluationErrors)
             {
-                var unknownVariableError = error.InnermostError as UnknownVariableParseErrorExpression;
-                if (unknownVariableError != null && unknownVariableError.Location.Start.Line <= line &&
-                    unknownVariableError.Location.End.Line >= line)
+                foreach (var error in _evaluationErrors)
                 {
-                    if (!expressions.Contains(unknownVariableError))
-                        expressions.Add(unknownVariableError);
-
-                    result = true;
-                }
-
-                ParseErrorExpression mostSignificantError = null;
-                var scan = error;
-                do
-                {
-                    if (scan.Location.Start.Line <= line && scan.Location.End.Line >= line)
+                    var unknownVariableError = error.InnermostError as UnknownVariableParseErrorExpression;
+                    if (unknownVariableError != null && unknownVariableError.Location.Start.Line <= line &&
+                        unknownVariableError.Location.End.Line >= line)
                     {
-                        // scan is more significant than current error, use it
-                        mostSignificantError = scan;
-                    }
-                    else if (mostSignificantError != null &&
-                        scan.Location.Start.Line >= mostSignificantError.Location.Start.Line &&
-                        scan.Location.End.Line < mostSignificantError.Location.End.Line)
-                    {
-                        // scan is more significant than current error, but not part of line, ignore it
-                        mostSignificantError = null;
-                        break;
+                        if (!expressions.Contains(unknownVariableError))
+                            expressions.Add(unknownVariableError);
+
+                        result = true;
                     }
 
-                    scan = scan.InnerError;
-                } while (scan != null);
+                    ParseErrorExpression mostSignificantError = null;
+                    var scan = error;
+                    do
+                    {
+                        if (scan.Location.Start.Line <= line && scan.Location.End.Line >= line)
+                        {
+                            // scan is more significant than current error, use it
+                            mostSignificantError = scan;
+                        }
+                        else if (mostSignificantError != null &&
+                            scan.Location.Start.Line >= mostSignificantError.Location.Start.Line &&
+                            scan.Location.End.Line < mostSignificantError.Location.End.Line)
+                        {
+                            // scan is more significant than current error, but not part of line, ignore it
+                            mostSignificantError = null;
+                            break;
+                        }
 
-                if (mostSignificantError != null)
-                {
-                    if (!expressions.Contains(mostSignificantError))
-                        expressions.Add(mostSignificantError);
+                        scan = scan.InnerError;
+                    } while (scan != null);
 
-                    result = true;
+                    if (mostSignificantError != null)
+                    {
+                        if (!expressions.Contains(mostSignificantError))
+                            expressions.Add(mostSignificantError);
+
+                        result = true;
+                    }
                 }
             }
 

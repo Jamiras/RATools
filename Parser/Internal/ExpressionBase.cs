@@ -21,14 +21,40 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ExpressionType Type { get; private set; }
 
+        /// <summary>
+        /// Gets the location of the expression within the document
+        /// </summary>
         public TextRange Location { get; protected set; }
+
+        /// <summary>
+        /// Gets whether or not an expression has been marked as immutable.
+        /// </summary>
+        /// <remarks>
+        /// Used to prevent relocating expressions (via <see cref="CopyLocation"/>) when they're returned
+        /// by <see cref="ReplaceVariables"/> without being copied.
+        /// </remarks>
+        internal bool IsReadOnly { get; private set; }
+
+        internal ExpressionBase MakeReadOnly(ExpressionBase expression)
+        {
+            expression.IsReadOnly = true;
+
+            var nested = expression as INestedExpressions;
+            if (nested != null)
+            {
+                foreach (var nestedExpression in nested.NestedExpressions)
+                    MakeReadOnly(nestedExpression);
+            }
+
+            return expression;
+        }
 
         /// <summary>
         /// Copies the location of this expression into another expression.
         /// </summary>
         internal void CopyLocation(ExpressionBase target)
         {
-            if (!Location.IsEmpty)
+            if (!Location.IsEmpty && !target.IsReadOnly)
                 target.Location = Location;
         }
 

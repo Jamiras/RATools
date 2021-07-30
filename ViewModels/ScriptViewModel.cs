@@ -1,4 +1,7 @@
-﻿using Jamiras.Components;
+﻿//#define DEBUG_RECORDING
+//#define DEBUG_PLAYBACK
+
+using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using System;
@@ -10,13 +13,18 @@ namespace RATools.ViewModels
     {
         public ScriptViewModel(GameViewModel owner)
         {
-            _owner = owner;
             Title = "Script";
+
+#if DEBUG_PLAYBACK
+            Editor = new PlaybackEditorViewModel(owner, "20210728-185730");
+#elif DEBUG_RECORDING
+            Editor = new RecordingEditorViewModel(owner);
+#else
             Editor = new EditorViewModel(owner);
+#endif
+
             Editor.LineChanged += (o, e) => SetModified();
         }
-
-        private GameViewModel _owner;
 
         public override bool IsGenerated { get { return true; } }
 
@@ -76,7 +84,7 @@ namespace RATools.ViewModels
             CompareState = GeneratedCompareState.LocalDiffers;
         }
 
-        private void ResetModified()
+        internal void ResetModified()
         { 
             CompareState = GeneratedCompareState.Same;
             ModificationMessage = null;
@@ -106,6 +114,13 @@ namespace RATools.ViewModels
             var backupFilename = GetBackupFilename(Filename);
             if (File.Exists(backupFilename))
                 File.Delete(backupFilename);
+        }
+
+        internal void OnBeforeClose()
+        {
+#if DEBUG_RECORDING
+            ((RecordingEditorViewModel)Editor).EndRecording();
+#endif
         }
     }
 }

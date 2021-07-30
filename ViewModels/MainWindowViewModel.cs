@@ -169,6 +169,9 @@ namespace RATools.ViewModels
 
         public bool CloseEditor()
         {
+            if (Game != null)
+                Game.Script.OnBeforeClose();
+
             if (Game == null || Game.Script.CompareState != GeneratedCompareState.LocalDiffers)
                 return true;
 

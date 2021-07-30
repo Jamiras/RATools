@@ -340,7 +340,8 @@ namespace RATools.ViewModels
         {
             int line = e.Line.Line;
             var expressions = new List<ExpressionBase>();
-            _parsedContent.GetExpressionsForLine(expressions, line);
+            if (_parsedContent != null)
+                _parsedContent.GetExpressionsForLine(expressions, line);
 
             foreach (var expression in expressions)
             {

@@ -544,7 +544,7 @@ namespace RATools.Parser.Internal
 
             Location = new TextRange(Location.Start, tokenizer.Location);
             tokenizer.Advance();
-            return this;
+            return MakeReadOnly(this);
         }
 
         protected ExpressionBase ParseShorthandBody(PositionalTokenizer tokenizer)
@@ -561,7 +561,7 @@ namespace RATools.Parser.Internal
             var returnExpression = new ReturnExpression(expression);
             Expressions.Add(returnExpression);
             Location = new TextRange(Location.Start, expression.Location.End);
-            return this;
+            return MakeReadOnly(this);
         }
 
 
