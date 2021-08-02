@@ -16,13 +16,16 @@ namespace RATools.Parser.Functions
 
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
-            var address = ((IntegerConstantExpression)functionCall.Parameters.ElementAt(1)).Value;
+            var address = functionCall.Parameters.ElementAt(1);
+            var result = BuildTrigger(context, scope, functionCall, address);
+            if (result != null)
+                return result;
 
             var index = ((IntegerConstantExpression)functionCall.Parameters.First()).Value;
             if (index < 0 || index > 31)
                 return new ParseErrorExpression("index must be between 0 and 31", functionCall.Parameters.First());
 
-            address += index / 8;
+            var offset = (uint)index / 8;
             index %= 8;
 
             FieldSize size;
@@ -39,9 +42,11 @@ namespace RATools.Parser.Functions
                 case 7: size = FieldSize.Bit7; break;
             }
 
-            var requirement = new Requirement();
-            requirement.Left = new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)address };
-            context.Trigger.Add(requirement);
+            var lastRequirement = context.LastRequirement;
+            if (lastRequirement.Left.IsMemoryReference)
+                lastRequirement.Left = new Field { Size = size, Type = lastRequirement.Left.Type, Value = lastRequirement.Left.Value + offset };
+            if (lastRequirement.Right.IsMemoryReference)
+                lastRequirement.Right = new Field { Size = size, Type = lastRequirement.Right.Type, Value = lastRequirement.Right.Value + offset };
             return null;
         }
     }

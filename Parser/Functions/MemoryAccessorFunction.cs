@@ -62,9 +62,13 @@ namespace RATools.Parser.Functions
 
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
-            var requirement = new Requirement();
             var address = functionCall.Parameters.First();
+            return BuildTrigger(context, scope, functionCall, address);
+        }
 
+        protected ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall, ExpressionBase address)
+        {
+            var requirement = new Requirement();
             var integerConstant = address as IntegerConstantExpression;
             if (integerConstant != null)
             {
@@ -75,6 +79,7 @@ namespace RATools.Parser.Functions
 
             IntegerConstantExpression offsetConstant = null;
             IntegerConstantExpression scalarConstant = null;
+            var originalAddress = address;
 
             var funcCall = address as FunctionCallExpression;
             if (funcCall == null)
@@ -163,11 +168,9 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            address = functionCall.Parameters.First();
-
             var builder = new StringBuilder();
             builder.Append("Cannot convert to an address: ");
-            address.AppendString(builder);
+            originalAddress.AppendString(builder);
 
             return new ParseErrorExpression(builder.ToString(), address);
         }
