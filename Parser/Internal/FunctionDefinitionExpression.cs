@@ -416,7 +416,7 @@ namespace RATools.Parser.Internal
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(definition));
             tokenizer.Match("function");
-            return Parse(tokenizer) as UserFunctionDefinitionExpression;
+            return Parse(tokenizer, 0, 0) as UserFunctionDefinitionExpression;
         }
 
         /// <summary>

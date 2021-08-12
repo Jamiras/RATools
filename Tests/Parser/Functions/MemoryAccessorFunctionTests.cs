@@ -152,6 +152,13 @@ namespace RATools.Test.Parser.Functions
         [TestCase("byte(0x1234 + word(0x2345) * 2)", "byte(word(0x002345) * 0x00000002 + 0x001234)")] // scaled array index
         [TestCase("byte(word(word(0x2345) * 2 + 0x1234) * 4 + 0x3456)",
                   "byte(word(word(0x002345) * 0x00000002 + 0x001234) * 0x00000004 + 0x003456)")] // double scaled array index
+        [TestCase("bit(3, word(0x1234))", "bit3(word(0x001234) + 0x000000)")] // direct pointer
+        [TestCase("bit(18, word(0x1234))", "bit2(word(0x001234) + 0x000002)")] // direct pointer
+        [TestCase("bit(3, word(0x1234) + 10)", "bit3(word(0x001234) + 0x00000A)")] // indirect pointer
+        [TestCase("bit(18, word(0x1234) + 10)", "bit2(word(0x001234) + 0x00000C)")] // indirect pointer
+        [TestCase("bit(18, 10 + word(0x1234))", "bit2(word(0x001234) + 0x00000C)")] // indirect pointer
+        [TestCase("bit(18, prev(word(0x1234)))", "bit2(prev(word(0x001234)) + 0x000002)")] // direct pointer using prev data
+        [TestCase("bit(18, 0x1234 + word(0x2345) * 2)", "bit2(word(0x002345) * 0x00000002 + 0x001236)")] // scaled array index
         public void TestAddAddress(string input, string expected)
         {
             var requirements = Evaluate(input);
