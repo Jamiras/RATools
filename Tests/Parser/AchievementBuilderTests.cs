@@ -665,6 +665,7 @@ namespace RATools.Test.Parser
         [TestCase("tbyte(WA) > word(WB)", "(word(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777215")] // different sizes and addresses
         [TestCase("byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2)",  // simple compare to prev of same address (double indirect)
             "byte(word(WA + 0x00000A) + 0x000002) > prev(byte(word(WA + 0x00000A) + 0x000002))")]
+        [TestCase("bit(18, WA + 10) > prev(bit(18, WA + 10))", "bit2(WA + 0x00000C) > prev(bit2(WA + 0x00000C))")] // simple compare to prev of same address with offset
         public void TestAddAddressAcrossCondition(string input, string expected)
         {
             input = input.Replace("WA", "word(0x1234)");
