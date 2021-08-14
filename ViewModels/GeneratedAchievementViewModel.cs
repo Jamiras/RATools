@@ -52,6 +52,8 @@ namespace RATools.ViewModels
             get { return (ImageSource)GetValue(BadgeProperty); }
         }
 
+        private string BadgeName { get; set; }
+
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (GeneratedAchievementViewModel)model;
@@ -61,6 +63,13 @@ namespace RATools.ViewModels
                 return vm.Unofficial.Badge;
             if (!String.IsNullOrEmpty(vm.Local.BadgeName))
                 return vm.Local.Badge;
+
+            if (!String.IsNullOrEmpty(vm.BadgeName))
+            {
+                vm.Local.BadgeName = vm.BadgeName;
+                return vm.Local.Badge;
+            }
+
             return null;
         }
 
@@ -119,6 +128,13 @@ namespace RATools.ViewModels
                 Id = Unofficial.Id;
             else if (Local.Achievement != null)
                 Id = Local.Id;
+
+            if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
+                BadgeName = Local.BadgeName;
+            else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
+                BadgeName = Core.BadgeName;
+            else if (!String.IsNullOrEmpty(Unofficial.BadgeName) && Unofficial.BadgeName != "0")
+                BadgeName = Unofficial.BadgeName;
 
             UpdateModified();
         }
@@ -372,28 +388,10 @@ namespace RATools.ViewModels
             var achievement = Generated.Achievement;
 
             if (achievement.Id == 0)
-            {
-                // script doesn't provide an ID. see if one is available
-                if (Core.Id > 0)
-                    Id = achievement.Id = Core.Id;
-                else if (Unofficial.Id > 0)
-                    Id = achievement.Id = Unofficial.Id;
-                else if (Local.Id > 0)
-                    Id = achievement.Id = Local.Id;
-                else if (Id > 0)
-                    achievement.Id = Id;
-            }
+                achievement.Id = Id;
 
             if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
-            {
-                // script doesn't provide a badge. see if one is available.
-                if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
-                    achievement.BadgeName = Local.BadgeName;
-                else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
-                    achievement.BadgeName = Core.BadgeName;
-                else if (!String.IsNullOrEmpty(Unofficial.BadgeName) && Unofficial.BadgeName != "0")
-                    achievement.BadgeName = Unofficial.BadgeName;
-            }
+                achievement.BadgeName = BadgeName;
 
             _owner.UpdateLocal(achievement, Local.Achievement, warning, validateAll);
 
