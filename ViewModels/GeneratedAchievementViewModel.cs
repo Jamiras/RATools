@@ -98,7 +98,6 @@ namespace RATools.ViewModels
 
             if (Generated.Achievement != null)
             {
-                Id = Generated.Id;
                 SetBinding(TitleProperty, new ModelBinding(Generated.Title, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
                 SetBinding(DescriptionProperty, new ModelBinding(Generated.Description, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
                 SetBinding(PointsProperty, new ModelBinding(Generated.Points, IntegerFieldViewModel.ValueProperty, ModelBindingMode.OneWay));
@@ -122,14 +121,18 @@ namespace RATools.ViewModels
                 Points = Local.Points.Value.GetValueOrDefault();
             }
 
-            if (Core.Achievement != null)
-                Id = Core.Id;
-            else if (Unofficial.Achievement != null)
-                Id = Unofficial.Id;
-            else if (Local.Achievement != null)
+            if (Generated.Id != 0)
+                Id = Generated.Id;
+            else if (Local.Id != 0)
                 Id = Local.Id;
+            else if (Core.Id != 0)
+                Id = Core.Id;
+            else
+                Id = Unofficial.Id;
 
-            if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
+            if (!String.IsNullOrEmpty(Generated.BadgeName) && Generated.BadgeName != "0")
+                BadgeName = Generated.BadgeName;
+            else if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
                 BadgeName = Local.BadgeName;
             else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
                 BadgeName = Core.BadgeName;
