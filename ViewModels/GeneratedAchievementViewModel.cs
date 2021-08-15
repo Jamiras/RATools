@@ -138,6 +138,8 @@ namespace RATools.ViewModels
                 BadgeName = Core.BadgeName;
             else if (!String.IsNullOrEmpty(Unofficial.BadgeName) && Unofficial.BadgeName != "0")
                 BadgeName = Unofficial.BadgeName;
+            else
+                BadgeName = "00000";
 
             UpdateModified();
         }
