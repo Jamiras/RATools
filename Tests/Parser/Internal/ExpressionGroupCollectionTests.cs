@@ -217,5 +217,35 @@ namespace RATools.Test.Parser.Internal
             Assert.That(group.Groups[2].NeedsEvaluated, Is.True); // depedendent on group 1
             Assert.That(group.Groups[3].NeedsEvaluated, Is.False); // not depedendent
         }
+
+        [Test]
+        public void TestUpdateSourceLine()
+        {
+            var input = "a = 3\n" +
+                        "achievement(\"t\", \"d\", 5, byte(0x1234) == a)\n" +
+                        "leaderboard(\"t\", \"d\", byte(0x1234) == a, byte(0x1234) == a + 1, byte(0x1234) == a + 2, byte(0x2345))\n";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var group = new ExpressionGroupCollection();
+            group.Scope = RATools.Parser.AchievementScriptInterpreter.GetGlobalScope();
+            group.Parse(tokenizer);
+
+            var interpreter = new RATools.Parser.AchievementScriptInterpreter();
+            interpreter.Run(group, null);
+
+            Assert.That(group.Groups.Count, Is.EqualTo(3));
+            Assert.That(group.Groups[1].GeneratedAchievements.First().SourceLine, Is.EqualTo(2));
+            Assert.That(group.Groups[2].GeneratedLeaderboards.First().SourceLine, Is.EqualTo(3));
+
+            var updatedInput = "a = 3\n" +
+                               "\n" +
+                               "\n" +
+                               "achievement(\"t\", \"d\", 5, byte(0x1234) == a)\n" +
+                               "leaderboard(\"t\", \"d\", byte(0x1234) == a, byte(0x1234) == a + 1, byte(0x1234) == a + 2, byte(0x2345))\n";
+            group.Update(Tokenizer.CreateTokenizer(updatedInput), new int[] { 2, 3 });
+
+            Assert.That(group.Groups.Count, Is.EqualTo(3));
+            Assert.That(group.Groups[1].GeneratedAchievements.First().SourceLine, Is.EqualTo(4));
+            Assert.That(group.Groups[2].GeneratedLeaderboards.First().SourceLine, Is.EqualTo(5));
+        }
     }
 }

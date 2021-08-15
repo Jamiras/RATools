@@ -124,8 +124,24 @@ namespace RATools.Parser.Internal
                         break;
                     }
 
+                    int achievementOffset = (existingGroup.GeneratedAchievements != null) ?
+                        existingGroup.GeneratedAchievements.First().SourceLine - existingGroup.FirstLine : 0;
+                    int leaderboardOffset = (existingGroup.GeneratedLeaderboards != null) ?
+                        existingGroup.GeneratedLeaderboards.First().SourceLine - existingGroup.FirstLine : 0;
+
                     existingGroup.ReplaceExpressions(newGroup, false);
                     Scope.UpdateVariables(existingGroup.Modifies, newGroup);
+
+                    if (existingGroup.GeneratedAchievements != null)
+                    {
+                        foreach (var achievement in existingGroup.GeneratedAchievements)
+                            achievement.SourceLine = existingGroup.FirstLine + achievementOffset;
+                    }
+                    if (existingGroup.GeneratedLeaderboards != null)
+                    {
+                        foreach (var leaderboard in existingGroup.GeneratedLeaderboards)
+                            leaderboard.SourceLine = existingGroup.FirstLine + leaderboardOffset;
+                    }
 
                     if (newGroupStop == 0)
                     {
