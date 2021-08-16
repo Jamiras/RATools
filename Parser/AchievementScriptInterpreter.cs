@@ -284,15 +284,9 @@ namespace RATools.Parser
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
         {
-            if (expressionGroups.Scope == null)
-            {
-                var scriptScope = new InterpreterScope(GetGlobalScope()) { Context = this };
-                expressionGroups.Scope = new InterpreterScope(scriptScope);
-            }
-
             var scriptContext = new AchievementScriptContext();
-
-            expressionGroups.Scope.Context = scriptContext;
+            var scriptScope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = this };
+            expressionGroups.Scope = new InterpreterScope(scriptScope) { Context = scriptContext };
             expressionGroups.ResetErrors();
 
             bool result = true;

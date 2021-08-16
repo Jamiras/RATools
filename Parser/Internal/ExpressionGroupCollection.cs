@@ -124,23 +124,37 @@ namespace RATools.Parser.Internal
                         break;
                     }
 
-                    int achievementOffset = (existingGroup.GeneratedAchievements != null) ?
-                        existingGroup.GeneratedAchievements.First().SourceLine - existingGroup.FirstLine : 0;
-                    int leaderboardOffset = (existingGroup.GeneratedLeaderboards != null) ?
-                        existingGroup.GeneratedLeaderboards.First().SourceLine - existingGroup.FirstLine : 0;
+                    var firstLine = existingGroup.FirstLine;
+                    var lastLine = existingGroup.LastLine;
 
                     existingGroup.ReplaceExpressions(newGroup, false);
                     Scope.UpdateVariables(existingGroup.Modifies, newGroup);
 
-                    if (existingGroup.GeneratedAchievements != null)
+                    var adjustment = existingGroup.FirstLine - firstLine;
+                    if (adjustment != 0)
                     {
-                        foreach (var achievement in existingGroup.GeneratedAchievements)
-                            achievement.SourceLine = existingGroup.FirstLine + achievementOffset;
-                    }
-                    if (existingGroup.GeneratedLeaderboards != null)
-                    {
-                        foreach (var leaderboard in existingGroup.GeneratedLeaderboards)
-                            leaderboard.SourceLine = existingGroup.FirstLine + leaderboardOffset;
+                        if (existingGroup.GeneratedAchievements != null)
+                        {
+                            foreach (var achievement in existingGroup.GeneratedAchievements)
+                                achievement.SourceLine += adjustment;
+                        }
+                        if (existingGroup.GeneratedLeaderboards != null)
+                        {
+                            foreach (var leaderboard in existingGroup.GeneratedLeaderboards)
+                                leaderboard.SourceLine += adjustment;
+                        }
+
+                        foreach (var error in _evaluationErrors)
+                        {
+                            var innerError = error;
+                            while (innerError != null)
+                            {
+                                if (innerError.Location.Start.Line >= firstLine && innerError.Location.End.Line <= lastLine)
+                                    innerError.AdjustLines(adjustment);
+
+                                innerError = innerError.InnerError;
+                            }
+                        }
                     }
 
                     if (newGroupStop == 0)
