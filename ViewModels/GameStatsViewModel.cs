@@ -29,6 +29,7 @@ namespace RATools.ViewModels
 
             SearchCommand = new DelegateCommand(Search);
             ShowUserUnlocksCommand = new DelegateCommand<UserStats>(ShowUserUnlocks);
+            ShowUnlockHistoryCommand = new DelegateCommand<UserStats>(ShowUnlockHistory);
         }
 
         private readonly IBackgroundWorkerService _backgroundWorkerService;
@@ -42,6 +43,8 @@ namespace RATools.ViewModels
             get { return (int)GetValue(GameIdProperty); }
             set { SetValue(GameIdProperty, value); }
         }
+
+        private string _gameName;
 
         public CommandBase SearchCommand { get; private set; }
         private void Search()
@@ -62,6 +65,7 @@ namespace RATools.ViewModels
         {
             public int Id { get; set; }
             public string Title { get; set; }
+            public string Description { get; set; }
             public int Points { get; set; }
             public int EarnedBy { get; set; }
             public int EarnedHardcoreBy { get; set; }
@@ -230,6 +234,7 @@ namespace RATools.ViewModels
                     titleString = titleString.Substring(0, index) + titleString.Substring(index + length);
                 }
 
+                _gameName = titleString;
                 DialogTitle = "Game Stats - " + titleString;
             }
 
@@ -297,6 +302,11 @@ namespace RATools.ViewModels
                     int points;
                     if (Int32.TryParse(achievementPoints.ToString(), out points))
                         stats.Points = points;
+
+                    tokenizer.ReadTo("<br>");
+                    tokenizer.Advance(4);
+                    var achievementDescription = tokenizer.ReadTo("<br>");
+                    stats.Description = achievementDescription.Trim().ToString();
                 }
 
                 allStats.Add(stats);
@@ -588,6 +598,52 @@ namespace RATools.ViewModels
         {
             var url = "https://retroachievements.org/gamecompare.php?ID=" + GameId + "&f=" + stats.User;
             Process.Start(url);
+        }
+
+        [DebuggerDisplay("{Title} ({UnlockTime})")]
+        public class AchievementUnlockInfo
+        {
+            public int Id { get; set; }
+            public string Title { get; set; }
+            public string Description { get; set; }
+            public DateTime UnlockTime { get; set; }
+        }
+
+        public class UserHistoryViewModel : DialogViewModelBase
+        {
+            public UserHistoryViewModel()
+            {
+                CanClose = true;
+            }
+
+            public List<AchievementUnlockInfo> Unlocks { get; set; }
+        }
+
+        public DelegateCommand<UserStats> ShowUnlockHistoryCommand { get; private set; }
+        void ShowUnlockHistory(UserStats stats)
+        {
+            var vm = new UserHistoryViewModel();
+            vm.DialogTitle = stats.User + " Unlocks for " + _gameName;
+
+            vm.Unlocks = new List<AchievementUnlockInfo>();
+            foreach (var achievement in Achievements)
+            {
+                var unlockInfo = new AchievementUnlockInfo
+                {
+                    Id = achievement.Id,
+                    Title = achievement.Title,
+                    Description = achievement.Description
+                };
+
+                DateTime when;
+                if (stats.Achievements.TryGetValue(achievement.Id, out when))
+                    unlockInfo.UnlockTime = when;
+
+                vm.Unlocks.Add(unlockInfo);
+            }
+
+            vm.Unlocks.Sort((l, r) => DateTime.Compare(l.UnlockTime, r.UnlockTime));
+            vm.ShowDialog();
         }
     }
 }

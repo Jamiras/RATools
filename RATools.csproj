@@ -113,6 +113,9 @@
     <Compile Include="ViewModels\RecordingEditorViewModel.cs" />
     <Compile Include="ViewModels\ScriptViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
+    <Compile Include="Views\UserHistoryDialog.xaml.cs">
+      <DependentUpon>UserHistoryDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\OptionsDialog.xaml.cs">
       <DependentUpon>OptionsDialog.xaml</DependentUpon>
     </Compile>
@@ -163,6 +166,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\UserHistoryDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\OptionsDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

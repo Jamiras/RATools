@@ -85,12 +85,17 @@
                             <ColumnDefinition Width="200" />
                         </Grid.ColumnDefinitions>
                         <TextBlock>
-                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                            <Hyperlink Style="{StaticResource subtleHyperlink}"
                                        Command="{Binding DataContext.ShowUserUnlocksCommand, ElementName=topUsersList}" CommandParameter="{Binding}">
                                 <TextBlock Text="{Binding User}" />
+                            </Hyperlink>
+                        </TextBlock>
+                        <TextBlock Grid.Column="1" HorizontalAlignment="Right" Margin="4,0,4,0">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" 
+                                       Command="{Binding DataContext.ShowUnlockHistoryCommand, ElementName=topUsersList}" CommandParameter="{Binding}">
+                                <TextBlock Text="{Binding PointsEarned}" />
                             </Hyperlink>                            
                         </TextBlock>
-                        <TextBlock Grid.Column="1" Text="{Binding PointsEarned}" HorizontalAlignment="Right" Margin="4,0,4,0" />
                         <TextBlock Grid.Column="2" Text="{Binding Summary}" />
                     </Grid>
                 </DataTemplate>
