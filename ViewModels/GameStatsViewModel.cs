@@ -28,6 +28,7 @@ namespace RATools.ViewModels
             CanClose = true;
 
             SearchCommand = new DelegateCommand(Search);
+            ShowUserUnlocksCommand = new DelegateCommand<UserStats>(ShowUserUnlocks);
         }
 
         private readonly IBackgroundWorkerService _backgroundWorkerService;
@@ -580,6 +581,13 @@ namespace RATools.ViewModels
             TopUsers = userStats;
 
             Progress.Label = String.Empty;
+        }
+
+        public DelegateCommand<UserStats> ShowUserUnlocksCommand { get; private set; }
+        void ShowUserUnlocks(UserStats stats)
+        {
+            var url = "https://retroachievements.org/gamecompare.php?ID=" + GameId + "&f=" + stats.User;
+            Process.Start(url);
         }
     }
 }
