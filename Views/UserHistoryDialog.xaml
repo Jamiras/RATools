@@ -6,7 +6,12 @@
              mc:Ignorable="d"
              Width="800" Height="600">
     <Grid Margin="4">
-        <ListView ItemsSource="{Binding Unlocks}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="{Binding Summary}" Margin="2,0,0,2" />
+        <ListView Grid.Row="1" ItemsSource="{Binding Unlocks}">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>

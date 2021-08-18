@@ -616,6 +616,8 @@ namespace RATools.ViewModels
                 CanClose = true;
             }
 
+            public string Summary { get; set; }
+
             public List<AchievementUnlockInfo> Unlocks { get; set; }
         }
 
@@ -624,6 +626,7 @@ namespace RATools.ViewModels
         {
             var vm = new UserHistoryViewModel();
             vm.DialogTitle = stats.User + " Unlocks for " + _gameName;
+            vm.Summary = String.Format("{0}/{1} points earned in {2}", stats.PointsEarned, TotalPoints, stats.Summary);
 
             vm.Unlocks = new List<AchievementUnlockInfo>();
             foreach (var achievement in Achievements)
