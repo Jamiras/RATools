@@ -331,30 +331,6 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public void AdjustLines(int amount)
-        {
-            FirstLine += amount;
-            LastLine += amount;
-
-            foreach (var expression in Expressions)
-                AdjustLines(expression, amount);
-
-            foreach (var expression in ParseErrors)
-                AdjustLines(expression, amount);
-        }
-
-        private static void AdjustLines(ExpressionBase expression, int amount)
-        {
-            expression.AdjustLines(amount);
-
-            var nested = expression as INestedExpressions;
-            if (nested != null)
-            {
-                foreach (var nestedExpression in nested.NestedExpressions)
-                    AdjustLines(nestedExpression, amount);
-            }
-        }
-
         public override string ToString()
         {
             if (IsEmpty)

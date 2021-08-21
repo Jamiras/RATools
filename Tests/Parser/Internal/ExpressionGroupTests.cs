@@ -142,33 +142,6 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        public void TestAdjustLines()
-        {
-            var group = Parse("a = 3").Groups.First(); // Parse will call UpdateMetadata
-            Assert.That(group.FirstLine, Is.EqualTo(1));
-            Assert.That(group.LastLine, Is.EqualTo(1));
-            var assignment = group.Expressions.First() as AssignmentExpression;
-            Assert.That(assignment, Is.Not.Null);
-            Assert.That(assignment.Location.Start.Line, Is.EqualTo(1));
-            Assert.That(assignment.Variable.Location.Start.Line, Is.EqualTo(1));
-            Assert.That(assignment.Value.Location.Start.Line, Is.EqualTo(1));
-
-            group.AdjustLines(6);
-            Assert.That(group.FirstLine, Is.EqualTo(7));
-            Assert.That(group.LastLine, Is.EqualTo(7));
-            Assert.That(assignment.Location.Start.Line, Is.EqualTo(7));
-            Assert.That(assignment.Variable.Location.Start.Line, Is.EqualTo(7));
-            Assert.That(assignment.Value.Location.Start.Line, Is.EqualTo(7));
-
-            group.AdjustLines(-2);
-            Assert.That(group.FirstLine, Is.EqualTo(5));
-            Assert.That(group.LastLine, Is.EqualTo(5));
-            Assert.That(assignment.Location.Start.Line, Is.EqualTo(5));
-            Assert.That(assignment.Variable.Location.Start.Line, Is.EqualTo(5));
-            Assert.That(assignment.Value.Location.Start.Line, Is.EqualTo(5));
-        }
-
-        [Test]
         public void TestIsDependentOn()
         {
             var group = Parse("a = b").Groups.First(); // Parse will call UpdateMetadata

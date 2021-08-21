@@ -124,8 +124,38 @@ namespace RATools.Parser.Internal
                         break;
                     }
 
+                    var firstLine = existingGroup.FirstLine;
+                    var lastLine = existingGroup.LastLine;
+
                     existingGroup.ReplaceExpressions(newGroup, false);
                     Scope.UpdateVariables(existingGroup.Modifies, newGroup);
+
+                    var adjustment = existingGroup.FirstLine - firstLine;
+                    if (adjustment != 0)
+                    {
+                        if (existingGroup.GeneratedAchievements != null)
+                        {
+                            foreach (var achievement in existingGroup.GeneratedAchievements)
+                                achievement.SourceLine += adjustment;
+                        }
+                        if (existingGroup.GeneratedLeaderboards != null)
+                        {
+                            foreach (var leaderboard in existingGroup.GeneratedLeaderboards)
+                                leaderboard.SourceLine += adjustment;
+                        }
+
+                        foreach (var error in _evaluationErrors)
+                        {
+                            var innerError = error;
+                            while (innerError != null)
+                            {
+                                if (innerError.Location.Start.Line >= firstLine && innerError.Location.End.Line <= lastLine)
+                                    innerError.AdjustLines(adjustment);
+
+                                innerError = innerError.InnerError;
+                            }
+                        }
+                    }
 
                     if (newGroupStop == 0)
                     {
