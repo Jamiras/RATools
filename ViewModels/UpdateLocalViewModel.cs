@@ -40,6 +40,8 @@ namespace RATools.ViewModels
         {
             var warning = new StringBuilder();
 
+            _game.SuspendCommitLocalAchievements();
+
             foreach (var achievement in _achievements)
             {
                 if (achievement.IsUpdated)
@@ -52,6 +54,8 @@ namespace RATools.ViewModels
                     achievement.Achievement.DeleteLocalCommand.Execute();
                 }
             }
+
+            _game.ResumeCommitLocalAchievements();
 
             if (warning.Length > 0)
                 TaskDialogViewModel.ShowWarningMessage("Your achievements may not function as expected.", warning.ToString());

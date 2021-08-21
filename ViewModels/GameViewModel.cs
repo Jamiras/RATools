@@ -170,8 +170,8 @@ namespace RATools.ViewModels
 
             foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
             {
-                if (achievement.Local != null && achievement.Local.Id == 0)
-                    achievement.Local.Id = nextLocalId++;
+                if (achievement.Local != null && achievement.Local.Achievement.Id == 0)
+                    achievement.Local.Achievement.Id = nextLocalId++;
 
                 achievement.UpdateCommonProperties(this);
             }
@@ -252,8 +252,25 @@ namespace RATools.ViewModels
                 }
             }
 
-            _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
+            if (_localAchievementCommitSuspendCount == 0)
+                _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
         }
+
+        private int _localAchievementCommitSuspendCount = 0;
+        internal void SuspendCommitLocalAchievements()
+        {
+            ++_localAchievementCommitSuspendCount;
+        }
+
+        internal void ResumeCommitLocalAchievements()
+        {
+            if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
+            {
+                var warning = new StringBuilder();
+                _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, null);
+            }
+        }
+
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Title", typeof(string), String.Empty);
         public string Title
