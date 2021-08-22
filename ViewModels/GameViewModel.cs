@@ -170,8 +170,11 @@ namespace RATools.ViewModels
 
             foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
             {
-                if (achievement.Local != null && achievement.Local.Achievement.Id == 0)
+                if (achievement.Local != null && achievement.Local.Achievement != null &&
+                    achievement.Local.Achievement.Id == 0)
+                {
                     achievement.Local.Achievement.Id = nextLocalId++;
+                }
 
                 achievement.UpdateCommonProperties(this);
             }
