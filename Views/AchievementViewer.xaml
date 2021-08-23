@@ -249,7 +249,7 @@
                         <TextBlock.Style>
                             <Style TargetType="{x:Type TextBlock}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Unofficial.Modified}" Value="None">
+                                    <DataTrigger Binding="{Binding Published.IsUnofficial}" Value="False">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </Style.Triggers>
