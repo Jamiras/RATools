@@ -89,6 +89,9 @@ namespace RATools.ViewModels
             var vm = (AchievementViewModel)model;
             if (!String.IsNullOrEmpty(vm.BadgeName) && vm.BadgeName != "0")
             {
+                if (String.IsNullOrEmpty(vm._owner.RACacheDirectory))
+                    return null;
+
                 var path = Path.Combine(Path.Combine(vm._owner.RACacheDirectory, "../Badge"), vm.BadgeName + ".png");
                 if (File.Exists(path))
                 {

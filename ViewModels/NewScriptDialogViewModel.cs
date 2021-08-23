@@ -100,7 +100,8 @@ namespace RATools.ViewModels
 
         private void LoadGame(int gameId, string raCacheDirectory)
         {
-            _game = new GameViewModel(gameId, "", raCacheDirectory);
+            _game = new GameViewModel(gameId, "");
+            _game.AssociateRACacheDirectory(raCacheDirectory);
             _game.PopulateEditorList(null);
             DialogTitle = "New Script - " + _game.Title;
 
