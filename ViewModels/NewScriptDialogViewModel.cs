@@ -100,7 +100,7 @@ namespace RATools.ViewModels
 
         private void LoadGame(int gameId, string raCacheDirectory)
         {
-            _game = new GameViewModel(GameId.Value.GetValueOrDefault(), "", raCacheDirectory);
+            _game = new GameViewModel(gameId, "", raCacheDirectory);
             _game.PopulateEditorList(null);
             DialogTitle = "New Script - " + _game.Title;
 
@@ -112,16 +112,12 @@ namespace RATools.ViewModels
             var unofficialAchievements = new List<DumpAchievementItem>();
             foreach (var achievement in _game.Editors.OfType<GeneratedAchievementViewModel>())
             {
-                AchievementViewModel source = achievement.Core;
+                AchievementViewModel source = achievement.Published;
                 if (source.Achievement == null)
-                {
-                    source = achievement.Unofficial;
-                    if (source.Achievement == null)
-                        continue;
-                }
+                    continue;
 
                 var dumpAchievement = new DumpAchievementItem(achievement.Id, source.Title.Text);
-                if (achievement.Core.Achievement == null)
+                if (achievement.Published.Achievement == null)
                 {
                     dumpAchievement.IsUnofficial = true;
                     unofficialAchievements.Add(dumpAchievement);
@@ -916,7 +912,7 @@ namespace RATools.ViewModels
 
                     stream.WriteLine("achievement(");
 
-                    var achievementViewModel = (achievement.Core.Achievement != null) ? achievement.Core : achievement.Unofficial;
+                    var achievementViewModel = achievement.Published;
                     var achievementData = achievementViewModel.Achievement;
 
                     stream.Write("    title = \"");

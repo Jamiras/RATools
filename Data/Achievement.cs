@@ -38,6 +38,19 @@ namespace RATools.Data
         public int Points { get; internal set; }
 
         /// <summary>
+        /// Gets the achievement category (3=Core, 5=Unofficial).
+        /// </summary>
+        public int Category { get; internal set; }
+
+        /// <summary>
+        /// Gets whether or not the achievement is Unofficial.
+        /// </summary>
+        public bool IsUnofficial
+        {
+            get { return Category == 5; }
+        }
+
+        /// <summary>
         /// Gets the name of the badge for the achievement.
         /// </summary>
         public string BadgeName { get; internal set; }

@@ -66,6 +66,11 @@ namespace RATools.ViewModels
         public TextFieldViewModel Description { get; private set; }
         public IntegerFieldViewModel Points { get; private set; }
 
+        public bool IsUnofficial
+        {
+            get { return (Achievement != null) && Achievement.IsUnofficial; }
+        }
+
         public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(AchievementViewModel), "BadgeName", typeof(string), String.Empty);
         public string BadgeName
         {

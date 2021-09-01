@@ -29,8 +29,7 @@ namespace RATools.ViewModels
             }
 
             Local = new AchievementViewModel(owner, "Local");
-            Unofficial = new AchievementViewModel(owner, "Unofficial");
-            Core = new AchievementViewModel(owner, "Core");
+            Published = new AchievementViewModel(owner, "Published");
 
             if (String.IsNullOrEmpty(owner.RACacheDirectory))
             {
@@ -57,10 +56,8 @@ namespace RATools.ViewModels
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (GeneratedAchievementViewModel)model;
-            if (!String.IsNullOrEmpty(vm.Core.BadgeName))
-                return vm.Core.Badge;
-            if (!String.IsNullOrEmpty(vm.Unofficial.BadgeName))
-                return vm.Unofficial.Badge;
+            if (!String.IsNullOrEmpty(vm.Published.BadgeName))
+                return vm.Published.Badge;
             if (!String.IsNullOrEmpty(vm.Local.BadgeName))
                 return vm.Local.Badge;
 
@@ -82,18 +79,11 @@ namespace RATools.ViewModels
                 Local.LoadAchievement(localAchievement);
             }
 
-            if (Unofficial.Modified == ModifiedState.Unmodified)
+            if (Published.Modified == ModifiedState.Unmodified)
             {
-                var unofficialAchievement = Unofficial.Achievement;
-                Unofficial = new AchievementViewModel(owner, "Unofficial");
-                Unofficial.LoadAchievement(unofficialAchievement);
-            }
-
-            if (Core.Modified == ModifiedState.Unmodified)
-            {
-                var coreAchievement = Core.Achievement;
-                Core = new AchievementViewModel(owner, "Core");
-                Core.LoadAchievement(coreAchievement);
+                var coreAchievement = Published.Achievement;
+                Published = new AchievementViewModel(owner, coreAchievement.IsUnofficial ? "Published (Unofficial)" : "Published (Core)");
+                Published.LoadAchievement(coreAchievement);
             }
 
             if (Generated.Achievement != null)
@@ -102,17 +92,11 @@ namespace RATools.ViewModels
                 SetBinding(DescriptionProperty, new ModelBinding(Generated.Description, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
                 SetBinding(PointsProperty, new ModelBinding(Generated.Points, IntegerFieldViewModel.ValueProperty, ModelBindingMode.OneWay));
             }
-            else if (Core.Achievement != null)
+            else if (Published.Achievement != null)
             {
-                Title = Core.Title.Text;
-                Description = Core.Description.Text;
-                Points = Core.Points.Value.GetValueOrDefault();
-            }
-            else if (Unofficial.Achievement != null)
-            {
-                Title = Unofficial.Title.Text;
-                Description = Unofficial.Description.Text;
-                Points = Unofficial.Points.Value.GetValueOrDefault();
+                Title = Published.Title.Text;
+                Description = Published.Description.Text;
+                Points = Published.Points.Value.GetValueOrDefault();
             }
             else if (Local.Achievement != null)
             {
@@ -125,19 +109,15 @@ namespace RATools.ViewModels
                 Id = Generated.Id;
             else if (Local.Id != 0)
                 Id = Local.Id;
-            else if (Core.Id != 0)
-                Id = Core.Id;
             else
-                Id = Unofficial.Id;
+                Id = Published.Id;
 
             if (!String.IsNullOrEmpty(Generated.BadgeName) && Generated.BadgeName != "0")
                 BadgeName = Generated.BadgeName;
             else if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
                 BadgeName = Local.BadgeName;
-            else if (!String.IsNullOrEmpty(Core.BadgeName) && Core.BadgeName != "0")
-                BadgeName = Core.BadgeName;
-            else if (!String.IsNullOrEmpty(Unofficial.BadgeName) && Unofficial.BadgeName != "0")
-                BadgeName = Unofficial.BadgeName;
+            else if (!String.IsNullOrEmpty(Published.BadgeName) && Published.BadgeName != "0")
+                BadgeName = Published.BadgeName;
             else
                 BadgeName = "00000";
 
@@ -156,8 +136,7 @@ namespace RATools.ViewModels
 
         public AchievementViewModel Generated { get; private set; }
         public AchievementViewModel Local { get; private set; }
-        public AchievementViewModel Unofficial { get; private set; }
-        public AchievementViewModel Core { get; private set; }
+        public AchievementViewModel Published { get; private set; }
         public AchievementViewModel Other { get; private set; }
 
         public static readonly ModelProperty RequirementSourceProperty = ModelProperty.Register(typeof(GeneratedAchievementViewModel), "RequirementSource", typeof(string), "Generated");
@@ -254,52 +233,47 @@ namespace RATools.ViewModels
                 IsPointsModified = false;
                 CompareState = GeneratedCompareState.None;
 
-                if (Core.Achievement != null)
+                if (Published.Achievement != null)
                 {
-                    RequirementGroups = Core.RequirementGroups;
-                    RequirementSource = "Core (Not Generated)";
-                }
-                else
-                {
-                    RequirementGroups = Unofficial.RequirementGroups;
-                    RequirementSource = "Unofficial (Not Generated)";
+                    RequirementGroups = Published.RequirementGroups;
+                    if (Published.Achievement.IsUnofficial)
+                        RequirementSource = "Unofficial (Not Generated)";
+                    else
+                        RequirementSource = "Core (Not Generated)";
                 }
             }
             else if (IsAchievementModified(Local))
             {
-                if (Core.Achievement != null && !IsAchievementModified(Core))
-                    RequirementSource = "Generated (Same as Core)";
-                else if (Unofficial.Achievement != null && !IsAchievementModified(Unofficial))
-                    RequirementSource = "Generated (Same as Unofficial)";
+                if (Published.Achievement != null && !IsAchievementModified(Published))
+                {
+                    if (Published.Achievement.IsUnofficial)
+                        RequirementSource = "Generated (Same as Unofficial)";
+                    else
+                        RequirementSource = "Generated (Same as Core)";
+                }
                 else
+                {
                     RequirementSource = "Generated";
+                }
 
                 Other = Local;
                 ModificationMessage = "Local achievement differs from generated achievement";
                 CompareState = GeneratedCompareState.LocalDiffers;
                 CanUpdate = true;
             }
-            else if (Core.Achievement != null && IsAchievementModified(Core))
+            else if (Published.Achievement != null && IsAchievementModified(Published))
             {
                 if (Local.Achievement != null)
                     RequirementSource = "Generated (Same as Local)";
                 else
                     RequirementSource = "Generated (Not in Local)";
 
-                Other = Core;
-                ModificationMessage = "Core achievement differs from generated achievement";
-                CompareState = GeneratedCompareState.PublishedDiffers;
-                CanUpdate = true;
-            }
-            else if (Unofficial.Achievement != null && IsAchievementModified(Unofficial))
-            {
-                if (Local.Achievement != null)
-                    RequirementSource = "Generated (Same as Local)";
+                Other = Published;
+                if (Published.Achievement.IsUnofficial)
+                    ModificationMessage = "Unofficial achievement differs from generated achievement";
                 else
-                    RequirementSource = "Generated (Not in Local)";
+                    ModificationMessage = "Core achievement differs from generated achievement";
 
-                Other = Unofficial;
-                ModificationMessage = "Unofficial achievement differs from generated achievement";
                 CompareState = GeneratedCompareState.PublishedDiffers;
                 CanUpdate = true;
             }
@@ -307,12 +281,12 @@ namespace RATools.ViewModels
             {
                 if (Local.Achievement == null && IsGenerated)
                 {
-                    if (Core.Achievement != null)
-                        RequirementSource = "Generated (Same as Core, not in Local)";
-                    else if (Unofficial.Achievement != null)
+                    if (Published.Achievement == null)
+                        RequirementSource = "Generated (Not in Local)";
+                    else if (Published.Achievement.IsUnofficial)
                         RequirementSource = "Generated (Same as Unofficial, not in Local)";
                     else
-                        RequirementSource = "Generated (Not in Local)";
+                        RequirementSource = "Generated (Same as Core, not in Local)";
 
                     ModificationMessage = "Local achievement does not exist";
                     CompareState = GeneratedCompareState.PublishedMatchesNotGenerated;
@@ -325,15 +299,14 @@ namespace RATools.ViewModels
                     CanUpdate = false;
                     CompareState = GeneratedCompareState.Same;
 
-                    if (Core.Achievement != null)
+                    if (Published.Achievement != null)
                     {
-                        RequirementSource = "Generated (Same as Core and Local)";
-                        Other = Core;
-                    }
-                    else if (Unofficial.Achievement != null)
-                    {
-                        RequirementSource = "Generated (Same as Unofficial and Local)";
-                        Other = Unofficial;
+                        if (Published.Achievement.IsUnofficial)
+                            RequirementSource = "Generated (Same as Unofficial and Local)";
+                        else
+                            RequirementSource = "Generated (Same as Core and Local)";
+
+                        Other = Published;
                     }
                     else
                     {
@@ -375,8 +348,7 @@ namespace RATools.ViewModels
         {
             yield return Generated;
             yield return Local;
-            yield return Unofficial;
-            yield return Core;
+            yield return Published;
         }
 
         private void UpdateLocal()
@@ -424,8 +396,7 @@ namespace RATools.ViewModels
 
             Generated.OnShowHexValuesChanged(e);
             Local.OnShowHexValuesChanged(e);
-            Unofficial.OnShowHexValuesChanged(e);
-            Core.OnShowHexValuesChanged(e);
+            Published.OnShowHexValuesChanged(e);
 
             base.OnShowHexValuesChanged(e);
         }
