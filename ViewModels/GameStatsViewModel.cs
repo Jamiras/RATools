@@ -84,6 +84,7 @@ namespace RATools.ViewModels
             public TimeSpan RealTime { get; set; }
             public TimeSpan GameTime { get; set; }
             public int Sessions { get; set; }
+            public bool Incomplete { get; set; }
             public TinyDictionary<int, DateTime> Achievements { get; private set; }
 
             public string Summary
@@ -96,6 +97,8 @@ namespace RATools.ViewModels
                         builder.AppendFormat(" in {0} sessions", Sessions);
                     if (RealTime.TotalDays > 1.0)
                         builder.AppendFormat(" over {0} days", (int)Math.Ceiling(RealTime.TotalDays));
+                    if (Incomplete)
+                        builder.Append(" (incomplete)");
 
                     return builder.ToString();
                 }
@@ -413,7 +416,7 @@ namespace RATools.ViewModels
                     // NOTE: this only lists the ~50 most recent unlocks! For games with more than 50 users who have mastered it, the oldest may be missed!
                     do
                     {
-                        tokenizer.ReadTo("<a href='/User/");
+                        tokenizer.ReadTo("<a href='/user/");
                         if (tokenizer.NextChar == '\0')
                             break;
 
@@ -465,44 +468,70 @@ namespace RATools.ViewModels
             {
                 HardcoreMasteredUserCountEstimated = (leastWon.EarnedBy > 50);
 
+                bool incompleteData = false;
+
                 Progress.Reset(masters.Count);
                 foreach (var user in masters)
                 {
                     Progress.Current++;
 
-                    var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
-                    if (masteryJson == null) // not able to get - probably not logged in. don't try other users
-                        break;
-
                     var stats = new UserStats { User = user };
                     var index = userStats.BinarySearch(stats, stats);
                     if (index < 0)
-                        userStats.Insert(~index, stats);
-                    else
-                        stats = userStats[index];
-
-                    if (stats.PointsEarned == totalPoints)
-                        continue;
-
-                    var achievements = masteryJson.GetField("achievements").ObjectValue;
-                    foreach (var achievement in achievements)
                     {
-                        var id = Int32.Parse(achievement.FieldName);
-                        if (!stats.Achievements.ContainsKey(id))
-                        {
-                            var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
-                            if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
-                                dateField = achievement.ObjectValue.GetField("DateEarned");
+                        userStats.Insert(~index, stats);
+                    }
+                    else
+                    {
+                        stats = userStats[index];
+                        if (stats.PointsEarned == totalPoints)
+                            continue;
+                    }
 
-                            if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
+                    if (!incompleteData)
+                    {
+                        var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
+                        if (masteryJson == null)
+                        {
+                            incompleteData = true;
+                        }
+                        else
+                        {
+                            var achievements = masteryJson.GetField("achievements").ObjectValue;
+                            foreach (var achievement in achievements)
                             {
-                                var date = DateTime.Parse(dateField.StringValue);
-                                date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
-                                stats.Achievements[id] = date;
-                                stats.PointsEarned += Int32.Parse(achievement.ObjectValue.GetField("Points").StringValue);
+                                var id = Int32.Parse(achievement.FieldName);
+                                if (!stats.Achievements.ContainsKey(id))
+                                {
+                                    var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
+                                    if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
+                                        dateField = achievement.ObjectValue.GetField("DateEarned");
+
+                                    if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
+                                    {
+                                        var date = DateTime.Parse(dateField.StringValue);
+                                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                                        stats.Achievements[id] = date;
+                                    }
+                                }
                             }
                         }
                     }
+
+                    stats.PointsEarned = totalPoints;
+                    stats.Incomplete = incompleteData;
+                }
+
+                if (incompleteData)
+                {
+                    _backgroundWorkerService.InvokeOnUiThread(() =>
+                    {
+                        var settings = ServiceRepository.Instance.FindService<ISettings>();
+                        if (String.IsNullOrEmpty(settings.ApiKey))
+                            MessageBoxViewModel.ShowMessage("Data is limited without an ApiKey in the ini file.");
+                        else
+                            MessageBoxViewModel.ShowMessage("Failed to fetch mastery information. Please make sure the ApiKey value is up to date in your ini file.");
+                    });
                 }
             }
             else
@@ -606,7 +635,7 @@ namespace RATools.ViewModels
             public int Id { get; set; }
             public string Title { get; set; }
             public string Description { get; set; }
-            public DateTime UnlockTime { get; set; }
+            public DateTime? UnlockTime { get; set; }
         }
 
         public class UserHistoryViewModel : DialogViewModelBase
@@ -645,7 +674,7 @@ namespace RATools.ViewModels
                 vm.Unlocks.Add(unlockInfo);
             }
 
-            vm.Unlocks.Sort((l, r) => DateTime.Compare(l.UnlockTime, r.UnlockTime));
+            vm.Unlocks.Sort((l, r) => DateTime.Compare(l.UnlockTime.GetValueOrDefault(), r.UnlockTime.GetValueOrDefault()));
             vm.ShowDialog();
         }
     }

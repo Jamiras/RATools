@@ -82,7 +82,7 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="150" />
                             <ColumnDefinition Width="40" />
-                            <ColumnDefinition Width="200" />
+                            <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock>
                             <Hyperlink Style="{StaticResource subtleHyperlink}"

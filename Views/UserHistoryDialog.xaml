@@ -20,7 +20,19 @@
                             <ColumnDefinition Width="200" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding UnlockTime}" HorizontalAlignment="Right" Margin="0,0,6,0"/>
+                        <TextBlock HorizontalAlignment="Right" Margin="0,0,6,0">
+                            <TextBlock.Style>
+                                <Style TargetType="{x:Type TextBlock}">
+                                    <Setter Property="Text" Value="{Binding UnlockTime}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UnlockTime}" Value="{x:Null}">
+                                            <Setter Property="Text" Value="[Unknown]" />
+                                            <Setter Property="Opacity" Value="0.4" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Grid.Column="1" Text="{Binding Title}" />
                         <TextBlock Grid.Column="2" Text="{Binding Description}" />
                     </Grid>
