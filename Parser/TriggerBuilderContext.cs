@@ -33,23 +33,32 @@ namespace RATools.Parser
             var terms = new List<Term>();
             terms.Add(new Term { multiplier = 1.0 });
 
+            var triggerBuilderScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext() };
+            if (!expression.ReplaceVariables(triggerBuilderScope, out expression))
+            {
+                result = expression;
+                return null;
+            }
+
             if (!ProcessValueExpression(expression, scope, terms, out result))
                 return null;
 
+            terms.RemoveAll(t => t.multiplier == 0.0);
+
+            if (terms.Any(t => t.measured != null))
+                return BuildMeasuredValueString(terms);
+
+            return BuildNonMeasuredValueString(terms);
+        }
+
+        private static string BuildNonMeasuredValueString(List<Term> terms)
+        {
             var builder = new StringBuilder();
+
             foreach (var term in terms)
             {
-                if (term.multiplier == 0.0)
-                    continue;
-
                 if (builder.Length > 0)
                     builder.Append('_');
-
-                if (term.measured != null)
-                {
-                    builder.Append(AchievementBuilder.SerializeRequirements(term.measured, new Requirement[0][]));
-                    continue;
-                }
 
                 switch (term.field.Type)
                 {
@@ -91,11 +100,90 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
+        private static string BuildMeasuredValueString(List<Term> terms)
+        {
+            var builder = new StringBuilder();
+
+            // move subsources before addsources
+            int index = 0;
+            while (terms.Last().multiplier < 0 && index < terms.Count)
+            {
+                var term = terms.Last();
+                terms.RemoveAt(terms.Count - 1);
+                terms.Insert(index++, term);
+            }
+
+            for (int i = 0; i < terms.Count; i++)
+            {
+                var term = terms[i];
+
+                if (builder.Length > 0)
+                    builder.Append('_');
+
+                if (term.measured != null)
+                {
+                    if (i < terms.Count - 1)
+                    {
+                        foreach (var requirement in term.measured)
+                        {
+                            if (requirement.Type == RequirementType.Measured)
+                            {
+                                if (term.multiplier < 0)
+                                {
+                                    requirement.Type = RequirementType.SubSource;
+                                    term.multiplier = -term.multiplier;
+                                }
+                                else
+                                {
+                                    requirement.Type = RequirementType.AddSource;
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    builder.Append(AchievementBuilder.SerializeRequirements(term.measured, new Requirement[0][]));
+                }
+                else
+                {
+                    if (i == terms.Count - 1)
+                    {
+                        builder.Append("M:");
+                    }
+                    else if (term.multiplier < 0)
+                    {
+                        builder.Append("B:");
+                        term.multiplier = -term.multiplier;
+                    }
+                    else
+                    {
+                        builder.Append("A:");
+                    }
+
+                    term.field.Serialize(builder);
+                }
+
+                if (term.multiplier != 1.0)
+                {
+                    builder.Append('*');
+                    builder.Append(term.multiplier);
+                }
+            }
+
+            return builder.ToString();
+        }
+
         private class Term
         {
             public Field field;
             public IEnumerable<Requirement> measured;
             public double multiplier;
+        }
+
+        private static ExpressionBase WrapInMeasured(ExpressionBase expression)
+        {
+            return new FunctionCallExpression("measured", new ExpressionBase[]
+                { expression, new FunctionCallExpression("always_true", new ExpressionBase[0]) });
         }
 
         private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, List<Term> terms, out ExpressionBase result)
@@ -180,8 +268,7 @@ namespace RATools.Parser
                             return true;
                         }
 
-                        result = new ParseErrorExpression("Multiplier must be an integer constant", mathematic.Right);
-                        return false;
+                        return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
 
                     case MathematicOperation.Divide:
                         if (integer != null)
@@ -193,8 +280,7 @@ namespace RATools.Parser
                             return true;
                         }
 
-                        result = new ParseErrorExpression("Divisor must be an integer constant", mathematic.Right);
-                        return false;
+                        return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
                 }
             }
 

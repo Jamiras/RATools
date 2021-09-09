@@ -89,27 +89,10 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        [TestCase("byte(0x1234)", "0xH001234")]
-        [TestCase("byte(0x1234) + 1", "0xH001234_v1")]
-        [TestCase("byte(0x1234) - 1", "0xH001234_v-1")]
-        [TestCase("byte(0x1234) * 2", "0xH001234*2")]
-        [TestCase("byte(0x1234) / 2", "0xH001234*0.5")]
-        [TestCase("byte(0x1234) * 100 / 2", "0xH001234*50")]
-        [TestCase("byte(0x1234) * 2 / 100", "0xH001234*0.02")]
-        [TestCase("byte(0x1234) + 100 - 2", "0xH001234_v98")]
-        [TestCase("byte(0x1234) + 1 - 1", "0xH001234")]
-        [TestCase("byte(0x1234) * 2 + 1", "0xH001234*2_v1")]
-        [TestCase("byte(0x1234) * 2 - 1", "0xH001234*2_v-1")]
-        [TestCase("byte(0x1234) * 256 + byte(0x2345) + 1", "0xH001234*256_0xH002345_v1")]
-        [TestCase("1", "v1")]
-        [TestCase("1 + 7", "v8")]
-        [TestCase("1 + 3 * 2", "v7")]
-        [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
-        [TestCase("byte(0x1234 + byte(0x2345))", "I:0xH002345_M:0xH001234")]
-        [TestCase("measured(byte(0x1234) != prev(byte(0x1234))", "M:0xH001234!=d0xH001234")]
-        public void TestValueExpressions(string input, string expected)
+        public void TestValueExpression()
         {
-            var rp = Evaluate("rich_presence_value(\"Name\", " + input + ")");
+            // more expressions are validated via TriggerBuilderTests.TestGetValueString
+            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234) + 1)");
             var rpString = rp.ToString();
             var index = rpString.IndexOf("@Name(");
             if (index == -1)
@@ -120,7 +103,7 @@ namespace RATools.Test.Parser.Functions
             {
                 var index2 = rpString.LastIndexOf(")");
                 var subString = rpString.Substring(index + 6, index2 - index - 6);
-                Assert.That(subString, Is.EqualTo(expected));
+                Assert.That(subString, Is.EqualTo("0xH001234_v1"));
             }
         }
 
