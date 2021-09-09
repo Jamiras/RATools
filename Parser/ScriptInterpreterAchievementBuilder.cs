@@ -557,40 +557,63 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope)
         {
+            return ExecuteAchievementConditional(condition, scope, scope.GetContext<TriggerBuilderContext>());
+        }
+
+        private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope, TriggerBuilderContext context)
+        {
             ParseErrorExpression error;
-            var context = scope.GetContext<TriggerBuilderContext>();
 
-            switch (condition.Operation)
+            // conditions are typically chained, so attempt to process them without recursion to prevent potential stack overflow
+            do
             {
-                case ConditionalOperation.Not:
-                    return new ParseErrorExpression("! operator should have been normalized out", condition);
+                switch (condition.Operation)
+                {
+                    case ConditionalOperation.And:
+                        break;
 
-                case ConditionalOperation.And:
+                    case ConditionalOperation.Or:
+                        // important to separate both clauses from the core group or previous alt group - does nothing if previous
+                        // alt group is empty
+                        BeginAlt(context);
+                        break;
+
+                    case ConditionalOperation.Not:
+                        return new ParseErrorExpression("! operator should have been normalized out", condition);
+
+                    default:
+                        return new ParseErrorExpression("Unsupported conditional", condition);
+                }
+
+                var leftConditional = condition.Left as ConditionalExpression;
+                if (leftConditional != null)
+                {
+                    // we can't actually chain left side conditionals without keeping our own stack,
+                    // but we can quickly call back into this function instead of going through
+                    // three levels of other functions to get back here.
+                    error = ExecuteAchievementConditional(leftConditional, scope, context);
+                }
+                else
+                {
+                    // actual logic, process it
                     error = ExecuteAchievementClause(condition.Left, scope);
-                    if (error != null)
-                        return error;
+                }
 
-                    error = ExecuteAchievementClause(condition.Right, scope);
-                    if (error != null)
-                        return error;
+                if (error != null)
+                    return error;
 
-                    return null;
-
-                case ConditionalOperation.Or:
+                if (condition.Operation == ConditionalOperation.Or)
                     BeginAlt(context);
-                    error = ExecuteAchievementClause(condition.Left, scope);
-                    if (error != null)
-                        return error;
 
-                    BeginAlt(context);
-                    error = ExecuteAchievementClause(condition.Right, scope);
-                    if (error != null)
-                        return error;
+                var rightConditional = condition.Right as ConditionalExpression;
+                if (rightConditional == null)
+                {
+                    // actual logic, end of expression. process it and return
+                    return ExecuteAchievementClause(condition.Right, scope);
+                }
 
-                    return null;
-            }
-
-            return new ParseErrorExpression("Unsupported conditional", condition);
+                condition = rightConditional;
+            } while (true);
         }
 
         private static ParseErrorExpression HandleAddAddressComparison(ExpressionBase comparison,
