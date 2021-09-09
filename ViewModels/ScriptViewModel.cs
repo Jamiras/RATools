@@ -12,9 +12,8 @@ namespace RATools.ViewModels
     public class ScriptViewModel : GeneratedItemViewModelBase
     {
         public ScriptViewModel(GameViewModel owner)
+            : this()
         {
-            Title = "Script";
-
 #if DEBUG_PLAYBACK
             Editor = new PlaybackEditorViewModel(owner, "20210728-185730");
 #elif DEBUG_RECORDING
@@ -24,6 +23,11 @@ namespace RATools.ViewModels
 #endif
 
             Editor.LineChanged += (o, e) => SetModified();
+        }
+
+        protected ScriptViewModel()
+        {
+            Title = "Script";
         }
 
         public override bool IsGenerated { get { return true; } }

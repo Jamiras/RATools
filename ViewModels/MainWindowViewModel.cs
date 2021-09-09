@@ -213,7 +213,8 @@ namespace RATools.ViewModels
                 // capture current location so we can restore it after refreshing
                 line = Game.Script.Editor.CursorLine;
                 column = Game.Script.Editor.CursorColumn;
-                selectedEditor = Game.SelectedEditor.Title;
+                if (Game.SelectedEditor != null)
+                    selectedEditor = Game.SelectedEditor.Title;
             }
             else if (!CloseEditor())
             {
@@ -304,7 +305,8 @@ namespace RATools.ViewModels
                 if (File.Exists(notesFile))
                 {
                     logger.WriteVerbose("Found code notes in " + dataDirectory);
-                    viewModel = new GameViewModel(gameId, gameTitle, dataDirectory);
+                    viewModel = new GameViewModel(gameId, gameTitle);
+                    viewModel.AssociateRACacheDirectory(dataDirectory);
                 }
             }
 
@@ -326,6 +328,10 @@ namespace RATools.ViewModels
                 existingViewModel.Script.Filename == filename &&
                 existingViewModel.Notes.Count == viewModel.Notes.Count)
             {
+                // refresh any data from the emulator (code notes, published/local achievement definitions)
+                if (!String.IsNullOrEmpty(viewModel.RACacheDirectory))
+                    existingViewModel.AssociateRACacheDirectory(viewModel.RACacheDirectory);
+
                 existingViewModel.Script.SetContent(content);
                 viewModel = existingViewModel;
 
@@ -382,6 +388,10 @@ namespace RATools.ViewModels
                 return SaveScriptAs();
 
             Game.Script.Save();
+
+            if (Game.Title.EndsWith(" (from backup)"))
+                Game.SetValue(GameViewModel.TitleProperty, Game.Title.Substring(0, Game.Title.Length - 14));
+
             AddRecentFile(Game.Script.Filename);
             return true;
         }

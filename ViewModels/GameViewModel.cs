@@ -21,92 +21,41 @@ namespace RATools.ViewModels
     public class GameViewModel : ViewModelBase
     {
         public GameViewModel(int gameId, string title)
+            : this(gameId, title,
+                  ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools"),
+                  ServiceRepository.Instance.FindService<IFileSystemService>())
         {
+            Resources = new ResourceContainer();
+
+            Script = new ScriptViewModel(this);
+            SelectedEditor = Script;
+        }
+
+        protected GameViewModel(int gameId, string title,
+            ILogger logger, IFileSystemService fileSystemService)
+        {
+            /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
             GameId = gameId;
             Title = title;
-            Script = new ScriptViewModel(this);
-            Resources = new ResourceContainer();
-            SelectedEditor = Script;
             Notes = new TinyDictionary<int, string>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
-            _logger = ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools");
+            _publishedAchievements = new List<Achievement>();
+
+            _logger = logger;
+            _fileSystemService = fileSystemService;
         }
 
-        private void ParseNotes(IEnumerable<JsonObject> notes)
-        {
-            foreach (var note in notes)
-            {
-                var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
-                var text = note.GetField("Note").StringValue;
-                if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
-                    Notes[address] = text;
-            }
-        }
+        private readonly ILogger _logger;
+        protected readonly IFileSystemService _fileSystemService;
+        protected readonly List<Achievement> _publishedAchievements;
+        protected LocalAchievements _localAchievements;
 
-        public GameViewModel(int gameId, string title, string raCacheDirectory)
-            : this(gameId, title)
-        {
-            RACacheDirectory = raCacheDirectory;
+        internal int GameId { get; private set; }
+        internal string RACacheDirectory { get; private set; }
+        internal TinyDictionary<int, string> Notes { get; private set; }
 
-            var filename = Path.Combine(raCacheDirectory, gameId + "-Notes.json");
-            if (!File.Exists(filename))
-                filename = Path.Combine(raCacheDirectory, gameId + "-Notes2.txt");
-
-            using (var notesStream = File.OpenRead(filename))
-            {
-                var reader = new StreamReader(notesStream);
-                var firstChar = reader.Peek();
-                notesStream.Seek(0, SeekOrigin.Begin);
-
-                if (firstChar == '{')
-                {
-                    _isN64 = false;
-
-                    // full JSON response
-                    var notes = new JsonObject(notesStream);
-                    ParseNotes(notes.GetField("CodeNotes").ObjectArrayValue);
-                }
-                else if (firstChar == '[')
-                {
-                    _isN64 = false;
-
-                    // just notes subobject.
-                    var notes = new JsonObject(notesStream);
-                    ParseNotes(notes.GetField("items").ObjectArrayValue);
-                }
-                else
-                {
-                    _isN64 = true;
-
-                    // N64 unique format
-                    var tokenizer = Tokenizer.CreateTokenizer(notesStream);
-                    do
-                    {
-                        var unused = tokenizer.ReadTo(':');
-                        if (tokenizer.NextChar == '\0')
-                            break;
-                        tokenizer.Advance();
-
-                        int address;
-                        if (tokenizer.Match("0x"))
-                            address = Int32.Parse(tokenizer.ReadTo(':').ToString(), System.Globalization.NumberStyles.HexNumber);
-                        else
-                            address = Int32.Parse(tokenizer.ReadTo(':').ToString());
-                        tokenizer.Advance();
-
-                        var text = tokenizer.ReadTo('#');
-                        tokenizer.Advance();
-
-                        Notes[address] = text.ToString();
-                    } while (true);
-                }
-            }
-
-            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
-        }
-
-        public ScriptViewModel Script { get; private set; }
+        public ScriptViewModel Script { get; protected set; }
 
         public CommandBase<int> GoToSourceCommand { get; private set; }
         private void GoToSource(int line)
@@ -151,44 +100,57 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = 0;
             }
 
-            if (!String.IsNullOrEmpty(RACacheDirectory))
-            {
-                if (_isN64)
-                    MergePublishedN64(GameId, editors);
-                else
-                    MergePublished(GameId, editors);
+            if (_publishedAchievements.Count > 0)
+                MergePublished(editors);
 
-                MergeLocal(GameId, editors);
-            }
+            if (_localAchievements != null)
+                MergeLocal(editors);
 
+            UpdateTemporaryIds(editors);
+
+            Editors = editors;
+        }
+
+        private void UpdateTemporaryIds(List<GeneratedItemViewModelBase> editors)
+        {
+            // find the maximum temporary id already assigned
             int nextLocalId = 111000001;
             foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
             {
                 if (achievement.Local != null && achievement.Local.Id >= nextLocalId)
                     nextLocalId = achievement.Local.Id + 1;
+                else if (achievement.Generated != null && achievement.Generated.Id >= nextLocalId)
+                    nextLocalId = achievement.Generated.Id + 1;
             }
 
             foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
             {
-                if (achievement.Local != null && achievement.Local.Achievement != null &&
-                    achievement.Local.Achievement.Id == 0)
+                // don't attempt to assign a temporary ID to a published achievement
+                if (achievement.Published == null || achievement.Published.Achievement == null)
                 {
-                    achievement.Local.Achievement.Id = nextLocalId++;
+                    if (achievement.Local != null && achievement.Local.Achievement != null)
+                    {
+                        // if it's in the local file, generate a temporary ID if one was not previously generated
+                        if (achievement.Local.Achievement.Id == 0)
+                        {
+                            achievement.Local.Achievement.Id = nextLocalId++;
+                            achievement.Local.LoadAchievement(achievement.Local.Achievement); // refresh the viewmodel's ID property
+                        }
+                    }
+                    else if (achievement.Generated != null && achievement.Generated.Achievement != null)
+                    {
+                        // if it's not in the local file, generate a temporary ID if one was not provided by the code
+                        if (achievement.Generated.Achievement.Id == 0)
+                        {
+                            achievement.Generated.Achievement.Id = nextLocalId++;
+                            achievement.Generated.LoadAchievement(achievement.Generated.Achievement); // refresh the viewmodel's ID property
+                        }
+                    }
                 }
 
                 achievement.UpdateCommonProperties(this);
             }
-
-            Editors = editors;
-        }      
-
-        private LocalAchievements _localAchievements;
-        private readonly bool _isN64;
-        private readonly ILogger _logger;
-
-        internal int GameId { get; private set; }
-        internal string RACacheDirectory { get; private set; }
-        internal TinyDictionary<int, string> Notes { get; private set; }
+        }
 
         public int CompileProgress { get; internal set; }
         public int CompileProgressLine { get; internal set; }
@@ -333,18 +295,52 @@ namespace RATools.ViewModels
 
         private static DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        private void MergePublished(int gameId, List<GeneratedItemViewModelBase> achievements)
+        public void AssociateRACacheDirectory(string raCacheDirectory)
         {
-            var fileName = Path.Combine(RACacheDirectory, gameId + ".json");
-            if (!File.Exists(fileName))
+            RACacheDirectory = raCacheDirectory;
+
+            ReadCodeNotes();
+            ReadPublished();
+
+            var fileName = Path.Combine(RACacheDirectory, GameId + "-User.txt");
+            _localAchievements = new LocalAchievements(fileName, _fileSystemService);
+
+            if (String.IsNullOrEmpty(_localAchievements.Title))
+                _localAchievements.Title = Title;
+        }
+
+        private void ReadCodeNotes()
+        {
+            var filename = Path.Combine(RACacheDirectory, GameId + "-Notes.json");
+            using (var notesStream = _fileSystemService.OpenFile(filename, OpenFileMode.Read))
             {
-                fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
-                if (!File.Exists(fileName))
-                    return;
+                if (notesStream != null)
+                {
+                    var notes = new JsonObject(notesStream).GetField("items");
+                    if (notes.Type == JsonFieldType.ObjectArray)
+                    {
+                        foreach (var note in notes.ObjectArrayValue)
+                        {
+                            var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
+                            var text = note.GetField("Note").StringValue;
+                            if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
+                                Notes[address] = text;
+                        }
+                    }
+                }
             }
 
-            using (var stream = File.OpenRead(fileName))
+            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
+        }
+
+        private void ReadPublished()
+        {
+            var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
+            using (var stream = _fileSystemService.OpenFile(fileName, OpenFileMode.Read))
             {
+                if (stream == null)
+                    return;
+
                 var publishedData = new JsonObject(stream);
                 Title = publishedData.GetField("Title").StringValue;
 
@@ -355,24 +351,9 @@ namespace RATools.ViewModels
                 var unofficialPoints = 0;
                 foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
                 {
-                    var points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-                    var title = publishedAchievement.GetField("Title").StringValue;
-
-                    var id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                    var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => a.Generated.Id == id);
-                    if (achievement == null)
-                    {
-                        achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, title, StringComparison.CurrentCultureIgnoreCase) == 0);
-                        if (achievement == null)
-                        {
-                            achievement = new GeneratedAchievementViewModel(this, null);
-                            achievements.Add(achievement);
-                        }
-                    }
-
                     var builder = new AchievementBuilder();
-                    builder.Id = id;
-                    builder.Title = title;
+                    builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                    builder.Title = publishedAchievement.GetField("Title").StringValue;
                     builder.Description = publishedAchievement.GetField("Description").StringValue;
                     builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
                     builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
@@ -385,15 +366,15 @@ namespace RATools.ViewModels
                     builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
                     if (builtAchievement.Category == 5)
                     {
-                        achievement.Published.LoadAchievement(builtAchievement);
+                        _publishedAchievements.Add(builtAchievement);
                         unofficialCount++;
-                        unofficialPoints += points;
+                        unofficialPoints += builtAchievement.Points;
                     }
                     else if (builtAchievement.Category == 3)
                     {
-                        achievement.Published.LoadAchievement(builtAchievement);
+                        _publishedAchievements.Add(builtAchievement);
                         coreCount++;
-                        corePoints += points;
+                        corePoints += builtAchievement.Points;
                     }
                 }
 
@@ -402,72 +383,32 @@ namespace RATools.ViewModels
                 UnofficialAchievementCount = unofficialCount;
                 UnofficialAchievementPoints = unofficialPoints;
 
-                _logger.WriteVerbose(String.Format("Merged {0} core achievements ({1} points)", coreCount, corePoints));
-                _logger.WriteVerbose(String.Format("Merged {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
+                _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
+                _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
             }
         }
 
-        private void MergePublishedN64(int gameId, List<GeneratedItemViewModelBase> achievements)
+        private void MergePublished(List<GeneratedItemViewModelBase> achievements)
         {
-            var fileName = Path.Combine(RACacheDirectory, gameId + ".json");
-            if (!File.Exists(fileName))
+            foreach (var publishedAchievement in _publishedAchievements)
             {
-                fileName = Path.Combine(RACacheDirectory, gameId + ".txt");
-                if (!File.Exists(fileName))
-                    return;
-            }
-
-            var count = 0;
-            var points = 0;
-
-            var officialAchievements = new LocalAchievements(fileName);
-            foreach (var publishedAchievement in officialAchievements.Achievements)
-            {
-                var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => a.Generated.Id == publishedAchievement.Id);
                 if (achievement == null)
                 {
-                    achievement = new GeneratedAchievementViewModel(this, null);
-                    achievements.Add(achievement);
-                }
-
-                achievement.Published.LoadAchievement(publishedAchievement);
-                count++;
-                points += publishedAchievement.Points;
-            }
-
-            fileName = Path.Combine(RACacheDirectory, gameId + "-Unofficial.txt");
-            if (File.Exists(fileName))
-            {
-                var unofficialAchievements = new LocalAchievements(fileName);
-                foreach (var publishedAchievement in unofficialAchievements.Achievements)
-                {
-                    var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                    achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
                     if (achievement == null)
                     {
                         achievement = new GeneratedAchievementViewModel(this, null);
                         achievements.Add(achievement);
                     }
-
-                    achievement.Published.LoadAchievement(publishedAchievement);
-                    count++;
-                    points += publishedAchievement.Points;
                 }
+
+                achievement.Published.LoadAchievement(publishedAchievement);
             }
-
-            CoreAchievementCount = count;
-            CoreAchievementPoints = points;
-
-            _logger.WriteVerbose(String.Format("Merged {0} published achievements ({1} points)", count, points));
         }
 
-        private void MergeLocal(int gameId, List<GeneratedItemViewModelBase> achievements)
+        private void MergeLocal(List<GeneratedItemViewModelBase> achievements)
         {
-            var fileName = Path.Combine(RACacheDirectory, gameId + "-User.txt");
-            _localAchievements = new LocalAchievements(fileName);
-
-            if (String.IsNullOrEmpty(_localAchievements.Title))
-                _localAchievements.Title = Title;
-
             var localAchievements = new List<Achievement>(_localAchievements.Achievements);
 
             foreach (var achievement in achievements.OfType<GeneratedAchievementViewModel>())
@@ -481,7 +422,9 @@ namespace RATools.ViewModels
                     localAchievement = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Generated.Title.Text, StringComparison.CurrentCultureIgnoreCase) == 0);
                     if (localAchievement == null)
                     {
-                        localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
+                        if (!String.IsNullOrEmpty(achievement.Generated.Description.Text))
+                            localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
+
                         if (localAchievement == null)
                         {
                             // TODO: attempt to match achievements by requirements                        
