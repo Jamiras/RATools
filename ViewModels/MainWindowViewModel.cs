@@ -284,42 +284,49 @@ namespace RATools.ViewModels
             {
                 logger.WriteVerbose("Could not find game ID");
                 TaskDialogViewModel.ShowWarningMessage("Could not find game ID", "The loaded file did not contain an #ID comment indicating which game the script is associated to.");
-                return;
             }
 
             if (!usingBackup)
                 AddRecentFile(filename);
 
-            logger.WriteVerbose("Game ID: " + gameId);
-
             GameViewModel viewModel = null;
 
-            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
+            if (gameId != 0)
             {
-                var dataDirectory = Path.Combine(directory, "RACache", "Data");
+                logger.WriteVerbose("Game ID: " + gameId);
 
-                var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
-                if (!File.Exists(notesFile))
-                    notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
-
-                if (File.Exists(notesFile))
+                foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
                 {
-                    logger.WriteVerbose("Found code notes in " + dataDirectory);
+                    var dataDirectory = Path.Combine(directory, "RACache", "Data");
+
+                    var notesFile = Path.Combine(dataDirectory, gameId + "-Notes.json");
+                    if (!File.Exists(notesFile))
+                        notesFile = Path.Combine(dataDirectory, gameId + "-Notes2.txt");
+
+                    if (File.Exists(notesFile))
+                    {
+                        logger.WriteVerbose("Found code notes in " + dataDirectory);
+                        viewModel = new GameViewModel(gameId, gameTitle);
+                        viewModel.AssociateRACacheDirectory(dataDirectory);
+                    }
+                }
+
+                if (viewModel == null)
+                {
+                    logger.WriteVerbose("Could not find code notes");
+                    TaskDialogViewModel.ShowWarningMessage("Could not locate code notes for game " + gameId,
+                        "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
+
                     viewModel = new GameViewModel(gameId, gameTitle);
-                    viewModel.AssociateRACacheDirectory(dataDirectory);
                 }
             }
-
-            if (viewModel == null)
+            else
             {
-                logger.WriteVerbose("Could not find code notes");
-                TaskDialogViewModel.ShowWarningMessage("Could not locate code notes for game " + gameId,
-                    "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
-
                 viewModel = new GameViewModel(gameId, gameTitle);
             }
 
-            var existingViewModel = Game as GameViewModel;
+
+            var existingViewModel = Game;
 
             // if we're just refreshing the current game script, only update the script content,
             // which will be reprocessed and update the editor list. If it's not the same script,
