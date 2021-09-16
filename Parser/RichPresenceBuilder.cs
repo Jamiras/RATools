@@ -4,6 +4,7 @@ using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser
@@ -92,12 +93,13 @@ namespace RATools.Parser
                 builder.Append("Lookup:");
                 builder.AppendLine(lookup.Key);
 
-                AppendRichPresenceLookupEntries(builder, lookup.Value.Entries);
+                var fallback = (lookup.Value.Fallback != null && lookup.Value.Fallback.Value.Length > 0) ? lookup.Value.Fallback.Value : null;
+                AppendRichPresenceLookupEntries(builder, lookup.Value.Entries, fallback);
 
-                if (lookup.Value.Fallback != null && !String.IsNullOrEmpty(lookup.Value.Fallback.Value))
+                if (fallback != null)
                 {
                     builder.Append("*=");
-                    builder.AppendLine(lookup.Value.Fallback.Value);
+                    builder.AppendLine(fallback);
                 }
 
                 builder.AppendLine();
@@ -122,7 +124,7 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries)
+        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries, string fallback)
         {
             // determine how many entries have the same values
             var sharedValues = new HashSet<string>();
@@ -133,7 +135,7 @@ namespace RATools.Parser
                 var uniqueValues = new HashSet<string>();
                 foreach (var value in entries.Values)
                 {
-                    if (!uniqueValues.Add(value))
+                    if (value != fallback && !uniqueValues.Add(value))
                     {
                         sharedValues.Add(value);
                         sharedValueCount++;
@@ -144,10 +146,11 @@ namespace RATools.Parser
             // if there are at least 10 entries and at least 20% of the lookup is repeated, or if there
             // are less than 10 entries and at least half of the lookup is repeated, then generate ranges
             bool useRanges;
-            if (entries.Count >= 10)
-                useRanges = (sharedValueCount > entries.Count / 5);
+            var entryCount = (fallback == null) ? entries.Count : entries.Count(e => e.Value != fallback);
+            if (entryCount >= 10)
+                useRanges = (sharedValueCount > entryCount / 5);
             else
-                useRanges = (sharedValueCount > entries.Count / 2);
+                useRanges = (sharedValueCount > entryCount / 2);
 
             // get an ordered set of keys for the lookup
             var list = new List<int>(entries.Keys);
@@ -158,9 +161,12 @@ namespace RATools.Parser
                 // just dump each entry as its own line
                 foreach (var key in list)
                 {
-                    builder.Append(key);
-                    builder.Append('=');
-                    builder.AppendLine(entries[key]);
+                    if (entries[key] != fallback)
+                    {
+                        builder.Append(key);
+                        builder.Append('=');
+                        builder.AppendLine(entries[key]);
+                    }
                 }
             }
             else
@@ -173,6 +179,9 @@ namespace RATools.Parser
                     list.RemoveAt(list.Count - 1);
 
                     var value = entries[key];
+                    if (value == fallback)
+                        continue;
+
                     if (!sharedValues.Contains(value))
                     {
                         // singular entry, just dump it

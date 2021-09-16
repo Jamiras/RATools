@@ -133,6 +133,8 @@ namespace RATools.Test.Parser.Functions
         public void TestOrNextNoHitTarget()
         {
             // ensures an OrNext chain can be forcibly generated even without a hit target
+            // this behavior is required by CrossMultiplyOrConditions to prevent the number
+            // of generated alts from becoming too cumbersome.
             var requirements = Evaluate("repeated(0, byte(0x1234) == 56 || byte(0x2345) == 67)");
             Assert.That(requirements.Count, Is.EqualTo(2));
             Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));

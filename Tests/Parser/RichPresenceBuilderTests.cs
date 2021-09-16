@@ -269,5 +269,47 @@ namespace RATools.Test.Parser
                 "@T(0xH1234)\n"
             ));
         }
+
+        [Test]
+        public void TestLookupFieldFallbackCollapse()
+        {
+            var dict = new Dictionary<int, string>
+            {
+                { 1, "Odd" },
+                { 2, "Even" },
+                { 3, "Odd" },
+                { 4, "Even" },
+                { 5, "Odd" },
+                { 6, "Even" },
+            };
+
+            var builder = new RichPresenceBuilder();
+            Assert.That(builder.AddLookupField(null, "OddOrEven", CreateDictionaryExpression(dict),
+                new StringConstantExpression("Even")), Is.Null);
+            builder.DisplayString = "@OddOrEven(0xH1234)";
+
+            Assert.That(builder.DisableLookupCollapsing, Is.False);
+            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+                "Lookup:OddOrEven\n" +
+                "1,3,5=Odd\n" +
+                "*=Even\n" +
+                "\n" +
+                "Display:\n" +
+                "@OddOrEven(0xH1234)\n"
+            ));
+
+            builder.DisableLookupCollapsing = true;
+            Assert.That(builder.DisableLookupCollapsing, Is.True);
+            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+                "Lookup:OddOrEven\n" +
+                "1=Odd\n" +
+                "3=Odd\n" +
+                "5=Odd\n" +
+                "*=Even\n" +
+                "\n" +
+                "Display:\n" +
+                "@OddOrEven(0xH1234)\n"
+            ));
+        }
     }
 }
