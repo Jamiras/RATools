@@ -26,6 +26,7 @@ namespace RATools.Services
 
             EmulatorDirectories = new List<string>();
             UserName = "RATools";
+            DumpDirectory = "";
 
             var file = new IniFile(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RATools.ini"));
             try
@@ -55,6 +56,10 @@ namespace RATools.Services
                 string apiKey;
                 if (values.TryGetValue("ApiKey", out apiKey) && apiKey.Length > 0)
                     ApiKey = apiKey;
+
+                string dumpDirectory;
+                if (values.TryGetValue("DumpDirectory", out dumpDirectory) && dumpDirectory.Length > 0)
+                    DumpDirectory = dumpDirectory;
 
                 string cookie;
                 if (values.TryGetValue("Cookie", out cookie) && cookie.Length > 0)
@@ -119,6 +124,8 @@ namespace RATools.Services
         public string ApiKey { get; set; }
 
         public string Cookie { get; set; }
+
+        public string DumpDirectory { get; set; }
 
         public string Colors { get; set; }
 

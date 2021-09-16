@@ -28,5 +28,10 @@ namespace RATools.Services
         /// Gets or sets a value indicating whether values should be displayed in hexadecimal.
         /// </summary>
         bool HexValues { get; set; }
+
+        /// <summary>
+        /// Gets the directory where data for analysis should be stored.
+        /// </summary>
+        string DumpDirectory { get; }
     }
 }

@@ -107,6 +107,7 @@
     <Compile Include="Services\Theme.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
+    <Compile Include="ViewModels\GameDataSnapshotViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
     <Compile Include="ViewModels\OptionsDialogViewModel.cs" />
     <Compile Include="ViewModels\PlaybackEditorViewModel.cs" />

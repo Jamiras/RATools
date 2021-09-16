@@ -8,6 +8,8 @@ using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -15,13 +17,17 @@ namespace RATools.ViewModels
     public class GameStatsViewModel : DialogViewModelBase
     {
         public GameStatsViewModel()
-            : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
+            : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>(),
+                   ServiceRepository.Instance.FindService<IFileSystemService>(),
+                   ServiceRepository.Instance.FindService<ISettings>())
         {
         }
 
-        public GameStatsViewModel(IBackgroundWorkerService backgroundWorkerService)
+        public GameStatsViewModel(IBackgroundWorkerService backgroundWorkerService, IFileSystemService fileSystem, ISettings settings)
         {
             _backgroundWorkerService = backgroundWorkerService;
+            _fileSystem = fileSystem;
+            _settings = settings;
 
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             DialogTitle = "Game Stats";
@@ -33,6 +39,8 @@ namespace RATools.ViewModels
         }
 
         private readonly IBackgroundWorkerService _backgroundWorkerService;
+        private readonly IFileSystemService _fileSystem;
+        private readonly ISettings _settings;
 
         public ProgressFieldViewModel Progress { get; private set; }
 
@@ -51,7 +59,7 @@ namespace RATools.ViewModels
         {
             Progress.Label = "Fetching Game " + GameId;
             Progress.IsEnabled = true;
-            _backgroundWorkerService.RunAsync(LoadGame);
+            _backgroundWorkerService.RunAsync(() => LoadGame(true));
         }
 
         private static void OnGameIdChanged(object sender, ModelPropertyChangedEventArgs e)
@@ -206,11 +214,326 @@ namespace RATools.ViewModels
             private set { SetValue(TotalPointsProperty, value); }
         }
 
-        internal void LoadGame()
+        internal void LoadGame(bool allowFetchFromServer = false)
         {
-            var gamePage = RAWebCache.Instance.GetGamePage(GameId);
-            if (gamePage == null)
-                return;
+            var userStats = new List<UserStats>();
+            var achievementStats = new List<AchievementStats>();
+
+            LoadGameFromFile(achievementStats, userStats, !allowFetchFromServer);
+
+            if (allowFetchFromServer)
+            {
+                var gamePage = RAWebCache.Instance.GetGamePage(GameId);
+                if (gamePage != null)
+                {
+                    // discard any previous achievement data to ensure we use the current information from the server
+                    // keep the user data as the server only returns the 50 newest winners of each achievement
+                    achievementStats.Clear();
+                    LoadGameFromServer(gamePage, achievementStats, userStats);
+                }
+            }
+
+            DialogTitle = "Game Stats - " + _gameName;
+
+            if (achievementStats.Count > 0)
+            {
+                AnalyzeData(achievementStats, userStats);
+
+                // only display the top 100 entries
+                if (userStats.Count > 100)
+                    userStats.RemoveRange(100, userStats.Count - 100);
+            }
+
+            Achievements = achievementStats;
+            TopUsers = userStats;
+
+            Progress.Label = String.Empty;
+        }
+
+        private bool LoadGameFromFile(List<AchievementStats> achievementStats, List<UserStats> userStats, bool allowOldData)
+        {
+            var file = Path.Combine(_settings.DumpDirectory, GameId + ".txt");
+            if (!_fileSystem.FileExists(file))
+                return false;
+
+            using (var reader = new StreamReader(_fileSystem.OpenFile(file, OpenFileMode.Read)))
+            {
+                while (!reader.EndOfStream)
+                {
+                    var line = reader.ReadLine();
+                    if (line.StartsWith("NonHardCoreCaptured="))
+                    {
+                        NonHardcoreUserCount = Int32.Parse(line.Substring(20));
+                        continue;
+                    }
+
+                    if (line.StartsWith("NumberOfPlayers="))
+                    {
+                        NumberOfPlayers = Int32.Parse(line.Substring(16));
+                        continue;
+                    }
+
+                    if (line.StartsWith("Game="))
+                    {
+                        _gameName = line.Substring(5);
+                        continue;
+                    }
+
+                    if (line.StartsWith("Achievement:"))
+                    {
+                        var stats = new AchievementStats();
+                        var index = line.IndexOf(';');
+                        var parts = line.Substring(0, index).Split(':', '=', '/');
+                        stats.Id = Int32.Parse(parts[1]);
+                        stats.EarnedHardcoreBy = Int32.Parse(parts[2]);
+                        stats.EarnedBy = Int32.Parse(parts[3]);
+                        stats.Points = Int32.Parse(parts[4]);
+                        stats.Title = line.Substring(index + 1);
+
+                        achievementStats.Add(stats);
+
+                        while (!reader.EndOfStream)
+                        {
+                            line = reader.ReadLine();
+                            if (line.Length < 1)
+                                break;
+
+                            parts = line.Split('@');
+
+                            var user = new UserStats { User = parts[0] };
+                            index = userStats.BinarySearch(user, user);
+                            if (index < 0)
+                                userStats.Insert(~index, user);
+                            else
+                                user = userStats[index];
+
+                            user.Achievements[stats.Id] = DateTime.Parse(parts[1]);
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        internal void LoadGameFromServer(string gamePage, List<AchievementStats> achievementStats, List<UserStats> userStats)
+        {
+            AchievementStats mostWon, leastWon;
+            TotalPoints = LoadAchievementStatsFromServer(gamePage, achievementStats, out mostWon, out leastWon);
+
+            var masteryPoints = (TotalPoints * 2).ToString();
+            var masters = GetMastersFromServer(gamePage, masteryPoints);
+
+            Progress.Label = "Fetching user stats";
+            Progress.Reset(achievementStats.Count);
+
+            achievementStats.Sort((l, r) =>
+            {
+                var diff = r.EarnedHardcoreBy - l.EarnedHardcoreBy;
+                if (diff == 0)
+                    diff = String.Compare(l.Title, r.Title, StringComparison.OrdinalIgnoreCase);
+
+                return diff;
+            });
+
+            var possibleMasters = new List<string>();
+            var nonHardcoreUsers = new List<string>();
+            foreach (var achievement in achievementStats)
+            {
+                var achievementPage = RAWebCache.Instance.GetAchievementPage(achievement.Id);
+                if (achievementPage != null)
+                {
+                    var tokenizer = Tokenizer.CreateTokenizer(achievementPage);
+                    tokenizer.ReadTo("<h3>Winners</h3>");
+
+                    // NOTE: this only lists the ~50 most recent unlocks! For games with more than 50 users who have mastered it, the oldest may be missed!
+                    do
+                    {
+                        tokenizer.ReadTo("<a href='/user/");
+                        if (tokenizer.NextChar == '\0')
+                            break;
+
+                        tokenizer.ReadTo("'>");
+                        tokenizer.Advance(2);
+
+                        // skip user image, we'll get the name from the text
+                        var user = tokenizer.ReadTo("</a>");
+                        if (user.StartsWith("<img"))
+                            continue;
+
+                        var mid = tokenizer.ReadTo("<small>");
+                        if (mid.Contains("Hardcore!"))
+                        {
+                            tokenizer.Advance(7);
+                            var when = tokenizer.ReadTo("</small>");
+                            var date = DateTime.Parse(when.ToString());
+                            date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+
+                            var stats = new UserStats { User = user.ToString() };
+                            var index = userStats.BinarySearch(stats, stats);
+                            if (index < 0)
+                                userStats.Insert(~index, stats);
+                            else
+                                stats = userStats[index];
+
+                            stats.Achievements[achievement.Id] = date;
+
+                            if (ReferenceEquals(achievement, leastWon))
+                            {
+                                if (!masters.Contains(stats.User))
+                                    possibleMasters.Add(stats.User);
+                            }
+                        }
+                        else
+                        {
+                            if (!nonHardcoreUsers.Contains(user.ToString()))
+                                nonHardcoreUsers.Add(user.ToString());
+                        }
+
+                    } while (true);
+                }
+
+                Progress.Current++;
+            }
+
+            // if more than 50 people have earned achievements, people who mastered the game early may no longer display 
+            // in the individual pages. fetch mastery data by user
+            if (mostWon == null || mostWon.EarnedBy <= 50)
+            {
+                HardcoreMasteredUserCountEstimated = false;
+            }
+            else
+            {
+                HardcoreMasteredUserCountEstimated = (leastWon.EarnedBy > 50);
+
+                bool incompleteData = false;
+                possibleMasters.AddRange(masters);
+
+                Progress.Reset(masters.Count);
+                foreach (var user in possibleMasters)
+                {
+                    Progress.Current++;
+
+                    var stats = new UserStats { User = user };
+                    var index = userStats.BinarySearch(stats, stats);
+                    if (index < 0)
+                    {
+                        userStats.Insert(~index, stats);
+                    }
+                    else
+                    {
+                        stats = userStats[index];
+                        if (stats.PointsEarned == TotalPoints)
+                            continue;
+                    }
+
+                    if (!incompleteData)
+                    {
+                        var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
+                        if (masteryJson == null)
+                        {
+                            incompleteData = true;
+                        }
+                        else
+                        {
+                            var achievements = masteryJson.GetField("achievements").ObjectValue;
+                            foreach (var achievement in achievements)
+                            {
+                                var id = Int32.Parse(achievement.FieldName);
+                                if (!stats.Achievements.ContainsKey(id))
+                                {
+                                    var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
+                                    if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
+                                        dateField = achievement.ObjectValue.GetField("DateEarned");
+
+                                    if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
+                                    {
+                                        var date = DateTime.Parse(dateField.StringValue);
+                                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                                        stats.Achievements[id] = date;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    stats.Incomplete = incompleteData;
+                }
+
+                if (incompleteData)
+                {
+                    _backgroundWorkerService.InvokeOnUiThread(() =>
+                    {
+                        var settings = ServiceRepository.Instance.FindService<ISettings>();
+                        if (String.IsNullOrEmpty(settings.ApiKey))
+                            MessageBoxViewModel.ShowMessage("Data is limited without an ApiKey in the ini file.");
+                        else
+                            MessageBoxViewModel.ShowMessage("Failed to fetch mastery information. Please make sure the ApiKey value is up to date in your ini file.");
+                    });
+                }
+            }
+
+            NonHardcoreUserCount = nonHardcoreUsers.Count;
+
+            WriteGameStats(_gameName, achievementStats, userStats);
+        }
+
+        private static List<string> GetMastersFromServer(string gamePage, string masteryPoints)
+        {
+            var masters = new List<string>();
+            var tokenizer = Tokenizer.CreateTokenizer(gamePage);
+
+            tokenizer.ReadTo("<div id='latestmasters'");
+            var latestMasters = tokenizer.ReadTo("<div id='highscores'");
+
+            // parse the Latest Masters
+            var tokenizer2 = Tokenizer.CreateTokenizer(latestMasters);
+            do
+            {
+                tokenizer2.ReadTo("<td class='user'>");
+                if (tokenizer2.NextChar == '\0')
+                    break;
+
+                tokenizer2.ReadTo("<a href='");
+                tokenizer2.ReadTo('>');
+                tokenizer2.Advance();
+
+                var userName = tokenizer2.ReadTo('<');
+
+                masters.Add(userName.ToString());
+            } while (true);
+
+            // merge the users from High Scores who have all points
+            do
+            {
+                tokenizer.ReadTo("<td class='user'>");
+                if (tokenizer.NextChar == '\0')
+                    break;
+
+                tokenizer.ReadTo("<a href='");
+                tokenizer.ReadTo('>');
+                tokenizer.Advance();
+
+                var userName = tokenizer.ReadTo('<');
+
+                tokenizer.ReadTo("<span");
+                tokenizer.ReadTo('>');
+                tokenizer.Advance();
+
+                var points = tokenizer.ReadTo('<');
+                if (points != masteryPoints)
+                    break;
+
+                if (!masters.Contains(userName.ToString()))
+                    masters.Add(userName.ToString());
+            } while (true);
+
+            return masters;
+        }
+
+        private int LoadAchievementStatsFromServer(string gamePage, List<AchievementStats> allStats, out AchievementStats mostWon, out AchievementStats leastWon)
+        {
+            int totalPoints = 0;
 
             var tokenizer = Tokenizer.CreateTokenizer(gamePage);
             tokenizer.ReadTo("<title>");
@@ -238,14 +561,11 @@ namespace RATools.ViewModels
                 }
 
                 _gameName = titleString;
-                DialogTitle = "Game Stats - " + titleString;
             }
 
-            AchievementStats mostWon = null;
-            AchievementStats leastWon = null;
-            var totalPoints = 0;
-
-            var allStats = new List<AchievementStats>();
+            mostWon = null;
+            leastWon = null;
+            totalPoints = 0;
             do
             {
                 tokenizer.ReadTo("<div class='achievemententry'>");
@@ -262,6 +582,14 @@ namespace RATools.ViewModels
                 if (stats.EarnedBy > 0)
                 {
                     tokenizer.SkipWhitespace();
+
+                    if (tokenizer.NextChar == '<')
+                    {
+                        tokenizer.ReadTo('>');
+                        tokenizer.Advance();
+                        tokenizer.SkipWhitespace();
+                    }
+
                     if (tokenizer.NextChar == '(')
                     {
                         tokenizer.Advance();
@@ -333,212 +661,11 @@ namespace RATools.ViewModels
                 }
             } while (true);
 
-            var masteryPoints = (totalPoints * 2).ToString();
-            TotalPoints = totalPoints;
+            return totalPoints;
+        }
 
-            var masters = new List<string>();
-            tokenizer = Tokenizer.CreateTokenizer(gamePage);
-
-            tokenizer.ReadTo("<div id='latestmasters'");
-            var latestMasters = tokenizer.ReadTo("<div id='highscores'");
-
-            var tokenizer2 = Tokenizer.CreateTokenizer(latestMasters);
-            do
-            {
-                tokenizer2.ReadTo("<td class='user'>");
-                if (tokenizer2.NextChar == '\0')
-                    break;
-
-                tokenizer2.ReadTo("<a href='");
-                tokenizer2.ReadTo('>');
-                tokenizer2.Advance();
-
-                var userName = tokenizer2.ReadTo('<');
-
-                masters.Add(userName.ToString());
-            } while (true);
-
-            do
-            {
-                tokenizer.ReadTo("<td class='user'>");
-                if (tokenizer.NextChar == '\0')
-                    break;
-
-                tokenizer.ReadTo("<a href='");
-                tokenizer.ReadTo('>');
-                tokenizer.Advance();
-
-                var userName = tokenizer.ReadTo('<');
-
-                tokenizer.ReadTo("<span");
-                tokenizer.ReadTo('>');
-                tokenizer.Advance();
-
-                var points = tokenizer.ReadTo('<');
-                if (points != masteryPoints)
-                    break;
-
-                if (!masters.Contains(userName.ToString()))
-                    masters.Add(userName.ToString());
-            } while (true);
-
-            Progress.Label = "Fetching user stats";
-            Progress.Reset(allStats.Count);
-            
-            allStats.Sort((l, r) =>
-            {
-                var diff = r.EarnedHardcoreBy - l.EarnedHardcoreBy;
-                if (diff == 0)
-                    diff = String.Compare(l.Title, r.Title, StringComparison.OrdinalIgnoreCase);
-
-                return diff;
-            });
-
-            Achievements = allStats;
-
-            if (allStats.Count == 0)
-            {
-                TopUsers = new List<UserStats>();
-                Progress.Label = String.Empty;
-                return;
-            }
-
-            var nonHardcoreUsers = new List<string>();
-            var userStats = new List<UserStats>();
-            foreach (var achievement in allStats)
-            {
-                var achievementPage = RAWebCache.Instance.GetAchievementPage(achievement.Id);
-                if (achievementPage != null)
-                {
-                    tokenizer = Tokenizer.CreateTokenizer(achievementPage);
-                    tokenizer.ReadTo("<h3>Winners</h3>");
-
-                    // NOTE: this only lists the ~50 most recent unlocks! For games with more than 50 users who have mastered it, the oldest may be missed!
-                    do
-                    {
-                        tokenizer.ReadTo("<a href='/user/");
-                        if (tokenizer.NextChar == '\0')
-                            break;
-
-                        tokenizer.ReadTo("'>");
-                        tokenizer.Advance(2);
-                        var user = tokenizer.ReadTo("</a>");
-                        if (user.StartsWith("<img"))
-                            continue;
-
-                        var mid = tokenizer.ReadTo("<small>");
-                        if (mid.Contains("Hardcore!"))
-                        {
-                            tokenizer.Advance(7);
-                            var when = tokenizer.ReadTo("</small>");
-                            var date = DateTime.Parse(when.ToString());
-                            date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
-
-                            var stats = new UserStats { User = user.ToString() };
-                            var index = userStats.BinarySearch(stats, stats);
-                            if (index < 0)
-                                userStats.Insert(~index, stats);
-                            else
-                                stats = userStats[index];
-
-                            stats.Achievements[achievement.Id] = date;
-                            stats.PointsEarned += achievement.Points;
-
-                            if (ReferenceEquals(achievement, leastWon))
-                            {
-                                if (!masters.Contains(stats.User))
-                                    masters.Add(stats.User);
-                            }
-                        }
-                        else
-                        {
-                            if (!nonHardcoreUsers.Contains(user.ToString()))
-                                nonHardcoreUsers.Add(user.ToString());
-                        }
-
-                    } while (true);
-                }
-
-                Progress.Current++;
-            }
-
-            // if more than 50 people have earned achievements, people who mastered the game early may no longer display 
-            // in the individual pages. fetch mastery data by user
-            if (mostWon.EarnedBy > 50)
-            {
-                HardcoreMasteredUserCountEstimated = (leastWon.EarnedBy > 50);
-
-                bool incompleteData = false;
-
-                Progress.Reset(masters.Count);
-                foreach (var user in masters)
-                {
-                    Progress.Current++;
-
-                    var stats = new UserStats { User = user };
-                    var index = userStats.BinarySearch(stats, stats);
-                    if (index < 0)
-                    {
-                        userStats.Insert(~index, stats);
-                    }
-                    else
-                    {
-                        stats = userStats[index];
-                        if (stats.PointsEarned == totalPoints)
-                            continue;
-                    }
-
-                    if (!incompleteData)
-                    {
-                        var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
-                        if (masteryJson == null)
-                        {
-                            incompleteData = true;
-                        }
-                        else
-                        {
-                            var achievements = masteryJson.GetField("achievements").ObjectValue;
-                            foreach (var achievement in achievements)
-                            {
-                                var id = Int32.Parse(achievement.FieldName);
-                                if (!stats.Achievements.ContainsKey(id))
-                                {
-                                    var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
-                                    if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
-                                        dateField = achievement.ObjectValue.GetField("DateEarned");
-
-                                    if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
-                                    {
-                                        var date = DateTime.Parse(dateField.StringValue);
-                                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
-                                        stats.Achievements[id] = date;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    stats.PointsEarned = totalPoints;
-                    stats.Incomplete = incompleteData;
-                }
-
-                if (incompleteData)
-                {
-                    _backgroundWorkerService.InvokeOnUiThread(() =>
-                    {
-                        var settings = ServiceRepository.Instance.FindService<ISettings>();
-                        if (String.IsNullOrEmpty(settings.ApiKey))
-                            MessageBoxViewModel.ShowMessage("Data is limited without an ApiKey in the ini file.");
-                        else
-                            MessageBoxViewModel.ShowMessage("Failed to fetch mastery information. Please make sure the ApiKey value is up to date in your ini file.");
-                    });
-                }
-            }
-            else
-            {
-                HardcoreMasteredUserCountEstimated = false;
-            }
-
+        private void AnalyzeData(List<AchievementStats> achievementStats, List<UserStats> userStats)
+        {
             Progress.Label = "Analyzing data";
 
             var sessions = new List<int>(userStats.Count);
@@ -549,9 +676,16 @@ namespace RATools.ViewModels
                 if (user.Achievements.Count == 0)
                     continue;
 
+                user.PointsEarned = 0;
                 var times = new List<DateTime>(user.Achievements.Count);
                 foreach (var achievement in user.Achievements)
+                {
+                    var achievementData = achievementStats.FirstOrDefault(a => a.Id == achievement.Key);
+                    if (achievementData != null)
+                        user.PointsEarned += achievementData.Points;
+
                     times.Add(achievement.Value);
+                }
 
                 times.Sort((l, r) => (int)((l - r).TotalSeconds));
 
@@ -577,7 +711,8 @@ namespace RATools.ViewModels
                 double perSessionAdjustment = user.GameTime.TotalSeconds / user.Achievements.Count;
                 user.GameTime += TimeSpan.FromSeconds(user.Sessions * perSessionAdjustment);
 
-                if (user.PointsEarned == totalPoints)
+                // if the user mastered the set, capture data for median calculations
+                if (user.PointsEarned == TotalPoints)
                 {
                     sessions.Add(user.Sessions);
                     days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
@@ -594,7 +729,6 @@ namespace RATools.ViewModels
             });
 
             HardcoreUserCount = userStats.Count;
-            NonHardcoreUserCount = nonHardcoreUsers.Count;
             MedianHardcoreUserScore = userStats.Count > 0 ? userStats[userStats.Count / 2].PointsEarned : 0;
 
             int masteredCount = sessions.Count;
@@ -613,13 +747,59 @@ namespace RATools.ViewModels
                 days.Sort();
                 MedianDaysToMaster = days[masteredCount / 2].ToString();
             }
+            else
+            {
+                HardcoreMasteredUserCount = 0;
+                MedianTimeToMaster = "n/a";
+                MedianSessionsToMaster = "n/a";
+                MedianDaysToMaster = "n/a";
+            }
+        }
 
-            if (userStats.Count > 100)
-                userStats.RemoveRange(100, userStats.Count - 100);
+        private void WriteGameStats(string gameName, List<AchievementStats> achievementStats,
+                                    List<UserStats> userStats)
+        {
+            if (String.IsNullOrEmpty(_settings.DumpDirectory))
+                return;
 
-            TopUsers = userStats;
+            var filename = Path.Combine(_settings.DumpDirectory, GameId + ".txt");
+            using (var file = new StreamWriter(_fileSystem.CreateFile(filename)))
+            {
+                if (gameName != null)
+                    file.WriteLine("Game=" + gameName);
 
-            Progress.Label = String.Empty;
+                file.WriteLine("NumberOfPlayers=" + NumberOfPlayers);
+                file.WriteLine("HardCoreCaptured=" + userStats.Count);
+                file.WriteLine("NonHardCoreCaptured=" + NonHardcoreUserCount);
+
+                foreach (var achievement in achievementStats)
+                {
+                    file.WriteLine();
+                    file.Write("Achievement:");
+                    file.Write(achievement.Id);
+                    file.Write('=');
+                    file.Write(achievement.EarnedHardcoreBy);
+                    file.Write('/');
+                    file.Write(achievement.EarnedBy);
+                    file.Write(':');
+                    file.Write(achievement.Points);
+                    file.Write(';');
+                    file.Write(achievement.Title);
+                    file.WriteLine();
+
+                    foreach (var user in userStats)
+                    {
+                        DateTime when;
+                        if (user.Achievements.TryGetValue(achievement.Id, out when))
+                        {
+                            file.Write(user.User);
+                            file.Write('@');
+                            file.Write(when.ToString("MM/dd/yyyy HH:mm:ss"));
+                            file.WriteLine();
+                        }
+                    }
+                }
+            }
         }
 
         public DelegateCommand<UserStats> ShowUserUnlocksCommand { get; private set; }
