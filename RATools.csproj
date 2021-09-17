@@ -106,6 +106,7 @@
     <Compile Include="Services\Settings.cs" />
     <Compile Include="Services\Theme.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
+    <Compile Include="ViewModels\ConditionsAnalyzerViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\GameDataSnapshotViewModel.cs" />
     <Compile Include="ViewModels\MasteryViewModel.cs" />
@@ -115,6 +116,9 @@
     <Compile Include="ViewModels\RecordingEditorViewModel.cs" />
     <Compile Include="ViewModels\ScriptViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
+    <Compile Include="Views\ConditionsAnalyzerDialog.xaml.cs">
+      <DependentUpon>ConditionsAnalyzerDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\MasteryDialog.xaml.cs">
       <DependentUpon>MasteryDialog.xaml</DependentUpon>
     </Compile>
@@ -171,6 +175,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\ConditionsAnalyzerDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\MasteryDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

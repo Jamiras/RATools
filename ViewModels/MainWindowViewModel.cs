@@ -31,6 +31,7 @@ namespace RATools.ViewModels
 
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
+            ConditionsAnalyzerCommand = new DelegateCommand(ConditionsAnalyzer);
             MasteryCommand = new DelegateCommand(MasteryStats);
 
             AboutCommand = new DelegateCommand(About);
@@ -514,6 +515,13 @@ namespace RATools.ViewModels
             }
 
             var vm = new OpenTicketsViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase ConditionsAnalyzerCommand { get; private set; }
+        private void ConditionsAnalyzer()
+        {
+            var vm = new ConditionsAnalyzerViewModel();
             vm.ShowDialog();
         }
 
