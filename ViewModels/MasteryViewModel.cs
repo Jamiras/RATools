@@ -90,6 +90,8 @@ namespace RATools.ViewModels
             var unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
             var masteryStats = new List<MasteryStats>();
+            var mostAwardedAchievements = new List<GameStatsViewModel.AchievementStats>();
+
             var achievementIds = new List<int>(Snapshot.GamesWithAchievements);
             achievementIds.Sort();
             foreach (var gameId in achievementIds)
@@ -100,6 +102,7 @@ namespace RATools.ViewModels
                 if (!Progress.IsEnabled)
                     break;
 
+                string gameName = "";
                 int created = Int32.MaxValue;
                 using (var stream = File.OpenRead(Path.Combine(_settings.DumpDirectory, gameId + ".json")))
                 {
@@ -117,6 +120,8 @@ namespace RATools.ViewModels
                         if (createdValue > 0 && createdValue < created)
                             created = createdValue;
                     }
+
+                    gameName = json.GetField("PatchData").ObjectValue.GetField("Title").StringValue;
                 }
 
                 var gameStats = new GameStatsViewModel() { GameId = gameId };
@@ -154,6 +159,22 @@ namespace RATools.ViewModels
                                 }
                             }
                         }
+                    }
+
+                    int i = 0;
+                    while (i < mostAwardedAchievements.Count)
+                    {
+                        if (achievement.EarnedBy > mostAwardedAchievements[i].EarnedBy)
+                            break;
+                        ++i;
+                    }
+                    if (i < 20)
+                    {
+                        if (mostAwardedAchievements.Count == 20)
+                            mostAwardedAchievements.RemoveAt(19);
+
+                        achievement.Description = gameName;
+                        mostAwardedAchievements.Insert(i, achievement);
                     }
                 }
 
@@ -199,7 +220,7 @@ namespace RATools.ViewModels
                     FiftiethPercentilePoints = fiftiethPercentilePoints,
                     SeventyFifthPercentilePoints = seventyFifthPercentilePoints,
                     NintiethPercentilePoints = ninetiethPercentilePoints,
-                    NintiethPercentileAchievements = ninetiethPercentileAchievements
+                    NintiethPercentileAchievements = ninetiethPercentileAchievements,
                 };
 
                 if (gameStats.NumberOfPlayers == 0)
@@ -231,6 +252,8 @@ namespace RATools.ViewModels
                     Results.Add(stats);
             });
 
+            _mostAwardedAchievements = mostAwardedAchievements;
+
             Progress.Label = String.Empty;
         }
 
@@ -255,6 +278,8 @@ namespace RATools.ViewModels
         }
 
         public ObservableCollection<MasteryStats> Results { get; private set; }
+
+        private List<GameStatsViewModel.AchievementStats> _mostAwardedAchievements;
 
         public CommandBase ExportCommand { get; private set; }
         private void Export()
@@ -593,6 +618,16 @@ namespace RATools.ViewModels
                             results[i].GameName));
                         count++;
                     }
+                }
+                file.WriteLine("```");
+                file.WriteLine();
+
+                file.WriteLine("Most Earned Achievements: MAX(Players)|Achievement (Game)");
+                file.WriteLine("```");
+                foreach (var achievement in _mostAwardedAchievements)
+                {
+                    file.WriteLine(String.Format("{0,5:D} {1} ({2})",
+                        achievement.EarnedBy, achievement.Title, achievement.Description));
                 }
                 file.WriteLine("```");
                 file.WriteLine();
