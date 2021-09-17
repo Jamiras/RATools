@@ -12,6 +12,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="GameViewer.xaml" />
             </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="boolToVisConverter" />
         </ResourceDictionary>
     </Window.Resources>
     <DockPanel Background="#F0F0F0" controls:CommandBinding.FileDropCommand="{Binding DragDropScriptCommand}" >
@@ -60,6 +61,8 @@
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />
                 <MenuItem Header="Game _Stats" Command="{Binding GameStatsCommand}" />
+                <MenuItem Header="_Mastery" Command="{Binding MasteryCommand}"
+                          Visibility="{Binding HasDumpDirectory, Converter={StaticResource boolToVisConverter}}"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="_About" Command="{Binding AboutCommand}" />

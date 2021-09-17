@@ -1,4 +1,6 @@
-﻿using Jamiras.Commands;
+﻿//#define ONLY_WITH_HASHES
+
+using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
@@ -16,9 +18,6 @@ namespace RATools.ViewModels
 {
     public class GameDataSnapshotViewModel : ViewModelBase
     {
-        private static string DoRequestToken = "uewapp4QpksDB3J6";
-        private static int MaxGameId = 17780;
-
         public GameDataSnapshotViewModel(ProgressFieldViewModel progress)
             : this(progress, ServiceRepository.Instance.FindService<IBackgroundWorkerService>(), ServiceRepository.Instance.FindService<ISettings>())
         {
@@ -30,7 +29,7 @@ namespace RATools.ViewModels
             _backgroundWorkerService = backgroundWorkerService;
             _settings = settings;
 
-            if (String.IsNullOrEmpty(settings.ApiKey))
+            if (String.IsNullOrEmpty(settings.DoRequestToken))
                 RefreshCommand = DisabledCommand.Instance;
             else
                 RefreshCommand = new DelegateCommand(DoRefresh);
@@ -69,126 +68,128 @@ namespace RATools.ViewModels
         public CommandBase RefreshCommand { get; private set; }
         private void DoRefresh()
         {
-            _backgroundWorkerService.RunAsync(() => RefreshFromServer(0));
+            _backgroundWorkerService.RunAsync(() => RefreshFromServer());
         }
 
-        internal void RefreshFromServer(int singularGameId)
+        internal void RefreshFromServer()
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            var directory = _settings.DumpDirectory;
             var rand = new Random();
+#if ONLY_WITH_HASHES
+            var ids = new List<int>();
+#else
+            var minId = 1;
+            var maxId = 0;
+#endif
 
             var fileSystemService = ServiceRepository.Instance.FindService<IFileSystemService>();
             var httpRequestService = ServiceRepository.Instance.FindService<IHttpRequestService>();
 
-            if (singularGameId == 0 && _progress != null)
+            if (_progress != null)
             {
                 _progress.IsEnabled = true;
-                _progress.Reset(MaxGameId);
+                _progress.Reset(1000);
                 _progress.Label = "Fetching data...";
             }
 
-            int misses = 0;
-            int gameId = singularGameId;
-            do
+            // fetch all games that have hashes associated to them (can't earn achievements without a hash)
             {
-                if (singularGameId == 0)
+                var data = RAWebCache.Instance.GetAllHashes();
+                var json = new Jamiras.IO.Serialization.JsonObject(data);
+                var hashes = json.GetField("MD5List").ObjectValue;
+                foreach (var pair in hashes)
                 {
-                    if (_progress != null)
-                    {
-                        if (!_progress.IsEnabled)
-                            break;
-
-                        _progress.Current++;
-                    }
-
-                    if (++gameId > MaxGameId)
-                        break;
+#if ONLY_WITH_HASHES
+                    if (!ids.Contains(pair.IntegerValue.GetValueOrDefault()))
+                        ids.Add(pair.IntegerValue.GetValueOrDefault());
+#else
+                    if (pair.IntegerValue.GetValueOrDefault() > maxId)
+                        maxId = pair.IntegerValue.GetValueOrDefault();
+#endif
                 }
-                else
+            }
+
+#if ONLY_WITH_HASHES
+            ids.Sort();
+
+            if (_progress != null)
+                _progress.Reset(ids.Count);
+
+            foreach (var gameId in ids)
+#else
+            if (_progress != null)
+                _progress.Reset(maxId - minId + 1);
+
+            for (var gameId = minId; gameId <= maxId; ++gameId)
+#endif
+            {
+                if (_progress != null)
                 {
-                    if (gameId++ != singularGameId)
-                        break;                   
+                    if (!_progress.IsEnabled) // error encountered
+                        return;
+
+                    _progress.Current++;
                 }
 
-                var file = Path.Combine(directory, String.Format("{0}.json", gameId));
-                if (fileSystemService.FileExists(file))
-                {
-                    bool fileValid = (DateTime.Now - fileSystemService.GetFileLastModified(file)) < TimeSpan.FromHours(16);
-                    if (fileValid)
-                    {
-                        misses = 0;
-                        continue;
-                    }
-                }
+                RefreshFromServer(gameId, fileSystemService, httpRequestService);
 
-                Debug.WriteLine(String.Format("{0} fetching patch data {1}", DateTime.Now, gameId));
-                var url = String.Format("http://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", apiUser, DoRequestToken, gameId); // TODO: why isn't this apiKey?
-                var request = new HttpRequest(url);
-                var response = httpRequestService.Request(request);
-                if (response.Status == System.Net.HttpStatusCode.OK)
+                System.Threading.Thread.Sleep(rand.Next(300) + 100);
+            }
+
+            // download completed, refresh the stats
+            if (_progress != null)
+                LoadFromDisk();
+        }
+
+        private void RefreshFromServer(int gameId, IFileSystemService fileSystemService, IHttpRequestService httpRequestService)
+        {
+            var file = Path.Combine(_settings.DumpDirectory, String.Format("{0}.json", gameId));
+            if (fileSystemService.FileExists(file))
+            {
+                bool fileValid = (DateTime.Now - fileSystemService.GetFileLastModified(file)) < TimeSpan.FromHours(16);
+                if (fileValid)
+                    return;
+            }
+
+            Debug.WriteLine(String.Format("{0} fetching patch data {1}", DateTime.Now, gameId));
+            var url = String.Format("http://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
+                _settings.UserName, _settings.DoRequestToken, gameId);
+            var request = new HttpRequest(url);
+            var response = httpRequestService.Request(request);
+            if (response.Status == System.Net.HttpStatusCode.OK)
+            {
+                using (var outputStream = fileSystemService.CreateFile(file))
                 {
-                    using (var outputStream = fileSystemService.CreateFile(file))
+                    byte[] buffer = new byte[4096];
+                    using (var stream = response.GetResponseStream())
                     {
-                        byte[] buffer = new byte[4096];
-                        using (var stream = response.GetResponseStream())
+                        int bytesRead;
+                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
                         {
-                            int bytesRead;
-                            while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                            if (bytesRead < 100)
                             {
-                                if (bytesRead < 100)
+                                var str = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                                if (str.Contains("Error"))
                                 {
-                                    var str = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-                                    if (str.Contains("Error"))
+                                    if (_progress != null)
                                     {
-                                        if (_progress != null)
-                                        {
-                                            _progress.IsEnabled = false;
-                                            _progress.Label = String.Empty;
-                                        }
-                                        _backgroundWorkerService.InvokeOnUiThread(() => MessageBoxViewModel.ShowMessage(str));
-                                        return;
+                                        _progress.IsEnabled = false;
+                                        _progress.Label = String.Empty;
                                     }
+                                    _backgroundWorkerService.InvokeOnUiThread(() => MessageBoxViewModel.ShowMessage(str));
+                                    return;
                                 }
-                                outputStream.Write(buffer, 0, bytesRead);
                             }
+                            outputStream.Write(buffer, 0, bytesRead);
                         }
                     }
-
-                    string contents;
-                    using (var stream = new StreamReader(fileSystemService.OpenFile(file, OpenFileMode.Read)))
-                    {
-                        contents = stream.ReadToEnd();
-                    }
-
-                    var json = new Jamiras.IO.Serialization.JsonObject(contents);
-                    var patchData = json.GetField("PatchData");
-                    if (patchData.Type != Jamiras.IO.Serialization.JsonFieldType.Object)
-                    {
-                        File.Delete(file);
-                        misses++;
-                        if (misses == 10)
-                            break;
-                    }
-                    else if (patchData.ObjectValue.GetField("ID").IntegerValue.GetValueOrDefault() == 0)
-                    {
-                        File.Delete(file);
-                        misses++;
-                        if (misses >= 30)
-                            break;
-                    }
-                    else
-                    {
-                        misses = 0;
-                    }
                 }
 
-                System.Threading.Thread.Sleep(rand.Next(300) + 200);
-            } while (true);
-
-            if (_progress != null && _progress.IsEnabled)
-                LoadFromDisk();
+                string contents;
+                using (var stream = new StreamReader(fileSystemService.OpenFile(file, OpenFileMode.Read)))
+                {
+                    contents = stream.ReadToEnd();
+                }
+            }
         }
 
         private void LoadFromDisk()
@@ -228,7 +229,8 @@ namespace RATools.ViewModels
                     continue;
                 }
 
-                if (patchData.ObjectValue.GetField("ID").IntegerValue.GetValueOrDefault() == 0)
+                int gameId = patchData.ObjectValue.GetField("ID").IntegerValue.GetValueOrDefault();
+                if (gameId == 0)
                 {
                     File.Delete(file);
                     continue;
@@ -238,7 +240,6 @@ namespace RATools.ViewModels
                 if (lastUpdated < oldestFile)
                     oldestFile = lastUpdated;
 
-                int gameId = patchData.ObjectValue.GetField("ID").IntegerValue.GetValueOrDefault();
                 gameCount++;
 
                 var richPresence = patchData.ObjectValue.GetField("RichPresencePatch").StringValue;

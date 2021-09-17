@@ -3,7 +3,6 @@ using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
-using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -32,6 +31,7 @@ namespace RATools.ViewModels
 
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
+            MasteryCommand = new DelegateCommand(MasteryStats);
 
             AboutCommand = new DelegateCommand(About);
 
@@ -44,6 +44,9 @@ namespace RATools.ViewModels
             ServiceRepository.Instance.RegisterInstance<ISettings>(settings);
             ShowHexValues = settings.HexValues;
             Theme.Deserialize(settings.Colors);
+
+            HasDumpDirectory = !String.IsNullOrEmpty(settings.DumpDirectory) &&
+                !String.IsNullOrEmpty(settings.DoRequestToken);
 
             var persistance = ServiceRepository.Instance.FindService<IPersistantDataRepository>();
             var recent = persistance.GetValue("RecentFiles");
@@ -89,6 +92,8 @@ namespace RATools.ViewModels
         }
 
         private RecencyBuffer<string> _recentFiles;
+
+        public bool HasDumpDirectory { get; private set; }
 
         public CommandBase ExitCommand { get; private set; }
 
@@ -509,6 +514,13 @@ namespace RATools.ViewModels
             }
 
             var vm = new OpenTicketsViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase MasteryCommand { get; private set; }
+        private void MasteryStats()
+        {
+            var vm = new MasteryViewModel();
             vm.ShowDialog();
         }
 

@@ -65,6 +65,13 @@ namespace RATools.Services
             return GetPage(filename, url, true);
         }
 
+        public string GetAllHashes()
+        {
+            var filename = Path.Combine(Path.GetTempPath(), "raHashes.json");
+            var url = "https://retroachievements.org/dorequest.php?r=hashlibrary";
+            return GetPage(filename, url, false);
+        }
+
         private string GetPage(string filename, string url, bool requiresCookie)
         {
             bool fileValid = false;

@@ -108,12 +108,16 @@
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\GameDataSnapshotViewModel.cs" />
+    <Compile Include="ViewModels\MasteryViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
     <Compile Include="ViewModels\OptionsDialogViewModel.cs" />
     <Compile Include="ViewModels\PlaybackEditorViewModel.cs" />
     <Compile Include="ViewModels\RecordingEditorViewModel.cs" />
     <Compile Include="ViewModels\ScriptViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
+    <Compile Include="Views\MasteryDialog.xaml.cs">
+      <DependentUpon>MasteryDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\UserHistoryDialog.xaml.cs">
       <DependentUpon>UserHistoryDialog.xaml</DependentUpon>
     </Compile>
@@ -167,6 +171,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\MasteryDialog.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\UserHistoryDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

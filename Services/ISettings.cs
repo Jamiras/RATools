@@ -20,6 +20,11 @@ namespace RATools.Services
         string ApiKey { get; }
 
         /// <summary>
+        /// Gets the DoRequest token for the user.
+        /// </summary>
+        string DoRequestToken { get; }
+
+        /// <summary>
         /// Gets the web Cookie for the user.
         /// </summary>
         string Cookie { get; }

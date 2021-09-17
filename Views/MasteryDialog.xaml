@@ -1,0 +1,164 @@
+﻿<UserControl x:Class="RATools.Views.MasteryDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
+             mc:Ignorable="d" 
+             Width="800" Height="600">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/FieldStyles.xaml" />
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <GroupBox Header="Game Data Snapshot" Grid.ColumnSpan="2">
+            <Grid DataContext="{Binding Snapshot}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="3" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="Games:" />
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding GameCount}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="Achievements:" />
+                <TextBlock Grid.Row="1" Grid.Column="2">
+                    <TextBlock Text="{Binding AchievementCount}" />
+                    <Run Text=" (" FontSize="10" />
+                    <TextBlock Text="{Binding AchievementGameCount}" FontSize="10" Margin="-2,0,-2,0" />
+                    <Run Text=" games with achievements)" FontSize="10" />
+                </TextBlock>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="Leaderboards:" />
+                <TextBlock Grid.Row="2" Grid.Column="2">
+                    <TextBlock Text="{Binding LeaderboardCount}" />
+                    <Run Text=" (" FontSize="10" />
+                    <TextBlock Text="{Binding LeaderboardGameCount}" FontSize="10" Margin="-2,0,-2,0" />
+                    <Run Text=" games with leaderboards)" FontSize="10" />
+                </TextBlock>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="RichPresences:" />
+                <TextBlock Grid.Row="3" Grid.Column="2">
+                    <TextBlock Text="{Binding RichPresenceCount}" /> 
+                    <Run Text=" (" FontSize="10" />
+                    <TextBlock Text="{Binding StaticRichPresenceCount}" FontSize="10" Margin="-2,0,-2,0" />
+                    <Run Text=" static)" FontSize="10" />                    
+                </TextBlock> 
+
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Authors:" />
+                <TextBlock Grid.Row="4" Grid.Column="2" Text="{Binding AuthorCount}" />
+
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="Systems:" />
+                <TextBlock Grid.Row="5" Grid.Column="2" Text="{Binding SystemCount}" />
+
+                <TextBlock Grid.Row="0" Grid.Column="4" HorizontalAlignment="Right" Text="Last Updated" />
+                <TextBlock Grid.Row="1" Grid.Column="4" HorizontalAlignment="Right" Text="{Binding LastUpdatedText}" />
+                <Button Grid.Row="2" Grid.Column="4" Grid.RowSpan="2" HorizontalAlignment="Right" Content="Refresh" Command="{Binding RefreshCommand}" Height="22" />
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <TextBlock Text="Results: " VerticalAlignment="Bottom" />
+            <TextBlock Text="{Binding Results.Count}" VerticalAlignment="Bottom" Margin="0,0,8,0" />
+            <Button Content="Refresh" Command="{Binding RefreshCommand}" Height="22" VerticalAlignment="Bottom" />
+            <Button Content="Summarize" Command="{Binding SummarizeCommand}" Height="22" VerticalAlignment="Bottom" />
+            <Button Content="Export" Command="{Binding ExportCommand}" Height="22" VerticalAlignment="Bottom" />
+        </StackPanel>
+
+        <ListView Grid.Row="2" Grid.ColumnSpan="2" ItemsSource="{Binding Results}" jamiras:GridViewSort.IsEnabled="True">
+            <ListView.Resources>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListView.Resources>
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="Game" Width="200">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock>
+                                    <Hyperlink Style="{StaticResource subtleHyperlink}"
+                                               Command="{Binding DataContext.OpenGameCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ListView}}}" CommandParameter="{Binding}">
+                                        <TextBlock Text="{Binding GameName}" />
+                                    </Hyperlink>
+                                </TextBlock>
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Players" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding NumPlayers}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Points" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Points}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="50th Percentile Points" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding FiftiethPercentilePoints}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Minutes per Point" Width="100">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding MinutesPerPoint}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Mastered" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding HardcoreMasteredUserCount}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="Mean Time to Master" Width="100">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding MeanTimeToMaster}" TextAlignment="Right" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <ContentPresenter Grid.RowSpan="3" Grid.ColumnSpan="2" Margin="-4" Content="{Binding Progress}" />
+    </Grid>
+</UserControl>

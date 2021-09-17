@@ -57,6 +57,10 @@ namespace RATools.Services
                 if (values.TryGetValue("ApiKey", out apiKey) && apiKey.Length > 0)
                     ApiKey = apiKey;
 
+                string doRequestToken;
+                if (values.TryGetValue("DoRequestToken", out doRequestToken) && doRequestToken.Length > 0)
+                    DoRequestToken = doRequestToken;
+
                 string dumpDirectory;
                 if (values.TryGetValue("DumpDirectory", out dumpDirectory) && dumpDirectory.Length > 0)
                     DumpDirectory = dumpDirectory;
@@ -101,6 +105,16 @@ namespace RATools.Services
             else
                 values["Cookie"] = Cookie;
 
+            if (String.IsNullOrEmpty(DumpDirectory))
+                values.Remove("DumpDirectory");
+            else
+                values["DumpDirectory"] = DumpDirectory;
+
+            if (String.IsNullOrEmpty(DoRequestToken))
+                values.Remove("DoRequestToken");
+            else
+                values["DoRequestToken"] = DoRequestToken;
+
             if (EmulatorDirectories.Count == 0)
                 values.Remove("EmulatorDirectories");
             else
@@ -126,6 +140,8 @@ namespace RATools.Services
         public string Cookie { get; set; }
 
         public string DumpDirectory { get; set; }
+
+        public string DoRequestToken { get; set; }
 
         public string Colors { get; set; }
 

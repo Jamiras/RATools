@@ -59,7 +59,10 @@ namespace RATools.ViewModels
         {
             Progress.Label = "Fetching Game " + GameId;
             Progress.IsEnabled = true;
-            _backgroundWorkerService.RunAsync(() => LoadGame(true));
+            _backgroundWorkerService.RunAsync(() =>
+            {
+                LoadGame(true, 100);
+            });
         }
 
         private static void OnGameIdChanged(object sender, ModelPropertyChangedEventArgs e)
@@ -214,7 +217,7 @@ namespace RATools.ViewModels
             private set { SetValue(TotalPointsProperty, value); }
         }
 
-        internal void LoadGame(bool allowFetchFromServer = false)
+        internal void LoadGame(bool allowFetchFromServer = false, int maxUserStats = Int32.MaxValue)
         {
             var userStats = new List<UserStats>();
             var achievementStats = new List<AchievementStats>();
@@ -239,9 +242,9 @@ namespace RATools.ViewModels
             {
                 AnalyzeData(achievementStats, userStats);
 
-                // only display the top 100 entries
-                if (userStats.Count > 100)
-                    userStats.RemoveRange(100, userStats.Count - 100);
+                // only display the top N entries
+                if (userStats.Count > maxUserStats)
+                    userStats.RemoveRange(maxUserStats, userStats.Count - maxUserStats);
             }
 
             Achievements = achievementStats;
@@ -256,6 +259,7 @@ namespace RATools.ViewModels
             if (!_fileSystem.FileExists(file))
                 return false;
 
+            TotalPoints = 0;
             using (var reader = new StreamReader(_fileSystem.OpenFile(file, OpenFileMode.Read)))
             {
                 while (!reader.EndOfStream)
@@ -291,6 +295,7 @@ namespace RATools.ViewModels
                         stats.Title = line.Substring(index + 1);
 
                         achievementStats.Add(stats);
+                        TotalPoints += stats.Points;
 
                         while (!reader.EndOfStream)
                         {
@@ -409,7 +414,7 @@ namespace RATools.ViewModels
                 bool incompleteData = false;
                 possibleMasters.AddRange(masters);
 
-                Progress.Reset(masters.Count);
+                Progress.Reset(possibleMasters.Count);
                 foreach (var user in possibleMasters)
                 {
                     Progress.Current++;
@@ -423,39 +428,12 @@ namespace RATools.ViewModels
                     else
                     {
                         stats = userStats[index];
-                        if (stats.PointsEarned == TotalPoints)
+                        if (stats.Achievements.Count >= achievementStats.Count)
                             continue;
                     }
 
-                    if (!incompleteData)
-                    {
-                        var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(user, GameId);
-                        if (masteryJson == null)
-                        {
-                            incompleteData = true;
-                        }
-                        else
-                        {
-                            var achievements = masteryJson.GetField("achievements").ObjectValue;
-                            foreach (var achievement in achievements)
-                            {
-                                var id = Int32.Parse(achievement.FieldName);
-                                if (!stats.Achievements.ContainsKey(id))
-                                {
-                                    var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
-                                    if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
-                                        dateField = achievement.ObjectValue.GetField("DateEarned");
-
-                                    if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
-                                    {
-                                        var date = DateTime.Parse(dateField.StringValue);
-                                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
-                                        stats.Achievements[id] = date;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    if (!incompleteData && !MergeUserGameMastery(stats))
+                        incompleteData = true;
 
                     stats.Incomplete = incompleteData;
                 }
@@ -476,6 +454,60 @@ namespace RATools.ViewModels
             NonHardcoreUserCount = nonHardcoreUsers.Count;
 
             WriteGameStats(_gameName, achievementStats, userStats);
+        }
+
+        public void RefreshUsers(List<UserStats> users)
+        {
+            var userStats = new List<UserStats>();
+            var achievementStats = new List<AchievementStats>();
+
+            if (!LoadGameFromFile(achievementStats, userStats, false))
+                return;
+
+            foreach (var user in users)
+            {
+                var stats = new UserStats { User = user.User };
+                var index = userStats.BinarySearch(stats, stats);
+                if (index < 0)
+                    userStats.Insert(~index, stats);
+                else
+                    stats = userStats[index];
+
+                MergeUserGameMastery(stats);
+
+                foreach (var kvp in stats.Achievements)
+                    user.Achievements[kvp.Key] = kvp.Value;
+            }
+
+            WriteGameStats(_gameName, achievementStats, userStats);
+        }
+
+        private bool MergeUserGameMastery(UserStats stats)
+        {
+            var masteryJson = RAWebCache.Instance.GetUserGameMasteryJson(stats.User, GameId);
+            if (masteryJson == null)
+                return false;
+
+            var achievements = masteryJson.GetField("achievements").ObjectValue;
+            foreach (var achievement in achievements)
+            {
+                var id = Int32.Parse(achievement.FieldName);
+                if (!stats.Achievements.ContainsKey(id))
+                {
+                    var dateField = achievement.ObjectValue.GetField("DateEarnedHardcore");
+                    if (dateField.Type != Jamiras.IO.Serialization.JsonFieldType.String)
+                        dateField = achievement.ObjectValue.GetField("DateEarned");
+
+                    if (dateField.Type == Jamiras.IO.Serialization.JsonFieldType.String)
+                    {
+                        var date = DateTime.Parse(dateField.StringValue);
+                        date = DateTime.SpecifyKind(date, DateTimeKind.Utc);
+                        stats.Achievements[id] = date;
+                    }
+                }
+            }
+
+            return true;
         }
 
         private static List<string> GetMastersFromServer(string gamePage, string masteryPoints)
