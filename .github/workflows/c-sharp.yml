@@ -1,0 +1,33 @@
+name: C# CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, github-actions ]
+
+jobs:
+  Build-and-Tests:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        submodules: recursive
+
+    - name: Setup dotnet
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.x
+
+    - name: Install MSBuild
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Install dependencies
+      run: dotnet restore RATools.sln
+
+    - name: Build
+      run: msbuild.exe RATools.sln -p:Configuration=Release -p:Platform="Any CPU"
+
+    - name: Run Tests
+      run: dotnet test Tests\bin\Release\RATools.Test.dll
