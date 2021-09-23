@@ -159,6 +159,7 @@ namespace RATools.Test.Parser.Functions
         [TestCase("bit(18, 10 + word(0x1234))", "bit2(word(0x001234) + 0x00000C)")] // indirect pointer
         [TestCase("bit(18, prev(word(0x1234)))", "bit2(prev(word(0x001234)) + 0x000002)")] // direct pointer using prev data
         [TestCase("bit(18, 0x1234 + word(0x2345) * 2)", "bit2(word(0x002345) * 0x00000002 + 0x001236)")] // scaled array index
+        [TestCase("byte(word(0x1234) - 10)", "byte(word(0x001234) + 0xFFFFFFF6)")]
         public void TestAddAddress(string input, string expected)
         {
             var requirements = Evaluate(input);
@@ -177,7 +178,6 @@ namespace RATools.Test.Parser.Functions
         [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(4660) == 3)")]
         [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(4660) == 3")]
         [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(4660) == 3 && 2 > 1")]
-        [TestCase("byte(word(0x1234) - 10)", "Negative relative offset not supported")]
         public void TestInvalidAddress(string input, string error)
         {
             Evaluate(input, error);

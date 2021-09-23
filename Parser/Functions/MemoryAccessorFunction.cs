@@ -107,14 +107,6 @@ namespace RATools.Parser.Functions
                     {
                         if (mathematic.Operation == MathematicOperation.Subtract)
                             offsetConstant = new IntegerConstantExpression(-offsetConstant.Value);
-
-                        if (offsetConstant.Value < 0)
-                        {
-                            // Negative relative offsets can actually be handled by the runtime through overflow
-                            // addition, but the editor generates an error if the offset is larger than the
-                            // available memory space for the current system.
-                            return new ParseErrorExpression("Negative relative offset not supported", address);
-                        }
                     }
 
                     mathematic = address as MathematicExpression;
