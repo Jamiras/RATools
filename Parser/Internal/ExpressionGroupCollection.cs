@@ -73,6 +73,20 @@ namespace RATools.Parser.Internal
                 groups.RemoveAt(groups.Count - 1);
         }
 
+        private static bool IsAtValidGroupStart(ExpressionTokenizer tokenizer)
+        {
+            if (Char.IsLetter(tokenizer.NextChar))
+                return true;
+
+            if (tokenizer.NextChar == '_')
+                return true;
+
+            if (tokenizer.MatchSubstring("//") == 2)
+                return true;
+
+            return false;
+        }
+
         public bool Update(Tokenizer tokenizer, IEnumerable<int> affectedLines)
         {
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
@@ -93,7 +107,36 @@ namespace RATools.Parser.Internal
                     nextUpdatedLine = Math.Min(Groups[groupStart].FirstLine, nextUpdatedLine);
                 }
 
+                expressionTokenizer.PushState();
                 expressionTokenizer.AdvanceToLine(nextUpdatedLine);
+
+                if (groupStart > 0)
+                {
+                    // if the first character to be parsed is not a valid identifier character or comment token,
+                    // the new content might need to be merged with the previous group.
+                    bool needPreviousGroup;
+                    if (Char.IsWhiteSpace(expressionTokenizer.NextChar))
+                    {
+                        expressionTokenizer.PushState();
+                        expressionTokenizer.SkipWhitespace();
+                        needPreviousGroup = !IsAtValidGroupStart(expressionTokenizer);
+                        expressionTokenizer.PopState();
+                    }
+                    else
+                    {
+                        needPreviousGroup = !IsAtValidGroupStart(expressionTokenizer);
+                    }
+
+                    if (needPreviousGroup)
+                    {
+                        --groupStart;
+                        nextUpdatedLine = Groups[groupStart].FirstLine;
+
+                        LOG_UPDATE("Also processing group {0} (first line of group is {1})", groupStart, nextUpdatedLine);
+                        expressionTokenizer.PopState();
+                        expressionTokenizer.AdvanceToLine(nextUpdatedLine);
+                    }
+                }
             }
             else
             {
