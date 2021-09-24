@@ -284,8 +284,17 @@ namespace RATools.Parser
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
         {
-            var scriptContext = new AchievementScriptContext();
-            var scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
+            AchievementScriptContext scriptContext = null;
+            InterpreterScope scope = expressionGroups.Scope;
+
+            if (scope != null)
+                scriptContext = scope.GetContext<AchievementScriptContext>();
+
+            if (scriptContext == null)
+            {
+                scriptContext = new AchievementScriptContext();
+                scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
+            }
 
             expressionGroups.ResetErrors();
 
@@ -340,16 +349,14 @@ namespace RATools.Parser
                 }
             }
 
-            if (scope.FunctionCount > 0 || scope.VariableCount > 0)
+            if (!ReferenceEquals(scope, expressionGroups.Scope))
             {
-                if (expressionGroups.Scope != null)
+                if (scope.FunctionCount > 0 || scope.VariableCount > 0)
                 {
-                    expressionGroups.Scope.Merge(scope);
-                }
-                else
-                {
-                    scope.Context = null;
-                    expressionGroups.Scope = scope;
+                    if (expressionGroups.Scope != null)
+                        expressionGroups.Scope.Merge(scope);
+                    else
+                        expressionGroups.Scope = scope;
                 }
             }
 
