@@ -41,6 +41,13 @@ namespace RATools.Services
             return GetPage(filename, url, false);
         }
 
+        public string GetUserPage(string userName)
+        {
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}.html", userName));
+            var url = String.Format("https://retroachievements.org/user/{0}", userName);
+            return GetPage(filename, url, false);
+        }
+
         public string GetOpenTicketsPage(int pageIndex)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", pageIndex));
@@ -72,11 +79,23 @@ namespace RATools.Services
             return GetPage(filename, url, false);
         }
 
+        /// <summary>
+        /// Specifies the number of hours before a downloaded file gets redownloaded.
+        /// </summary>
+        /// <remarks>Set to 0 for default behavior (16 hours).</remarks>
+        public static int ExpireHours { get; set; }
+
         private string GetPage(string filename, string url, bool requiresCookie)
         {
             bool fileValid = false;
             if (_fileSystemService.FileExists(filename))
-                fileValid = (DateTime.Now - _fileSystemService.GetFileLastModified(filename)) < TimeSpan.FromHours(16);
+            {
+                var expireHours = ExpireHours;
+                if (expireHours == 0)
+                    expireHours = 16;
+
+                fileValid = (DateTime.Now - _fileSystemService.GetFileLastModified(filename)) < TimeSpan.FromHours(expireHours);
+            }
 
             if (!fileValid)
             {

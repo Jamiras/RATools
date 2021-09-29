@@ -79,7 +79,12 @@ namespace RATools.ViewModels
         public CommandBase RefreshCommand { get; private set; }
         private void RefreshGames()
         {
-            _backgroundWorkerService.RunAsync(() => CalculateMastery(true));
+            _backgroundWorkerService.RunAsync(() =>
+            {
+                RAWebCache.ExpireHours = 64;
+                CalculateMastery(true);
+                RAWebCache.ExpireHours = 0;
+            });
         }
 
         private void CalculateMastery(bool refresh)
@@ -104,10 +109,12 @@ namespace RATools.ViewModels
 
                 string gameName = "";
                 int created = Int32.MaxValue;
+                int consoleId = 0;
                 using (var stream = File.OpenRead(Path.Combine(_settings.DumpDirectory, gameId + ".json")))
                 {
                     var json = new JsonObject(stream);
-                    var achievements = json.GetField("PatchData").ObjectValue.GetField("Achievements");
+                    var patchData = json.GetField("PatchData").ObjectValue;
+                    var achievements = patchData.GetField("Achievements");
                     if (achievements.Type != JsonFieldType.ObjectArray)
                         continue;
 
@@ -121,7 +128,8 @@ namespace RATools.ViewModels
                             created = createdValue;
                     }
 
-                    gameName = json.GetField("PatchData").ObjectValue.GetField("Title").StringValue;
+                    gameName = patchData.GetField("Title").StringValue;
+                    consoleId = patchData.GetField("ConsoleID").IntegerValue.GetValueOrDefault();
                 }
 
                 var gameStats = new GameStatsViewModel() { GameId = gameId };
@@ -185,15 +193,18 @@ namespace RATools.ViewModels
                     var times = new List<double>();
                     foreach (var user in gameStats.TopUsers)
                     {
-                        if (user.PointsEarned == gameStats.TotalPoints)
+                        if (user.PointsEarned == gameStats.TotalPoints && user.IsEstimateReliable)
                             times.Add(user.GameTime.TotalMinutes);
                     }
 
-                    mean = times.Average();
-                    if (gameStats.HardcoreMasteredUserCountEstimated)
-                        standardDeviation = StandardDeviation.CalculateFromSample(times);
-                    else
-                        standardDeviation = StandardDeviation.Calculate(times);
+                    if (times.Count > 0)
+                    {
+                        mean = times.Average();
+                        if (gameStats.HardcoreMasteredUserCountEstimated)
+                            standardDeviation = StandardDeviation.CalculateFromSample(times);
+                        else
+                            standardDeviation = StandardDeviation.Calculate(times);
+                    }
                 }
 
                 var minutesPerPoint = new List<float>();
@@ -208,6 +219,7 @@ namespace RATools.ViewModels
                 {
                     GameId = gameStats.GameId,
                     GameName = gameStats.DialogTitle.Substring(12).Trim(),
+                    ConsoleId = consoleId,
                     Created = unixEpoch + TimeSpan.FromSeconds(created),
                     Points = gameStats.TotalPoints,
                     NumPlayers = gameStats.NumberOfPlayers,
@@ -261,6 +273,7 @@ namespace RATools.ViewModels
         {
             public int GameId { get; set; }
             public string GameName { get; set; }
+            public int ConsoleId { get; set; }
             public DateTime Created { get; set; }
             public int Points { get; set; }
             public int NumPlayers { get; set; }
@@ -294,7 +307,7 @@ namespace RATools.ViewModels
             {
                 using (var file = File.CreateText(vm.FileNames[0]))
                 {
-                    file.WriteLine("Id,Title,Created,Age," + 
+                    file.WriteLine("Id,Title,ConsoleId,Created,Age," + 
                                    "Points,Players,TimesMastered," +
                                    "MeanTimeToMaster,StdDevTimeToMaster," +
                                    "MinutesPerPointToMaster,MinutesPerPoint," +
@@ -302,7 +315,8 @@ namespace RATools.ViewModels
 
                     foreach (var game in Results)
                     {
-                        file.Write("{0},\"{1}\",{2},{3},", game.GameId, game.GameName.Replace("\"", "\\\""), game.Created, (DateTime.Today - game.Created).TotalDays);
+                        file.Write("{0},\"{1}\",", game.GameId, game.GameName.Replace("\"", "\\\""));
+                        file.Write("{0},{1},{2},", game.ConsoleId, game.Created, (DateTime.Today - game.Created).TotalDays);
                         file.Write("{0},{1},{2},", game.Points, game.NumPlayers, game.HardcoreMasteredUserCount);
                         file.Write("{0},{1},", game.MeanTimeToMaster, game.StdDevTimeToMaster);
                         file.Write("{0},{1},", game.MinutesPerPointToMaster, game.MinutesPerPoint);
@@ -333,7 +347,7 @@ namespace RATools.ViewModels
             const int CountPerSection = 20;
 
             var results = new List<MasteryStats>(Results);
-            results.RemoveAll(r => r.GameName.StartsWith("~Bonus~") || r.GameName.StartsWith("~Multi~") || r.GameName.EndsWith(" (Events)"));
+            results.RemoveAll(r => r.GameName.Contains("[Bonus]") || r.GameName.Contains("[Multi]") || r.GameName.EndsWith(" (Events)"));
 
             DateTime thirtyDaysAgo = DateTime.Today - TimeSpan.FromDays(30);
             DateTime now = DateTime.Now;
@@ -372,6 +386,11 @@ namespace RATools.ViewModels
                 {
                     if (user.PointsEarned == result.Points && user.GameTime.TotalMinutes < threshold)
                     {
+                        // if the user isn't averaging at least three achievements per session, the
+                        // estimate will be off. ignore it.
+                        if (!user.IsEstimateReliable)
+                            continue;
+
                         // some things that appear like cheating aren't. check the exceptions list.
                         if (IgnoreCheater(user, result.GameId))
                             continue;
@@ -498,7 +517,7 @@ namespace RATools.ViewModels
                 file.WriteLine("```");
                 for (int i = 0, count = 0; count < CountPerSection; i++)
                 {
-                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 50)
+                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 50 && results[i].MeanTimeToMaster > 0.0)
                     {
                         file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
                             results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
@@ -514,7 +533,7 @@ namespace RATools.ViewModels
                 file.WriteLine("```");
                 for (int i = 0, count = 0; count < CountPerSection; i++)
                 {
-                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 400)
+                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 400 && results[i].MeanTimeToMaster > 0.0)
                     {
                         file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
                             results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
@@ -722,7 +741,7 @@ namespace RATools.ViewModels
                 case "AngryPotato":
                     // https://discord.com/channels/310192285306454017/564271682731245603/794618358356115478
                     // admitted to using a speed hack: https://discord.com/channels/310192285306454017/399671428733206528/794858362478788628
-                    // achievemnts were reset
+                    // achievements were reset
                     // if (gameId == 2114)
                     //     return Jan21;
                     break;
@@ -735,7 +754,7 @@ namespace RATools.ViewModels
 
                 case "fepnascimento":
                     // https://discord.com/channels/310192285306454017/564271682731245603/794618214688096268
-                    // achievements were rest
+                    // achievements were reset
                     // if (gameId == 2592)
                     //    return Jan21;
                     break;
@@ -799,14 +818,6 @@ namespace RATools.ViewModels
                     // seems like a bad estimation caused by playing over many days
                     return (gameId == 676);
 
-                case "Alexjovi":
-                    // seems like a bad estimation caused by playing over many days
-                    return (gameId == 759);
-
-                case "Alfex":
-                    // seems like a bad estimation caused by playing over many days
-                    return (gameId == 4703);
-
                 case "amine456":
                     // televandalist seems to think the times seem reasonable
                     // https://discord.com/channels/310192285306454017/564271682731245603/794743956948647936
@@ -827,14 +838,6 @@ namespace RATools.ViewModels
                     // https://discord.com/channels/310192285306454017/564271682731245603/794635369555034142
                     return (gameId == 788);
 
-                case "Deng":
-                    // seems like a bad estimation caused by playing over many days
-                    return (gameId == 2450);
-
-                case "Erixx":
-                    // seems like a bad estimation caused by playing one world per day over many days: https://discord.com/channels/310192285306454017/564271682731245603/794622152615657542
-                    return (gameId == 558);
-
                 case "joker1000":
                     // golden sun was broken
                     // https://discord.com/channels/310192285306454017/564271682731245603/826985751379050566
@@ -842,28 +845,16 @@ namespace RATools.ViewModels
                         return true;
                     break;
 
-                case "MauricioNeo":
-                    // seems like a bad estimation caused by playing one world per day over many days: https://discord.com/channels/310192285306454017/564271682731245603/794622152615657542
-                    return (gameId == 558);
-
                 case "Nevermond12":
                     // he's just that good
                     // https://discord.com/channels/310192285306454017/564271682731245603/826985306074120202
                     return (gameId == 10173);
-
-                case "RetroRobb":
-                    // seems like a bad estimation caused by playing over many days
-                    return (gameId == 813);
 
                 case "Riger":
                     // Salsa manually unlocked a bunch of stuff for Riger on 4/14/2018: https://discord.com/channels/310192285306454017/360584144281010178/434742993728307201
                     if (user.Achievements.First().Value.Year == 2018)
                         return true;
                     break;
-
-                case "ThiagoBFiorenza":
-                    // seems like a bad estimation caused by playing over many days
-                    return (gameId == 1013);
 
                 case "Valenstein":
                     // seems like a bad estimation caused by playing over many days
@@ -881,36 +872,12 @@ namespace RATools.ViewModels
 
         private static bool IsUntracked(string user)
         {
-            // TODO: automate this
-            switch (user)
-            {
-                case "Augustine":
-                    return true;
+            var userPage = RAWebCache.Instance.GetUserPage(user);
+            var tokenizer = Tokenizer.CreateTokenizer(userPage);
+            tokenizer.ReadTo("Site Rank:");
 
-                case "Francis64":
-                    return true;
-
-                case "Ianimodo":
-                    return true;
-
-                case "MegaLuis33":
-                    return true;
-
-                case "Otamegane":
-                    return true;
-
-                case "RetroAchiever":
-                    return true;
-
-                case "Rewsifer":
-                    return true;
-
-                case "twinphex":
-                    return true;
-
-                default:
-                    return false;
-            }
+            var rank = tokenizer.ReadTo("<br>");
+            return rank.Contains("Untracked");
         }
 
         private class CheaterInfo

@@ -98,6 +98,16 @@ namespace RATools.ViewModels
             public bool Incomplete { get; set; }
             public TinyDictionary<int, DateTime> Achievements { get; private set; }
 
+            public bool IsEstimateReliable
+            {
+                get
+                {
+                    // if the use earned less than 3 achievements per session, the estimate will be off.
+                    // don't use it for calculations.
+                    return (Sessions == 1 || Sessions < Achievements.Count / 3);
+                }
+            }
+
             public string Summary
             {
                 get
@@ -323,6 +333,8 @@ namespace RATools.ViewModels
 
         internal void LoadGameFromServer(string gamePage, List<AchievementStats> achievementStats, List<UserStats> userStats)
         {
+            NumberOfPlayers = 0; // reset so it gets updated from server data
+
             AchievementStats mostWon, leastWon;
             TotalPoints = LoadAchievementStatsFromServer(gamePage, achievementStats, out mostWon, out leastWon);
 
@@ -608,8 +620,11 @@ namespace RATools.ViewModels
 
                 tokenizer.ReadTo("won by ");
                 tokenizer.Advance(7);
-                var winners = tokenizer.ReadNumber();
-                stats.EarnedBy = Int32.Parse(winners.ToString());
+                if (tokenizer.NextChar != '-') // ignore buggy value "won by -200 (300) of 400"
+                {
+                    var winners = tokenizer.ReadNumber();
+                    stats.EarnedBy = Int32.Parse(winners.ToString());
+                }
 
                 if (stats.EarnedBy > 0)
                 {
@@ -703,6 +718,7 @@ namespace RATools.ViewModels
             var sessions = new List<int>(userStats.Count);
             var days = new List<int>(userStats.Count);
             var idleTime = TimeSpan.FromHours(4);
+            int masteredCount = 0;
             foreach (var user in userStats)
             {
                 if (user.Achievements.Count == 0)
@@ -746,8 +762,13 @@ namespace RATools.ViewModels
                 // if the user mastered the set, capture data for median calculations
                 if (user.PointsEarned == TotalPoints)
                 {
-                    sessions.Add(user.Sessions);
-                    days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
+                    masteredCount++;
+
+                    if (user.IsEstimateReliable)
+                    {
+                        sessions.Add(user.Sessions);
+                        days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
+                    }
                 }
             }
 
@@ -762,26 +783,25 @@ namespace RATools.ViewModels
 
             HardcoreUserCount = userStats.Count;
             MedianHardcoreUserScore = userStats.Count > 0 ? userStats[userStats.Count / 2].PointsEarned : 0;
+            HardcoreMasteredUserCount = masteredCount;
 
-            int masteredCount = sessions.Count;
-            if (masteredCount > 0)
+            int sessionCount = sessions.Count;
+            if (sessionCount > 0)
             {
-                HardcoreMasteredUserCount = masteredCount;
-                var timeToMaster = masteredCount > 0 ? userStats[masteredCount / 2].Summary : "n/a";
+                var timeToMaster = sessionCount > 0 ? userStats[sessionCount / 2].Summary : "n/a";
                 var space = timeToMaster.IndexOf(' ');
                 if (space > 0)
                     timeToMaster = timeToMaster.Substring(0, space);
                 MedianTimeToMaster = timeToMaster;
 
                 sessions.Sort();
-                MedianSessionsToMaster = sessions[masteredCount / 2].ToString();
+                MedianSessionsToMaster = sessions[sessionCount / 2].ToString();
 
                 days.Sort();
-                MedianDaysToMaster = days[masteredCount / 2].ToString();
+                MedianDaysToMaster = days[sessionCount / 2].ToString();
             }
             else
             {
-                HardcoreMasteredUserCount = 0;
                 MedianTimeToMaster = "n/a";
                 MedianSessionsToMaster = "n/a";
                 MedianDaysToMaster = "n/a";
