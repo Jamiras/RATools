@@ -126,6 +126,9 @@ namespace RATools.ViewModels
             if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
                 _parsedContent = new ExpressionGroupCollection();
+                _parsedContent.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+                _parsedContent.Scope.Context = new AchievementScriptContext();
+
                 lock (_parsedContent)
                 {
                     _parsedContent.Parse(tokenizer);

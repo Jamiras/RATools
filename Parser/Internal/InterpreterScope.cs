@@ -322,6 +322,11 @@ namespace RATools.Parser.Internal
             return false;
         }
 
+        /// <summary>
+        /// Updates the specified variables/functions from definitions in a secondary <see cref="ExpressionGroup"/>.
+        /// </summary>
+        /// <param name="names">The variables/functions to update</param>
+        /// <param name="newGroup">The <see cref="ExpressionGroup"/> containing the new definitions of the variables/functions.</param>
         internal void UpdateVariables(IEnumerable<string> names, ExpressionGroup newGroup)
         {
             if (_variable.Key != null)
@@ -347,6 +352,29 @@ namespace RATools.Parser.Internal
                     if (_functions.TryGetValue(name, out function))
                         UpdateFunction(name, newGroup.Expressions);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Merges all varaibles/functions from the provided <see cref="InterpreterScope"/> into this <see cref="InterpreterScope"/>.
+        /// </summary>
+        /// <param name="source">The <see cref="InterpreterScope"/> to merge variables/functions from.</param>
+        internal void Merge(InterpreterScope source)
+        {
+            if (source._variable.Key != null)
+            {
+                DefineVariable(source._variable.Key, source._variable.Value);
+            }
+            else if (source._variables != null)
+            {
+                foreach (var kvp in source._variables)
+                    DefineVariable(kvp.Value.Key, kvp.Value.Value);
+            }
+
+            if (source._functions != null)
+            {
+                foreach (var kvp in source._functions)
+                    AddFunction(kvp.Value);
             }
         }
 

@@ -171,5 +171,46 @@ namespace RATools.Test.Parser.Internal
 
             Assert.That(array.Entries[0], Is.SameAs(value));
         }
+
+        [Test]
+        public void TestMerge()
+        {
+            var scope1 = new InterpreterScope();
+            scope1.DefineVariable(new VariableDefinitionExpression("a"), new IntegerConstantExpression(1));
+
+            var scope2 = new InterpreterScope();
+            scope2.DefineVariable(new VariableDefinitionExpression("a"), new IntegerConstantExpression(4));
+            scope2.DefineVariable(new VariableDefinitionExpression("d"), new IntegerConstantExpression(5));
+            scope2.AddFunction(new FunctionDefinitionExpression("f1"));
+
+            var scope3 = new InterpreterScope();
+            scope3.DefineVariable(new VariableDefinitionExpression("b"), new IntegerConstantExpression(2));
+            scope3.DefineVariable(new VariableDefinitionExpression("c"), new IntegerConstantExpression(3));
+
+            var scope4 = new InterpreterScope();
+            scope4.AddFunction(new FunctionDefinitionExpression("f1"));
+            scope4.AddFunction(new FunctionDefinitionExpression("f2"));
+
+            var union = new InterpreterScope();
+            Assert.That(union.VariableCount, Is.EqualTo(0));
+            Assert.That(union.FunctionCount, Is.EqualTo(0));
+
+            union.Merge(scope1);
+            Assert.That(union.VariableCount, Is.EqualTo(1));
+            Assert.That(union.FunctionCount, Is.EqualTo(0));
+
+            union.Merge(scope2);
+            Assert.That(union.VariableCount, Is.EqualTo(2));
+            Assert.That(union.FunctionCount, Is.EqualTo(1));
+            Assert.That(union.GetVariable("a"), Is.EqualTo(new IntegerConstantExpression(4)));
+
+            union.Merge(scope3);
+            Assert.That(union.VariableCount, Is.EqualTo(4));
+            Assert.That(union.FunctionCount, Is.EqualTo(1));
+
+            union.Merge(scope4);
+            Assert.That(union.VariableCount, Is.EqualTo(4));
+            Assert.That(union.FunctionCount, Is.EqualTo(2));
+        }
     }
 }

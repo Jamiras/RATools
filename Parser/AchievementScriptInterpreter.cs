@@ -284,9 +284,18 @@ namespace RATools.Parser
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
         {
-            var scriptContext = new AchievementScriptContext();
-            var scriptScope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = this };
-            expressionGroups.Scope = new InterpreterScope(scriptScope) { Context = scriptContext };
+            AchievementScriptContext scriptContext = null;
+            InterpreterScope scope = expressionGroups.Scope;
+
+            if (scope != null)
+                scriptContext = scope.GetContext<AchievementScriptContext>();
+
+            if (scriptContext == null)
+            {
+                scriptContext = new AchievementScriptContext();
+                scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
+            }
+
             expressionGroups.ResetErrors();
 
             bool result = true;
@@ -301,7 +310,7 @@ namespace RATools.Parser
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
-                    if (!Evaluate(expressionGroup.Expressions, expressionGroups.Scope, callback))
+                    if (!Evaluate(expressionGroup.Expressions, scope, callback))
                     {
                         var error = Error;
                         if (error != null)
@@ -337,6 +346,17 @@ namespace RATools.Parser
                     }
 
                     expressionGroup.MarkEvaluated();
+                }
+            }
+
+            if (!ReferenceEquals(scope, expressionGroups.Scope))
+            {
+                if (scope.FunctionCount > 0 || scope.VariableCount > 0)
+                {
+                    if (expressionGroups.Scope != null)
+                        expressionGroups.Scope.Merge(scope);
+                    else
+                        expressionGroups.Scope = scope;
                 }
             }
 
