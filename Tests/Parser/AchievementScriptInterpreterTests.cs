@@ -1052,5 +1052,15 @@ namespace RATools.Test.Parser
             var integerConstant = (IntegerConstantExpression)c;
             Assert.That(integerConstant.Value, Is.EqualTo(4));
         }
+
+        [Test]
+        public void TestNestedComparisonFunction()
+        {
+            Evaluate("function f() => byte(0x1234) == 2\n" +
+                     "achievement(\"T\", \"D\", 5, f() == 1)\n",
+
+                     "2:1 achievement call failed\r\n" +
+                     "- 2:26 comparison did not evaluate to a valid comparison");
+        }
     }
 }

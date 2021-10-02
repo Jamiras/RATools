@@ -773,10 +773,12 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
         {
-            var context = scope.GetContext<TriggerBuilderContext>();
             var left = comparison.Left;
             var right = comparison.Right;
+            if (left.Type == ExpressionType.Comparison || right.Type == ExpressionType.Comparison)
+                return new ParseErrorExpression("comparison did not evaluate to a valid comparison", comparison);
 
+            var context = scope.GetContext<TriggerBuilderContext>();
             var op = GetRequirementOperator(comparison.Operation);
 
             if (left.Type == ExpressionType.IntegerConstant)
