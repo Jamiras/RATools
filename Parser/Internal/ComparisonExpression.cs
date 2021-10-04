@@ -844,11 +844,28 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            // prevent reprocessing the result and return it
-            comparison._fullyExpanded = true;
-            CopyLocation(comparison);
+            // if the expression can be fully evaluated, do so
+            ParseErrorExpression error;
+            var comparisonResult = comparison.IsTrue(scope, out error);
+            if (error != null)
+            {
+                result = error;
+                return false;
+            }
 
-            result = comparison;
+            if (comparisonResult != null)
+            {
+                // result of comparison is known, return a boolean
+                result = new BooleanConstantExpression(comparisonResult.GetValueOrDefault());
+            }
+            else
+            {
+                // prevent reprocessing the result and return it
+                comparison._fullyExpanded = true;
+                result = comparison;
+            }
+
+            CopyLocation(result);
             return true;
         }
 
@@ -894,12 +911,6 @@ namespace RATools.Parser.Internal
             }
 
             error = null;
-
-            if (left.Type != right.Type)
-            {
-                error = new ParseErrorExpression(String.Format("Cannot compare {0} to {1}", left.Type, right.Type), this);
-                return null;
-            }
 
             var integerLeft = left as IntegerConstantExpression;
             if (integerLeft != null)

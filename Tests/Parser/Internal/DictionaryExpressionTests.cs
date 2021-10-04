@@ -138,14 +138,14 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestReplaceVariablesLogicalFunctionCall()
         {
-            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => i == 1");
+            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => byte(i) == 1");
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value1 = new IntegerConstantExpression(98);
             var expr = new DictionaryExpression();
             expr.Add(functionCall, value1);
 
-            var scope = new InterpreterScope();
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.AddFunction(functionDefinition);
 
             ExpressionBase result;

@@ -124,11 +124,8 @@ namespace RATools.Test.Parser.Functions
 
             Evaluate("array_push(arr, happy(1) == 2)", scope);
 
-            var comparison = (ComparisonExpression)array.Entries[0];
-            Assert.That(comparison.Left, Is.InstanceOf<IntegerConstantExpression>());
-            Assert.That(((IntegerConstantExpression)comparison.Left).Value, Is.EqualTo(1));
-            Assert.That(comparison.Right, Is.InstanceOf<IntegerConstantExpression>());
-            Assert.That(((IntegerConstantExpression)comparison.Right).Value, Is.EqualTo(2));
+            var comparison = (BooleanConstantExpression)array.Entries[0];
+            Assert.That(comparison.Value, Is.False);
         }
 
         [Test]

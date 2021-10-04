@@ -171,6 +171,22 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        public void TestDictionaryLogic()
+        {
+            var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +
+                               "function f(key) => dict[key] == \"D\"\n" +
+                               "if (f(2))\n" +
+                               "    achievement(dict[1], dict[2], 5, byte(0x1234) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1"));
+        }
+
+        [Test]
         public void TestArrayLookup()
         {
             var parser = Parse("array = [ \"A\", \"B\", \"C\" ]\n" +
