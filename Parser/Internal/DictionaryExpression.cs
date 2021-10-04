@@ -89,7 +89,7 @@ namespace RATools.Parser.Internal
                 if (createIfNotFound)
                 {
                     _entries.Insert(~index, entry);
-                    if (!IsConstant(key.Type))
+                    if (!key.IsConstant)
                         _state = DictionaryState.DynamicKeysUnsorted;
 
                     return entry;
@@ -115,7 +115,7 @@ namespace RATools.Parser.Internal
 
             entry.Value = value;
 
-            if (_state == DictionaryState.ConstantSorted && !IsConstant(value.Type))
+            if (_state == DictionaryState.ConstantSorted && !value.IsConstant)
                 _state = DictionaryState.ConstantKeysSorted;
 
             return null;
@@ -216,26 +216,13 @@ namespace RATools.Parser.Internal
             _state = DictionaryState.Unprocessed;
         }
 
-        private static bool IsConstant(ExpressionType type)
-        {
-            switch (type)
-            {
-                case ExpressionType.StringConstant:
-                case ExpressionType.IntegerConstant:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
         private ParseErrorExpression UpdateState()
         {
             if (_entries.Count == 0)
             {
                 _state = DictionaryState.ConstantSorted;
             }
-            else if (_entries.TrueForAll(e => IsConstant(e.Key.Type)))
+            else if (_entries.TrueForAll(e => e.Key.IsConstant))
             {
                 // sort by key
                 var comparer = (IComparer<DictionaryEntry>)_entries[0];
@@ -255,7 +242,7 @@ namespace RATools.Parser.Internal
                 }
 
                 // check for constant values
-                if (_entries.TrueForAll(e => IsConstant(e.Value.Type)))
+                if (_entries.TrueForAll(e => e.Value.IsConstant))
                     _state = DictionaryState.ConstantSorted;
                 else
                     _state = DictionaryState.ConstantKeysSorted;
@@ -305,7 +292,7 @@ namespace RATools.Parser.Internal
                 ExpressionBase key, value;
                 key = entry.Key;
 
-                if (!IsConstant(key.Type))
+                if (!key.IsConstant)
                 {
                     dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
                     if (!key.ReplaceVariables(dictScope, out value))
@@ -314,7 +301,7 @@ namespace RATools.Parser.Internal
                         return false;
                     }
 
-                    if (!IsConstant(value.Type))
+                    if (!value.IsConstant)
                     {
                         result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
                         return false;
@@ -323,7 +310,7 @@ namespace RATools.Parser.Internal
                     key = value;
                 }
 
-                if (IsConstant(entry.Value.Type))
+                if (entry.Value.IsConstant)
                 {
                     value = entry.Value;
                 }
@@ -460,6 +447,10 @@ namespace RATools.Parser.Internal
                     case ExpressionType.StringConstant:
                         return string.Compare(((StringConstantExpression)x.Key).Value,
                             ((StringConstantExpression)y.Key).Value);
+
+                    case ExpressionType.BooleanConstant:
+                        return (((BooleanConstantExpression)x.Key).Value ? 1 : 0) -
+                            (((BooleanConstantExpression)y.Key).Value ? 1 : 0);
 
                     default:
                         return 0;

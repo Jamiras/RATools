@@ -23,6 +23,14 @@ namespace RATools.Parser.Internal
         public bool Value { get; private set; }
 
         /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public override bool IsConstant
+        {
+            get { return true; }
+        }
+
+        /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
         internal override void AppendString(StringBuilder builder)

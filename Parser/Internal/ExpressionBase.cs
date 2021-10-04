@@ -67,6 +67,14 @@ namespace RATools.Parser.Internal
         public bool IsLogicalUnit { get; set; }
 
         /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public virtual bool IsConstant
+        {
+            get { return false; }
+        }
+
+        /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
@@ -582,12 +590,11 @@ namespace RATools.Parser.Internal
                 case ExpressionType.ParseError:
                     return right;
 
-                case ExpressionType.Comparison:
-                case ExpressionType.Conditional:
-                case ExpressionType.Dictionary:
+                case ExpressionType.Comparison: // will be rebalanced
+                case ExpressionType.Conditional: // will be rebalanced
+                case ExpressionType.Mathematic:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.IntegerConstant:
-                case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
                 case ExpressionType.Variable:
                     break;
@@ -618,6 +625,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 
@@ -684,6 +692,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 

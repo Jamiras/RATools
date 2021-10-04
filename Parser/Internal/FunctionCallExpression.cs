@@ -31,6 +31,13 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ICollection<ExpressionBase> Parameters { get; private set; }
 
+        /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public override bool IsConstant
+        {
+            get { return _fullyExpanded; }
+        }
         private bool _fullyExpanded = false;
 
         /// <summary>
@@ -214,30 +221,27 @@ namespace RATools.Parser.Internal
                 }
             }
 
-            switch (value.Type)
+            if (value.IsConstant)
             {
-                case ExpressionType.IntegerConstant:
-                case ExpressionType.StringConstant:
-                    // already a basic type, do nothing
-                    break;
+                // already a basic type, do nothing
+            }
+            else if (value.Type == ExpressionType.FunctionDefinition)
+            {
+                var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
+                if (anonymousFunction != null)
+                    anonymousFunction.CaptureVariables(parameterScope);
+            }
+            else
+            {
+                // not a basic type, evaluate it
+                var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+                if (!value.ReplaceVariables(assignmentScope, out value))
+                {
+                    var error = (ParseErrorExpression)value;
+                    return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+                }
 
-                case ExpressionType.FunctionDefinition:
-                    var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
-                    if (anonymousFunction != null)
-                        anonymousFunction.CaptureVariables(parameterScope);
-                    break;
-
-                default:
-                    // not a basic type, evaluate it
-                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
-                    if (!value.ReplaceVariables(assignmentScope, out value))
-                    {
-                        var error = (ParseErrorExpression)value;
-                        return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
-                    }
-
-                    assignment.Value.CopyLocation(value);
-                    break;
+                assignment.Value.CopyLocation(value);
             }
 
             return value;
@@ -248,7 +252,7 @@ namespace RATools.Parser.Internal
             var funcParameter = function.Parameters.First();
 
             ExpressionBase value = Parameters.First();
-            if (value.Type == ExpressionType.IntegerConstant || value.Type == ExpressionType.StringConstant)
+            if (value.IsConstant)
             {
                 // already a basic type, just proceed to storing it
                 error = null;
