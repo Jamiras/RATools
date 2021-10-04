@@ -91,10 +91,19 @@ namespace RATools.Parser.Internal
             if (inAssignment && _fullyExpanded)
             {
                 // this function call is already fully expanded, allow it to be assigned without re-evaluating
-                scope.ReturnValue = result = this;
-                return true;
+                result = this;
+            }
+            else
+            {
+                if (!Evaluate(scope, inAssignment, out result))
+                    return false;
             }
 
+            return true;
+        }
+
+        private bool Evaluate(InterpreterScope scope, bool inAssignment, out ExpressionBase result)
+        {
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
@@ -155,7 +164,6 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            scope.ReturnValue = result;
             return true;
         }
 
@@ -433,6 +441,34 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+        }
+
+        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        {
+            ExpressionBase result;
+            if (!Evaluate(scope, true, out result))
+            {
+                error = result as ParseErrorExpression;
+                return false;
+            }
+
+            var functionCall = result as FunctionCallExpression;
+            if (functionCall != null) // prevent recursion
+            {
+                error = null;
+
+                var funcDef = scope.GetFunction(functionCall.FunctionName.Name);
+                if (funcDef is Functions.AlwaysTrueFunction)
+                    return true;
+
+                if (funcDef is Functions.AlwaysFalseFunction)
+                    return false;
+
+                error = new ParseErrorExpression("Expression did not evaluate to a boolean result.", this);
+                return false;
+            }
+
+            return result.IsTrue(scope, out error);
         }
     }
 

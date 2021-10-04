@@ -271,15 +271,7 @@ namespace RATools.Parser
                 }
             }
 
-            if (!Run(expressionGroups, null))
-            {
-                if (Error == null)
-                    Error = expressionGroups.Errors.FirstOrDefault();
-
-                return false;
-            }
-
-            return true;
+            return Run(expressionGroups, null);
         }
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
@@ -389,6 +381,7 @@ namespace RATools.Parser
                 RichPresenceLine = _richPresence.Line;
             }
 
+            Error = expressionGroups.Errors.FirstOrDefault();
             return result;
         }
 

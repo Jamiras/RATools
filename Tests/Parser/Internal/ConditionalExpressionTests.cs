@@ -140,5 +140,34 @@ namespace RATools.Test.Parser.Internal
             rebalanced.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
+
+        [Test]
+        [TestCase("true || true", true)]
+        [TestCase("true || false", true)]
+        [TestCase("false || true", true)]
+        [TestCase("false || false", false)]
+        [TestCase("true && true", true)]
+        [TestCase("true && false", false)]
+        [TestCase("false && true", false)]
+        [TestCase("false && false", false)]
+        [TestCase("!true", false)]
+        [TestCase("!false", true)]
+        [TestCase("!true && !true", false)]
+        [TestCase("!true && !false", false)]
+        [TestCase("!false && !true", false)]
+        [TestCase("!false && !false", true)]
+        public void TestIsTrue(string input, bool expected)
+        {
+            input = input.Replace("true", "always_true()").Replace("false", "always_false()");
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer);
+            Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
+
+            ParseErrorExpression error;
+            var scope = AchievementScriptInterpreter.GetGlobalScope();
+            var result = expression.IsTrue(scope, out error);
+            Assert.That(error, Is.Null);
+            Assert.That(result, Is.EqualTo(expected));
+        }
     }
 }

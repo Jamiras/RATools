@@ -205,26 +205,30 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
-            bool result = Left.IsTrue(scope, out error);
-            if (error != null)
-                return false;
+            bool result = false;
+            error = null;
 
             switch (Operation)
             {
                 case ConditionalOperation.And:
-                    if (result)
+                    result = Left.IsTrue(scope, out error);
+                    if (result && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
                 case ConditionalOperation.Or:
-                    if (!result)
+                    result = Left.IsTrue(scope, out error);
+                    if (!result && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
                 case ConditionalOperation.Not:
-                    result = !result;
+                    result = !Right.IsTrue(scope, out error);
                     break;
             }
+
+            if (error != null)
+                return false;
 
             return result;
         }
