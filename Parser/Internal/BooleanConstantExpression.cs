@@ -1,11 +1,18 @@
-﻿using System.Text;
+﻿using Jamiras.Components;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class IntegerConstantExpression : ExpressionBase
+    internal class BooleanConstantExpression : ExpressionBase
     {
-        public IntegerConstantExpression(int value)
-            : base(ExpressionType.IntegerConstant)
+        public BooleanConstantExpression(bool value, int line, int column)
+            : this(value)
+        {
+            Location = new TextRange(line, column, line, column + (value ? 4 : 5));
+        }
+
+        public BooleanConstantExpression(bool value)
+            : base(ExpressionType.BooleanConstant)
         {
             Value = value;
         }
@@ -13,14 +20,14 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the value.
         /// </summary>
-        public int Value { get; private set; }
+        public bool Value { get; private set; }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            builder.Append(Value);
+            builder.Append(Value ? "true" : "false");
         }
 
         /// <summary>
@@ -32,8 +39,14 @@ namespace RATools.Parser.Internal
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as IntegerConstantExpression;
+            var that = obj as BooleanConstantExpression;
             return (that != null && Value == that.Value);
+        }
+
+        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        {
+            error = null;
+            return Value;
         }
     }
 }

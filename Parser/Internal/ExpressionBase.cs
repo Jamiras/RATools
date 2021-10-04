@@ -486,6 +486,11 @@ namespace RATools.Parser.Internal
                     if (identifier == "if")
                         return IfExpression.Parse(tokenizer, line, column);
 
+                    if (identifier == "true")
+                        return new BooleanConstantExpression(true, line, column);
+                    if (identifier == "false")
+                        return new BooleanConstantExpression(false, line, column);
+
                     if (tokenizer.NextChar == '(')
                     {
                         tokenizer.Advance();
@@ -642,6 +647,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.Conditional:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.Variable:
+                case ExpressionType.BooleanConstant:
                     break;
 
                 default:
@@ -916,6 +922,11 @@ namespace RATools.Parser.Internal
         /// A string constant.
         /// </summary>
         StringConstant,
+
+        /// <summary>
+        /// A boolean constant.
+        /// </summary>
+        BooleanConstant,
 
         /// <summary>
         /// A function call.
