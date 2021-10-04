@@ -45,9 +45,6 @@ namespace RATools.Parser.Internal
             if (condition.Type == ExpressionType.ParseError)
                 return condition;
 
-            if (condition.Type != ExpressionType.Conditional && condition.Type != ExpressionType.Comparison)
-                return ParseError(tokenizer, "Expected conditional statement following if", condition);
-
             var ifExpression = new IfExpression(condition);
             ifExpression._keyword = new KeywordExpression("if", line, column);
 

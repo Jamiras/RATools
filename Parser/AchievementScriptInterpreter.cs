@@ -381,7 +381,9 @@ namespace RATools.Parser
                 RichPresenceLine = _richPresence.Line;
             }
 
-            Error = expressionGroups.Errors.FirstOrDefault();
+            if (Error == null)
+                Error = expressionGroups.Errors.FirstOrDefault();
+
             return result;
         }
 

@@ -1062,5 +1062,36 @@ namespace RATools.Test.Parser
                      "2:1 achievement call failed\r\n" +
                      "- 2:26 comparison did not evaluate to a valid comparison");
         }
+
+        [Test]
+        public void TestIfFunctionResult()
+        {
+            var scope = Evaluate("function t() => always_true()\n" +
+                                 "function f() => always_false()\n" +
+                                 "a = 0\n" +
+                                 "b = 0\n" +
+                                 "c = 0\n" +
+                                 "d = 0\n" +
+                                 "if (t()) { a = 1 }" +
+                                 "if (!t()) { b = 1 }" +
+                                 "if (f()) { c = 1 }" +
+                                 "if (!f()) { d = 1 }");
+
+            var a = scope.GetVariable("a");
+            Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)a).Value, Is.EqualTo(1));
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(0));
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)c).Value, Is.EqualTo(0));
+
+            var d = scope.GetVariable("d");
+            Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)d).Value, Is.EqualTo(1));
+        }
     }
 }
