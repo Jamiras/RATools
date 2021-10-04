@@ -555,8 +555,17 @@ namespace RATools.Parser.Internal
             if (expression.Type == ExpressionType.ParseError)
                 return expression;
 
-            if (expression.Type == ExpressionType.Return)
-                return new ParseErrorExpression("Return statement is implied by =>", ((ReturnExpression)expression).Keyword);
+            switch (expression.Type)
+            {
+                case ExpressionType.Return:
+                    return ParseError(tokenizer, "Return statement is implied by =>", ((ReturnExpression)expression).Keyword);
+
+                case ExpressionType.For:
+                    return ParseError(tokenizer, "Shorthand function definition does not support loops.", expression);
+
+                case ExpressionType.If:
+                    return ParseError(tokenizer, "Shorthand function definition does not support branches.", expression);
+            }
 
             var returnExpression = new ReturnExpression(expression);
             Expressions.Add(returnExpression);

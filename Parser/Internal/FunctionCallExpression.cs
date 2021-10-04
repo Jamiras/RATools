@@ -443,13 +443,13 @@ namespace RATools.Parser.Internal
         {
         }
 
-        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
             ExpressionBase result;
             if (!Evaluate(scope, true, out result))
             {
                 error = result as ParseErrorExpression;
-                return false;
+                return null;
             }
 
             var functionCall = result as FunctionCallExpression;
@@ -464,8 +464,7 @@ namespace RATools.Parser.Internal
                 if (funcDef is Functions.AlwaysFalseFunction)
                     return false;
 
-                error = new ParseErrorExpression("Expression did not evaluate to a boolean result.", this);
-                return false;
+                return null;
             }
 
             return result.IsTrue(scope, out error);

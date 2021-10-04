@@ -75,7 +75,10 @@ namespace RATools.Parser.Internal
         {
             builder.Append("if (");
             Condition.AppendString(builder);
-            builder.Append(')');
+            builder.Append(") { ... }");
+
+            if (ElseExpressions.Count > 0)
+                builder.Append(" else { ... }");
         }
 
         /// <summary>

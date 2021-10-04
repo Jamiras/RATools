@@ -246,22 +246,22 @@ namespace RATools.Parser.Internal
         /// <returns>
         /// The result of evaluating the expression
         /// </returns>
-        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
-            bool result = false;
+            bool? result = false;
             error = null;
 
             switch (Operation)
             {
                 case ConditionalOperation.And:
                     result = Left.IsTrue(scope, out error);
-                    if (result && error == null)
+                    if (result == true && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
                 case ConditionalOperation.Or:
                     result = Left.IsTrue(scope, out error);
-                    if (!result && error == null)
+                    if (result == false && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
@@ -271,7 +271,7 @@ namespace RATools.Parser.Internal
             }
 
             if (error != null)
-                return false;
+                result = null;
 
             return result;
         }

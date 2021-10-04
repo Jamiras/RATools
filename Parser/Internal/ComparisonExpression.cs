@@ -878,29 +878,35 @@ namespace RATools.Parser.Internal
         /// <returns>
         /// The result of evaluating the expression
         /// </returns>
-        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
             ExpressionBase left, right;
             if (!Left.ReplaceVariables(scope, out left))
             {
                 error = left as ParseErrorExpression;
-                return false;
+                return null;
             }
 
             if (!Right.ReplaceVariables(scope, out right))
             {
                 error = right as ParseErrorExpression;
-                return false;
+                return null;
             }
 
             error = null;
+
+            if (left.Type != right.Type)
+            {
+                error = new ParseErrorExpression(String.Format("Cannot compare {0} to {1}", left.Type, right.Type), this);
+                return null;
+            }
 
             var integerLeft = left as IntegerConstantExpression;
             if (integerLeft != null)
             {
                 var integerRight = right as IntegerConstantExpression;
                 if (integerRight == null)
-                    return false;
+                    return null;
 
                 switch (Operation)
                 {
@@ -917,7 +923,26 @@ namespace RATools.Parser.Internal
                     case ComparisonOperation.LessThanOrEqual:
                         return integerLeft.Value <= integerRight.Value;
                     default:
-                        return false;
+                        return null;
+                }
+            }
+
+            var booleanLeft = left as BooleanConstantExpression;
+            if (booleanLeft != null)
+            {
+                var booleanRight = right as BooleanConstantExpression;
+                if (booleanRight == null)
+                    return null;
+
+                switch (Operation)
+                {
+                    case ComparisonOperation.Equal:
+                        return booleanLeft.Value == booleanRight.Value;
+                    case ComparisonOperation.NotEqual:
+                        return booleanLeft.Value != booleanRight.Value;
+                    default:
+                        error = new ParseErrorExpression("Cannot perform relative comparison on boolean values", this);
+                        return null;
                 }
             }
 
@@ -943,11 +968,11 @@ namespace RATools.Parser.Internal
                     case ComparisonOperation.LessThanOrEqual:
                         return String.Compare(stringLeft.Value, stringRight.Value) <= 0;
                     default:
-                        return false;
+                        return null;
                 }
             }
 
-            return false;
+            return null;
         }
 
         /// <summary>

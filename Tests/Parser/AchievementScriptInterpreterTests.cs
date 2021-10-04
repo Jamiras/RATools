@@ -39,6 +39,9 @@ namespace RATools.Test.Parser
 
             groups.Parse(Tokenizer.CreateTokenizer(script));
 
+            foreach (var error in groups.Errors)
+                Assert.Fail(error.Message);
+
             var interpreter = new AchievementScriptInterpreter();
 
             if (expectedError != null)
@@ -1043,6 +1046,8 @@ namespace RATools.Test.Parser
         [TestCase("a = i => i + 1\nb = (f,i) => f(i)\nc = b(a, 3)")] // anonymous function passed as parameter
         [TestCase("a = f => f(1)\nb = n => a(i => i + n)\nc = b(3)")] // anonymous function captures variable
         [TestCase("b = (f,i) => f(i)\nc = b(i => i + 1, 3)")] // anonymous function defined as parameter
+        [TestCase("function p(fn) { if (fn()) return 2 else return 0 }\n" +
+                  "function t() => true\nfunction f() => false\nc=p(t)+p(f)+p(f)+p(t)+p(f)")]
         public void TestAnonymousFunction(string definition)
         {
             var scope = Evaluate(definition);
@@ -1064,7 +1069,38 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestIfFunctionResult()
+        public void TestIfFunctionResultBoolean()
+        {
+            var scope = Evaluate("function t() => true\n" +
+                                 "function f() => false\n" +
+                                 "a = 0\n" +
+                                 "b = 0\n" +
+                                 "c = 0\n" +
+                                 "d = 0\n" +
+                                 "if (t()) { a = 1 }" +
+                                 "if (!t()) { b = 1 }" +
+                                 "if (f()) { c = 1 }" +
+                                 "if (!f()) { d = 1 }");
+
+            var a = scope.GetVariable("a");
+            Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)a).Value, Is.EqualTo(1));
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(0));
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)c).Value, Is.EqualTo(0));
+
+            var d = scope.GetVariable("d");
+            Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)d).Value, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestIfFunctionResultAlwaysTrueFalse()
         {
             var scope = Evaluate("function t() => always_true()\n" +
                                  "function f() => always_false()\n" +

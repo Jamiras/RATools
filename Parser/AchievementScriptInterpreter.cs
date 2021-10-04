@@ -550,14 +550,20 @@ namespace RATools.Parser
         private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
         {
             ParseErrorExpression error;
-            bool result = ifExpression.Condition.IsTrue(scope, out error);
+            bool? result = ifExpression.Condition.IsTrue(scope, out error);
             if (error != null)
             {
                 Error = error;
                 return false;
             }
 
-            return Evaluate(result ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
+            if (result == null)
+            {
+                Error = new ParseErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition);
+                return false;
+            }
+
+            return Evaluate(result.GetValueOrDefault() ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)

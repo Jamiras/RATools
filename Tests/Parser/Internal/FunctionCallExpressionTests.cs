@@ -635,9 +635,8 @@ namespace RATools.Test.Parser.Internal
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
             ParseErrorExpression error;
-            Assert.That(expr.IsTrue(scope, out error), Is.False);
-            Assert.That(error, Is.Not.Null);
-            Assert.That(error.Message, Is.EqualTo("Expression did not evaluate to a boolean result."));
+            Assert.That(expr.IsTrue(scope, out error), Is.Null);
+            Assert.That(error, Is.Null);
         }
 
         [Test]
@@ -649,9 +648,8 @@ namespace RATools.Test.Parser.Internal
             scope.AddFunction(userFunc);
 
             ParseErrorExpression error;
-            Assert.That(expr.IsTrue(scope, out error), Is.False);
-            Assert.That(error, Is.Not.Null);
-            Assert.That(error.Message, Is.EqualTo("Expression did not evaluate to a boolean result."));
+            Assert.That(expr.IsTrue(scope, out error), Is.Null);
+            Assert.That(error, Is.Null);
         }
 
         [Test]

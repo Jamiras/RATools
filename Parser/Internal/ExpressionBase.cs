@@ -891,10 +891,10 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="error">[out] The error that prevented evaluation (or null if successful).</param>
         /// <returns>The result of evaluating the expression</returns>
-        public virtual bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public virtual bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
-            error = new ParseErrorExpression("Expression did not evaluate to a boolean result.", this);
-            return false;
+            error = null;
+            return null;
         }
     }
 

@@ -43,7 +43,7 @@ namespace RATools.Parser.Internal
             return (that != null && Value == that.Value);
         }
 
-        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
             error = null;
             return Value;
