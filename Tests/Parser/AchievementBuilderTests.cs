@@ -710,5 +710,11 @@ namespace RATools.Test.Parser
             CreateAchievement("byte(0x1234) || byte(0x2345) == 1", "Incomplete trigger condition");
             CreateAchievement("byte(0x1234) == 1 || byte(0x2345)", "Incomplete trigger condition");
         }
+
+        [Test]
+        public void TestNestedComparison()
+        {
+            CreateAchievement("(byte(0x1234) == 2) == 1", "comparison did not evaluate to a valid comparison");
+        }
     }
 }
