@@ -101,6 +101,44 @@ namespace RATools.Parser.Internal
                 return result.ReplaceVariables(scope, out result);
             }
 
+            BooleanConstantExpression booleanExpression = left as BooleanConstantExpression;
+            if (booleanExpression != null)
+            {
+                switch (Operation)
+                {
+                    case ConditionalOperation.Or:
+                        // true || n => true
+                        // false || n => n
+                        result = (booleanExpression.Value) ? left : right;
+                        return true;
+
+                    case ConditionalOperation.And:
+                        // true && n => n
+                        // false && n => false
+                        result = (booleanExpression.Value) ? right : left;
+                        return true;
+                }
+            }
+
+            booleanExpression = right as BooleanConstantExpression;
+            if (booleanExpression != null)
+            {
+                switch (Operation)
+                {
+                    case ConditionalOperation.Or:
+                        // n || true => true
+                        // n || false => n
+                        result = (booleanExpression.Value) ? right : left;
+                        return true;
+
+                    case ConditionalOperation.And:
+                        // n && true => n
+                        // n && false => false
+                        result = (booleanExpression.Value) ? left : right;
+                        return true;
+                }
+            }
+
             result = new ConditionalExpression(left, Operation, right);
             CopyLocation(result);
             return true;
@@ -147,6 +185,11 @@ namespace RATools.Parser.Internal
                     ComparisonExpression.GetOppositeComparisonOperation(comparison.Operation),
                     comparison.Right);
             }
+
+            // boolean constant
+            var boolean = expression as BooleanConstantExpression;
+            if (boolean != null)
+                return new BooleanConstantExpression(!boolean.Value);
 
             // special handling for built-in functions
             var function = expression as FunctionCallExpression;
@@ -203,28 +246,32 @@ namespace RATools.Parser.Internal
         /// <returns>
         /// The result of evaluating the expression
         /// </returns>
-        public override bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
-            bool result = Left.IsTrue(scope, out error);
-            if (error != null)
-                return false;
+            bool? result = false;
+            error = null;
 
             switch (Operation)
             {
                 case ConditionalOperation.And:
-                    if (result)
+                    result = Left.IsTrue(scope, out error);
+                    if (result == true && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
                 case ConditionalOperation.Or:
-                    if (!result)
+                    result = Left.IsTrue(scope, out error);
+                    if (result == false && error == null)
                         result = Right.IsTrue(scope, out error);
                     break;
 
                 case ConditionalOperation.Not:
-                    result = !result;
+                    result = !Right.IsTrue(scope, out error);
                     break;
             }
+
+            if (error != null)
+                result = null;
 
             return result;
         }

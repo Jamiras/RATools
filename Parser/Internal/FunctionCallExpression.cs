@@ -31,6 +31,13 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ICollection<ExpressionBase> Parameters { get; private set; }
 
+        /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public override bool IsConstant
+        {
+            get { return _fullyExpanded; }
+        }
         private bool _fullyExpanded = false;
 
         /// <summary>
@@ -91,10 +98,19 @@ namespace RATools.Parser.Internal
             if (inAssignment && _fullyExpanded)
             {
                 // this function call is already fully expanded, allow it to be assigned without re-evaluating
-                scope.ReturnValue = result = this;
-                return true;
+                result = this;
+            }
+            else
+            {
+                if (!Evaluate(scope, inAssignment, out result))
+                    return false;
             }
 
+            return true;
+        }
+
+        private bool Evaluate(InterpreterScope scope, bool inAssignment, out ExpressionBase result)
+        {
             var functionDefinition = scope.GetFunction(FunctionName.Name);
             if (functionDefinition == null)
             {
@@ -155,7 +171,6 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            scope.ReturnValue = result;
             return true;
         }
 
@@ -206,30 +221,27 @@ namespace RATools.Parser.Internal
                 }
             }
 
-            switch (value.Type)
+            if (value.IsConstant)
             {
-                case ExpressionType.IntegerConstant:
-                case ExpressionType.StringConstant:
-                    // already a basic type, do nothing
-                    break;
+                // already a basic type, do nothing
+            }
+            else if (value.Type == ExpressionType.FunctionDefinition)
+            {
+                var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
+                if (anonymousFunction != null)
+                    anonymousFunction.CaptureVariables(parameterScope);
+            }
+            else
+            {
+                // not a basic type, evaluate it
+                var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+                if (!value.ReplaceVariables(assignmentScope, out value))
+                {
+                    var error = (ParseErrorExpression)value;
+                    return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+                }
 
-                case ExpressionType.FunctionDefinition:
-                    var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
-                    if (anonymousFunction != null)
-                        anonymousFunction.CaptureVariables(parameterScope);
-                    break;
-
-                default:
-                    // not a basic type, evaluate it
-                    var assignmentScope = new InterpreterScope(scope) { Context = assignment };
-                    if (!value.ReplaceVariables(assignmentScope, out value))
-                    {
-                        var error = (ParseErrorExpression)value;
-                        return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
-                    }
-
-                    assignment.Value.CopyLocation(value);
-                    break;
+                assignment.Value.CopyLocation(value);
             }
 
             return value;
@@ -240,7 +252,7 @@ namespace RATools.Parser.Internal
             var funcParameter = function.Parameters.First();
 
             ExpressionBase value = Parameters.First();
-            if (value.Type == ExpressionType.IntegerConstant || value.Type == ExpressionType.StringConstant)
+            if (value.IsConstant)
             {
                 // already a basic type, just proceed to storing it
                 error = null;
@@ -433,6 +445,33 @@ namespace RATools.Parser.Internal
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+        }
+
+        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        {
+            ExpressionBase result;
+            if (!Evaluate(scope, true, out result))
+            {
+                error = result as ParseErrorExpression;
+                return null;
+            }
+
+            var functionCall = result as FunctionCallExpression;
+            if (functionCall != null) // prevent recursion
+            {
+                error = null;
+
+                var funcDef = scope.GetFunction(functionCall.FunctionName.Name);
+                if (funcDef is Functions.AlwaysTrueFunction)
+                    return true;
+
+                if (funcDef is Functions.AlwaysFalseFunction)
+                    return false;
+
+                return null;
+            }
+
+            return result.IsTrue(scope, out error);
         }
     }
 

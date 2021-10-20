@@ -17,7 +17,7 @@ namespace RATools.Test.Parser.Internal
 
             var builder = new StringBuilder();
             expr.AppendString(builder);
-            Assert.That(builder.ToString(), Is.EqualTo("if (1)"));
+            Assert.That(builder.ToString(), Is.EqualTo("if (1) { ... }"));
             // NOTE: does not output Expressions block
         }
 

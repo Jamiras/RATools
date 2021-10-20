@@ -1,9 +1,9 @@
 ﻿using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Internal;
-using System.Text;
-using System.Linq;
-using Jamiras.Components;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -604,6 +604,65 @@ namespace RATools.Test.Parser.Internal
             ((INestedExpressions)expr).GetModifications(modifications);
 
             Assert.That(modifications.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestIsTrueAlwaysTrueFunction()
+        {
+            var expr = new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            var scope = AchievementScriptInterpreter.GetGlobalScope();
+
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.True);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestIsTrueAlwaysFalseFunction()
+        {
+            var expr = new FunctionCallExpression("always_false", new ExpressionBase[0]);
+            var scope = AchievementScriptInterpreter.GetGlobalScope();
+
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.False);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestIsTrueMemoryAccessorFunction()
+        {
+            var expr = new FunctionCallExpression("byte", new ExpressionBase[] { new IntegerConstantExpression(0x1234) });
+            var scope = AchievementScriptInterpreter.GetGlobalScope();
+
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.Null);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestIsTrueUserFunctionReturningInteger()
+        {
+            var userFunc = Parse("function u() => 3");
+            var expr = new FunctionCallExpression("u", new ExpressionBase[0]);
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AddFunction(userFunc);
+
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.Null);
+            Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestIsTrueUserFunctionReturningBoolean()
+        {
+            var userFunc = Parse("function u() => always_true()");
+            var expr = new FunctionCallExpression("u", new ExpressionBase[0]);
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AddFunction(userFunc);
+
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.True);
+            Assert.That(error, Is.Null);
         }
     }
 }

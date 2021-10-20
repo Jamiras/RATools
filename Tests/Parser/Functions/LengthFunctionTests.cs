@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Linq;
@@ -117,12 +118,19 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
-        public void TestComparison()
+        public void TestBoolean()
         {
             var scope = new InterpreterScope();
             scope.DefineVariable(new VariableDefinitionExpression("i"), new IntegerConstantExpression(12345));
 
-            Evaluate("length(i != 12)", scope, "Cannot calculate length of Comparison");
+            Evaluate("length(true)", scope, "Cannot calculate length of BooleanConstant");
+        }
+
+        [Test]
+        public void TestComparison()
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            Evaluate("length(byte(0x1234) != 12)", scope, "Cannot calculate length of Comparison");
         }
 
         [Test]

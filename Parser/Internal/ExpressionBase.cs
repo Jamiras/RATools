@@ -67,6 +67,14 @@ namespace RATools.Parser.Internal
         public bool IsLogicalUnit { get; set; }
 
         /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public virtual bool IsConstant
+        {
+            get { return false; }
+        }
+
+        /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
@@ -486,6 +494,11 @@ namespace RATools.Parser.Internal
                     if (identifier == "if")
                         return IfExpression.Parse(tokenizer, line, column);
 
+                    if (identifier == "true")
+                        return new BooleanConstantExpression(true, line, column);
+                    if (identifier == "false")
+                        return new BooleanConstantExpression(false, line, column);
+
                     if (tokenizer.NextChar == '(')
                     {
                         tokenizer.Advance();
@@ -577,12 +590,11 @@ namespace RATools.Parser.Internal
                 case ExpressionType.ParseError:
                     return right;
 
-                case ExpressionType.Comparison:
-                case ExpressionType.Conditional:
-                case ExpressionType.Dictionary:
+                case ExpressionType.Comparison: // will be rebalanced
+                case ExpressionType.Conditional: // will be rebalanced
+                case ExpressionType.Mathematic:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.IntegerConstant:
-                case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
                 case ExpressionType.Variable:
                     break;
@@ -613,6 +625,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 
@@ -642,6 +655,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.Conditional:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.Variable:
+                case ExpressionType.BooleanConstant:
                     break;
 
                 default:
@@ -678,6 +692,7 @@ namespace RATools.Parser.Internal
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 
@@ -885,10 +900,10 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="error">[out] The error that prevented evaluation (or null if successful).</param>
         /// <returns>The result of evaluating the expression</returns>
-        public virtual bool IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public virtual bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
             error = null;
-            return false;
+            return null;
         }
     }
 
@@ -916,6 +931,11 @@ namespace RATools.Parser.Internal
         /// A string constant.
         /// </summary>
         StringConstant,
+
+        /// <summary>
+        /// A boolean constant.
+        /// </summary>
+        BooleanConstant,
 
         /// <summary>
         /// A function call.

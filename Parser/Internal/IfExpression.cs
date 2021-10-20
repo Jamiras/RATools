@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Jamiras.Components;
 
@@ -45,9 +46,6 @@ namespace RATools.Parser.Internal
             if (condition.Type == ExpressionType.ParseError)
                 return condition;
 
-            if (condition.Type != ExpressionType.Conditional && condition.Type != ExpressionType.Comparison)
-                return ParseError(tokenizer, "Expected conditional statement following if", condition);
-
             var ifExpression = new IfExpression(condition);
             ifExpression._keyword = new KeywordExpression("if", line, column);
 
@@ -78,7 +76,10 @@ namespace RATools.Parser.Internal
         {
             builder.Append("if (");
             Condition.AppendString(builder);
-            builder.Append(')');
+            builder.Append(") { ... }");
+
+            if (ElseExpressions.Count > 0)
+                builder.Append(" else { ... }");
         }
 
         /// <summary>

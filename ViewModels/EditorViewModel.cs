@@ -37,6 +37,7 @@ namespace RATools.ViewModels
 
             foreach (var kvp in _themeColors)
                Style.SetCustomColor((int)kvp.Value, Theme.GetColor(kvp.Key));
+            Style.SetCustomColor((int)ExpressionType.BooleanConstant, Theme.GetColor(Theme.Color.EditorIntegerConstant));
             Style.Background = Theme.GetColor(Theme.Color.Background);
             Style.Foreground = Theme.GetColor(Theme.Color.Foreground);
             Style.Selection = Theme.GetColor(Theme.Color.EditorSelection);
@@ -83,6 +84,10 @@ namespace RATools.ViewModels
                         return;
 
                     Style.SetCustomColor((int)type, e.NewValue);
+
+                    if (type == ExpressionType.IntegerConstant)
+                        Style.SetCustomColor((int)ExpressionType.BooleanConstant, e.NewValue);
+
                     break;
             }
 

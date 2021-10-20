@@ -28,7 +28,8 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        [TestCase("variable1 > variable2", "98 > 99")] // simple variable substitution
+        [TestCase("byte(1) > variable2", "byte(1) > 99")] // simple variable substitution
+        [TestCase("variable1 > variable2", "false")] // evaluates to a constant
         [TestCase("1 == byte(2)", "byte(2) == 1")] // move constant to right side
         [TestCase("1 != byte(2)", "byte(2) != 1")] // move constant to right side
         [TestCase("1 < byte(2)", "byte(2) > 1")] // move constant to right side

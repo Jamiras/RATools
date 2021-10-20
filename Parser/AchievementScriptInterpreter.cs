@@ -271,15 +271,7 @@ namespace RATools.Parser
                 }
             }
 
-            if (!Run(expressionGroups, null))
-            {
-                if (Error == null)
-                    Error = expressionGroups.Errors.FirstOrDefault();
-
-                return false;
-            }
-
-            return true;
+            return Run(expressionGroups, null);
         }
 
         internal bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
@@ -388,6 +380,9 @@ namespace RATools.Parser
                 RichPresence = _richPresence.ToString();
                 RichPresenceLine = _richPresence.Line;
             }
+
+            if (Error == null)
+                Error = expressionGroups.Errors.FirstOrDefault();
 
             return result;
         }
@@ -555,14 +550,20 @@ namespace RATools.Parser
         private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
         {
             ParseErrorExpression error;
-            bool result = ifExpression.Condition.IsTrue(scope, out error);
+            bool? result = ifExpression.Condition.IsTrue(scope, out error);
             if (error != null)
             {
                 Error = error;
                 return false;
             }
 
-            return Evaluate(result ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
+            if (result == null)
+            {
+                Error = new ParseErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition);
+                return false;
+            }
+
+            return Evaluate(result.GetValueOrDefault() ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)

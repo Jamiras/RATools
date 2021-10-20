@@ -174,25 +174,25 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestParseErrorInsideDefinition()
         {
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"));
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() { j = }"));
             tokenizer.Match("function");
             var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)expr).Message, Is.EqualTo("Expected conditional statement following if"));
+            Assert.That(((ParseErrorExpression)expr).Message, Is.EqualTo("Unexpected end of script"));
         }
 
         [Test]
         public void TestParseErrorInsideDefinitionExpressionTokenizer()
         {
             var group = new ExpressionGroup();
-            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { if (j) { j = i } }"), group);
+            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { j = }"), group);
             tokenizer.Match("function");
             var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
-            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
-            Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Expected conditional statement following if"));
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(2));
+            Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Unexpected character: }"));
         }
 
         [Test]

@@ -32,7 +32,8 @@ namespace RATools.Test.Parser.Functions
                 return builder.RequirementsDebugString;
             }
 
-            return parser.Error.InnermostError.Message;
+            var error = parser.Error.InnermostError ?? parser.Error;
+            return error.Message;
         }
 
         [Test]
