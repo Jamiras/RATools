@@ -282,68 +282,78 @@ namespace RATools.Parser.Internal
             return null;
         }
 
-        /// <summary>
-        /// Replace every subtraction of a memory reference in the mathematic expression with the maximum value
-        /// it can return, and every other memory reference with 0, then sum the result.
-        /// </summary>
-        private static int CalculateUnderflow(MathematicExpression mathematic, InterpreterScope scope, bool invert)
+        private static void GetMinMax(ExpressionBase expression, InterpreterScope scope, out long min, out long max)
         {
-            int leftAdjustment = 0;
-            switch (mathematic.Left.Type)
+            switch (expression.Type)
             {
                 case ExpressionType.Mathematic:
-                    leftAdjustment = CalculateUnderflow((MathematicExpression)mathematic.Left, scope, invert);
-                    break;
+                    var mathematic = (MathematicExpression)expression;
 
-                case ExpressionType.IntegerConstant:
-                    leftAdjustment = -((IntegerConstantExpression)mathematic.Left).Value;
-                    break;
+                    long leftMin, leftMax;
+                    GetMinMax(mathematic.Left, scope, out leftMin, out leftMax);
 
-                case ExpressionType.FunctionCall:
-                    if (invert)
+                    long rightMin, rightMax;
+                    GetMinMax(mathematic.Right, scope, out rightMin, out rightMax);
+
+                    switch (mathematic.Operation)
                     {
-                        // subtraction, account for the maximum value of the memory reference
-                        var memoryAccessor = GetMemoryAccessor(mathematic.Left, scope);
-                        if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
-                            leftAdjustment = (int)Field.GetMaxValue(memoryAccessor.Size);
+                        default:
+                        case MathematicOperation.Add:
+                            min = leftMin + rightMin;
+                            max = leftMax + rightMax;
+                            break;
+
+                        case MathematicOperation.Subtract:
+                            min = leftMin - rightMax;
+                            max = leftMax - rightMin;
+                            break;
+
+                        case MathematicOperation.Multiply:
+                            min = leftMin * rightMin;
+                            max = leftMax * rightMax;
+                            break;
+
+                        case MathematicOperation.Divide:
+                            if (mathematic.Left == mathematic.Right)
+                            {
+                                // A/A is either 0 or 1
+                                min = 0;
+                                max = 1;
+                            }
+                            else
+                            {
+                                // division by 0 will always return 0, so assume division by 1
+                                min = (rightMax == 0) ? leftMin : leftMin / rightMax;
+                                max = (rightMin == 0) ? leftMax : leftMax / rightMin;
+                            }
+                            break;
+
+                        case MathematicOperation.Modulus:
+                            // modulus will return at most right-1
+                            min = 0;
+                            max = rightMax - 1;
+                            break;
                     }
                     break;
 
-                default:
-                    break;
-            }
-
-            int rightAdjustment = 0;
-            switch (mathematic.Right.Type)
-            {
-                case ExpressionType.Mathematic:
-                    if (mathematic.Operation == MathematicOperation.Subtract)
-                        invert = !invert;
-
-                    rightAdjustment = CalculateUnderflow((MathematicExpression)mathematic.Right, scope, invert);
-                    break;
-
                 case ExpressionType.IntegerConstant:
-                    rightAdjustment = -((IntegerConstantExpression)mathematic.Right).Value;
+                    min = max = (uint)((IntegerConstantExpression)expression).Value;
                     break;
 
                 case ExpressionType.FunctionCall:
-                    var subsourceOperation = invert ? MathematicOperation.Add : MathematicOperation.Subtract;
-                    if (mathematic.Operation == subsourceOperation)
-                    {
-                        // subtraction, account for the maximum value of the memory reference
-                        var memoryAccessor = GetMemoryAccessor(mathematic.Right, scope);
-                        if (memoryAccessor != null && memoryAccessor.Size != FieldSize.DWord)
-                            rightAdjustment = (int)Field.GetMaxValue(memoryAccessor.Size);
-                    }
+                    min = 0;
+                    var memoryAccessor = GetMemoryAccessor(expression, scope);
+                    if (memoryAccessor != null)
+                        max = Field.GetMaxValue(memoryAccessor.Size);
+                    else
+                        max = 0xFFFFFFFF; // unknown function, assume it can return the full range of values
                     break;
 
                 default:
+                    min = 0;
+                    max = 0xFFFFFFFF;
                     break;
             }
-
-
-            return leftAdjustment + rightAdjustment;
         }
 
         private static bool HasDword(ExpressionBase expression, InterpreterScope scope)
@@ -741,7 +751,9 @@ namespace RATools.Parser.Internal
                 mathematicLeft = comparison.Left as MathematicExpression;
                 if (mathematicLeft != null && !HasDword(mathematicLeft, scope))
                 {
-                    var underflowAdjustment = CalculateUnderflow(mathematicLeft, scope, false);
+                    long min, max;
+                    GetMinMax(mathematicLeft, scope, out min, out max);
+                    var underflowAdjustment = -(int)min;
 
                     // attempt to adjust the negative value up to 0.
                     if (integerConstant != null && integerConstant.Value < 0)
@@ -761,8 +773,8 @@ namespace RATools.Parser.Internal
                         }
                         else
                         {
-                            mathematicRight = new MathematicExpression(new IntegerConstantExpression(0), MathematicOperation.Subtract, comparison.Right);
-                            underflowAdjustment += CalculateUnderflow(mathematicRight, scope, false);
+                            GetMinMax(comparison.Right, scope, out min, out max);
+                            underflowAdjustment += (int)max;
 
                             ExpressionBase newLeft = new MathematicExpression(comparison.Left, MathematicOperation.Subtract, comparison.Right);
                             newLeft = AddConstant(newLeft, underflowAdjustment);

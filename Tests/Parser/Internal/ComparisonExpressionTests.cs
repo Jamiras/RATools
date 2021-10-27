@@ -140,6 +140,14 @@ namespace RATools.Test.Parser.Internal
         [TestCase("A - B - C + 300 < 100", "A - B - C + 510 < 310")] // possible underflow of 210, add to both sides
         [TestCase("A - B < C + 100", "A - B - C + 510 < 610")] // move C to left side, possible underflow of 510
         [TestCase("A - 100 > B - C", "A - (B - C) + 255 > 355")] // move 100 to right side, B and C to left, and add 255 to prevent underflow
+        [TestCase("A * 2 - B < 3", "A * 2 - B + 255 < 258")] // reverse and change to addition
+        [TestCase("A - B * 2 < 3", "A - (B * 2) + 510 < 513")] // reverse and change to addition
+        [TestCase("A / 2 - B < 3", "A / 2 - B + 255 < 258")] // reverse and change to addition
+        [TestCase("A - B / 2 < 3", "A - (B / 2) + 127 < 130")] // reverse and change to addition
+        [TestCase("A / A - (B / B) >= 1", "B / B + 1 <= A / A")]
+        [TestCase("A / B - (B / C) >= 1", "B / C + 1 <= A / B")]
+        [TestCase("A / A - 2 > (B / B)", "A / A - (B / B) + 1 > 3")] // B/B resolves to 1
+        [TestCase("A / B - 2 > (B / C)", "A / B - (B / C) + 255 > 257")] // B/C resolves to 255
         public void TestUnderflow(string input, string expected)
         {
             var comparison = input.Replace("A", "byte(1)").Replace("B", "byte(2)").Replace("C", "byte(3)");
@@ -163,18 +171,20 @@ namespace RATools.Test.Parser.Internal
             result.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expectedComparison));
 
+            var minimum = input.Contains("/") ? "1" : "0";
+
             // prove that the logic is equivalent                  0123456789
             // ignore items where the explicit underflow was kept (A + 1 - B  ~> A - B + 1)
-            var swapped = (input.Length > 9) ? input.Substring(0,1) + input.Substring(5,4) + input.Substring(1,4) + input.Substring(9) : string.Empty;
+            var swapped = (input.Length > 9) ? input.Substring(0, 1) + input.Substring(5, 4) + input.Substring(1, 4) + input.Substring(9) : string.Empty;
             if (swapped != expected)
             {
-                var values = new string[] { "0", "10", "100", "255" };
+                var values = new string[] { minimum, "10", "100", "255" };
                 foreach (var a in values)
                 {
-                    var bValues = input.Contains("B") ? values : new string[] { "0" };
+                    var bValues = input.Contains("B") ? values : new string[] { minimum };
                     foreach (var b in bValues)
                     {
-                        var cValues = input.Contains("C") ? values : new string[] { "0" };
+                        var cValues = input.Contains("C") ? values : new string[] { minimum };
                         foreach (var c in cValues)
                         {
                             var original = input.Replace("A", a).Replace("B", b).Replace("C", c);
