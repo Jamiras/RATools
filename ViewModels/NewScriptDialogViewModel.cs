@@ -178,6 +178,24 @@ namespace RATools.ViewModels
                     size = FieldSize.TByte;
                 }
 
+                if (size != FieldSize.Byte &&
+                    (token.Contains("bit-BE", StringComparison.OrdinalIgnoreCase) ||
+                     token.Contains("bit BE", StringComparison.OrdinalIgnoreCase)))
+                {
+                    switch (size)
+                    {
+                        case FieldSize.Word:
+                            size = FieldSize.BigEndianWord;
+                            break;
+                        case FieldSize.DWord:
+                            size = FieldSize.BigEndianDWord;
+                            break;
+                        case FieldSize.TByte:
+                            size = FieldSize.BigEndianTByte;
+                            break;
+                    }
+                }
+
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });
             }
 

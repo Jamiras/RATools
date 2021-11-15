@@ -82,14 +82,17 @@ namespace RATools.Data
                             break;
 
                         case FieldSize.Word:
+                        case FieldSize.BigEndianWord:
                             builder.AppendFormat("{0:X4}", Value);
                             break;
 
                         case FieldSize.TByte:
+                        case FieldSize.BigEndianTByte:
                             builder.AppendFormat("{0:X6}", Value);
                             break;
 
                         case FieldSize.DWord:
+                        case FieldSize.BigEndianDWord:
                             builder.AppendFormat("{0:X8}", Value);
                             break;
                     }
@@ -169,6 +172,9 @@ namespace RATools.Data
                 case FieldSize.TByte: return "tbyte";
                 case FieldSize.DWord: return "dword";
                 case FieldSize.BitCount: return "bitcount";
+                case FieldSize.BigEndianWord: return "word_be";
+                case FieldSize.BigEndianTByte: return "tbyte_be";
+                case FieldSize.BigEndianDWord: return "dword_be";
                 default: return size.ToString();
             }
         }
@@ -201,9 +207,11 @@ namespace RATools.Data
                     return 0xFF;
 
                 case FieldSize.Word:
+                case FieldSize.BigEndianWord:
                     return 0xFFFF;
 
                 case FieldSize.TByte:
+                case FieldSize.BigEndianTByte:
                     return 0xFFFFFF;
 
                 default:
@@ -281,6 +289,9 @@ namespace RATools.Data
                 case FieldSize.TByte: builder.Append('W'); break;
                 case FieldSize.DWord: builder.Append('X'); break;
                 case FieldSize.BitCount: builder.Append('K'); break;
+                case FieldSize.BigEndianWord: builder.Append('I'); break;
+                case FieldSize.BigEndianTByte: builder.Append('J'); break;
+                case FieldSize.BigEndianDWord: builder.Append('G'); break;
             }
 
             builder.AppendFormat("{0:x6}", Value);
@@ -349,6 +360,12 @@ namespace RATools.Data
                 case 'X': size = FieldSize.DWord; tokenizer.Advance(); break;
                 case 'k':
                 case 'K': size = FieldSize.BitCount; tokenizer.Advance(); break;
+                case 'i':
+                case 'I': size = FieldSize.BigEndianWord; tokenizer.Advance(); break;
+                case 'j':
+                case 'J': size = FieldSize.BigEndianTByte; tokenizer.Advance(); break;
+                case 'g':
+                case 'G': size = FieldSize.BigEndianDWord; tokenizer.Advance(); break;
                 case '0':
                 case '1':
                 case '2':
@@ -617,5 +634,20 @@ namespace RATools.Data
         /// The number of bits set in a byte.
         /// </summary>
         BitCount,
+
+        /// <summary>
+        /// Two bytes (16-bit). Read from memory in big-endian mode.
+        /// </summary>
+        BigEndianWord,
+
+        /// <summary>
+        /// Three bytes (24-bit). Read from memory in big-endian mode.
+        /// </summary>
+        BigEndianTByte,
+
+        /// <summary>
+        /// Four bytes (32-bit). Read from memory in big-endian mode.
+        /// </summary>
+        BigEndianDWord,
     }
 }

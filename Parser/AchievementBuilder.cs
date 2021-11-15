@@ -286,13 +286,15 @@ namespace RATools.Parser
 
                     case RequirementType.MeasuredIf:
                     case RequirementType.OrNext:
-                        // 0.78 18 May 2019
+                        // 0.78 18 May 2020
                         if (minVer < 78)
                             minVer = 78;
                         break;
 
                     case RequirementType.ResetNextIf:
-                        // 0.79 TBD
+                    case RequirementType.Trigger:
+                    case RequirementType.SubHits:
+                        // 0.79 22 May 2021
                         if (minVer < 79)
                             minVer = 79;
                         break;
@@ -306,7 +308,7 @@ namespace RATools.Parser
                     case RequirementOperator.Multiply:
                     case RequirementOperator.Divide:
                     case RequirementOperator.LogicalAnd:
-                        // 0.78 18 May 2019
+                        // 0.78 18 May 2020
                         if (minVer < 78)
                             minVer = 78;
                         break;
@@ -341,9 +343,17 @@ namespace RATools.Parser
                             break;
 
                         case FieldSize.BitCount:
-                            // 0.78 18 May 2019
+                            // 0.78 18 May 2020
                             if (minVer < 78)
                                 minVer = 78;
+                            break;
+
+                        case FieldSize.BigEndianWord:
+                        case FieldSize.BigEndianTByte:
+                        case FieldSize.BigEndianDWord:
+                            // 0.80 TBD
+                            if (minVer < 80)
+                                minVer = 80;
                             break;
 
                         default:

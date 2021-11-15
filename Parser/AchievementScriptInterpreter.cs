@@ -87,6 +87,9 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MemoryAccessorFunction("word", FieldSize.Word));
                 _globalScope.AddFunction(new MemoryAccessorFunction("tbyte", FieldSize.TByte));
                 _globalScope.AddFunction(new MemoryAccessorFunction("dword", FieldSize.DWord));
+                _globalScope.AddFunction(new MemoryAccessorFunction("word_be", FieldSize.BigEndianWord));
+                _globalScope.AddFunction(new MemoryAccessorFunction("tbyte_be", FieldSize.BigEndianTByte));
+                _globalScope.AddFunction(new MemoryAccessorFunction("dword_be", FieldSize.BigEndianDWord));
                 _globalScope.AddFunction(new BitFunction());
                 _globalScope.AddFunction(new MemoryAccessorFunction("bitcount", FieldSize.BitCount));
 
