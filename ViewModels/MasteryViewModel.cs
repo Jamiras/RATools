@@ -765,6 +765,12 @@ namespace RATools.ViewModels
                         return Jan21;
                     break;
 
+                case "joker1000":
+                    // https://discord.com/channels/310192285306454017/388903437640794112/904712391303000076
+                    if (gameId == 767 || gameId == 2592)
+                        return "https://discord.com/channels/310192285306454017/388903437640794112/904712391303000076";
+                    break;
+
                 case "MegaLuis33":
                     // https://discord.com/channels/310192285306454017/564271682731245603/794618468212539412
                     if (gameId == 558)
