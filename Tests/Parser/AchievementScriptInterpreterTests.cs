@@ -1145,5 +1145,16 @@ namespace RATools.Test.Parser
             Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)d).Value, Is.EqualTo(1));
         }
+
+        [Test]
+        public void TestDeltaBCDComparison()
+        {
+            var parser = Parse("function f() => bcd(byte(0x1234))\n" +
+                               "achievement(\"T\", \"D\", 5, f() != prev(f()))\n");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.ElementAt(0);
+            Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) != prev(byte(0x001234))"));
+        }
     }
 }

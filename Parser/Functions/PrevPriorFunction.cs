@@ -89,8 +89,31 @@ namespace RATools.Parser.Functions
             var memoryAccessor = functionDefinition as MemoryAccessorFunction;
             if (memoryAccessor == null)
             {
-                result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                return false;
+                if (!(functionDefinition is PrevPriorFunction))
+                {
+                    result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                    return false;
+                }
+
+                if (this.Name.Name == "bcd" && functionDefinition.Name.Name != "bcd")
+                {
+                    // bcd(prev(X)) => no change
+                }
+                else if (functionDefinition.Name.Name == "bcd" && this.Name.Name != "bcd")
+                {
+                    // prev(bcd(X)) => bcd(prev(X))
+                    var nestedFunctionCall = new FunctionCallExpression(this.Name.Name, functionCall.Parameters);
+                    functionCall.CopyLocation(nestedFunctionCall);
+
+                    result = new FunctionCallExpression(functionDefinition.Name.Name, new[] { nestedFunctionCall });
+                    CopyLocation(result);
+                    return true;
+                }
+                else
+                {
+                    result = new ParseErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
+                    return false;
+                }
             }
 
             result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { functionCall });
@@ -106,6 +129,9 @@ namespace RATools.Parser.Functions
                 return error;
 
             var left = context.LastRequirement.Left;
+            if (left.Type != FieldType.MemoryAddress)
+                return new ParseErrorExpression("cannot apply multiple modifiers to memory accessor", functionCall);
+
             context.LastRequirement.Left = new Field { Size = left.Size, Type = _fieldType, Value = left.Value };
             return null;
         }

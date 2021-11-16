@@ -366,6 +366,16 @@ namespace RATools.Parser
                         return new ParseErrorExpression("Function used like a variable", expression);
 
                     return ExecuteAchievementExpression(operand, scope);
+
+                case ExpressionType.BooleanConstant:
+                {
+                    var context = scope.GetContext<TriggerBuilderContext>();
+                    if (((BooleanConstantExpression)expression).Value == true)
+                        context.Trigger.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                    else
+                        context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                    return null;
+                }
             }
 
             return new ParseErrorExpression("Cannot generate trigger from " + expression.Type, expression);

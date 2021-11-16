@@ -83,6 +83,18 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestPrevBCD()
+        {
+            // bcd() can be factored out
+            var definition = Process("prev(bcd(byte(0x1234))) == 10");
+            Assert.That(definition, Is.EqualTo("d0xH001234=16"));
+
+            // bcd cannot be factored out
+            var parser = Parse("achievement(\"T\", \"D\", 5, prev(bcd(byte(0x1234))) != byte(0x1234))", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 cannot apply multiple modifiers to memory accessor"));
+        }
+
+        [Test]
         public void TestPrevLargeMathematicChain()
         {
             var largeInput = new StringBuilder();
