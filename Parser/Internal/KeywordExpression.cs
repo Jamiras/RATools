@@ -20,6 +20,17 @@ namespace RATools.Parser.Internal
         /// Gets the keyword.
         /// </summary>
         public string Keyword { get; private set; }
+        
+        /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        public override bool IsConstant
+        {
+            get { return true; }
+        }
+
+        // NOTE: Not returning true for IsLiteralConstant. While it is unchanging at compile-time,
+        //       it won't make it to the output.
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.

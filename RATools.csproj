@@ -134,6 +134,7 @@
     <Compile Include="Parser\Internal\ExpressionGroup.cs" />
     <Compile Include="Parser\Internal\ExpressionTokenizer.cs" />
     <Compile Include="Parser\Internal\BooleanConstantExpression.cs" />
+    <Compile Include="Parser\Internal\FloatConstantExpression.cs" />
     <Compile Include="Parser\Internal\KeywordExpression.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBase.cs" />
     <Compile Include="Parser\RichPresenceBuilder.cs" />

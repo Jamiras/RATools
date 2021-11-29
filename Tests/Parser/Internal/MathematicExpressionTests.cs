@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Functions;
@@ -438,7 +439,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("division by zero"));
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Division by zero"));
         }
 
         [Test]
@@ -482,7 +483,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("division by zero"));
+            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Division by zero"));
         }
 
         [Test]
@@ -513,32 +514,32 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        [TestCase("+3+1", "+4")]
-        [TestCase("+3-1", "+2")]
-        [TestCase("+1-3", "-2")]
-        [TestCase("+3-3", "")]
-        [TestCase("-3-1", "-4")]
-        [TestCase("-3+1", "-2")]
-        [TestCase("-1+3", "+2")]
-        [TestCase("-3+3", "")]
-        [TestCase("*4*2", "*8")]
-        [TestCase("*4/2", "*2")]
-        [TestCase("*2/4", "*2/4")]
-        [TestCase("*3/3", "")]
-        [TestCase("/4/2", "/8")]
-        [TestCase("/4*2", "/4*2")] // divide followed by multiply removes the modulus portion, cannot combine
-        [TestCase("/2*4", "/2*4")] // divide followed by multiply removes the modulus portion, cannot combine
-        [TestCase("/3*3", "/3*3")] // divide followed by multiply removes the modulus portion, cannot combine
-        public void TestCombining(string modifiers, string expectedModifiers)
+        [TestCase("byte(0) + 3 + 1", "byte(0) + 4")]
+        [TestCase("byte(0) + 3 - 1", "byte(0) + 2")]
+        [TestCase("byte(0) + 1 - 3", "byte(0) - 2")]
+        [TestCase("byte(0) + 3 - 3", "byte(0)")]
+        [TestCase("byte(0) - 3 - 1", "byte(0) - 4")]
+        [TestCase("byte(0) - 3 + 1", "byte(0) - 2")]
+        [TestCase("byte(0) - 1 + 3", "byte(0) + 2")]
+        [TestCase("byte(0) - 3 + 3", "byte(0)")]
+        [TestCase("byte(0) * 4 * 2", "byte(0) * 8")]
+        [TestCase("byte(0) * 4 / 2", "byte(0) * 2")]
+        [TestCase("byte(0) * 2 / 4", "byte(0) * 2 / 4")] // don't convert integer division to float yet
+        [TestCase("byte(0) * 2.0 / 4", "byte(0) * 0.5")] // do convert partial float division to float
+        [TestCase("byte(0) * 2 / 4.0", "byte(0) * 0.5")] // do convert partial float division to float
+        [TestCase("byte(0) * 2 / 3.0", "byte(0) * 0.666667")] // do convert partial float division to float
+        [TestCase("byte(0) * 3 / 3", "byte(0)")]
+        [TestCase("byte(0) / 4 / 2", "byte(0) / 8")]
+        [TestCase("byte(0) / 4 * 2", "byte(0) / 4 * 2")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 2 * 4", "byte(0) / 2 * 4")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 3 * 3", "byte(0) / 3 * 3")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 4.0 / 2", "byte(0) / 8.0")]
+        [TestCase("byte(0) / 4.0 * 2", "byte(0) * 0.5")] // divide followed by multiply with floats can be merged
+        public void TestCombining(string input, string expected)
         {
-            var operation1 = GetOperation(modifiers[0]);
-            var value1 = modifiers[1] - '0';
-            var operation2 = GetOperation(modifiers[2]);
-            var value2 = modifiers[3] - '0';
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expr, Is.InstanceOf<MathematicExpression>());
 
-            var mem = new FunctionCallExpression("byte", new[] { new IntegerConstantExpression(0) });
-            var left = new MathematicExpression(mem, operation1, new IntegerConstantExpression(value1));
-            var expr = new MathematicExpression(left, operation2, new IntegerConstantExpression(value2));
             var scope = new InterpreterScope();
             scope.Context = new TriggerBuilderContext();
             scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
@@ -546,21 +547,9 @@ namespace RATools.Test.Parser.Internal
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
 
-            if (expectedModifiers.Length == 0)
-            {
-                Assert.That(result.ToString(), Is.EqualTo(mem.ToString()));
-            }
-            else if (expectedModifiers == modifiers)
-            {
-                Assert.That(result.ToString(), Is.EqualTo(expr.ToString()));
-            }
-            else
-            {
-                var expectedOperation = GetOperation(expectedModifiers[0]);
-                var expectedValue = expectedModifiers[1] - '0';
-                var expected = new MathematicExpression(mem, expectedOperation, new IntegerConstantExpression(expectedValue));
-                Assert.That(result.ToString(), Is.EqualTo(expected.ToString()));
-            }
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
     }
 }

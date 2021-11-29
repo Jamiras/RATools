@@ -2,10 +2,10 @@
 
 namespace RATools.Parser.Internal
 {
-    internal class IntegerConstantExpression : ExpressionBase
+    internal class FloatConstantExpression : ExpressionBase
     {
-        public IntegerConstantExpression(int value)
-            : base(ExpressionType.IntegerConstant)
+        public FloatConstantExpression(float value)
+            : base(ExpressionType.FloatConstant)
         {
             Value = value;
         }
@@ -13,7 +13,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the value.
         /// </summary>
-        public int Value { get; private set; }
+        public float Value { get; private set; }
 
         /// <summary>
         /// Gets whether this is non-changing.
@@ -36,7 +36,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            builder.Append(Value);
+            builder.AppendFormat("{0:0.0#####}", Value);
         }
 
         /// <summary>
@@ -50,6 +50,32 @@ namespace RATools.Parser.Internal
         {
             var that = obj as IntegerConstantExpression;
             return (that != null && Value == that.Value);
+        }
+
+        /// <summary>
+        /// Attempts to convert an expression to a <see cref="FloatConstantExpression"/>.
+        /// </summary>
+        /// <param name="expression">The expression to convert.</param>
+        /// <returns>The converted expression, or a <see cref="ParseErrorExpression"/> if the expression could not be converted.</returns>
+        public static ExpressionBase ConvertFrom(ExpressionBase expression)
+        {
+            FloatConstantExpression floatExpression;
+
+            switch (expression.Type)
+            {
+                case ExpressionType.FloatConstant:
+                    return expression;
+
+                case ExpressionType.IntegerConstant:
+                    floatExpression = new FloatConstantExpression((float)((IntegerConstantExpression)expression).Value);
+                    break;
+
+                default:
+                    return new ParseErrorExpression("Cannot convert to float", expression);
+            }
+
+            expression.CopyLocation(floatExpression);
+            return floatExpression;
         }
     }
 }

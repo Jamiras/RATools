@@ -75,6 +75,14 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Gets whether this is a compile-time constant.
+        /// </summary>
+        public virtual bool IsLiteralConstant
+        {
+            get { return false; }
+        }
+
+        /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
@@ -366,6 +374,29 @@ namespace RATools.Parser.Internal
                     tokenizer.Advance();
                 }
 
+                if (tokenizer.NextChar == '.')
+                {
+                    number += tokenizer.NextChar;
+                    tokenizer.Advance();
+
+                    while (Char.IsDigit(tokenizer.NextChar))
+                    {
+                        number += tokenizer.NextChar;
+
+                        endLine = tokenizer.Line;
+                        endColumn = tokenizer.Column;
+                        tokenizer.Advance();
+                    }
+
+                    float floatValue;
+                    if (!float.TryParse(number, out floatValue))
+                        return new ParseErrorExpression("Number too large");
+
+                    var floatExpression = new FloatConstantExpression(floatValue);
+                    floatExpression.Location = new TextRange(line, column, endLine, endColumn);
+                    return floatExpression;
+                }
+
                 if (!UInt32.TryParse(number, out value))
                     return new ParseErrorExpression("Number too large");
             }
@@ -438,24 +469,30 @@ namespace RATools.Parser.Internal
                     return ParseNumber(tokenizer, true);
 
                 case '-':
+                    var tokenStart = tokenizer.Location;
                     tokenizer.Advance();
                     if (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
                     {
                         var result = ParseNumber(tokenizer, false);
-                        if (result.Type == ExpressionType.ParseError)
-                            return result;
+                        var tokenEnd = result.Location.End;
+                        switch (result.Type)
+                        {
+                            case ExpressionType.IntegerConstant:
+                                result = new IntegerConstantExpression(-((IntegerConstantExpression)result).Value);
+                                break;
 
-                        var integerExpression = (IntegerConstantExpression)result;
-                        var negativeIntegerExpression = new IntegerConstantExpression(-integerExpression.Value);
-                        integerExpression.CopyLocation(negativeIntegerExpression);
-                        integerExpression.Location = new TextRange(
-                            negativeIntegerExpression.Location.Start.Line,
-                            negativeIntegerExpression.Location.Start.Column - 1,
-                            negativeIntegerExpression.Location.End.Line,
-                            negativeIntegerExpression.Location.End.Column);
-                        return negativeIntegerExpression;
+                            case ExpressionType.FloatConstant:
+                                result = new FloatConstantExpression(-((FloatConstantExpression)result).Value);
+                                break;
+
+                            default:
+                                return result;
+                        }
+
+                        result.Location = new TextRange(tokenStart, tokenEnd);
+                        return result;
                     }
-                    return ParseError(tokenizer, "Minus without value", tokenizer.Line, tokenizer.Column - 1);
+                    return ParseError(tokenizer, "Minus without value", tokenStart.Line, tokenStart.Column);
 
                 case '{':
                     tokenizer.Advance();
@@ -592,9 +629,10 @@ namespace RATools.Parser.Internal
 
                 case ExpressionType.Comparison: // will be rebalanced
                 case ExpressionType.Conditional: // will be rebalanced
-                case ExpressionType.Mathematic:
+                case ExpressionType.FloatConstant:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.IntegerConstant:
+                case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
                 case ExpressionType.Variable:
                     break;
@@ -605,8 +643,7 @@ namespace RATools.Parser.Internal
                         expressionTokenizer.QueueExpression(right);
 
                     right = new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn);
-                    ParseError(tokenizer, "incompatible mathematical operation", right);
-                    break;
+                    return ParseError(tokenizer, "Incompatible mathematical operation", right);
             }
 
             return new MathematicExpression(left, operation, right);
@@ -936,6 +973,11 @@ namespace RATools.Parser.Internal
         /// A boolean constant.
         /// </summary>
         BooleanConstant,
+
+        /// <summary>
+        /// A floating point constant.
+        /// </summary>
+        FloatConstant,
 
         /// <summary>
         /// A function call.
