@@ -40,11 +40,11 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="IntegerConstantExpression" /> is equal to this instance.
+        /// Determines whether the specified <see cref="FloatConstantExpression" /> is equal to this instance.
         /// </summary>
-        /// <param name="obj">The <see cref="IntegerConstantExpression" /> to compare with this instance.</param>
+        /// <param name="obj">The <see cref="FloatConstantExpression" /> to compare with this instance.</param>
         /// <returns>
-        ///   <c>true</c> if the specified <see cref="IntegerConstantExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        ///   <c>true</c> if the specified <see cref="FloatConstantExpression" /> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {

@@ -232,6 +232,11 @@ namespace RATools.Test.Parser
         [TestCase("once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_0xO20770f=0.1.")]
         [TestCase("never(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_R:0xO20770f=0")]
         [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
+        [TestCase("float(0x1111) == 3.14", "fF001111=f3.14")]
+        [TestCase("prev(float(0x1111)) > 3.14", "dfF001111>f3.14")]
+        [TestCase("float(0x1111) < prev(float(0x1111))", "fF001111<dfF001111")]
+        [TestCase("mbf32(0x2345) == -0.5", "fM002345=f-0.5")]
+        [TestCase("never(float(0x1111) == 2.0)", "R:fF001111=f2.0")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder
@@ -382,6 +387,9 @@ namespace RATools.Test.Parser
         [TestCase("0 == 1", "always_false()")] // always false
         [TestCase("1 == 1", "always_true()")] // always true
         [TestCase("3 > 6", "always_false()")] // always false
+        [TestCase("4.56 == 4.56", "always_true()")] // always true
+        [TestCase("4.56 > 4.57", "always_false()")] // always false
+        [TestCase("4.56 > 4", "always_true()")] // always false
         [TestCase("0 == 1 && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
         [TestCase("0 == 1 && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
         [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause

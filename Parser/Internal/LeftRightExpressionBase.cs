@@ -50,6 +50,27 @@ namespace RATools.Parser.Internal
             return newRoot;
         }
 
+        protected static bool ConvertToFloat(ref ExpressionBase left, ref ExpressionBase right, out ExpressionBase result)
+        {
+            left = FloatConstantExpression.ConvertFrom(left);
+            if (left.Type != ExpressionType.FloatConstant)
+            {
+                result = left;
+                return false;
+            }
+
+            right = FloatConstantExpression.ConvertFrom(right);
+            if (right.Type != ExpressionType.FloatConstant)
+            {
+                result = right;
+                return false;
+            }
+
+            result = null;
+            return true;
+        }
+
+
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get

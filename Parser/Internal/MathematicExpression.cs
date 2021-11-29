@@ -260,42 +260,14 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        private static bool ConvertToFloat(ref ExpressionBase left, ref ExpressionBase right, out ExpressionBase result)
-        {
-            left = FloatConstantExpression.ConvertFrom(left);
-            if (left.Type != ExpressionType.FloatConstant)
-            {
-                result = left;
-                return false;
-            }
-
-            right = FloatConstantExpression.ConvertFrom(right);
-            if (right.Type != ExpressionType.FloatConstant)
-            {
-                result = right;
-                return false;
-            }
-
-            result = null;
-            return true;
-        }
-
         private static bool MergeAddition(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
         {
             // if either side is a string, combine to a larger string
             if (left.Type == ExpressionType.StringConstant || right.Type == ExpressionType.StringConstant)
             {
                 var builder = new StringBuilder();
-
-                if (left.Type == ExpressionType.StringConstant)
-                    builder.Append(((StringConstantExpression)left).Value); // StringConstant.AppendString includes quotes
-                else
-                    left.AppendString(builder);
-
-                if (right.Type == ExpressionType.StringConstant)
-                    builder.Append(((StringConstantExpression)right).Value); // StringConstant.AppendString includes quotes
-                else
-                    right.AppendString(builder);
+                left.AppendStringLiteral(builder);
+                right.AppendStringLiteral(builder);
 
                 result = new StringConstantExpression(builder.ToString());
                 return true;

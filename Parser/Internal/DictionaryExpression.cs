@@ -316,10 +316,11 @@ namespace RATools.Parser.Internal
                 }
                 else
                 {
-                    if (key.Type == ExpressionType.IntegerConstant)
-                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((IntegerConstantExpression)key).Value.ToString() + "]"), entry.Value);
-                    else // key.Type == ExpressionType.StringConstant
-                        dictScope.Context = new AssignmentExpression(new VariableExpression("[" + ((StringConstantExpression)key).Value + "]"), entry.Value);
+                    var builder = new StringBuilder();
+                    builder.Append('[');
+                    key.AppendString(builder);
+                    builder.Append(']');
+                    dictScope.Context = new AssignmentExpression(new VariableExpression(builder.ToString()), entry.Value);
 
                     if (!entry.Value.ReplaceVariables(dictScope, out value))
                     {
@@ -451,6 +452,11 @@ namespace RATools.Parser.Internal
                     case ExpressionType.BooleanConstant:
                         return (((BooleanConstantExpression)x.Key).Value ? 1 : 0) -
                             (((BooleanConstantExpression)y.Key).Value ? 1 : 0);
+
+                    case ExpressionType.FloatConstant:
+                        var xValue = ((FloatConstantExpression)x.Key).Value;
+                        var yValue = ((FloatConstantExpression)y.Key).Value;
+                        return (xValue == yValue) ? 0 : (xValue < yValue) ? -1 : 1;
 
                     default:
                         return 0;

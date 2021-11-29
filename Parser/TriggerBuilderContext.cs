@@ -186,6 +186,56 @@ namespace RATools.Parser
                 { expression, new FunctionCallExpression("always_true", new ExpressionBase[0]) });
         }
 
+        private static bool MergeFields(Field field, Term term, MathematicOperation operation)
+        {
+            ExpressionBase right;
+            if (field.Type == FieldType.Value)
+                right = new IntegerConstantExpression((int)field.Value);
+            else if (field.Type == FieldType.Float)
+                right = new FloatConstantExpression(field.Float);
+            else
+                return false;
+
+            ExpressionBase left = null;
+            if (term.multiplier == 1.0)
+            {
+                if (term.field.Type == FieldType.Value)
+                    left = new IntegerConstantExpression((int)term.field.Value);
+                else if (term.field.Type == FieldType.Float)
+                    left = new FloatConstantExpression(term.field.Float);
+            }
+
+            if (left == null)
+            {
+                FloatConstantExpression floatRight;
+                switch (operation)
+                {
+                    case MathematicOperation.Multiply:
+                        floatRight = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
+                        if (floatRight == null)
+                            return false;
+
+                        term.multiplier *= floatRight.Value;
+                        return true;
+
+                    case MathematicOperation.Divide:
+                        floatRight = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
+                        if (floatRight == null)
+                            return false;
+
+                        term.multiplier /= floatRight.Value;
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+
+            var mathematicExpression = new MathematicExpression(left, operation, right);
+            term.field = AchievementBuilder.CreateFieldFromExpression(mathematicExpression.MergeOperands());
+            return true;
+        }
+
         private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, List<Term> terms, out ExpressionBase result)
         {
             var functionCall = expression as FunctionCallExpression;
@@ -203,10 +253,10 @@ namespace RATools.Parser
                 return ProcessMeasuredValue(requirements, expression, terms, out result);
             }
 
-            IntegerConstantExpression integer = expression as IntegerConstantExpression;
-            if (integer != null)
+            var field = AchievementBuilder.CreateFieldFromExpression(expression);
+            if (field.Type != FieldType.None)
             {
-                terms.Last().field = new Field { Type = FieldType.Value, Value = (uint)integer.Value };
+                terms.Last().field = field;
                 result = null;
                 return true;
             }
@@ -228,58 +278,22 @@ namespace RATools.Parser
                 if (!ProcessValueExpression(mathematic.Left, scope, terms, out result))
                     return false;
 
-                integer = mathematic.Right as IntegerConstantExpression;
+                field = AchievementBuilder.CreateFieldFromExpression(mathematic.Right);
+                if (MergeFields(field, terms.Last(), mathematic.Operation))
+                    return true;
+
                 switch (mathematic.Operation)
                 {
                     case MathematicOperation.Add:
-                        if (integer != null)
-                        {
-                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
-                            {
-                                terms.Last().field.Value += (uint)integer.Value;
-                                return true;
-                            }
-                        }
-
                         terms.Add(new Term { multiplier = 1.0 });
                         return ProcessValueExpression(mathematic.Right, scope, terms, out result);
 
                     case MathematicOperation.Subtract:
-                        if (integer != null)
-                        {
-                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
-                            {
-                                terms.Last().field.Value -= (uint)integer.Value;
-                                return true;
-                            }
-                        }
-
                         terms.Add(new Term { multiplier = -1.0 });
                         return ProcessValueExpression(mathematic.Right, scope, terms, out result);
 
                     case MathematicOperation.Multiply:
-                        if (integer != null)
-                        {
-                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0)
-                                terms.Last().field.Value *= (uint)integer.Value;
-                            else
-                                terms.Last().multiplier *= integer.Value;
-
-                            return true;
-                        }
-
-                        return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
-
                     case MathematicOperation.Divide:
-                        if (integer != null)
-                        {
-                            if (terms.Last().field.Type == FieldType.Value && terms.Last().multiplier == 1.0 && (terms.Last().field.Value % integer.Value) == 0)
-                                terms.Last().field.Value /= (uint)integer.Value;
-                            else
-                                terms.Last().multiplier /= integer.Value;
-                            return true;
-                        }
-
                         return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
                 }
             }

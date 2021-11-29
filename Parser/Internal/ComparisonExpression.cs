@@ -253,7 +253,7 @@ namespace RATools.Parser.Internal
 
             // ensure the IntegerConstant is the rightmost element of the left side
             mathematic = comparison.Left as MathematicExpression;
-            if (mathematic != null && mathematic.Right is IntegerConstantExpression)
+            if (mathematic != null && mathematic.Right.IsLiteralConstant)
             {
                 newLeft.Left = mathematic.Left;
                 mathematic.Left = newLeft;
@@ -405,38 +405,8 @@ namespace RATools.Parser.Internal
 
         static ExpressionBase AddConstant(ExpressionBase expr, int constant)
         {
-            var integerConstant = expr as IntegerConstantExpression;
-            if (integerConstant != null)
-                return new IntegerConstantExpression(integerConstant.Value + constant);
-
-            var mathematic = expr as MathematicExpression;
-            if (mathematic != null)
-            {
-                integerConstant = mathematic.Right as IntegerConstantExpression;
-                if (integerConstant != null)
-                {
-                    if (mathematic.Operation == MathematicOperation.Add)
-                    {
-                        integerConstant = new IntegerConstantExpression(integerConstant.Value + constant);
-                        return new MathematicExpression(mathematic.Left, MathematicOperation.Add, integerConstant);
-                    }
-                    else if (mathematic.Operation == MathematicOperation.Subtract)
-                    {
-                        if (integerConstant.Value > constant)
-                        {
-                            integerConstant = new IntegerConstantExpression(integerConstant.Value - constant);
-                            return new MathematicExpression(mathematic.Left, MathematicOperation.Subtract, integerConstant);
-                        }
-                        else
-                        {
-                            integerConstant = new IntegerConstantExpression(constant - integerConstant.Value);
-                            return new MathematicExpression(mathematic.Left, MathematicOperation.Add, integerConstant);
-                        }
-                    }
-                }
-            }
-
-            return new MathematicExpression(expr, MathematicOperation.Add, new IntegerConstantExpression(constant));
+            var temp = new MathematicExpression(expr, MathematicOperation.Add, new IntegerConstantExpression(constant));
+            return temp.MergeOperands();
         }
 
         static int ExtractConstant(ref ExpressionBase expr)
@@ -1044,6 +1014,34 @@ namespace RATools.Parser.Internal
 
             error = null;
 
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                ExpressionBase result;
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return null;
+
+                var leftFloat = (FloatConstantExpression)left;
+                var rightFloat = (FloatConstantExpression)right;
+
+                switch (Operation)
+                {
+                    case ComparisonOperation.Equal:
+                        return leftFloat.Value == rightFloat.Value;
+                    case ComparisonOperation.NotEqual:
+                        return leftFloat.Value != rightFloat.Value;
+                    case ComparisonOperation.GreaterThan:
+                        return leftFloat.Value > rightFloat.Value;
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        return leftFloat.Value >= rightFloat.Value;
+                    case ComparisonOperation.LessThan:
+                        return leftFloat.Value < rightFloat.Value;
+                    case ComparisonOperation.LessThanOrEqual:
+                        return leftFloat.Value <= rightFloat.Value;
+                    default:
+                        return null;
+                }
+            }
+
             var integerLeft = left as IntegerConstantExpression;
             if (integerLeft != null)
             {
@@ -1094,7 +1092,7 @@ namespace RATools.Parser.Internal
             {
                 var stringRight = right as StringConstantExpression;
                 if (stringRight == null)
-                    return false;
+                    return null;
 
                 switch (Operation)
                 {

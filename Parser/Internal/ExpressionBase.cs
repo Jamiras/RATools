@@ -83,6 +83,15 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder"/>.
+        /// </summary>
+        /// <remarks>Used for constructing a StringConstantExpression from smaller expressions.</remarks>
+        internal virtual void AppendStringLiteral(StringBuilder builder)
+        {
+            AppendString(builder);
+        }
+
+        /// <summary>
         /// Rebalances this expression based on the precendence of operators.
         /// </summary>
         /// <returns>Rebalanced expression</returns>
@@ -657,12 +666,13 @@ namespace RATools.Parser.Internal
                 case ExpressionType.ParseError:
                     return right;
 
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Conditional: // will be rebalanced
+                case ExpressionType.FloatConstant:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
-                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 
@@ -672,8 +682,7 @@ namespace RATools.Parser.Internal
                         expressionTokenizer.QueueExpression(right);
 
                     right = new KeywordExpression(ComparisonExpression.GetOperatorString(operation), joinerLine, joinerColumn);
-                    ParseError(tokenizer, "incompatible comparison", right);
-                    break;
+                    return ParseError(tokenizer, "Incompatible comparison", right);
             }
 
             return new ComparisonExpression(left, operation, right);
@@ -688,11 +697,11 @@ namespace RATools.Parser.Internal
                 case ExpressionType.ParseError:
                     return right;
 
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Comparison:
                 case ExpressionType.Conditional:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.Variable:
-                case ExpressionType.BooleanConstant:
                     break;
 
                 default:
@@ -701,8 +710,7 @@ namespace RATools.Parser.Internal
                         expressionTokenizer.QueueExpression(right);
 
                     right = new KeywordExpression(ConditionalExpression.GetOperatorString(operation), joinerLine, joinerColumn);
-                    ParseError(tokenizer, "incompatible logical condition", right);
-                    break;
+                    return ParseError(tokenizer, "Incompatible logical condition", right);
             }
 
             return new ConditionalExpression(left, operation, right);
@@ -721,15 +729,16 @@ namespace RATools.Parser.Internal
                     break;
 
                 case ExpressionType.Array:
+                case ExpressionType.BooleanConstant:
                 case ExpressionType.Comparison:
                 case ExpressionType.Conditional:
                 case ExpressionType.Dictionary:
+                case ExpressionType.FloatConstant:
                 case ExpressionType.FunctionCall:
                 case ExpressionType.FunctionDefinition:
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
-                case ExpressionType.BooleanConstant:
                 case ExpressionType.Variable:
                     break;
 
@@ -739,8 +748,7 @@ namespace RATools.Parser.Internal
                         expressionTokenizer.QueueExpression(value);
 
                     value = new KeywordExpression("=", joinerLine, joinerColumn);
-                    ParseError(tokenizer, "incompatible assignment", value);
-                    break;
+                    return ParseError(tokenizer, "Incompatible assignment", value);
             }
 
             return new AssignmentExpression((VariableExpression)variable, value);

@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Text;
@@ -431,6 +432,106 @@ namespace RATools.Test.Parser.Internal
             Assert.That(result.Left, Is.EqualTo(expr.Left));
             Assert.That(result.Operation, Is.EqualTo(expr.Operation));
             Assert.That(result.Right, Is.EqualTo(expr.Right));
+        }
+
+        [Test]
+        [TestCase("0 == 0", true)]
+        [TestCase("0 == 1", false)]
+        [TestCase("byte(0) == 0", null)]
+        [TestCase("0 == 0.0", true)]
+        [TestCase("0 == 1.0", false)]
+        [TestCase("0.0 == 0.0", true)]
+        [TestCase("0.0 == 1.0", false)]
+        [TestCase("0.0 == 0", true)]
+        [TestCase("0.0 == 1", false)]
+        [TestCase("1 == 1", true)]
+        [TestCase("1 != 1", false)]
+        [TestCase("1 < 1", false)]
+        [TestCase("1 <= 1", true)]
+        [TestCase("1 > 1", false)]
+        [TestCase("1 >= 1", true)]
+        [TestCase("1 == 2", false)]
+        [TestCase("1 != 2", true)]
+        [TestCase("1 < 2", true)]
+        [TestCase("1 <= 2", true)]
+        [TestCase("1 > 2", false)]
+        [TestCase("1 >= 2", false)]
+        [TestCase("2 == 1", false)]
+        [TestCase("2 != 1", true)]
+        [TestCase("2 < 1", false)]
+        [TestCase("2 <= 1", false)]
+        [TestCase("2 > 1", true)]
+        [TestCase("2 >= 1", true)]
+        [TestCase("1.2 == 1.2", true)]
+        [TestCase("1.2 != 1.2", false)]
+        [TestCase("1.2 < 1.2", false)]
+        [TestCase("1.2 <= 1.2", true)]
+        [TestCase("1.2 > 1.2", false)]
+        [TestCase("1.2 >= 1.2", true)]
+        [TestCase("1.2 == 1.3", false)]
+        [TestCase("1.2 != 1.3", true)]
+        [TestCase("1.2 < 1.3", true)]
+        [TestCase("1.2 <= 1.3", true)]
+        [TestCase("1.2 > 1.3", false)]
+        [TestCase("1.2 >= 1.3", false)]
+        [TestCase("1.3 == 1.2", false)]
+        [TestCase("1.3 != 1.2", true)]
+        [TestCase("1.3 < 1.2", false)]
+        [TestCase("1.3 <= 1.2", false)]
+        [TestCase("1.3 > 1.2", true)]
+        [TestCase("1.3 >= 1.2", true)]
+        [TestCase("1.2 == 1", false)]
+        [TestCase("1.2 != 1", true)]
+        [TestCase("1.2 < 1", false)]
+        [TestCase("1.2 <= 1", false)]
+        [TestCase("1.2 > 1", true)]
+        [TestCase("1.2 >= 1", true)]
+        [TestCase("true == true", true)]
+        [TestCase("true == false", false)]
+        [TestCase("false == false", true)]
+        [TestCase("false == true", false)]
+        [TestCase("true != true", false)]
+        [TestCase("true != false", true)]
+        [TestCase("false != false", false)]
+        [TestCase("false != true", true)]
+        [TestCase("\"bbb\" == \"bbb\"", true)]
+        [TestCase("\"bbb\" != \"bbb\"", false)]
+        [TestCase("\"bbb\" < \"bbb\"", false)]
+        [TestCase("\"bbb\" <= \"bbb\"", true)]
+        [TestCase("\"bbb\" > \"bbb\"", false)]
+        [TestCase("\"bbb\" >= \"bbb\"", true)]
+        [TestCase("\"bbb\" == \"bba\"", false)]
+        [TestCase("\"bbb\" != \"bba\"", true)]
+        [TestCase("\"bbb\" < \"bba\"", false)]
+        [TestCase("\"bbb\" <= \"bba\"", false)]
+        [TestCase("\"bbb\" > \"bba\"", true)]
+        [TestCase("\"bbb\" >= \"bba\"", true)]
+        [TestCase("\"bba\" == \"bbb\"", false)]
+        [TestCase("\"bba\" != \"bbb\"", true)]
+        [TestCase("\"bba\" < \"bbb\"", true)]
+        [TestCase("\"bba\" <= \"bbb\"", true)]
+        [TestCase("\"bba\" > \"bbb\"", false)]
+        [TestCase("\"bba\" >= \"bbb\"", false)]
+        [TestCase("\"bbb\" == \"bbbb\"", false)]
+        [TestCase("\"bbb\" != \"bbbb\"", true)]
+        [TestCase("\"bbb\" < \"bbbb\"", true)]
+        [TestCase("\"bbb\" <= \"bbbb\"", true)]
+        [TestCase("\"bbb\" > \"bbbb\"", false)]
+        [TestCase("\"bbb\" >= \"bbbb\"", false)]
+        [TestCase("\"bbb\" == 0", null)]
+        [TestCase("\"bbb\" == -2.0", null)]
+        [TestCase("1 == \"bbb\"", null)]
+        [TestCase("2.0 == -2.0", false)]
+        public void TestIsTrue(string input, bool? expected)
+        {
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new RATools.Parser.TriggerBuilderContext();
+            ParseErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.EqualTo(expected));
+            Assert.That(error, Is.Null);
         }
     }
 }
