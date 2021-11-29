@@ -547,6 +547,12 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
         [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
+        [TestCase("once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
+                  "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
+        [TestCase("tally(2, once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301))",
+                  "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301), always_false())")] // always_false() inside once() is optimized out, but a new one must be added for the tally since very subclause has a hit target
+        [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))",
+                  "repeated(2, once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3) || always_false())")] // always_false has to be added since every subclause has a hit target and should not be eliminated
         public void TestOptimize(string input, string expected)
         {
             var achievement = CreateAchievement(input);

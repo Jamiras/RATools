@@ -348,36 +348,68 @@ namespace RATools.Data
         {
             var group = new List<RequirementEx>();
 
-            bool combiningRequirement = false;
+            Requirement combiningRequirement = null;
             foreach (var requirement in requirements)
             {
-                switch (requirement.Type)
+                if (combiningRequirement != null &&
+                    (combiningRequirement.Type == RequirementType.AndNext ||
+                     combiningRequirement.Type == RequirementType.OrNext))
                 {
-                    case RequirementType.AddHits:
-                    case RequirementType.SubHits:
-                        // an always_false() condition will never generate a hit
-                        if (requirement.Evaluate() == false)
-                            continue;
-                        break;
+                    // "A || always_false()" and "A && always_true()" are both just "A",
+                    // but we need to preserve the flag and hit target from the second condition.
+                    bool redundantEvaluation = (combiningRequirement.Type == RequirementType.AndNext);
+                    if (requirement.Evaluate() == redundantEvaluation)
+                    {
+                        if (combiningRequirement.HitCount != 0 && requirement.HitCount != 0)
+                        {
+                            // if both requirements have separate hit targets, we can't combine them
+                        }
+                        else
+                        {
+                            // one of the two conditions has a hit count of zero, so this
+                            // effectively takes whichever isn't zero.
+                            combiningRequirement.HitCount += requirement.HitCount;
 
-                    case RequirementType.AndNext:
-                        // an always_true() condition will not affect the next condition
-                        if (requirement.Evaluate() == true)
-                            continue;
-                        break;
+                            // copy the flag and decide if the condition is still combining
+                            combiningRequirement.Type = requirement.Type;
+                            if (!requirement.IsCombining)
+                                combiningRequirement = null;
 
-                    case RequirementType.OrNext:
-                        // an always_false() condition will not affect the next condition
-                        if (requirement.Evaluate() == false)
                             continue;
-                        break;
+                        }
+                    }
+                }
+                else
+                {
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.AddHits:
+                        case RequirementType.SubHits:
+                            // an always_false() condition will never generate a hit
+                            if (requirement.Evaluate() == false)
+                                continue;
+                            break;
+
+                        case RequirementType.AndNext:
+                            // an always_true() condition will not affect the next condition
+                            if (requirement.Evaluate() == true)
+                                continue;
+                            break;
+
+                        case RequirementType.OrNext:
+                            // an always_false() condition will not affect the next condition
+                            if (requirement.Evaluate() == false)
+                                continue;
+                            break;
+                    }
                 }
 
-                if (!combiningRequirement)
+                if (combiningRequirement == null)
                     group.Add(new RequirementEx());
 
                 group.Last().Requirements.Add(requirement);
-                combiningRequirement = requirement.IsCombining;
+
+                combiningRequirement = requirement.IsCombining ? requirement : null;
             }
 
             return group;
