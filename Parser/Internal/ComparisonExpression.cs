@@ -789,6 +789,118 @@ namespace RATools.Parser.Internal
             return true;
         }
 
+        private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
+        {
+            var funcCall = expression as FunctionCallExpression;
+            if (funcCall != null)
+            {
+                // ASSERT: bcd() has been bubbled up by PrevPriorFunction.ReplaceVariables
+                if (funcCall.FunctionName.Name == "bcd")
+                {
+                    newExpression = funcCall.Parameters.FirstOrDefault();
+                    if (newExpression != null)
+                        return true;
+                }
+            }
+
+            newExpression = expression;
+            return false;
+        }
+
+        private static bool ConvertToBCD(ExpressionBase expression, out ExpressionBase newExpression)
+        {
+            var integerExpression = expression as IntegerConstantExpression;
+            if (integerExpression != null)
+            {
+                int newValue = 0;
+                int modifier = 0;
+                int value = integerExpression.Value;
+                while (value > 0)
+                {
+                    newValue |= (value % 10) << modifier;
+                    modifier += 4;
+                    value /= 10;
+                }
+
+                // modifier > 32 means the value can't be encoded in a 32-bit BCD value
+                if (modifier > 32)
+                {
+                    newExpression = null;
+                    return false;
+                }
+
+                newExpression = new IntegerConstantExpression(newValue);
+                integerExpression.CopyLocation(newExpression);
+                return true;
+            }
+
+            newExpression = expression;
+            return false;
+        }
+
+        private static bool NormalizeBCD(ComparisonExpression comparison, out ExpressionBase result)
+        {
+            ExpressionBase newLeft;
+            ExpressionBase newRight;
+            bool leftHasBCD = ExtractBCD(comparison.Left, out newLeft);
+            bool rightHasBCD = ExtractBCD(comparison.Right, out newRight);
+
+            if (leftHasBCD || rightHasBCD)
+            {
+                if (!rightHasBCD)
+                {
+                    rightHasBCD = ConvertToBCD(comparison.Right, out newRight);
+                    if (newRight == null)
+                    {
+                        // right value cannot be decoded into 32-bits
+                        switch (comparison.Operation)
+                        {
+                            case ComparisonOperation.NotEqual:
+                            case ComparisonOperation.LessThan:
+                            case ComparisonOperation.LessThanOrEqual:
+                                result = new BooleanConstantExpression(true);
+                                return false;
+
+                            default:
+                                result = new BooleanConstantExpression(false);
+                                return false;
+                        }
+                    }
+                }
+                else if (!leftHasBCD)
+                {
+                    leftHasBCD = ConvertToBCD(comparison.Right, out newLeft);
+                    if (newLeft == null)
+                    {
+                        // left value cannot be decoded into 32-bits
+                        switch (comparison.Operation)
+                        {
+                            case ComparisonOperation.NotEqual:
+                            case ComparisonOperation.GreaterThan:
+                            case ComparisonOperation.GreaterThanOrEqual:
+                                result = new BooleanConstantExpression(true);
+                                return false;
+
+                            default:
+                                result = new BooleanConstantExpression(false);
+                                return false;
+                        }
+                    }
+                }
+
+                if (leftHasBCD && rightHasBCD)
+                {
+                    var newComparison = new ComparisonExpression(newLeft, comparison.Operation, newRight);
+                    comparison.CopyLocation(newComparison);
+                    result = newComparison;
+                    return true;
+                }
+            }
+
+            result = comparison;
+            return true;
+        }
+
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
@@ -845,6 +957,14 @@ namespace RATools.Parser.Internal
             {
                 CopyLocation(result);
                 return false;
+            }
+            comparison = (ComparisonExpression)result;
+
+            // remove bcd() from both sides (if possible)
+            if (!NormalizeBCD(comparison, out result))
+            {
+                CopyLocation(result);
+                return (result.Type == ExpressionType.BooleanConstant);
             }
             comparison = (ComparisonExpression)result;
 

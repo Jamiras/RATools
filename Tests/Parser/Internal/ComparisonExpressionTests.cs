@@ -75,17 +75,18 @@ namespace RATools.Test.Parser.Internal
         [TestCase("byte(1) - prev(byte(1)) == 3", "byte(1) - prev(byte(1)) == 3")] // value increases by 3
         [TestCase("0 + byte(1) + 0 == 9", "byte(1) == 9")] // 0s should be removed without reordering
         [TestCase("0 + byte(1) - 9 == 0", "byte(1) == 9")] // 9 should be moved to right hand side, then 0s removed
+        [TestCase("bcd(byte(1)) == 24", "byte(1) == 36")] // bcd should be factored out
+        [TestCase("byte(1) != bcd(byte(2))", "byte(1) != bcd(byte(2))")] // bcd cannot be factored out
+        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", "byte(1) != prev(byte(1))")] // bcd should be factored out
         public void TestReplaceVariables(string input, string expected)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
 
-            var scope = new InterpreterScope();
+            var scope = new InterpreterScope(RATools.Parser.AchievementScriptInterpreter.GetGlobalScope());
             scope.Context = new RATools.Parser.TriggerBuilderContext();
             scope.AssignVariable(new VariableExpression("variable1"), new IntegerConstantExpression(98));
             scope.AssignVariable(new VariableExpression("variable2"), new IntegerConstantExpression(99));
-            scope.AddFunction(new MemoryAccessorFunction("byte", RATools.Data.FieldSize.Byte));
-            scope.AddFunction(new PrevPriorFunction("prev", Data.FieldType.PreviousValue));
 
             ExpressionBase result;
             if (!expr.ReplaceVariables(scope, out result))
