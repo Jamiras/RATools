@@ -351,6 +351,8 @@ namespace RATools.Parser
                         case FieldSize.BigEndianWord:
                         case FieldSize.BigEndianTByte:
                         case FieldSize.BigEndianDWord:
+                        case FieldSize.Float:
+                        case FieldSize.MBF32:
                             // 0.80 TBD
                             if (minVer < 80)
                                 minVer = 80;

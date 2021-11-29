@@ -32,9 +32,20 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234, "bcd(byte(0x001234))")]
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "byte(0x123456)")]
+        [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "float(0x123456)")]
+        [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "mbf32(0x123456)")]
         public void TestToString(FieldSize fieldSize, FieldType fieldType, int value, string expected)
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
+            Assert.That(field.ToString(), Is.EqualTo(expected));
+        }
+
+        [TestCase(FieldSize.Float, FieldType.Float, 2.0, "2.0")]
+        [TestCase(FieldSize.Float, FieldType.Float, 3.14, "3.14")]
+        [TestCase(FieldSize.Float, FieldType.Float, -6.12345, "-6.12345")]
+        public void TestToString(FieldSize fieldSize, FieldType fieldType, double value, string expected)
+        {
+            var field = new Field { Size = fieldSize, Type = fieldType, Float = (float)value };
             Assert.That(field.ToString(), Is.EqualTo(expected));
         }
 
@@ -103,6 +114,9 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234, "b0xH001234")]
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "0xH123456")]
+        [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "fF123456")]
+        [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "fM123456")]
+        [TestCase(FieldSize.MBF32, FieldType.PreviousValue, 0x123456, "dfM123456")]
         public void TestSerialize(FieldSize fieldSize, FieldType fieldType, int value, string expected)
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
@@ -132,6 +146,9 @@ namespace RATools.Tests.Data
         [TestCase("4660", FieldSize.None, FieldType.Value, 0x1234)]
         [TestCase("h4660", FieldSize.None, FieldType.Value, 0x4660)]
         [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456)]
+        [TestCase("fF123456", FieldSize.Float, FieldType.MemoryAddress, 0x123456)]
+        [TestCase("fM123456", FieldSize.MBF32, FieldType.MemoryAddress, 0x123456)]
+        [TestCase("dfM123456", FieldSize.MBF32, FieldType.PreviousValue, 0x123456)]
         public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, int value)
         {
             var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
@@ -139,6 +156,18 @@ namespace RATools.Tests.Data
             Assert.That(field.Size, Is.EqualTo(fieldSize));
             Assert.That(field.Type, Is.EqualTo(fieldType));
             Assert.That(field.Value, Is.EqualTo(value));
+        }
+
+        [TestCase("f2.0", FieldSize.None, FieldType.Float, 2.0)]
+        [TestCase("f3.14", FieldSize.None, FieldType.Float, 3.14)]
+        [TestCase("f-6.12345", FieldSize.None, FieldType.Float, -6.12345)]
+        public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, double value)
+        {
+            var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
+            Assert.That(field, Is.Not.Null);
+            Assert.That(field.Size, Is.EqualTo(fieldSize));
+            Assert.That(field.Type, Is.EqualTo(fieldType));
+            Assert.That(field.Float, Is.EqualTo((float)value));
         }
 
         [Test]
@@ -206,6 +235,22 @@ namespace RATools.Tests.Data
             Assert.That(field1, Is.EqualTo(field2));
             Assert.That(field1 == field2);
             Assert.That(field1.Equals(field2));
+        }
+
+        [Test]
+        public void TestEqualsFloat()
+        {
+            var field1 = new Field { Size = FieldSize.Float, Type = FieldType.Float, Float = 3.14f };
+            var field2 = new Field { Size = FieldSize.Float, Type = FieldType.Float, Float = 3.14f };
+            var field3 = new Field { Size = FieldSize.Float, Type = FieldType.Float, Float = 2.0f };
+
+            Assert.That(field1, Is.EqualTo(field2));
+            Assert.That(field1 == field2);
+            Assert.That(field1.Equals(field2));
+
+            Assert.That(field1, Is.Not.EqualTo(field3));
+            Assert.That(field1 != field3);
+            Assert.That(!field1.Equals(field3));
         }
     }
 }
