@@ -486,7 +486,7 @@ namespace RATools.ViewModels
             var game = vm.Game;
             if (game != null)
             {
-                foreach (var achievement in game.Editors)
+                foreach (var achievement in game.Editors.OfType<AssetViewModelBase>())
                     achievement.OnShowHexValuesChanged(e);
             }
         }

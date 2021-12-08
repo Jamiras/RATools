@@ -56,7 +56,7 @@
                         </Hyperlink>
                     </TextBlock>
                 </StackPanel>
-                
+
                 <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
                               Template="{StaticResource themedScrollViewerTemplate}">
                     <ItemsControl ItemsSource="{Binding Groups}">

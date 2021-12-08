@@ -12,6 +12,7 @@ namespace RATools.ViewModels
     public class RichPresenceViewModel : GeneratedItemViewModelBase
     {
         public RichPresenceViewModel(GameViewModel owner, string richPresence)
+            : base(owner)
         {
             Title = "Rich Presence";
 
@@ -232,11 +233,6 @@ namespace RATools.ViewModels
         private readonly string _richFile;
         private bool _hasGenerated;
         private bool _hasLocal;
-
-        public override bool IsGenerated
-        {
-            get { return _hasGenerated; }
-        }
 
         public int SourceLine { get; set; }
 

@@ -88,12 +88,15 @@ namespace RATools.ViewModels
 
                 foreach (var achievement in interpreter.Achievements)
                 {
-                    var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
+                    var achievementViewModel = new AchievementViewModel(this, achievement);
                     editors.Add(achievementViewModel);
                 }
 
                 foreach (var leaderboard in interpreter.Leaderboards)
-                    editors.Add(new LeaderboardViewModel(this, leaderboard));
+                {
+                    var leaderboardViewModel = new LeaderboardViewModel(this, leaderboard);
+                    editors.Add(leaderboardViewModel);
+                }
             }
             else
             {
@@ -115,40 +118,21 @@ namespace RATools.ViewModels
         {
             // find the maximum temporary id already assigned
             int nextLocalId = 111000001;
-            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
             {
-                if (achievement.Local != null && achievement.Local.Id >= nextLocalId)
-                    nextLocalId = achievement.Local.Id + 1;
-                else if (achievement.Generated != null && achievement.Generated.Id >= nextLocalId)
-                    nextLocalId = achievement.Generated.Id + 1;
+                var id = assetViewModel.Local.Id;
+                if (id == 0)
+                    id = assetViewModel.Generated.Id;
+                if (id >= nextLocalId)
+                    nextLocalId = id + 1;
             }
 
-            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
             {
-                // don't attempt to assign a temporary ID to a published achievement
-                if (achievement.Published == null || achievement.Published.Achievement == null)
-                {
-                    if (achievement.Local != null && achievement.Local.Achievement != null)
-                    {
-                        // if it's in the local file, generate a temporary ID if one was not previously generated
-                        if (achievement.Local.Achievement.Id == 0)
-                        {
-                            achievement.Local.Achievement.Id = nextLocalId++;
-                            achievement.Local.LoadAchievement(achievement.Local.Achievement); // refresh the viewmodel's ID property
-                        }
-                    }
-                    else if (achievement.Generated != null && achievement.Generated.Achievement != null)
-                    {
-                        // if it's not in the local file, generate a temporary ID if one was not provided by the code
-                        if (achievement.Generated.Achievement.Id == 0)
-                        {
-                            achievement.Generated.Achievement.Id = nextLocalId++;
-                            achievement.Generated.LoadAchievement(achievement.Generated.Achievement); // refresh the viewmodel's ID property
-                        }
-                    }
-                }
+                if (assetViewModel.AllocateLocalId(nextLocalId))
+                    nextLocalId++;
 
-                achievement.UpdateCommonProperties(this);
+                assetViewModel.Refresh();
             }
         }
 
@@ -392,18 +376,18 @@ namespace RATools.ViewModels
         {
             foreach (var publishedAchievement in _publishedAchievements)
             {
-                var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => a.Generated.Id == publishedAchievement.Id);
+                var achievement = achievements.OfType<AchievementViewModel>().FirstOrDefault(a => a.Generated.Id == publishedAchievement.Id);
                 if (achievement == null)
                 {
-                    achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
+                    achievement = achievements.OfType<AchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
                     if (achievement == null)
                     {
-                        achievement = new GeneratedAchievementViewModel(this, null);
+                        achievement = new AchievementViewModel(this, null);
                         achievements.Add(achievement);
                     }
                 }
 
-                achievement.Published.LoadAchievement(publishedAchievement);
+                achievement.Published.Asset = publishedAchievement;
             }
         }
 
@@ -411,7 +395,7 @@ namespace RATools.ViewModels
         {
             var localAchievements = new List<Achievement>(_localAchievements.Achievements);
 
-            foreach (var achievement in achievements.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in achievements.OfType<AchievementViewModel>())
             {
                 Achievement localAchievement = null;
                 if (achievement.Id > 0)
@@ -435,13 +419,13 @@ namespace RATools.ViewModels
 
                 localAchievements.Remove(localAchievement);
 
-                achievement.Local.LoadAchievement(localAchievement);
+                achievement.Local.Asset = localAchievement;
             }
 
             foreach (var localAchievement in localAchievements)
             {
-                var vm = new GeneratedAchievementViewModel(this, null);
-                vm.Local.LoadAchievement(localAchievement);
+                var vm = new AchievementViewModel(this, null);
+                vm.Local.Asset = localAchievement;
                 achievements.Add(vm);
             }
 

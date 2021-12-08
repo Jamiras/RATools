@@ -9,11 +9,18 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Title}")]
     public abstract class GeneratedItemViewModelBase : ViewModelBase
     {
-        public static readonly ModelProperty IdProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "Id", typeof(int), 0);
-        public int Id
+        public GeneratedItemViewModelBase(GameViewModel owner)
         {
-            get { return (int)GetValue(IdProperty); }
-            protected set { SetValue(IdProperty, value); }
+            _owner = owner;
+        }
+
+        protected readonly GameViewModel _owner;
+
+        public CommandBase UpdateLocalCommand { get; protected set; }
+
+        internal string RACacheDirectory
+        {
+            get { return _owner.RACacheDirectory; }
         }
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "Title", typeof(string), String.Empty);
@@ -30,14 +37,19 @@ namespace RATools.ViewModels
             protected set { SetValue(DescriptionProperty, value); }
         }
 
-        public static readonly ModelProperty PointsProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "Points", typeof(int), 0);
-        public int Points
+        public static readonly ModelProperty IsTitleModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsTitleModified", typeof(bool), false);
+        public bool IsTitleModified
         {
-            get { return (int)GetValue(PointsProperty); }
-            protected set { SetValue(PointsProperty, value); }
+            get { return (bool)GetValue(IsTitleModifiedProperty); }
+            protected set { SetValue(IsTitleModifiedProperty, value); }
         }
 
-        public virtual bool IsGenerated { get { return false; } }
+        public static readonly ModelProperty IsDescriptionModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsDescriptionModified", typeof(bool), false);
+        public bool IsDescriptionModified
+        {
+            get { return (bool)GetValue(IsDescriptionModifiedProperty); }
+            protected set { SetValue(IsDescriptionModifiedProperty, value); }
+        }
 
         public static readonly ModelProperty ModificationMessageProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "ModificationMessage", typeof(string), null);
         public string ModificationMessage
@@ -59,10 +71,6 @@ namespace RATools.ViewModels
             get { return (bool)GetValue(CanUpdateProperty); }
             protected set { SetValue(CanUpdateProperty, value); }
         }
-
-        public CommandBase UpdateLocalCommand { get; protected set; }
-
-        internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e) { }
     }
 
     public enum ModifiedState

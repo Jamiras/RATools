@@ -122,14 +122,14 @@ namespace RATools.ViewModels
             MemoryAddresses.Rows.Clear();
 
             var unofficialAchievements = new List<DumpAchievementItem>();
-            foreach (var achievement in _game.Editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
             {
-                AchievementViewModel source = achievement.Published;
-                if (source.Achievement == null)
+                var publishedAchievement = achievement.Published.Asset as Achievement;
+                if (publishedAchievement == null)
                     continue;
 
-                var dumpAchievement = new DumpAchievementItem(achievement.Id, source.Title.Text);
-                if (achievement.Published.Achievement == null)
+                var dumpAchievement = new DumpAchievementItem(achievement.Id, publishedAchievement.Title);
+                if (publishedAchievement.IsUnofficial)
                 {
                     dumpAchievement.IsUnofficial = true;
                     unofficialAchievements.Add(dumpAchievement);
@@ -139,7 +139,7 @@ namespace RATools.ViewModels
                     _achievements.Add(dumpAchievement);
                 }
 
-                foreach (var group in source.RequirementGroups)
+                foreach (var group in achievement.Published.RequirementGroups)
                 {
                     foreach (var requirement in group.Requirements)
                     {
@@ -875,8 +875,8 @@ namespace RATools.ViewModels
 
                 foreach (var dumpAchievement in _achievements.Where(a => a.IsSelected && !a.IsLookup && !a.IsRichPresence))
                 {
-                    var achievement = _game.Editors.FirstOrDefault(a => a.Id == dumpAchievement.Id) as GeneratedAchievementViewModel;
-                    if (achievement == null)
+                    var achievementViewModel = _game.Editors.OfType<AchievementViewModel>().FirstOrDefault(a => a.Id == dumpAchievement.Id);
+                    if (achievementViewModel == null)
                         continue;
 
                     stream.WriteLine();
@@ -938,8 +938,7 @@ namespace RATools.ViewModels
 
                     stream.WriteLine("achievement(");
 
-                    var achievementViewModel = achievement.Published;
-                    var achievementData = achievementViewModel.Achievement;
+                    var achievementData = achievementViewModel.Published.Asset as Achievement;
 
                     stream.Write("    title = \"");
                     stream.Write(EscapeString(achievementData.Title));
@@ -962,7 +961,7 @@ namespace RATools.ViewModels
                     stream.Write("    trigger = ");
                     const int indent = 14; // "    trigger = ".length
 
-                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel, indent);
+                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published, indent);
                     stream.WriteLine();
 
                     stream.WriteLine(")");
@@ -1017,8 +1016,8 @@ namespace RATools.ViewModels
                         var achievement = new AchievementBuilder();
                         achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
 
-                        var vmAchievement = new AchievementViewModel(_game, "RichPresence");
-                        vmAchievement.LoadAchievement(achievement.ToAchievement());
+                        var vmAchievement = new AssetSourceViewModel(null, "RichPresence");
+                        vmAchievement.Asset = achievement.ToAchievement();
 
                         stream.Write("rich_presence_conditional_display(");
                         DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 4);
@@ -1091,8 +1090,8 @@ namespace RATools.ViewModels
                         if (achievement.CoreRequirements.Count > 0 && achievement.CoreRequirements.Last().Type == RequirementType.Measured)
                             achievement.CoreRequirements.Last().Type = RequirementType.None;
 
-                        var vmAchievement = new AchievementViewModel(_game, "Rich Presence");
-                        vmAchievement.LoadAchievement(achievement.ToAchievement());
+                        var vmAchievement = new AssetSourceViewModel(null, "Rich Presence");
+                        vmAchievement.Asset = achievement.ToAchievement();
 
                         DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 32);
                     }
@@ -1242,7 +1241,7 @@ namespace RATools.ViewModels
             stream.Write(builder.ToString());
         }
 
-        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, AchievementViewModel achievementViewModel, int indent)
+        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, AssetSourceViewModel achievementViewModel, int indent)
         {
             var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
             groupEnumerator.MoveNext();

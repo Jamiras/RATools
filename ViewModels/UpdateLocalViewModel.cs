@@ -17,9 +17,9 @@ namespace RATools.ViewModels
             _achievements = new ObservableCollection<UpdateAchievementViewModel>();
             DialogTitle = "Update Local - " + game.Title;
 
-            foreach (var achievement in game.Editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var achievement in game.Editors.OfType<AchievementViewModel>())
             {
-                if (achievement.IsGenerated || achievement.Local.Achievement != null)
+                if (achievement.IsGenerated || achievement.Local.Asset != null)
                     _achievements.Add(new UpdateAchievementViewModel(achievement));
             }
         }
@@ -121,7 +121,7 @@ namespace RATools.ViewModels
             /// <summary>
             /// Initializes a new instance of the <see cref="UpdateAchievementViewModel"/> class.
             /// </summary>
-            public UpdateAchievementViewModel(GeneratedAchievementViewModel achievement)
+            public UpdateAchievementViewModel(AchievementViewModel achievement)
             {
                 Achievement = achievement;
 
@@ -129,7 +129,7 @@ namespace RATools.ViewModels
                     IsUpdated = false;
             }
 
-            internal GeneratedAchievementViewModel Achievement { get; private set; }
+            internal AchievementViewModel Achievement { get; private set; }
 
             public string Title
             {
@@ -143,7 +143,7 @@ namespace RATools.ViewModels
 
             public bool CanDelete
             {
-                get { return Achievement.Local.Achievement != null; }
+                get { return Achievement.Local.Asset != null; }
             }
 
             public static readonly ModelProperty IsUpdatedProperty = ModelProperty.Register(typeof(UpdateLocalViewModel), "IsUpdated", typeof(bool), true, OnIsUpdatedChanged);

@@ -1,11 +1,15 @@
 ﻿//#define DEBUG_RECORDING
 //#define DEBUG_PLAYBACK
 
+using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
+using RATools.Data;
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -26,11 +30,11 @@ namespace RATools.ViewModels
         }
 
         protected ScriptViewModel()
+            : base(null)
         {
             Title = "Script";
+            UpdateLocalCommand = DisabledCommand.Instance;
         }
-
-        public override bool IsGenerated { get { return true; } }
 
         public EditorViewModel Editor { get; private set; }
 

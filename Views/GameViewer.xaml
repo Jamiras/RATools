@@ -65,7 +65,7 @@
             <!-- Image -->
             <ContentPresenter Grid.Column="1" Content="{Binding}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,-1,0,-1">
                 <ContentPresenter.Resources>
-                    <DataTemplate DataType="{x:Type vm:GeneratedAchievementViewModel}">
+                    <DataTemplate DataType="{x:Type vm:AchievementViewModel}">
                         <Image Width="12" Height="12" Source="/RATools;component/Resources/achievement.png" ToolTip="Achievement" />
                     </DataTemplate>
                     <DataTemplate DataType="{x:Type vm:LeaderboardViewModel}">

@@ -96,6 +96,7 @@
     </ApplicationDefinition>
     <Compile Include="Data\Achievement.cs" />
     <Compile Include="Data\Field.cs" />
+    <Compile Include="Data\AssetBase.cs" />
     <Compile Include="Data\Leaderboard.cs" />
     <Compile Include="Data\Requirement.cs" />
     <Compile Include="Data\RequirementEx.cs" />
@@ -145,9 +146,12 @@
     <Compile Include="Services\Settings.cs" />
     <Compile Include="Services\Theme.cs" />
     <Compile Include="ViewModels\AboutDialogViewModel.cs" />
+    <Compile Include="ViewModels\AssetSourceViewModel.cs" />
     <Compile Include="ViewModels\ConditionsAnalyzerViewModel.cs" />
     <Compile Include="ViewModels\EditorViewModel.cs" />
     <Compile Include="ViewModels\GameDataSnapshotViewModel.cs" />
+    <Compile Include="ViewModels\LeaderboardViewModel.cs" />
+    <Compile Include="ViewModels\AssetViewModelBase.cs" />
     <Compile Include="ViewModels\MasteryViewModel.cs" />
     <Compile Include="ViewModels\NewScriptDialogViewModel.cs" />
     <Compile Include="ViewModels\OptionsDialogViewModel.cs" />
@@ -204,11 +208,9 @@
     <Compile Include="Parser\LocalAchievements.cs" />
     <Compile Include="ViewModels\GeneratedItemViewModelBase.cs" />
     <Compile Include="ViewModels\RequirementComparisonViewModel.cs" />
-    <Compile Include="ViewModels\GeneratedAchievementViewModel.cs" />
     <Compile Include="ViewModels\AchievementViewModel.cs" />
     <Compile Include="ViewModels\OpenTicketsViewModel.cs" />
     <Compile Include="ViewModels\GameStatsViewModel.cs" />
-    <Compile Include="ViewModels\LeaderboardViewModel.cs" />
     <Compile Include="ViewModels\GameViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
