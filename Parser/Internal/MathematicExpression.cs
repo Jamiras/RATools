@@ -152,7 +152,12 @@ namespace RATools.Parser.Internal
                 return false;
             }
 
-            return MergeOperands(left, right, out result);
+            bool mergeResult = MergeOperands(left, Operation, right, out result);
+
+            if (result.Location.IsEmpty)
+                CopyLocation(result);
+
+            return mergeResult;
         }
 
         /// <summary>
@@ -161,302 +166,526 @@ namespace RATools.Parser.Internal
         internal ExpressionBase MergeOperands()
         {
             ExpressionBase result;
-            MergeOperands(Left, Right, out result);
+            var left = Left;
+            var right = Right;
+
+            var mathematicLeft = left as MathematicExpression;
+            if (mathematicLeft != null)
+            {
+                left = mathematicLeft.MergeOperands();
+                if (left.Type == ExpressionType.ParseError)
+                    return left;
+            }
+
+            var mathematicRight = right as MathematicExpression;
+            if (mathematicRight != null)
+            {
+                right = mathematicRight.MergeOperands();
+                if (right.Type == ExpressionType.ParseError)
+                    return right;
+            }
+
+            MergeOperands(Left, Operation, Right, out result);
+            CopyLocation(result);
             return result;
         }
 
-        private bool MergeOperands(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        { 
-            var integerLeft = left as IntegerConstantExpression;
-            var integerRight = right as IntegerConstantExpression;
+        private static bool MergeOperands(ExpressionBase left, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
+        {
+            // ASSERT: expression tree has already been rebalanced and variables have been replaced
 
-            switch (Operation)
+            if (!left.IsLiteralConstant)
             {
-                case MathematicOperation.Add:
-                    var stringLeft = left as StringConstantExpression;
-                    var stringRight = right as StringConstantExpression;
-                    if (stringLeft != null)
-                    {
-                        if (stringRight != null)
-                        {
-                            result = new StringConstantExpression(stringLeft.Value + stringRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
+                // cannot combine non-constant, leave as is.
+                if (right.IsLiteralConstant)
+                {
+                    // attempt to merge the right constant into the left mathematic expression
+                    var mathematicLeft = left as MathematicExpression;
+                    if (mathematicLeft != null && MergeNonConstantMathematic(mathematicLeft, operation, right, out result))
+                        return true;
 
-                        if (integerRight != null)
-                        {
-                            result = new StringConstantExpression(stringLeft.Value + integerRight.Value.ToString());
-                            CopyLocation(result);
-                            return true;
-                        }
-                    }
-                    else if (stringRight != null)
-                    {
-                        if (integerLeft != null)
-                        {
-                            result = new StringConstantExpression(integerLeft.Value.ToString() + stringRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
-                    }
+                    // attempt to eliminate the right constant
+                    if (MergeIdentity(left, operation, right, out result))
+                        return true;
 
-                    // prefer constants on right
-                    if (integerLeft != null && integerRight == null)
-                    {
+                    if (result is ParseErrorExpression)
+                        return false;
+                }
+            }
+            else if (!right.IsLiteralConstant)
+            {
+                // cannot combine non-constant. when possible, prefer constants on the right.
+                switch (operation)
+                {
+                    case MathematicOperation.Add:
+                    case MathematicOperation.Multiply:
+                        if (MergeIdentity(right, operation, left, out result))
+                            return true;
+
+                        if (result is ParseErrorExpression)
+                            return false;
+
                         var temp = left;
                         left = right;
                         right = temp;
-                        integerRight = integerLeft;
-                        integerLeft = null;
-                    }
+                        break;
 
-                    if (integerRight != null)
+                    default:
+                        // cannot swap
+                        break;
+                }
+            }
+            else
+            {
+                switch (operation)
+                {
+                    case MathematicOperation.Add:
+                        return MergeAddition(left, right, out result);
+
+                    case MathematicOperation.Subtract:
+                        return MergeSubtraction(left, right, out result);
+
+                    case MathematicOperation.Multiply:
+                        return MergeMultiplication(left, right, out result);
+
+                    case MathematicOperation.Divide:
+                        return MergeDivision(left, right, out result);
+
+                    case MathematicOperation.Modulus:
+                        return MergeModulus(left, right, out result);
+                }
+            }
+
+            result = new MathematicExpression(left, operation, right);
+            return true;
+        }
+
+        private static bool MergeAddition(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            // if either side is a string, combine to a larger string
+            if (left.Type == ExpressionType.StringConstant || right.Type == ExpressionType.StringConstant)
+            {
+                var builder = new StringBuilder();
+                left.AppendStringLiteral(builder);
+                right.AppendStringLiteral(builder);
+
+                result = new StringConstantExpression(builder.ToString());
+                return true;
+            }
+
+            // if either side is a float, convert both to float
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return false;
+
+                result = new FloatConstantExpression(((FloatConstantExpression)left).Value + ((FloatConstantExpression)right).Value);
+                return true;
+            }
+
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value + ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot add expressions");
+            return false;
+        }
+
+        private static bool MergeSubtraction(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            // if either side is a float, convert both to float
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return false;
+
+                result = new FloatConstantExpression(((FloatConstantExpression)left).Value - ((FloatConstantExpression)right).Value);
+                return true;
+            }
+
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value - ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot subtract expressions");
+            return false;
+        }
+
+        private static bool MergeMultiplication(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            // if either side is a float, convert both to float
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return false;
+
+                result = new FloatConstantExpression(((FloatConstantExpression)left).Value * ((FloatConstantExpression)right).Value);
+                return true;
+            }
+
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value * ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot multiply expressions");
+            return false;
+        }
+
+        private static bool MergeDivision(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            // if either side is a float, convert both to float
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return false;
+
+                if (((FloatConstantExpression)right).Value == 0.0)
+                {
+                    result = new ParseErrorExpression("Division by zero");
+                    return false;
+                }
+
+                result = new FloatConstantExpression(((FloatConstantExpression)left).Value / ((FloatConstantExpression)right).Value);
+                return true;
+            }
+
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                if (((IntegerConstantExpression)right).Value == 0.0)
+                {
+                    result = new ParseErrorExpression("Division by zero");
+                    return false;
+                }
+
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value / ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot divide expressions");
+            return false;
+        }
+
+        private static bool MergeModulus(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            // if either side is a float, convert both to float
+            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            {
+                if (!ConvertToFloat(ref left, ref right, out result))
+                    return false;
+
+                if (((FloatConstantExpression)right).Value == 0.0)
+                {
+                    result = new ParseErrorExpression("Division by zero");
+                    return false;
+                }
+
+                result = new FloatConstantExpression(((FloatConstantExpression)left).Value % ((FloatConstantExpression)right).Value);
+                return true;
+            }
+
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                if (((IntegerConstantExpression)right).Value == 0.0)
+                {
+                    result = new ParseErrorExpression("Division by zero");
+                    return false;
+                }
+
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value % ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot modulus expressions");
+            return false;
+        }
+
+        private static bool MergeNonConstantMathematic(MathematicExpression mathematicLeft, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
+        {
+            var left = mathematicLeft.Right;
+            result = null;
+
+            var newLeft = mathematicLeft.Left;
+            var newOperation = mathematicLeft.Operation;
+            ExpressionBase newRight;
+
+            switch (mathematicLeft.Operation)
+            {
+                case MathematicOperation.Add:
+                    if (operation == MathematicOperation.Add)
                     {
-                        if (integerRight.Value == 0) // anything plus 0 is itself
+                        // (a + 3) + 2 => a + (3 + 2)
+                        if (!MergeAddition(left, right, out newRight))
                         {
-                            result = left;
-                            return true;
+                            result = newRight;
+                            return false;
                         }
-
-                        if (integerLeft != null)
+                    }
+                    else if (operation == MathematicOperation.Subtract)
+                    {
+                        if (IsGreater(left, right))
                         {
-                            result = new IntegerConstantExpression(integerLeft.Value + integerRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
-
-                        var mathematicLeft = left as MathematicExpression;
-                        if (mathematicLeft != null)
-                        {
-                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
-                            if (integerLeft != null)
+                            // (a + 3) - 2 => a + (3 - 2)
+                            if (!MergeSubtraction(left, right, out newRight))
                             {
-                                if (mathematicLeft.Operation == MathematicOperation.Add)
-                                {
-                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add, 
-                                        new IntegerConstantExpression(integerLeft.Value + integerRight.Value));
-                                    CopyLocation(result);
-                                    return true;
-                                }
-
-                                if (mathematicLeft.Operation == MathematicOperation.Subtract)
-                                {
-                                    if (integerLeft.Value == integerRight.Value)
-                                    {
-                                        result = mathematicLeft.Left;
-                                        return true;
-                                    }
-
-                                    if (integerLeft.Value > integerRight.Value)
-                                    {
-                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
-                                            new IntegerConstantExpression(integerLeft.Value - integerRight.Value));
-                                    }
-                                    else
-                                    {
-                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add,
-                                            new IntegerConstantExpression(integerRight.Value - integerLeft.Value));
-                                    }
-
-                                    CopyLocation(result);
-                                    return true;
-                                }
+                                result = newRight;
+                                return false;
                             }
                         }
+                        else
+                        {
+                            // (a + 2) - 3 => a - (3 - 2)
+                            if (!MergeSubtraction(right, left, out newRight))
+                            {
+                                result = newRight;
+                                return false;
+                            }
+
+                            newOperation = MathematicOperation.Subtract;
+                        }
+                    }
+                    else
+                    {
+                        return false;
                     }
                     break;
 
                 case MathematicOperation.Subtract:
-                    if (integerRight != null)
+                    if (operation == MathematicOperation.Add)
                     {
-                        if (integerRight.Value == 0) // anything minus 0 is itself
+                        if (IsGreater(left, right))
                         {
-                            result = left;
-                            return true;
-                        }
-
-                        if (integerLeft != null)
-                        {
-                            result = new IntegerConstantExpression(integerLeft.Value - integerRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
-
-                        var mathematicLeft = left as MathematicExpression;
-                        if (mathematicLeft != null)
-                        {
-                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
-                            if (integerLeft != null)
+                            // (a - 3) + 2 => a - (3 - 2)
+                            if (!MergeSubtraction(left, right, out newRight))
                             {
-                                if (mathematicLeft.Operation == MathematicOperation.Subtract)
-                                {
-                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
-                                        new IntegerConstantExpression(integerLeft.Value + integerRight.Value));
-                                    CopyLocation(result);
-                                    return true;
-                                }
-
-                                if (mathematicLeft.Operation == MathematicOperation.Add)
-                                {
-                                    if (integerLeft.Value == integerRight.Value)
-                                    {
-                                        result = mathematicLeft.Left;
-                                        return true;
-                                    }
-
-                                    if (integerLeft.Value > integerRight.Value)
-                                    {
-                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add,
-                                            new IntegerConstantExpression(integerLeft.Value - integerRight.Value));
-                                    }
-                                    else
-                                    {
-                                        result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Subtract,
-                                            new IntegerConstantExpression(integerRight.Value - integerLeft.Value));
-                                    }
-
-                                    CopyLocation(result);
-                                    return true;
-                                }
+                                result = newRight;
+                                return false;
                             }
                         }
+                        else
+                        {
+                            // (a - 2) + 3 => a + (3 - 2)
+                            if (!MergeSubtraction(right, left, out newRight))
+                            {
+                                result = newRight;
+                                return false;
+                            }
+
+                            newOperation = MathematicOperation.Add;
+                        }
+                    }
+                    else if (operation == MathematicOperation.Subtract)
+                    {
+                        // (a - 3) - 2 => a - (3 + 2)
+                        if (!MergeAddition(left, right, out newRight))
+                        {
+                            result = newRight;
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        return false;
                     }
                     break;
 
                 case MathematicOperation.Multiply:
-                    // prefer constants on right
-                    if (integerLeft != null && integerRight == null)
+                    switch (operation)
                     {
-                        var temp = left;
-                        left = right;
-                        right = temp;
-                        integerRight = integerLeft;
-                        integerLeft = null;
-                    }
-
-                    if (integerRight != null)
-                    {
-                        if (integerRight.Value == 0) // anything times 0 is 0
-                        {
-                            result = right;
-                            return true;
-                        }
-
-                        if (integerRight.Value == 1) // anything times 1 is itself
-                        {
-                            result = left;
-                            return true;
-                        }
-
-                        if (integerLeft != null)
-                        {
-                            result = new IntegerConstantExpression(integerLeft.Value * integerRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
-
-                        var mathematicLeft = left as MathematicExpression;
-                        if (mathematicLeft != null)
-                        {
-                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
-                            if (integerLeft != null)
+                        case MathematicOperation.Multiply:
+                            // (a * 3) * 2 => a * (3 * 2)
+                            if (!MergeMultiplication(left, right, out newRight))
                             {
-                                if (mathematicLeft.Operation == MathematicOperation.Multiply)
-                                {
-                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Multiply,
-                                        new IntegerConstantExpression(integerLeft.Value * integerRight.Value));
-                                    CopyLocation(result);
-                                    return true;
-                                }
+                                result = newRight;
+                                return false;
                             }
-                        }
+                            break;
+
+                        case MathematicOperation.Divide:
+                            if (left.Type == ExpressionType.FloatConstant)
+                            {
+                                right = FloatConstantExpression.ConvertFrom(right);
+                                if (right.Type == ExpressionType.ParseError)
+                                    return false;
+                            }
+                            else if (right.Type == ExpressionType.FloatConstant)
+                            {
+                                left = FloatConstantExpression.ConvertFrom(left);
+                                if (left.Type == ExpressionType.ParseError)
+                                    return false;
+                            }
+                            else
+                            {
+                                // (a * 8) / 4 => a * (8 / 4) => a * 2
+
+                                // can only merge these if the constant on the left is a multiple of the constant on the right
+                                if (!IsMultiple(left, right))
+                                    return false;
+                            }
+
+                            if (!MergeDivision(left, right, out newRight))
+                            {
+                                result = newRight;
+                                return false;
+                            }
+                            break;
+
+                        case MathematicOperation.Modulus:
+                            // (a * 8) % 4 => a % 4
+                            // can only merge these if the constant on the left is a multiple of the constant on the right
+                            if (!IsMultiple(left, right))
+                                return false;
+
+                            newRight = right;
+                            newOperation = MathematicOperation.Modulus;
+                            break;
+
+                        default:
+                            return false;
                     }
                     break;
 
                 case MathematicOperation.Divide:
-                    if (integerRight != null)
+                    if (operation == MathematicOperation.Divide)
                     {
-                        if (integerRight.Value == 0) // division by 0 is impossible
+                        // (a / 3) / 2 => a / (3 * 2)
+                        var multiplication = new MathematicExpression(left, MathematicOperation.Multiply, right);
+                        if (!MergeMultiplication(left, right, out newRight))
                         {
-                            result = new ParseErrorExpression("division by zero", this);
+                            result = newRight;
                             return false;
                         }
-
-                        if (integerRight.Value == 1) // anything divided by 1 is itself
+                    }
+                    else if (operation == MathematicOperation.Multiply)
+                    {
+                        if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
                         {
-                            result = left;
-                            return true;
-                        }
-
-                        if (integerLeft != null)
-                        {
-                            result = new IntegerConstantExpression(integerLeft.Value / integerRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
-
-                        var mathematicLeft = left as MathematicExpression;
-                        if (mathematicLeft != null)
-                        {
-                            integerLeft = mathematicLeft.Right as IntegerConstantExpression;
-                            if (integerLeft != null)
+                            // (a / 3.0) * 2.0 => a * (2.0 / 3.0)
+                            if (!MergeDivision(right, left, out newRight))
                             {
-                                if (mathematicLeft.Operation == MathematicOperation.Divide)
-                                {
-                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Divide,
-                                       new IntegerConstantExpression(integerLeft.Value * integerRight.Value));
-                                    CopyLocation(result);
-                                    return true;
-                                }
-
-                                if (mathematicLeft.Operation == MathematicOperation.Multiply && (integerLeft.Value % integerRight.Value == 0))
-                                {
-                                    if (integerLeft.Value == integerRight.Value)
-                                    {
-                                        result = mathematicLeft.Left;
-                                        return true;
-                                    }
-
-                                    result = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Multiply,
-                                        new IntegerConstantExpression(integerLeft.Value / integerRight.Value));
-                                    CopyLocation(result);
-                                    return true;
-                                }
+                                result = newRight;
+                                return false;
                             }
-                        }
-                    }
-                    break;
 
-                case MathematicOperation.Modulus:
-                    if (integerRight != null)
-                    {
-                        if (integerRight.Value == 0) // division by 0 is impossible
+                            newOperation = MathematicOperation.Multiply;
+                        }
+                        else
                         {
-                            result = new ParseErrorExpression("division by zero", this);
+                            // (a / 3) * 2 => a * (2 / 3)
+
+                            // when integer division is performed first, the result may be floored before applying
+                            // the multiplication, so don't automatically merge them.
                             return false;
                         }
-
-                        if (integerRight.Value == 1) // anything modulus 1 is 0
-                        {
-                            result = new IntegerConstantExpression(0);
-                            CopyLocation(result);
-                            return true;
-                        }
-
-                        if (integerLeft != null)
-                        {
-                            result = new IntegerConstantExpression(integerLeft.Value % integerRight.Value);
-                            CopyLocation(result);
-                            return true;
-                        }
+                    }
+                    else
+                    {
+                        return false;
                     }
                     break;
+
+                default:
+                    return false;
             }
 
-            result = new MathematicExpression(left, Operation, right);
-            CopyLocation(result);
-            return true;
+            return MergeOperands(newLeft, newOperation, newRight, out result);
+        }
+
+        private static bool IsGreater(ExpressionBase left, ExpressionBase right)
+        {
+            var leftInteger = left as IntegerConstantExpression;
+            var rightInteger = right as IntegerConstantExpression;
+            if (leftInteger != null && rightInteger != null)
+                return (leftInteger.Value > rightInteger.Value);
+
+            var leftFloat = FloatConstantExpression.ConvertFrom(left) as FloatConstantExpression;
+            var rightFloat = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
+            if (leftFloat == null || rightFloat == null)
+                return false;
+
+            return (leftFloat.Value > rightFloat.Value);
+        }
+
+        private static bool IsMultiple(ExpressionBase left, ExpressionBase right)
+        {
+            var leftInteger = left as IntegerConstantExpression;
+            var rightInteger = right as IntegerConstantExpression;
+            if (leftInteger != null && rightInteger != null)
+                return ((leftInteger.Value % rightInteger.Value) == 0);
+
+            var leftFloat = FloatConstantExpression.ConvertFrom(left) as FloatConstantExpression;
+            var rightFloat = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
+            if (leftFloat == null || rightFloat == null)
+                return false;
+
+            return ((leftFloat.Value % rightFloat.Value) == 0.0f);
+        }
+
+        private static bool MergeIdentity(ExpressionBase left, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
+        {
+            bool isZero = false;
+            bool isOne = false;
+            var integerRight = right as IntegerConstantExpression;
+            if (integerRight != null)
+            {
+                isZero = (integerRight.Value == 0);
+                isOne = (integerRight.Value == 1);
+            }
+            else
+            {
+                var floatRight = right as FloatConstantExpression;
+                if (floatRight != null)
+                {
+                    isZero = floatRight.Value == 0.0f;
+                    isOne = floatRight.Value == 1.0f;
+                }
+            }
+
+            if (isZero)
+            {
+                switch (operation)
+                {
+                    case MathematicOperation.Add:
+                    case MathematicOperation.Subtract:
+                        // anything plus or minus 0 is itself
+                        result = left;
+                        return true;
+
+                    case MathematicOperation.Multiply:
+                        // anything times 0 is 0
+                        result = right;
+                        return true;
+
+                    case MathematicOperation.Divide:
+                    case MathematicOperation.Modulus:
+                        result = new ParseErrorExpression("Division by zero");
+                        return false;
+                }
+            }
+            else if (isOne)
+            {
+                switch (operation)
+                {
+                    case MathematicOperation.Multiply:
+                    case MathematicOperation.Divide:
+                        // anything multiplied or divided by 1 is itself
+                        result = left;
+                        return true;
+
+                    case MathematicOperation.Modulus:
+                        // anything modulus 1 is 0
+                        result = new IntegerConstantExpression(0);
+                        return true;
+                }
+            }
+
+            result = null;
+            return false;
         }
 
         /// <summary>
@@ -519,11 +748,11 @@ namespace RATools.Parser.Internal
                     ExpressionBase result;
 
                     mathematic.Left = mathematicLeft.Right;
-                    if (mathematic.MergeOperands(mathematic.Left, mathematic.Right, out result))
+                    if (MergeOperands(mathematic.Left, mathematic.Operation, mathematic.Right, out result))
                     {
                         mathematicLeft.Right = result;
 
-                        if (mathematicLeft.MergeOperands(mathematicLeft.Left, mathematicLeft.Right, out result))
+                        if (MergeOperands(mathematicLeft.Left, mathematicLeft.Operation, mathematicLeft.Right, out result))
                             mathematicLeft = (MathematicExpression)result;
 
                         mathematic = mathematicLeft;

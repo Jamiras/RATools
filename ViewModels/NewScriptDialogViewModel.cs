@@ -98,6 +98,17 @@ namespace RATools.ViewModels
             return;
         }
 
+        private static FieldSize CheckForBigEndian(Token token, FieldSize leSize, FieldSize beSize)
+        {
+            if (token.Contains("bit-BE", StringComparison.OrdinalIgnoreCase) ||
+                token.Contains("bit BE", StringComparison.OrdinalIgnoreCase))
+            {
+                return beSize;
+            }
+
+            return leSize;
+        }
+
         private void LoadGame(int gameId, string raCacheDirectory)
         {
             _game = new GameViewModel(gameId, "");
@@ -165,35 +176,31 @@ namespace RATools.ViewModels
                 if (token.Contains("16-bit", StringComparison.OrdinalIgnoreCase) ||
                     token.Contains("16 bit", StringComparison.OrdinalIgnoreCase))
                 {
-                    size = FieldSize.Word;
+                    size = CheckForBigEndian(token, FieldSize.Word, FieldSize.BigEndianWord);
                 }
                 else if (token.Contains("32-bit", StringComparison.OrdinalIgnoreCase) ||
                     token.Contains("32 bit", StringComparison.OrdinalIgnoreCase))
                 {
-                    size = FieldSize.DWord;
+                    size = CheckForBigEndian(token, FieldSize.DWord, FieldSize.BigEndianDWord);
                 }
                 else if (token.Contains("24-bit", StringComparison.OrdinalIgnoreCase) ||
                     token.Contains("24 bit", StringComparison.OrdinalIgnoreCase))
                 {
-                    size = FieldSize.TByte;
+                    size = CheckForBigEndian(token, FieldSize.TByte, FieldSize.BigEndianTByte);
                 }
-
-                if (size != FieldSize.Byte &&
-                    (token.Contains("bit-BE", StringComparison.OrdinalIgnoreCase) ||
-                     token.Contains("bit BE", StringComparison.OrdinalIgnoreCase)))
+                else if (token.Contains("float]", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("float)", StringComparison.OrdinalIgnoreCase))
                 {
-                    switch (size)
-                    {
-                        case FieldSize.Word:
-                            size = FieldSize.BigEndianWord;
-                            break;
-                        case FieldSize.DWord:
-                            size = FieldSize.BigEndianDWord;
-                            break;
-                        case FieldSize.TByte:
-                            size = FieldSize.BigEndianTByte;
-                            break;
-                    }
+                    size = FieldSize.Float;
+                }
+                else if (token.Contains("MBF32", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("MBF-32", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("MBF40", StringComparison.OrdinalIgnoreCase) ||
+                    token.Contains("MBF-40", StringComparison.OrdinalIgnoreCase))
+                {
+                    // MBF-40 values are 100% compatible with MBF-32. The last 8 bits are
+                    // too insignificant to be handled by the runtime, so can be ignored.
+                    size = FieldSize.MBF32;
                 }
 
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });

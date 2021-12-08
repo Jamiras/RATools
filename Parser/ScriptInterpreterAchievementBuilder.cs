@@ -409,17 +409,8 @@ namespace RATools.Parser
                 case MathematicOperation.Multiply:
                 case MathematicOperation.Divide:
                     // generate the condition for the right side
-                    Field operand;
-                    if (mathematic.Right.Type == ExpressionType.IntegerConstant)
-                    {
-                        operand = new Field
-                        {
-                            Size = FieldSize.DWord,
-                            Type = FieldType.Value,
-                            Value = (uint)((IntegerConstantExpression)mathematic.Right).Value
-                        };
-                    }
-                    else
+                    Field operand = CreateFieldFromExpression(mathematic.Right);
+                    if (operand.Type == FieldType.None)
                     {
                         var requirements = new List<Requirement>();
                         var innerContext = new TriggerBuilderContext() { Trigger = requirements };
@@ -454,13 +445,13 @@ namespace RATools.Parser
             if (!mathematic.Right.ReplaceVariables(scope, out right))
                 return (ParseErrorExpression)right;
 
-            var integerOperand = right as IntegerConstantExpression;
-            if (integerOperand != null)
+            Field field = CreateFieldFromExpression(right);
+            if (field.Type != FieldType.None)
             {
                 context.Trigger.Add(new Requirement
                 {
                     Type = (operation == MathematicOperation.Add) ? RequirementType.AddSource : RequirementType.SubSource,
-                    Left = new Field { Type = FieldType.Value, Value = (uint)integerOperand.Value },
+                    Left = field,
                     Operator = RequirementOperator.None,
                     Right = new Field()
                 });
@@ -512,7 +503,7 @@ namespace RATools.Parser
                     return error;
             }
 
-            if (integerOperand != null)
+            if (field.Type != FieldType.None)
                 return null;
 
             if (operation == MathematicOperation.Add)
@@ -534,13 +525,13 @@ namespace RATools.Parser
                 return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
             }
 
-            var integerConstant = right as IntegerConstantExpression;
-            if (integerConstant != null)
+            field = CreateFieldFromExpression(right);
+            if (field.Type != FieldType.None)
             {
                 context.Trigger.Add(new Requirement
                 {
                     Type = RequirementType.None,
-                    Left = new Field { Type = FieldType.Value, Value = (uint)integerConstant.Value },
+                    Left = field,
                     Operator = RequirementOperator.None,
                     Right = new Field()
                 });
@@ -791,16 +782,18 @@ namespace RATools.Parser
             var context = scope.GetContext<TriggerBuilderContext>();
             var op = GetRequirementOperator(comparison.Operation);
 
-            if (left.Type == ExpressionType.IntegerConstant)
+            var leftField = CreateFieldFromExpression(left);
+            if (leftField.Type != FieldType.None)
             {
-                if (right.Type == ExpressionType.IntegerConstant)
+                var rightField = CreateFieldFromExpression(right);
+                if (rightField.Type != FieldType.None)
                 {
                     // comparing two constants, convert to always_true or always_false
                     var requirement = new Requirement
                     {
-                        Left = new Field { Type = FieldType.Value, Value = (uint)((IntegerConstantExpression)left).Value },
+                        Left = leftField,
                         Operator = op,
-                        Right = new Field { Type = FieldType.Value, Value = (uint)((IntegerConstantExpression)right).Value },
+                        Right = rightField,
                     };
 
                     if (requirement.Evaluate() == true)
@@ -823,11 +816,8 @@ namespace RATools.Parser
             if (error != null)
                 return ParseErrorExpression.WrapError(error, "Invalid value", left);
 
-            var integerRight = right as IntegerConstantExpression;
-            if (integerRight != null)
+            if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
             {
-                int newValue = integerRight.Value;
-
                 var lastRequirement = context.LastRequirement;
                 if (lastRequirement.Operator != RequirementOperator.None)
                 {
@@ -864,7 +854,7 @@ namespace RATools.Parser
                 }
 
                 lastRequirement.Operator = op;
-                lastRequirement.Right = new Field { Size = lastRequirement.Left.Size, Type = FieldType.Value, Value = (uint)newValue };
+                lastRequirement.Right = CreateFieldFromExpression(right);
             }
             else
             {

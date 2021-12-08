@@ -24,6 +24,23 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Gets whether this is a compile-time constant.
+        /// </summary>
+        public override bool IsLiteralConstant
+        {
+            get { return true; }
+        }
+
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder"/>.
+        /// </summary>
+        /// <remarks>Used for constructing a StringConstantExpression from smaller expressions.</remarks>
+        internal override void AppendStringLiteral(StringBuilder builder)
+        {
+            builder.Append(Value);
+        }
+
+        /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
         internal override void AppendString(StringBuilder builder)

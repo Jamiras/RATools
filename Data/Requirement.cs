@@ -344,15 +344,12 @@ namespace RATools.Data
         /// </returns>
         public bool? Evaluate()
         {
-            if (Left.Type != Right.Type)
-                return null;
-
             bool result = false;
 
-            if (Left.IsMemoryReference)
+            if (Left.IsMemoryReference || Right.IsMemoryReference)
             {
                 // memory reference - can only be equal or not equal to same memory reference
-                if (Left.Value != Right.Value || Left.Size != Right.Size)
+                if (Left.Value != Right.Value || Left.Type != Right.Type || Left.Size != Right.Size)
                     return null;
 
                 // same memory reference in the same frame is always equal
@@ -364,6 +361,37 @@ namespace RATools.Data
                         result = true;
                         break;
 
+                    default:
+                        result = false;
+                        break;
+                }
+            }
+            else if (Left.Type == FieldType.Float || Right.Type == FieldType.Float)
+            {
+                float leftFloat = (Left.Type == FieldType.Float) ? Left.Float : (float)Left.Value;
+                float rightFloat = (Right.Type == FieldType.Float) ? Right.Float : (float)Right.Value;
+
+                // comparing constants
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal:
+                        result = (leftFloat == rightFloat);
+                        break;
+                    case RequirementOperator.NotEqual:
+                        result = (leftFloat != rightFloat);
+                        break;
+                    case RequirementOperator.LessThan:
+                        result = (leftFloat < rightFloat);
+                        break;
+                    case RequirementOperator.LessThanOrEqual:
+                        result = (leftFloat <= rightFloat);
+                        break;
+                    case RequirementOperator.GreaterThan:
+                        result = (leftFloat > rightFloat);
+                        break;
+                    case RequirementOperator.GreaterThanOrEqual:
+                        result = (leftFloat >= rightFloat);
+                        break;
                     default:
                         result = false;
                         break;

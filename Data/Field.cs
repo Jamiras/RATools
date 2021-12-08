@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System;
 using System.Text;
 
 namespace RATools.Data
@@ -28,6 +29,14 @@ namespace RATools.Data
         public uint Value { get; set; }
 
         /// <summary>
+        /// Gets or sets the field value for floating-point fields.
+        /// </summary>
+        /// <remarks>
+        /// Only used for <see cref="FieldType.Value"/> fields.
+        /// </remarks>
+        public float Float { get; set; }
+
+        /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
         /// </summary>
         public override string ToString()
@@ -37,94 +46,97 @@ namespace RATools.Data
             return builder.ToString();
         }
 
+        private static void AppendHexValue(StringBuilder builder, uint value, FieldSize size)
+        {
+            builder.Append("0x");
+            switch (size)
+            {
+                case FieldSize.Bit0:
+                case FieldSize.Bit1:
+                case FieldSize.Bit2:
+                case FieldSize.Bit3:
+                case FieldSize.Bit4:
+                case FieldSize.Bit5:
+                case FieldSize.Bit6:
+                case FieldSize.Bit7:
+                    builder.Append(value);
+                    break;
+
+                case FieldSize.LowNibble:
+                case FieldSize.HighNibble:
+                    builder.AppendFormat("{0:X1}", value);
+                    break;
+
+                default:
+                case FieldSize.Byte:
+                case FieldSize.BitCount:
+                    builder.AppendFormat("{0:X2}", value);
+                    break;
+
+                case FieldSize.Word:
+                case FieldSize.BigEndianWord:
+                    builder.AppendFormat("{0:X4}", value);
+                    break;
+
+                case FieldSize.TByte:
+                case FieldSize.BigEndianTByte:
+                    builder.AppendFormat("{0:X6}", value);
+                    break;
+
+                case FieldSize.DWord:
+                case FieldSize.BigEndianDWord:
+                    builder.AppendFormat("{0:X8}", value);
+                    break;
+            }
+        }
+
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
         internal void AppendString(StringBuilder builder, NumberFormat numberFormat, string addAddress = null)
         {
-            if (Type == FieldType.None)
-            {
-                builder.Append("none");
-                return;
-            }
-
-            if (Type == FieldType.Value)
-            {
-                if (numberFormat == NumberFormat.Decimal)
-                {
-                    builder.Append(Value);
-                }
-                else
-                {
-                    builder.Append("0x");
-                    switch (Size)
-                    {
-                        case FieldSize.Bit0:
-                        case FieldSize.Bit1:
-                        case FieldSize.Bit2:
-                        case FieldSize.Bit3:
-                        case FieldSize.Bit4:
-                        case FieldSize.Bit5:
-                        case FieldSize.Bit6:
-                        case FieldSize.Bit7:
-                            builder.Append(Value);
-                            break;
-
-                        case FieldSize.LowNibble:
-                        case FieldSize.HighNibble:
-                            builder.AppendFormat("{0:X1}", Value);
-                            break;
-
-                        default:
-                        case FieldSize.Byte:
-                        case FieldSize.BitCount:
-                            builder.AppendFormat("{0:X2}", Value);
-                            break;
-
-                        case FieldSize.Word:
-                        case FieldSize.BigEndianWord:
-                            builder.AppendFormat("{0:X4}", Value);
-                            break;
-
-                        case FieldSize.TByte:
-                        case FieldSize.BigEndianTByte:
-                            builder.AppendFormat("{0:X6}", Value);
-                            break;
-
-                        case FieldSize.DWord:
-                        case FieldSize.BigEndianDWord:
-                            builder.AppendFormat("{0:X8}", Value);
-                            break;
-                    }
-                }
-
-                return;
-            }
-
-            bool needsClosingParenthesis = true;
             switch (Type)
             {
+                case FieldType.MemoryAddress:
+                    AppendMemoryReference(builder, Value, Size, addAddress);
+                    break;
+
+                case FieldType.Value:
+                    if (numberFormat == NumberFormat.Decimal)
+                        builder.Append(Value);
+                    else
+                        AppendHexValue(builder, Value, Size);
+                    break;
+
+                case FieldType.Float:
+                    builder.AppendFormat("{0:0.0#####}", Float);
+                    break;
+
                 case FieldType.PreviousValue:
                     builder.Append("prev(");
+                    AppendMemoryReference(builder, Value, Size, addAddress);
+                    builder.Append(')');
                     break;
 
                 case FieldType.PriorValue:
                     builder.Append("prior(");
+                    AppendMemoryReference(builder, Value, Size, addAddress);
+                    builder.Append(')');
                     break;
 
                 case FieldType.BinaryCodedDecimal:
                     builder.Append("bcd(");
+                    AppendMemoryReference(builder, Value, Size, addAddress);
+                    builder.Append(')');
+                    break;
+
+                case FieldType.None:
+                    builder.Append("none");
                     break;
 
                 default:
-                    needsClosingParenthesis = false;
-                    break;
+                    throw new NotImplementedException("Unknown FieldType:" + Type);
             }
-
-            AppendMemoryReference(builder, Value, Size, addAddress);
-
-            if (needsClosingParenthesis)
-                builder.Append(')');
         }
 
         /// <summary>
@@ -175,6 +187,8 @@ namespace RATools.Data
                 case FieldSize.BigEndianWord: return "word_be";
                 case FieldSize.BigEndianTByte: return "tbyte_be";
                 case FieldSize.BigEndianDWord: return "dword_be";
+                case FieldSize.Float: return "float";
+                case FieldSize.MBF32: return "mbf32";
                 default: return size.ToString();
             }
         }
@@ -266,32 +280,36 @@ namespace RATools.Data
                     builder.Append('b');
                     break;
 
+                case FieldType.Float:
+                    builder.AppendFormat("f{0:0.0#####}", Float);
+                    return;
+
                 default:
                     break;
             }
 
-            builder.Append("0x");
-
             switch (Size)
             {
-                case FieldSize.Bit0: builder.Append('M'); break;
-                case FieldSize.Bit1: builder.Append('N'); break;
-                case FieldSize.Bit2: builder.Append('O'); break;
-                case FieldSize.Bit3: builder.Append('P'); break;
-                case FieldSize.Bit4: builder.Append('Q'); break;
-                case FieldSize.Bit5: builder.Append('R'); break;
-                case FieldSize.Bit6: builder.Append('S'); break;
-                case FieldSize.Bit7: builder.Append('T'); break;
-                case FieldSize.LowNibble: builder.Append('L'); break;
-                case FieldSize.HighNibble: builder.Append('U'); break;
-                case FieldSize.Byte: builder.Append('H'); break;
-                case FieldSize.Word: builder.Append(' ');  break;
-                case FieldSize.TByte: builder.Append('W'); break;
-                case FieldSize.DWord: builder.Append('X'); break;
-                case FieldSize.BitCount: builder.Append('K'); break;
-                case FieldSize.BigEndianWord: builder.Append('I'); break;
-                case FieldSize.BigEndianTByte: builder.Append('J'); break;
-                case FieldSize.BigEndianDWord: builder.Append('G'); break;
+                case FieldSize.Bit0: builder.Append("0xM"); break;
+                case FieldSize.Bit1: builder.Append("0xN"); break;
+                case FieldSize.Bit2: builder.Append("0xO"); break;
+                case FieldSize.Bit3: builder.Append("0xP"); break;
+                case FieldSize.Bit4: builder.Append("0xQ"); break;
+                case FieldSize.Bit5: builder.Append("0xR"); break;
+                case FieldSize.Bit6: builder.Append("0xS"); break;
+                case FieldSize.Bit7: builder.Append("0xT"); break;
+                case FieldSize.LowNibble: builder.Append("0xL"); break;
+                case FieldSize.HighNibble: builder.Append("0xU"); break;
+                case FieldSize.Byte: builder.Append("0xH"); break;
+                case FieldSize.Word: builder.Append("0x ");  break;
+                case FieldSize.TByte: builder.Append("0xW"); break;
+                case FieldSize.DWord: builder.Append("0xX"); break;
+                case FieldSize.BitCount: builder.Append("0xK"); break;
+                case FieldSize.BigEndianWord: builder.Append("0xI"); break;
+                case FieldSize.BigEndianTByte: builder.Append("0xJ"); break;
+                case FieldSize.BigEndianDWord: builder.Append("0xG"); break;
+                case FieldSize.Float: builder.Append("fF"); break;
+                case FieldSize.MBF32: builder.Append("fM"); break;
             }
 
             builder.AppendFormat("{0:x6}", Value);
@@ -324,6 +342,22 @@ namespace RATools.Data
             {
                 tokenizer.Advance();
                 return new Field { Type = FieldType.Value, Value = ReadHexNumber(tokenizer) };
+            }
+
+            if (tokenizer.NextChar == 'f')
+            {
+                tokenizer.Advance();
+                switch (tokenizer.NextChar)
+                {
+                    case 'F':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.Float, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    case 'M':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.MBF32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    default: 
+                        return new Field { Type = FieldType.Float, Float = ReadFloat(tokenizer) };
+                }
             }
 
             if (!tokenizer.Match("0x"))
@@ -448,6 +482,23 @@ namespace RATools.Data
             return value;
         }
 
+        private static float ReadFloat(Tokenizer tokenizer)
+        {
+            bool isNegative = false;
+            if (tokenizer.NextChar == '-')
+            {
+                tokenizer.Advance();
+                isNegative = true;
+            }
+
+            var token = tokenizer.ReadNumber();
+            var value = float.Parse(token.ToString());
+            if (isNegative)
+                value = -value;
+
+            return value;
+        }
+
         /// <summary>
         /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>
@@ -461,13 +512,20 @@ namespace RATools.Data
                 return false;
 
             var that = (Field)obj;
-            if (that.Type != Type || that.Value != Value)
+            if (that.Type != Type)
                 return false;
 
-            if (Type == FieldType.Value)
-                return true;
+            switch (Type)
+            {
+                case FieldType.Value:
+                    return (that.Value == Value);
 
-            return that.Size == Size;
+                case FieldType.Float:
+                    return (that.Float == Float);
+
+                default:
+                    return (that.Value == Value && that.Size == Size);
+            }
         }
 
         /// <summary>
@@ -527,27 +585,32 @@ namespace RATools.Data
         /// <summary>
         /// The value at a memory address.
         /// </summary>
-        MemoryAddress = 1,
+        MemoryAddress,
         
         /// <summary>
-        /// A raw value.
+        /// An unsigned integer constant.
         /// </summary>
-        Value = 3,
+        Value,
 
         /// <summary>
         /// The previous value at a memory address.
         /// </summary>
-        PreviousValue = 2, // Delta
+        PreviousValue, // Delta
 
         /// <summary>
         /// The last differing value at a memory address.
         /// </summary>
-        PriorValue = 4, // Prior
+        PriorValue, // Prior
 
         /// <summary>
         /// The current value at a memory address decoded from BCD.
         /// </summary>
-        BinaryCodedDecimal = 5,
+        BinaryCodedDecimal,
+
+        /// <summary>
+        /// A floating point constant.
+        /// </summary>
+        Float,
     }
 
     /// <summary>
@@ -649,5 +712,15 @@ namespace RATools.Data
         /// Four bytes (32-bit). Read from memory in big-endian mode.
         /// </summary>
         BigEndianDWord,
+
+        /// <summary>
+        /// 32-bit IEE-754 floating point number.
+        /// </summary>
+        Float,
+
+        /// <summary>
+        /// 32-bit Microsoft Binary Format floating point number.
+        /// </summary>
+        MBF32,
     }
 }

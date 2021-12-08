@@ -86,23 +86,14 @@ namespace RATools.Parser.Functions
                         return false;
                 }
 
-                var strResult = result as StringConstantExpression;
-                if (strResult != null)
+                if (result.IsLiteralConstant)
                 {
-                    builder.Append(strResult.Value);
+                    result.AppendStringLiteral(builder);
                 }
                 else
                 {
-                    var intResult = result as IntegerConstantExpression;
-                    if (intResult != null)
-                    {
-                        builder.Append(intResult.Value);
-                    }
-                    else
-                    {
-                        result = new ParseErrorExpression("Cannot convert expression to string", result);
-                        return false;
-                    }
+                    result = new ParseErrorExpression("Cannot convert expression to string", result);
+                    return false;
                 }
             }
 
