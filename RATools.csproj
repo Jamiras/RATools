@@ -157,7 +157,9 @@
     <Compile Include="ViewModels\OptionsDialogViewModel.cs" />
     <Compile Include="ViewModels\PlaybackEditorViewModel.cs" />
     <Compile Include="ViewModels\RecordingEditorViewModel.cs" />
+    <Compile Include="ViewModels\TriggerComparisonViewModel.cs" />
     <Compile Include="ViewModels\ScriptViewModel.cs" />
+    <Compile Include="ViewModels\TriggerViewModel.cs" />
     <Compile Include="ViewModels\UpdateLocalViewModel.cs" />
     <Compile Include="Views\ConditionsAnalyzerDialog.xaml.cs">
       <DependentUpon>ConditionsAnalyzerDialog.xaml</DependentUpon>
@@ -216,6 +218,10 @@
     <Compile Include="ViewModels\RequirementGroupViewModel.cs" />
     <Compile Include="ViewModels\RequirementViewModel.cs" />
     <Compile Include="ViewModels\RichPresenceViewModel.cs" />
+    <Page Include="Views\AssetViewer.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\ConditionsAnalyzerDialog.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>

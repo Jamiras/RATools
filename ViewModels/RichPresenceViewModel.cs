@@ -236,6 +236,11 @@ namespace RATools.ViewModels
 
         public int SourceLine { get; set; }
 
+        public string AssetImage
+        {
+            get { return "/RATools;component/Resources/rich_presence.png"; }
+        }
+
         public int RichPresenceLength { get; private set; }
 
         public int RichPresenceMaxLength

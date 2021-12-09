@@ -19,50 +19,26 @@ namespace RATools.ViewModels
             get { return "Leaderboard"; }
         }
 
-        private void AppendTrigger(List<RequirementGroupViewModel> groups, string header, string trigger)
+        internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
         {
-            var achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
-            var achievement = achievementBuilder.ToAchievement();
-
-            var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
-            groups.Add(new RequirementGroupViewModel("Core", achievement.CoreRequirements, numberFormat, _owner.Notes));
-
-            int i = 0;
-            foreach (var alt in achievement.AlternateRequirements)
-            {
-                i++;
-                groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, _owner.Notes));
-            }
-        }
-
-        private void AppendValue(List<RequirementGroupViewModel> groups, string header, string trigger)
-        {
-
-        }
-
-        internal override IEnumerable<RequirementGroupViewModel> BuildRequirementGroups(AssetSourceViewModel assetViewModel)
-        {
-            var groups = new List<RequirementGroupViewModel>();
+            var triggers = new List<TriggerViewModel>();
             var leaderboard = assetViewModel.Asset as Leaderboard;
             if (leaderboard != null)
             {
-                AppendTrigger(groups, "Start Conditions", leaderboard.Start);
-                AppendTrigger(groups, "Cancel Conditions", leaderboard.Cancel);
-                AppendTrigger(groups, "Submit Conditions", leaderboard.Submit);
+                var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
-                if (leaderboard.Value.Length > 2 && leaderboard.Value[1] == ':')
-                    AppendTrigger(groups, "Value", leaderboard.Value);
-                else
-                    AppendValue(groups, "Value", leaderboard.Value);
+                triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Submit Conditions", leaderboard.Submit, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Value", leaderboard.Value, numberFormat, _owner.Notes));
             }
 
-            return groups.ToArray();
+            return triggers.ToArray();
         }
 
         protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
         {
-            _owner.UpdateLocal((Achievement)asset, (Achievement)localAsset, warning, validateAll);
+            //_owner.UpdateLocal((Leaderboard)asset, (Leaderboard)localAsset, warning, validateAll);
         }
     }
 }

@@ -5,10 +5,12 @@ using RATools.Data;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace RATools.ViewModels
 {
+    [DebuggerDisplay("{Requirement}")]
     public class RequirementViewModel : ViewModelBase
     {
         public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<int, string> notes)

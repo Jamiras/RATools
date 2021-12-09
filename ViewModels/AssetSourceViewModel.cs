@@ -38,10 +38,10 @@ namespace RATools.ViewModels
                 Points.Value = value.Points;
                 BadgeName = value.BadgeName;
 
-                if (_requirementGroups != null)
+                if (_triggerList != null)
                 {
-                    _requirementGroups = null;
-                    OnPropertyChanged(() => RequirementGroups);
+                    _triggerList = null;
+                    OnPropertyChanged(() => TriggerList);
                 }
             }
         }
@@ -97,11 +97,11 @@ namespace RATools.ViewModels
         {
         }
 
-        public IEnumerable<RequirementGroupViewModel> RequirementGroups
+        public IEnumerable<TriggerViewModel> TriggerList
         {
-            get { return _requirementGroups ?? (_requirementGroups = _owner.BuildRequirementGroups(this)); }
+            get { return _triggerList ?? (_triggerList = _owner.BuildTriggerList(this)); }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private IEnumerable<RequirementGroupViewModel> _requirementGroups;
+        private IEnumerable<TriggerViewModel> _triggerList;
     }
 }

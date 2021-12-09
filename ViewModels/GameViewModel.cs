@@ -372,62 +372,85 @@ namespace RATools.ViewModels
             }
         }
 
-        private void MergePublished(List<GeneratedItemViewModelBase> achievements)
+        private void MergeAchievements(List<GeneratedItemViewModelBase> assets, IEnumerable<Achievement> achievements,
+            Action<AssetViewModelBase, Achievement> assign)
         {
-            foreach (var publishedAchievement in _publishedAchievements)
-            {
-                var achievement = achievements.OfType<AchievementViewModel>().FirstOrDefault(a => a.Generated.Id == publishedAchievement.Id);
-                if (achievement == null)
-                {
-                    achievement = achievements.OfType<AchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
-                    if (achievement == null)
-                    {
-                        achievement = new AchievementViewModel(this, null);
-                        achievements.Add(achievement);
-                    }
-                }
+            var mergeAchievements = new List<Achievement>(achievements);
+            var achievementEditors = new List<AchievementViewModel>(assets.OfType<AchievementViewModel>());
 
-                achievement.Published.Asset = publishedAchievement;
+            // first pass - look for ID matches
+            for (int i = achievementEditors.Count - 1; i >= 0; i--)
+            {
+                Achievement mergeAchievement = null;
+                var achievement = achievementEditors[i];
+
+                if (achievement.Generated.Id > 0)
+                    mergeAchievement = mergeAchievements.FirstOrDefault(a => a.Id == achievement.Generated.Id);
+                if (mergeAchievement == null && achievement.Published.Id > 0)
+                    mergeAchievement = mergeAchievements.FirstOrDefault(a => a.Id == achievement.Published.Id);
+
+                if (mergeAchievement != null)
+                {
+                    assign(achievement, mergeAchievement);
+
+                    mergeAchievements.Remove(mergeAchievement);
+                    achievementEditors.RemoveAt(i);
+                }
+            }
+
+            // second pass - look for title matches
+            for (int i = mergeAchievements.Count - 1; i >= 0; i--)
+            {
+                var mergeAchievement = mergeAchievements[i];
+                var achievement = achievementEditors.FirstOrDefault(a =>
+                    (String.Compare(a.Generated.Title.Text, mergeAchievement.Title, StringComparison.InvariantCultureIgnoreCase) == 0 ||
+                     String.Compare(a.Published.Title.Text, mergeAchievement.Title, StringComparison.InvariantCultureIgnoreCase) == 0)
+                );
+
+                if (achievement != null)
+                {
+                    assign(achievement, mergeAchievement);
+
+                    mergeAchievements.RemoveAt(i);
+                    achievementEditors.Remove(achievement);
+                }
+            }
+
+            // third pass - look for description matches
+            for (int i = mergeAchievements.Count - 1; i >= 0; i--)
+            {
+                var mergeAchievement = mergeAchievements[i];
+                var achievement = achievementEditors.FirstOrDefault(a =>
+                    String.Compare(a.Generated.Description.Text, mergeAchievement.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+
+                if (achievement != null)
+                {
+                    assign(achievement, mergeAchievement);
+
+                    mergeAchievements.RemoveAt(i);
+                    achievementEditors.Remove(achievement);
+                }
+            }
+
+            // TODO: attempt to match requirements
+
+            // create new entries for each remaining unmerged achievement
+            foreach (var mergeAchievement in mergeAchievements)
+            {
+                var achievement = new AchievementViewModel(this, null);
+                assign(achievement, mergeAchievement);
+                assets.Add(achievement);
             }
         }
 
-        private void MergeLocal(List<GeneratedItemViewModelBase> achievements)
+        private void MergePublished(List<GeneratedItemViewModelBase> assets)
         {
-            var localAchievements = new List<Achievement>(_localAchievements.Achievements);
+            MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
+        }
 
-            foreach (var achievement in achievements.OfType<AchievementViewModel>())
-            {
-                Achievement localAchievement = null;
-                if (achievement.Id > 0)
-                    localAchievement = localAchievements.FirstOrDefault(a => a.Id == achievement.Id);
-
-                if (localAchievement == null)
-                {
-                    localAchievement = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Generated.Title.Text, StringComparison.CurrentCultureIgnoreCase) == 0);
-                    if (localAchievement == null)
-                    {
-                        if (!String.IsNullOrEmpty(achievement.Generated.Description.Text))
-                            localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
-
-                        if (localAchievement == null)
-                        {
-                            // TODO: attempt to match achievements by requirements                        
-                            continue;
-                        }
-                    }
-                }
-
-                localAchievements.Remove(localAchievement);
-
-                achievement.Local.Asset = localAchievement;
-            }
-
-            foreach (var localAchievement in localAchievements)
-            {
-                var vm = new AchievementViewModel(this, null);
-                vm.Local.Asset = localAchievement;
-                achievements.Add(vm);
-            }
+        private void MergeLocal(List<GeneratedItemViewModelBase> assets)
+        {
+            MergeAchievements(assets, _localAchievements.Achievements, (vm, a) => vm.Local.Asset = a);
 
             LocalAchievementCount = _localAchievements.Achievements.Count();
             LocalAchievementPoints = _localAchievements.Achievements.Sum(a => a.Points);

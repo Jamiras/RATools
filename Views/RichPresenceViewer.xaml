@@ -3,17 +3,13 @@
                     xmlns:vm="clr-namespace:RATools.ViewModels"
                     xmlns:views="clr-namespace:RATools.Views">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
-        <ResourceDictionary Source="Common.xaml" />
+        <ResourceDictionary Source="AssetViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:RichPresenceViewModel}">
         <Border Style="{StaticResource editorBorder}">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -22,21 +18,24 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Image Width="48" Height="48" Grid.RowSpan="4" Source="/RATools;component/Resources/rich_presence.png" Margin="4,2,2,2" />
-                <TextBlock Grid.Column="1" Text="Rich Presence" Style="{StaticResource editorTitle}" />
-                <TextBlock Grid.Column="1" Grid.Row="1" Style="{StaticResource editorSubtitle}">
-                    <TextBlock Text="{Binding RichPresenceLength}" />
-                    <TextBlock Text="/" />
-                    <TextBlock Text="{Binding RichPresenceMaxLength}" />
-                    <TextBlock Text="characters" />
-                </TextBlock>
-                <TextBlock Grid.Column="1" Grid.Row="2" Style="{StaticResource editorSubtitle}">
-                    <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
-                        <TextBlock Text="Copy to Clipboard" />
-                    </Hyperlink>
-                </TextBlock>
+                <ContentPresenter ContentTemplate="{StaticResource assetImageTemplate}" />
 
-                <ScrollViewer Grid.Row="4" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0"
+                <StackPanel Grid.Column="1">
+                    <TextBlock Style="{StaticResource assetTitleStyle}" />
+                    <TextBlock Style="{StaticResource editorSubtitle}">
+                        <TextBlock Text="{Binding RichPresenceLength}" />
+                        <TextBlock Text="/" />
+                        <TextBlock Text="{Binding RichPresenceMaxLength}" />
+                        <TextBlock Text="characters" />
+                    </TextBlock>
+                    <TextBlock Style="{StaticResource editorSubtitle}">
+                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
+                            <TextBlock Text="Copy to Clipboard" />
+                        </Hyperlink>
+                    </TextBlock>
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch" Margin="4,0,0,0"
                               Template="{StaticResource themedScrollViewerTemplate}">
                     <Grid>
                         <Grid.RowDefinitions>

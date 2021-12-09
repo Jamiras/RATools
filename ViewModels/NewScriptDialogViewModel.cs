@@ -139,25 +139,28 @@ namespace RATools.ViewModels
                     _achievements.Add(dumpAchievement);
                 }
 
-                foreach (var group in achievement.Published.RequirementGroups)
+                foreach (var trigger in achievement.Published.TriggerList)
                 {
-                    foreach (var requirement in group.Requirements)
+                    foreach (var group in trigger.Groups)
                     {
-                        if (requirement.Requirement == null)
-                            continue;
-
-                        if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
+                        foreach (var requirement in group.Requirements)
                         {
-                            var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
-                            if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                                dumpAchievement.MemoryAddresses.Add(memoryItem);
-                        }
+                            if (requirement.Requirement == null)
+                                continue;
 
-                        if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
-                        {
-                            var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
-                            if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                                dumpAchievement.MemoryAddresses.Add(memoryItem);
+                            if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
+                            {
+                                var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
+                                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
+                                    dumpAchievement.MemoryAddresses.Add(memoryItem);
+                            }
+
+                            if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
+                            {
+                                var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
+                                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
+                                    dumpAchievement.MemoryAddresses.Add(memoryItem);
+                            }
                         }
                     }
                 }
@@ -961,7 +964,7 @@ namespace RATools.ViewModels
                     stream.Write("    trigger = ");
                     const int indent = 14; // "    trigger = ".length
 
-                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published, indent);
+                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published.TriggerList.First(), indent);
                     stream.WriteLine();
 
                     stream.WriteLine(")");
@@ -1020,7 +1023,7 @@ namespace RATools.ViewModels
                         vmAchievement.Asset = achievement.ToAchievement();
 
                         stream.Write("rich_presence_conditional_display(");
-                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 4);
+                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 4);
                         stream.Write(", \"");
                     }
 
@@ -1093,7 +1096,7 @@ namespace RATools.ViewModels
                         var vmAchievement = new AssetSourceViewModel(null, "Rich Presence");
                         vmAchievement.Asset = achievement.ToAchievement();
 
-                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement, 32);
+                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 32);
                     }
                     else
                     {
@@ -1241,9 +1244,9 @@ namespace RATools.ViewModels
             stream.Write(builder.ToString());
         }
 
-        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, AssetSourceViewModel achievementViewModel, int indent)
+        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, TriggerViewModel triggerViewModel, int indent)
         {
-            var groupEnumerator = achievementViewModel.RequirementGroups.GetEnumerator();
+            var groupEnumerator = triggerViewModel.Groups.GetEnumerator();
             groupEnumerator.MoveNext();
 
             bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
@@ -1263,7 +1266,7 @@ namespace RATools.ViewModels
                     stream.Write('(');
                     first = false;
 
-                    if (achievementViewModel.RequirementGroups.Count() == 2)
+                    if (triggerViewModel.Groups.Count() == 2)
                     {
                         // only core and one alt, inject an always_false clause to prevent the compiler from joining them
                         stream.Write("always_false() || ");

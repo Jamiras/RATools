@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
 using RATools.Services;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -18,26 +19,27 @@ namespace RATools.ViewModels
             get { return "Achievement"; }
         }
 
-        internal override IEnumerable<RequirementGroupViewModel> BuildRequirementGroups(AssetSourceViewModel assetViewModel)
+        public override void Refresh()
         {
-            var groups = new List<RequirementGroupViewModel>();
+            base.Refresh();
 
+            if (String.IsNullOrEmpty(BadgeName))
+                BadgeName = "00000";
+        }
+
+        internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
+        {
             var achievement = assetViewModel.Asset as Achievement;
             if (achievement != null)
             {
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
-                groups.Add(new RequirementGroupViewModel("Core", achievement.CoreRequirements, numberFormat, _owner.Notes));
-
-
-                int i = 0;
-                foreach (var alt in achievement.AlternateRequirements)
-                {
-                    i++;
-                    groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, _owner.Notes));
-                }
+                return new TriggerViewModel[] 
+                { 
+                    new TriggerViewModel("", achievement, numberFormat, _owner.Notes) 
+                };
             }
 
-            return groups.ToArray();
+            return new TriggerViewModel[0];
         }
 
         protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
