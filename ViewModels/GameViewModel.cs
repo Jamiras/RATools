@@ -92,13 +92,15 @@ namespace RATools.ViewModels
 
                 foreach (var achievement in interpreter.Achievements)
                 {
-                    var achievementViewModel = new AchievementViewModel(this, achievement);
+                    var achievementViewModel = new AchievementViewModel(this);
+                    achievementViewModel.Generated.Asset = achievement;
                     editors.Add(achievementViewModel);
                 }
 
                 foreach (var leaderboard in interpreter.Leaderboards)
                 {
-                    var leaderboardViewModel = new LeaderboardViewModel(this, leaderboard);
+                    var leaderboardViewModel = new LeaderboardViewModel(this);
+                    leaderboardViewModel.Generated.Asset = leaderboard;
                     editors.Add(leaderboardViewModel);
                 }
             }
@@ -362,62 +364,68 @@ namespace RATools.ViewModels
                 var corePoints = 0;
                 var unofficialCount = 0;
                 var unofficialPoints = 0;
-                foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
+                if (publishedAchievements.Type == JsonFieldType.ObjectArray)
                 {
-                    var builder = new AchievementBuilder();
-                    builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                    builder.Title = publishedAchievement.GetField("Title").StringValue;
-                    builder.Description = publishedAchievement.GetField("Description").StringValue;
-                    builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-                    builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
-                    builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
-
-                    var builtAchievement = builder.ToAchievement();
-                    builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
-                    builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
-
-                    builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
-                    if (builtAchievement.Category == 5)
+                    foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
                     {
-                        _publishedAchievements.Add(builtAchievement);
-                        unofficialCount++;
-                        unofficialPoints += builtAchievement.Points;
-                    }
-                    else if (builtAchievement.Category == 3)
-                    {
-                        _publishedAchievements.Add(builtAchievement);
-                        coreCount++;
-                        corePoints += builtAchievement.Points;
+                        var builder = new AchievementBuilder();
+                        builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                        builder.Title = publishedAchievement.GetField("Title").StringValue;
+                        builder.Description = publishedAchievement.GetField("Description").StringValue;
+                        builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
+                        builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
+                        builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
+
+                        var builtAchievement = builder.ToAchievement();
+                        builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
+                        builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
+
+                        builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
+                        if (builtAchievement.Category == 5)
+                        {
+                            _publishedAchievements.Add(builtAchievement);
+                            unofficialCount++;
+                            unofficialPoints += builtAchievement.Points;
+                        }
+                        else if (builtAchievement.Category == 3)
+                        {
+                            _publishedAchievements.Add(builtAchievement);
+                            coreCount++;
+                            corePoints += builtAchievement.Points;
+                        }
                     }
                 }
 
                 var publishedLeaderboards = publishedData.GetField("Leaderboards");
-                foreach (var publishedLeaderboard in publishedLeaderboards.ObjectArrayValue)
+                if (publishedLeaderboards.Type == JsonFieldType.ObjectArray)
                 {
-                    var leaderboard = new Leaderboard();
-                    leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
-                    leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
-                    leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
-                    leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
-
-                    var mem = publishedLeaderboard.GetField("Mem").StringValue;
-                    var tokenizer = Tokenizer.CreateTokenizer(mem);
-                    while (tokenizer.NextChar != '\0')
+                    foreach (var publishedLeaderboard in publishedLeaderboards.ObjectArrayValue)
                     {
-                        var part = tokenizer.ReadTo("::");
-                        if (part.StartsWith("STA:"))
-                            leaderboard.Start = part.Substring(4);
-                        else if (part.StartsWith("CAN:"))
-                            leaderboard.Cancel = part.Substring(4);
-                        else if (part.StartsWith("SUB:"))
-                            leaderboard.Submit = part.Substring(4);
-                        else if (part.StartsWith("VAL:"))
-                            leaderboard.Value = part.Substring(4);
+                        var leaderboard = new Leaderboard();
+                        leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
+                        leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
+                        leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
+                        leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
 
-                        tokenizer.Advance(2);
+                        var mem = publishedLeaderboard.GetField("Mem").StringValue;
+                        var tokenizer = Tokenizer.CreateTokenizer(mem);
+                        while (tokenizer.NextChar != '\0')
+                        {
+                            var part = tokenizer.ReadTo("::");
+                            if (part.StartsWith("STA:"))
+                                leaderboard.Start = part.Substring(4);
+                            else if (part.StartsWith("CAN:"))
+                                leaderboard.Cancel = part.Substring(4);
+                            else if (part.StartsWith("SUB:"))
+                                leaderboard.Submit = part.Substring(4);
+                            else if (part.StartsWith("VAL:"))
+                                leaderboard.Value = part.Substring(4);
+
+                            tokenizer.Advance(2);
+                        }
+
+                        _publishedLeaderboards.Add(leaderboard);
                     }
-
-                    _publishedLeaderboards.Add(leaderboard);
                 }
 
                 CoreAchievementCount = coreCount;
@@ -506,9 +514,9 @@ namespace RATools.ViewModels
                 AssetViewModelBase assetEditor;
 
                 if (mergeAsset is Achievement)
-                    assetEditor = new AchievementViewModel(this, null);
+                    assetEditor = new AchievementViewModel(this);
                 else
-                    assetEditor = new LeaderboardViewModel(this, null);
+                    assetEditor = new LeaderboardViewModel(this);
 
                 assign(assetEditor, mergeAsset);
                 editors.Add(assetEditor);

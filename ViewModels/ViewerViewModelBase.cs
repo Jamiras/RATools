@@ -112,6 +112,6 @@ namespace RATools.ViewModels
         /// <summary>
         /// Same as published but not in local
         /// </summary>
-        PublishedMatchesNotGenerated,
+        PublishedMatchesNotLocal,
     }
 }

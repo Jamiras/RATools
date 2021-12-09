@@ -14,16 +14,13 @@ using System.Windows.Media;
 
 namespace RATools.ViewModels
 {
-    [DebuggerDisplay("{Title} ({AssetType,nq})")]
+    [DebuggerDisplay("{Title} ({ViewerType,nq})")]
     public abstract class AssetViewModelBase : ViewerViewModelBase
     {
-        public AssetViewModelBase(GameViewModel owner, AssetBase generatedAsset)
+        public AssetViewModelBase(GameViewModel owner)
             : base(owner)
         {
             Generated = new AssetSourceViewModel(this, "Generated");
-            if (generatedAsset != null)
-                Generated.Asset = generatedAsset;
-
             Local = new AssetSourceViewModel(this, "Local");
             Published = new AssetSourceViewModel(this, "Published");
 
@@ -62,6 +59,9 @@ namespace RATools.ViewModels
 
         public CommandBase DeleteLocalCommand { get; protected set; }
 
+        /// <summary>
+        /// True if this asset includes a <see cref="Generated"/> aspect.
+        /// </summary>
         public virtual bool IsGenerated
         {
             get { return Generated.Asset != null; }
@@ -70,33 +70,56 @@ namespace RATools.ViewModels
         internal bool AllocateLocalId(int value)
         {
             // don't attempt to assign a temporary ID to a published asset
-            if (Published != null && Published.Asset != null)
+            if (Published.Asset != null)
                 return false;
 
-            // if it's in the local file, generate a temporary ID if one was not previously generated
-            if (Local != null && Local.Id == 0)
+            var localId = Local.Id;
+            var generatedId = Generated.Id;
+
+            // if either asset provides an ID, copy it into the other
+            if (localId != generatedId)
             {
-                var localAsset = Local.Asset;
-                if (localAsset != null)
+                if (localId == 0 && Local.Asset != null)
                 {
-                    localAsset.Id = value;
-                    Local.Asset = localAsset; // refresh the viewmodel's ID property
-                    Id = Local.Id;
-                    return true;
+                    Local.Asset.Id = generatedId;
+                    Local.Asset = Local.Asset; // refresh the viewmodel's ID property
                 }
+
+                if (generatedId == 0 && Generated.Asset != null)
+                {
+                    Generated.Asset.Id = localId;
+                    Generated.Asset = Generated.Asset; // refresh the viewmodel's ID property
+                }
+
+                return false;
             }
 
-            // if it's not in the local file, generate a temporary ID if one was not provided by the code
-            if (Generated != null && Generated.Id == 0)
+            if (localId != 0)
             {
-                var generatedAsset = Generated.Asset;
-                if (generatedAsset != null)
-                {
-                    generatedAsset.Id = value;
-                    Generated.Asset = generatedAsset; // refresh the viewmodel's ID property
-                    Id = Generated.Id;
-                    return true;
-                }
+                // both assets have a valid id. do nothing
+                return false;
+            }
+
+            var localAsset = Local.Asset;
+            var generatedAsset = Generated.Asset;
+
+            if (localAsset == null && generatedAsset == null)
+            {
+                // this should never happen as it's only possible if a published asset exists
+                return false;
+            }
+
+            // assign the local id to both assets
+            if (localAsset != null)
+            {
+                localAsset.Id = value;
+                Local.Asset = localAsset; // refresh the viewmodel's ID property
+            }
+
+            if (generatedAsset != null)
+            {
+                generatedAsset.Id = value;
+                Generated.Asset = generatedAsset; // refresh the viewmodel's ID property
             }
 
             return true;
@@ -124,7 +147,7 @@ namespace RATools.ViewModels
             protected set { SetValue(IsPointsModifiedProperty, value); }
         }
 
-        protected void UpdateModified()
+        private void UpdateModified()
         {
             var coreAsset = Published.Asset;
 
@@ -146,6 +169,11 @@ namespace RATools.ViewModels
                         TriggerSource = "Unofficial (Not Generated)";
                     else
                         TriggerSource = "Core (Not Generated)";
+                }
+                else if (Local.Asset != null)
+                {
+                    Triggers = Local.TriggerList;
+                    TriggerSource = "Local (Not Generated)";
                 }
             }
             else if (IsModified(Local))
@@ -170,18 +198,23 @@ namespace RATools.ViewModels
             else if (coreAsset != null && IsModified(Published))
             {
                 if (Local.Asset != null)
+                {
                     TriggerSource = "Generated (Same as Local)";
+                    CanUpdate = false;
+                }
                 else
+                {
                     TriggerSource = "Generated (Not in Local)";
+                    CanUpdate = true;
+                }
 
-                Other = Published;
                 if (coreAsset.IsUnofficial)
                     ModificationMessage = "Unofficial differs from generated";
                 else
                     ModificationMessage = "Core differs from generated";
 
+                Other = Published;
                 CompareState = GeneratedCompareState.PublishedDiffers;
-                CanUpdate = true;
             }
             else
             {
@@ -195,7 +228,7 @@ namespace RATools.ViewModels
                         TriggerSource = "Generated (Same as Core, not in Local)";
 
                     ModificationMessage = "Local " + ViewerType + " does not exist";
-                    CompareState = GeneratedCompareState.PublishedMatchesNotGenerated;
+                    CompareState = GeneratedCompareState.PublishedMatchesNotLocal;
                     CanUpdate = true;
                     Other = null;
                 }
@@ -325,7 +358,7 @@ namespace RATools.ViewModels
             get { return (ImageSource)GetValue(BadgeProperty); }
         }
 
-        protected string BadgeName { get; set; }
+        internal string BadgeName { get; set; }
 
         private static ImageSource GetBadge(ModelBase model)
         {

@@ -10,8 +10,8 @@ namespace RATools.ViewModels
 {
     public class LeaderboardViewModel : AssetViewModelBase
     {
-        public LeaderboardViewModel(GameViewModel owner, Leaderboard generatedLeaderboard)
-            : base(owner, generatedLeaderboard)
+        public LeaderboardViewModel(GameViewModel owner)
+            : base(owner)
         {
         }
 

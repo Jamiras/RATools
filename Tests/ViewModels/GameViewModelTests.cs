@@ -39,7 +39,8 @@ namespace RATools.Test.ViewModels
                 var achievement = new Achievement
                 {
                     Id = id,
-                    Title = name
+                    Title = name,
+                    Description = name
                 };
 
                 ((List<Achievement>)_localAssets.Achievements).Add(achievement);
@@ -194,7 +195,8 @@ namespace RATools.Test.ViewModels
             var achievement = new Achievement
             {
                 Id = id,
-                Title = name
+                Title = name,
+                Description = name
             };
 
             ((List<Achievement>)interpreter.Achievements).Add(achievement);

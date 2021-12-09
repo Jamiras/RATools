@@ -9,8 +9,8 @@ namespace RATools.ViewModels
 {
     public class AchievementViewModel : AssetViewModelBase
     {
-        public AchievementViewModel(GameViewModel owner, Achievement generatedAchievement)
-            : base(owner, generatedAchievement)
+        public AchievementViewModel(GameViewModel owner)
+            : base(owner)
         {
         }
 
