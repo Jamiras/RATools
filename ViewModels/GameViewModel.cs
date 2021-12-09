@@ -41,6 +41,7 @@ namespace RATools.ViewModels
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _publishedAchievements = new List<Achievement>();
+            _publishedLeaderboards = new List<Leaderboard>();
 
             _logger = logger;
             _fileSystemService = fileSystemService;
@@ -49,6 +50,7 @@ namespace RATools.ViewModels
         private readonly ILogger _logger;
         protected readonly IFileSystemService _fileSystemService;
         protected readonly List<Achievement> _publishedAchievements;
+        protected readonly List<Leaderboard> _publishedLeaderboards;
         protected LocalAssets _localAssets;
 
         internal int GameId { get; private set; }
@@ -105,7 +107,7 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = 0;
             }
 
-            if (_publishedAchievements.Count > 0)
+            if (_publishedAchievements.Count > 0 || _publishedLeaderboards.Count > 0)
                 MergePublished(editors);
 
             if (_localAssets != null)
@@ -344,6 +346,7 @@ namespace RATools.ViewModels
         private void ReadPublished()
         {
             _publishedAchievements.Clear();
+            _publishedLeaderboards.Clear();
 
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
             using (var stream = _fileSystemService.OpenFile(fileName, OpenFileMode.Read))
@@ -386,6 +389,35 @@ namespace RATools.ViewModels
                         coreCount++;
                         corePoints += builtAchievement.Points;
                     }
+                }
+
+                var publishedLeaderboards = publishedData.GetField("Leaderboards");
+                foreach (var publishedLeaderboard in publishedLeaderboards.ObjectArrayValue)
+                {
+                    var leaderboard = new Leaderboard();
+                    leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
+                    leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
+                    leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
+                    leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
+
+                    var mem = publishedLeaderboard.GetField("Mem").StringValue;
+                    var tokenizer = Tokenizer.CreateTokenizer(mem);
+                    while (tokenizer.NextChar != '\0')
+                    {
+                        var part = tokenizer.ReadTo("::");
+                        if (part.StartsWith("STA:"))
+                            leaderboard.Start = part.Substring(4);
+                        else if (part.StartsWith("CAN:"))
+                            leaderboard.Cancel = part.Substring(4);
+                        else if (part.StartsWith("SUB:"))
+                            leaderboard.Submit = part.Substring(4);
+                        else if (part.StartsWith("VAL:"))
+                            leaderboard.Value = part.Substring(4);
+
+                        tokenizer.Advance(2);
+                    }
+
+                    _publishedLeaderboards.Add(leaderboard);
                 }
 
                 CoreAchievementCount = coreCount;
@@ -486,6 +518,7 @@ namespace RATools.ViewModels
         private void MergePublished(List<ViewerViewModelBase> assets)
         {
             MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
+            MergeAchievements(assets, _publishedLeaderboards, (vm, a) => vm.Published.Asset = a);
         }
 
         private void MergeLocal(List<ViewerViewModelBase> assets)
