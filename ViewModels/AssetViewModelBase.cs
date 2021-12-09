@@ -248,7 +248,10 @@ namespace RATools.ViewModels
                 else
                     compareTrigger = emptyTrigger;
 
-                triggers.Add(new TriggerComparisonViewModel(trigger, compareTrigger, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerComparisonViewModel(trigger, compareTrigger, numberFormat, _owner.Notes)
+                {
+                    CopyToClipboardCommand = trigger.CopyToClipboardCommand
+                });
             }
 
             foreach (var compareTrigger in compareTriggers)

@@ -1,4 +1,5 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser;
@@ -44,5 +45,7 @@ namespace RATools.ViewModels
 
         public string Label { get; private set; }
         public IEnumerable<RequirementGroupViewModel> Groups { get; protected set; }
+
+        public CommandBase CopyToClipboardCommand { get; set; }
     }
 }

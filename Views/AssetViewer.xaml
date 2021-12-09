@@ -200,11 +200,6 @@
                                 <TextBlock.Style>
                                     <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                         <Setter Property="Margin" Value="4,4,0,0" />
-                                        <Setter Property="Text">
-                                            <Setter.Value>
-                                                <Binding StringFormat="{}[{0}]" Path="Label" />
-                                            </Setter.Value>
-                                        </Setter>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding Label}" Value="">
                                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -213,6 +208,22 @@
                                         </Style.Triggers>
                                     </Style>
                                 </TextBlock.Style>
+
+                                <TextBlock Text="{Binding Label, StringFormat=[{0}]}" />
+                                <TextBlock FontSize="10" VerticalAlignment="Bottom" Margin="4,0,0,2">
+                                    <TextBlock.Style>
+                                        <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                    <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
+                                        <TextBlock Text="Copy to Clipboard" />
+                                    </Hyperlink>
+                                </TextBlock>
                             </TextBlock>
                             <ItemsControl Grid.Row="1" ItemsSource="{Binding Groups}">
                                 <ItemsControl.ItemTemplate>
@@ -223,7 +234,7 @@
                                                 <RowDefinition Height="*" />
                                             </Grid.RowDefinitions>
 
-                                            <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="16" FontWeight="DemiBold"
+                                            <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontSize="15" FontWeight="DemiBold"
                                                         Style="{StaticResource themedTextBlock}" />
                                             <ItemsControl Grid.Row="1" ItemsSource="{Binding Requirements}" Margin="6,0,0,4" />
                                         </Grid>
