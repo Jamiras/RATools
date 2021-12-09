@@ -45,7 +45,7 @@
 
                         <Image Width="12" Height="12" Margin="0" 
                                HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Source="{Binding Asset.AssetImage}" ToolTip="{Binding Asset.AssetType}" />
+                               Source="{Binding Asset.ViewerImage}" ToolTip="{Binding Asset.ViewerType}" />
                         <TextBlock Grid.Column="1" Text="{Binding Title}" />
                         <CheckBox Grid.Column="2" IsChecked="{Binding IsUpdated}" IsEnabled="{Binding CanUpdate}" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <CheckBox.Style>

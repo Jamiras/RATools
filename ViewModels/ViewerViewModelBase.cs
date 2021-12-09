@@ -7,20 +7,20 @@ using System.Diagnostics;
 namespace RATools.ViewModels
 {
     [DebuggerDisplay("{Title}")]
-    public abstract class GeneratedItemViewModelBase : ViewModelBase
+    public abstract class ViewerViewModelBase : ViewModelBase
     {
-        public GeneratedItemViewModelBase(GameViewModel owner)
+        public ViewerViewModelBase(GameViewModel owner)
         {
             _owner = owner;
         }
 
         protected readonly GameViewModel _owner;
 
-        public abstract string AssetType { get; }
+        public abstract string ViewerType { get; }
 
-        public virtual string AssetImage
+        public virtual string ViewerImage
         {
-            get { return String.Format("/RATools;component/Resources/{0}.png", AssetType.ToLower()); }
+            get { return String.Format("/RATools;component/Resources/{0}.png", ViewerType.ToLower()); }
         }
 
         public CommandBase UpdateLocalCommand { get; protected set; }
@@ -30,49 +30,49 @@ namespace RATools.ViewModels
             get { return _owner.RACacheDirectory; }
         }
 
-        public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "Title", typeof(string), String.Empty);
+        public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "Title", typeof(string), String.Empty);
         public string Title
         {
             get { return (string)GetValue(TitleProperty); }
             protected set { SetValue(TitleProperty, value); }
         }
 
-        public static readonly ModelProperty DescriptionProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "Description", typeof(string), String.Empty);
+        public static readonly ModelProperty DescriptionProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "Description", typeof(string), String.Empty);
         public string Description
         {
             get { return (string)GetValue(DescriptionProperty); }
             protected set { SetValue(DescriptionProperty, value); }
         }
 
-        public static readonly ModelProperty IsTitleModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsTitleModified", typeof(bool), false);
+        public static readonly ModelProperty IsTitleModifiedProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "IsTitleModified", typeof(bool), false);
         public bool IsTitleModified
         {
             get { return (bool)GetValue(IsTitleModifiedProperty); }
             protected set { SetValue(IsTitleModifiedProperty, value); }
         }
 
-        public static readonly ModelProperty IsDescriptionModifiedProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "IsDescriptionModified", typeof(bool), false);
+        public static readonly ModelProperty IsDescriptionModifiedProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "IsDescriptionModified", typeof(bool), false);
         public bool IsDescriptionModified
         {
             get { return (bool)GetValue(IsDescriptionModifiedProperty); }
             protected set { SetValue(IsDescriptionModifiedProperty, value); }
         }
 
-        public static readonly ModelProperty ModificationMessageProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "ModificationMessage", typeof(string), null);
+        public static readonly ModelProperty ModificationMessageProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "ModificationMessage", typeof(string), null);
         public string ModificationMessage
         {
             get { return (string)GetValue(ModificationMessageProperty); }
             protected set { SetValue(ModificationMessageProperty, value); }
         }
 
-        public static readonly ModelProperty CompareStateProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "CompareState", typeof(GeneratedCompareState), GeneratedCompareState.None);
+        public static readonly ModelProperty CompareStateProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "CompareState", typeof(GeneratedCompareState), GeneratedCompareState.None);
         public GeneratedCompareState CompareState
         {
             get { return (GeneratedCompareState)GetValue(CompareStateProperty); }
             protected set { SetValue(CompareStateProperty, value); }
         }
 
-        public static readonly ModelProperty CanUpdateProperty = ModelProperty.Register(typeof(GeneratedItemViewModelBase), "CanUpdate", typeof(bool), false);
+        public static readonly ModelProperty CanUpdateProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "CanUpdate", typeof(bool), false);
         public bool CanUpdate
         {
             get { return (bool)GetValue(CanUpdateProperty); }

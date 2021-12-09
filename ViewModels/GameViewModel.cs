@@ -67,7 +67,7 @@ namespace RATools.ViewModels
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
         { 
-            var editors = new List<GeneratedItemViewModelBase>();
+            var editors = new List<ViewerViewModelBase>();
             if (Script != null)
                 editors.Add(Script);
 
@@ -117,7 +117,7 @@ namespace RATools.ViewModels
             Editors = editors;
         }
 
-        private void UpdateTemporaryIds(List<GeneratedItemViewModelBase> editors)
+        private void UpdateTemporaryIds(List<ViewerViewModelBase> editors)
         {
             // find the maximum temporary id already assigned
             int nextLocalId = 111000001;
@@ -157,17 +157,17 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<GeneratedItemViewModelBase>), new GeneratedItemViewModelBase[0]);
-        public IEnumerable<GeneratedItemViewModelBase> Editors
+        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<ViewerViewModelBase>), new ViewerViewModelBase[0]);
+        public IEnumerable<ViewerViewModelBase> Editors
         {
-            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(EditorsProperty); }
+            get { return (IEnumerable<ViewerViewModelBase>)GetValue(EditorsProperty); }
             private set { SetValue(EditorsProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(GeneratedItemViewModelBase), null);
-        public GeneratedItemViewModelBase SelectedEditor
+        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(ViewerViewModelBase), null);
+        public ViewerViewModelBase SelectedEditor
         {
-            get { return (GeneratedItemViewModelBase)GetValue(SelectedEditorProperty); }
+            get { return (ViewerViewModelBase)GetValue(SelectedEditorProperty); }
             set { SetValue(SelectedEditorProperty, value); }
         }
 
@@ -398,7 +398,7 @@ namespace RATools.ViewModels
             }
         }
 
-        private void MergeAchievements(List<GeneratedItemViewModelBase> editors, IEnumerable<AssetBase> assets,
+        private void MergeAchievements(List<ViewerViewModelBase> editors, IEnumerable<AssetBase> assets,
             Action<AssetViewModelBase, AssetBase> assign)
         {
             var mergeAssets = new List<AssetBase>(assets);
@@ -483,12 +483,12 @@ namespace RATools.ViewModels
             }
         }
 
-        private void MergePublished(List<GeneratedItemViewModelBase> assets)
+        private void MergePublished(List<ViewerViewModelBase> assets)
         {
             MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
         }
 
-        private void MergeLocal(List<GeneratedItemViewModelBase> assets)
+        private void MergeLocal(List<ViewerViewModelBase> assets)
         {
             MergeAchievements(assets, _localAssets.Achievements, (vm, a) => vm.Local.Asset = a);
             MergeAchievements(assets, _localAssets.Leaderboards, (vm, a) => vm.Local.Asset = a);

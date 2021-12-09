@@ -13,7 +13,7 @@ namespace RATools.ViewModels
         {
         }
 
-        public override string AssetType
+        public override string ViewerType
         {
             get { return "Leaderboard"; }
         }

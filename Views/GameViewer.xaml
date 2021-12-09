@@ -65,7 +65,7 @@
             <!-- Image -->
             <Image Grid.Column="1" Width="12" Height="12" Margin="0,-1,0,-1"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Source="{Binding AssetImage}" ToolTip="{Binding AssetType}" />
+                   Source="{Binding ViewerImage}" ToolTip="{Binding ViewerType}" />
 
             <!-- Name -->
             <TextBlock Grid.Column="2" Margin="2,-3,2,0" HorizontalAlignment="Stretch"

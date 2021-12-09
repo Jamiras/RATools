@@ -11,7 +11,7 @@
         <Border BorderThickness="1" BorderBrush="Gray" Margin="4" VerticalAlignment="Top">
             <Grid>
                 <Image Grid.RowSpan="4" Source="{Binding Badge}" Width="64" Height="64" />
-                <Image Width="56" Height="56" Source="{Binding AssetImage}">
+                <Image Width="56" Height="56" Source="{Binding ViewerImage}">
                     <Image.Style>
                         <Style TargetType="{x:Type Image}">
                             <Setter Property="Visibility" Value="Collapsed" />

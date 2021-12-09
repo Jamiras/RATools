@@ -10,7 +10,7 @@ using System.IO;
 
 namespace RATools.ViewModels
 {
-    public class ScriptViewModel : GeneratedItemViewModelBase
+    public class ScriptViewModel : ViewerViewModelBase
     {
         public ScriptViewModel(GameViewModel owner)
             : this()
@@ -33,7 +33,7 @@ namespace RATools.ViewModels
             UpdateLocalCommand = DisabledCommand.Instance;
         }
 
-        public override string AssetType
+        public override string ViewerType
         {
             get { return "Script"; }
         }

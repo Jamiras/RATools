@@ -208,7 +208,7 @@
     <Compile Include="Parser\Internal\ExpressionBase.cs" />
     <Compile Include="Parser\Internal\FunctionDefinitionExpression.cs" />
     <Compile Include="Parser\LocalAssets.cs" />
-    <Compile Include="ViewModels\GeneratedItemViewModelBase.cs" />
+    <Compile Include="ViewModels\ViewerViewModelBase.cs" />
     <Compile Include="ViewModels\RequirementComparisonViewModel.cs" />
     <Compile Include="ViewModels\AchievementViewModel.cs" />
     <Compile Include="ViewModels\OpenTicketsViewModel.cs" />

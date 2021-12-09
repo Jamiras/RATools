@@ -15,7 +15,7 @@ using System.Windows.Media;
 namespace RATools.ViewModels
 {
     [DebuggerDisplay("{Title} ({AssetType,nq})")]
-    public abstract class AssetViewModelBase : GeneratedItemViewModelBase
+    public abstract class AssetViewModelBase : ViewerViewModelBase
     {
         public AssetViewModelBase(GameViewModel owner, AssetBase generatedAsset)
             : base(owner)
@@ -194,7 +194,7 @@ namespace RATools.ViewModels
                     else
                         TriggerSource = "Generated (Same as Core, not in Local)";
 
-                    ModificationMessage = "Local " + AssetType + " does not exist";
+                    ModificationMessage = "Local " + ViewerType + " does not exist";
                     CompareState = GeneratedCompareState.PublishedMatchesNotGenerated;
                     CanUpdate = true;
                     Other = null;
@@ -271,7 +271,7 @@ namespace RATools.ViewModels
             UpdateLocal(warning, false);
 
             if (warning.Length > 0)
-                TaskDialogViewModel.ShowWarningMessage("Your " + AssetType + " may not function as expected.", warning.ToString());
+                TaskDialogViewModel.ShowWarningMessage("Your " + ViewerType + " may not function as expected.", warning.ToString());
         }
 
         internal void UpdateLocal(StringBuilder warning, bool validateAll)
