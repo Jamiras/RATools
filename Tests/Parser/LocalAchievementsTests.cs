@@ -12,7 +12,7 @@ namespace RATools.Test.Parser
     [TestFixture]
     class LocalAchievementsTests
     {
-        private LocalAchievements Initialize(string fileContents, MemoryStream memoryStream)
+        private LocalAssets Initialize(string fileContents, MemoryStream memoryStream)
         {
             var fileName = "XXX-User.txt";
             var mockFileSystem = new Mock<IFileSystemService>();
@@ -28,7 +28,7 @@ namespace RATools.Test.Parser
 
             mockFileSystem.Setup(f => f.CreateFile(fileName)).Returns(memoryStream);
 
-            return new LocalAchievements(fileName, mockFileSystem.Object);
+            return new LocalAssets(fileName, mockFileSystem.Object);
         }
 
         [Test]

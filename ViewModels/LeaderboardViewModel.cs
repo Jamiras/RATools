@@ -1,6 +1,5 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
-using RATools.Parser;
 using RATools.Services;
 using System.Collections.Generic;
 using System.Text;
@@ -14,7 +13,7 @@ namespace RATools.ViewModels
         {
         }
 
-        protected override string AssetType
+        public override string AssetType
         {
             get { return "Leaderboard"; }
         }
@@ -38,7 +37,7 @@ namespace RATools.ViewModels
 
         protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
         {
-            //_owner.UpdateLocal((Leaderboard)asset, (Leaderboard)localAsset, warning, validateAll);
+            _owner.UpdateLocal((Leaderboard)asset, (Leaderboard)localAsset, warning, validateAll);
         }
     }
 }

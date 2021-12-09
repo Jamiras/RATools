@@ -146,7 +146,7 @@ namespace RATools.Test.Parser
                 var mockFileSystemService = new Mock<IFileSystemService>();
                 mockFileSystemService.Setup(s => s.CreateFile(It.IsAny<string>())).Returns((string path) => File.Create(path));
 
-                var localAchievements = new LocalAchievements(outputFileName, mockFileSystemService.Object);
+                var localAchievements = new LocalAssets(outputFileName, mockFileSystemService.Object);
                 localAchievements.Title = Path.GetFileNameWithoutExtension(scriptFileName);
                 foreach (var achievement in interpreter.Achievements)
                     localAchievements.Replace(null, achievement);

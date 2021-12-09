@@ -236,7 +236,12 @@ namespace RATools.ViewModels
 
         public int SourceLine { get; set; }
 
-        public string AssetImage
+        public override string AssetType
+        {
+            get { return "Rich Presence"; }
+        }
+
+        public override string AssetImage
         {
             get { return "/RATools;component/Resources/rich_presence.png"; }
         }

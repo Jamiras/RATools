@@ -14,7 +14,7 @@ namespace RATools.ViewModels
         {
         }
 
-        protected override string AssetType
+        public override string AssetType
         {
             get { return "Achievement"; }
         }

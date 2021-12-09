@@ -16,6 +16,13 @@ namespace RATools.ViewModels
 
         protected readonly GameViewModel _owner;
 
+        public abstract string AssetType { get; }
+
+        public virtual string AssetImage
+        {
+            get { return String.Format("/RATools;component/Resources/{0}.png", AssetType.ToLower()); }
+        }
+
         public CommandBase UpdateLocalCommand { get; protected set; }
 
         internal string RACacheDirectory

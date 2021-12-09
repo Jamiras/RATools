@@ -5,11 +5,8 @@ using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
-using RATools.Data;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace RATools.ViewModels
 {
@@ -34,6 +31,11 @@ namespace RATools.ViewModels
         {
             Title = "Script";
             UpdateLocalCommand = DisabledCommand.Instance;
+        }
+
+        public override string AssetType
+        {
+            get { return "Script"; }
         }
 
         public EditorViewModel Editor { get; private set; }

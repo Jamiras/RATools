@@ -33,8 +33,8 @@ namespace RATools.Test.ViewModels
 
             public Achievement AddLocalAchievement(int id, string name)
             {
-                if (_localAchievements == null)
-                    _localAchievements = new LocalAchievements(GameId + "-User.txt", _fileSystemService);
+                if (_localAssets == null)
+                    _localAssets = new LocalAssets(GameId + "-User.txt", _fileSystemService);
 
                 var achievement = new Achievement
                 {
@@ -42,7 +42,7 @@ namespace RATools.Test.ViewModels
                     Title = name
                 };
 
-                ((List<Achievement>)_localAchievements.Achievements).Add(achievement);
+                ((List<Achievement>)_localAssets.Achievements).Add(achievement);
                 return achievement;
             }
             public Achievement AddPublishedAchievement(int id, string name)

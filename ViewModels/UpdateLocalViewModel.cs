@@ -14,27 +14,27 @@ namespace RATools.ViewModels
         public UpdateLocalViewModel(GameViewModel game)
         {
             _game = game;
-            _achievements = new ObservableCollection<UpdateAchievementViewModel>();
+            _assets = new ObservableCollection<UpdateAssetViewModel>();
             DialogTitle = "Update Local - " + game.Title;
 
-            foreach (var achievement in game.Editors.OfType<AchievementViewModel>())
+            foreach (var asset in game.Editors.OfType<AssetViewModelBase>())
             {
-                if (achievement.IsGenerated || achievement.Local.Asset != null)
-                    _achievements.Add(new UpdateAchievementViewModel(achievement));
+                if (asset.IsGenerated || asset.Local.Asset != null)
+                    _assets.Add(new UpdateAssetViewModel(asset));
             }
         }
 
         private readonly GameViewModel _game;
 
         /// <summary>
-        /// Gets the list of local and generated achievements.
+        /// Gets the list of local and generated assets.
         /// </summary>
-        public IEnumerable<UpdateAchievementViewModel> Achievements
+        public IEnumerable<UpdateAssetViewModel> Assets
         {
-            get { return _achievements; }
+            get { return _assets; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private ObservableCollection<UpdateAchievementViewModel> _achievements;
+        private ObservableCollection<UpdateAssetViewModel> _assets;
 
         protected override void ExecuteOkCommand()
         {
@@ -42,16 +42,16 @@ namespace RATools.ViewModels
 
             _game.SuspendCommitLocalAchievements();
 
-            foreach (var achievement in _achievements)
+            foreach (var achievement in _assets)
             {
                 if (achievement.IsUpdated)
                 {
                     warning.Clear();
-                    achievement.Achievement.UpdateLocal(warning, true);
+                    achievement.Asset.UpdateLocal(warning, true);
                 }
                 else if (achievement.IsDeleted)
                 {
-                    achievement.Achievement.DeleteLocalCommand.Execute();
+                    achievement.Asset.DeleteLocalCommand.Execute();
                 }
             }
 
@@ -70,9 +70,9 @@ namespace RATools.ViewModels
 
         private void ExecuteToggleSelectedForUpdateCommand()
         {
-            if (_achievements.Any(a => !a.IsUpdated && a.CanUpdate))
+            if (_assets.Any(a => !a.IsUpdated && a.CanUpdate))
             {
-                foreach (var a in _achievements)
+                foreach (var a in _assets)
                 {
                     if (a.CanUpdate)
                         a.IsUpdated = true;
@@ -80,7 +80,7 @@ namespace RATools.ViewModels
             }
             else
             {
-                foreach (var a in _achievements)
+                foreach (var a in _assets)
                 {
                     if (a.CanUpdate)
                         a.IsUpdated = false;
@@ -95,9 +95,9 @@ namespace RATools.ViewModels
 
         private void ExecuteToggleSelectedForDeleteCommand()
         {
-            if (_achievements.Any(a => !a.IsDeleted && a.CanDelete))
+            if (_assets.Any(a => !a.IsDeleted && a.CanDelete))
             {
-                foreach (var a in _achievements)
+                foreach (var a in _assets)
                 {
                     if (a.CanDelete)
                         a.IsDeleted = true;
@@ -105,7 +105,7 @@ namespace RATools.ViewModels
             }
             else
             {
-                foreach (var a in _achievements)
+                foreach (var a in _assets)
                 {
                     if (a.CanDelete)
                         a.IsDeleted = false;
@@ -114,36 +114,36 @@ namespace RATools.ViewModels
         }
 
         /// <summary>
-        /// A single achievement to update or delete
+        /// A single asset to update or delete
         /// </summary>
-        public class UpdateAchievementViewModel : ViewModelBase
+        public class UpdateAssetViewModel : ViewModelBase
         {
             /// <summary>
-            /// Initializes a new instance of the <see cref="UpdateAchievementViewModel"/> class.
+            /// Initializes a new instance of the <see cref="UpdateAssetViewModel"/> class.
             /// </summary>
-            public UpdateAchievementViewModel(AchievementViewModel achievement)
+            public UpdateAssetViewModel(AssetViewModelBase asset)
             {
-                Achievement = achievement;
+                Asset = asset;
 
-                if (!achievement.IsGenerated || achievement.CompareState == GeneratedCompareState.Same)
+                if (!asset.IsGenerated || asset.CompareState == GeneratedCompareState.Same)
                     IsUpdated = false;
             }
 
-            internal AchievementViewModel Achievement { get; private set; }
+            public AssetViewModelBase Asset { get; private set; }
 
             public string Title
             {
-                get { return Achievement.Title; }
+                get { return Asset.Title; }
             }
 
             public bool CanUpdate
             {
-                get { return Achievement.IsGenerated && Achievement.CompareState != GeneratedCompareState.Same; }
+                get { return Asset.IsGenerated && Asset.CompareState != GeneratedCompareState.Same; }
             }
 
             public bool CanDelete
             {
-                get { return Achievement.Local.Asset != null; }
+                get { return Asset.Local.Asset != null; }
             }
 
             public static readonly ModelProperty IsUpdatedProperty = ModelProperty.Register(typeof(UpdateLocalViewModel), "IsUpdated", typeof(bool), true, OnIsUpdatedChanged);
@@ -155,7 +155,7 @@ namespace RATools.ViewModels
 
             private static void OnIsUpdatedChanged(object sender, ModelPropertyChangedEventArgs e)
             {
-                var vm = (UpdateAchievementViewModel)sender;
+                var vm = (UpdateAssetViewModel)sender;
                 if (vm.IsUpdated)
                     vm.IsDeleted = false;
             }
@@ -169,7 +169,7 @@ namespace RATools.ViewModels
 
             private static void OnIsDeletedChanged(object sender, ModelPropertyChangedEventArgs e)
             {
-                var vm = (UpdateAchievementViewModel)sender;
+                var vm = (UpdateAssetViewModel)sender;
                 if (vm.IsDeleted)
                     vm.IsUpdated = false;
             }

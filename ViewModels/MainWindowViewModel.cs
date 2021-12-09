@@ -348,7 +348,7 @@ namespace RATools.ViewModels
                 existingViewModel.Script.SetContent(content);
                 viewModel = existingViewModel;
 
-                existingViewModel.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+                existingViewModel.SelectedEditor = existingViewModel.Editors.FirstOrDefault(e => e.Title == selectedEditor);
                 existingViewModel.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
             }
             else
