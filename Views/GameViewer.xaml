@@ -48,7 +48,7 @@
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedMatchesNotGenerated">
+                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedMatchesNotLocal">
                                 <Setter Property="Text" Value="&#x25CB;" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
