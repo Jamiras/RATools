@@ -273,7 +273,7 @@ namespace RATools.ViewModels
             var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
             var emptyTrigger = new TriggerViewModel("", (Achievement)null, numberFormat, null);
 
-            foreach (var trigger in assetViewModel.TriggerList)
+            foreach (var trigger in Generated.TriggerList)
             {
                 var compareTrigger = compareTriggers.FirstOrDefault(t => t.Label == trigger.Label);
                 if (compareTrigger != null)
