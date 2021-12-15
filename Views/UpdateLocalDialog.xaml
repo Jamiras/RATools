@@ -3,6 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:vm="clr-namespace:RATools.ViewModels"
+             SnapsToDevicePixels="True"
+             UseLayoutRounding="True"
+             RenderOptions.BitmapScalingMode="HighQuality"
              mc:Ignorable="d" Width="360" Height="480"
              d:DesignHeight="300" d:DesignWidth="300">
     <Grid Margin="4">
@@ -11,12 +15,12 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200" />
+            <ColumnDefinition Width="216" />
             <ColumnDefinition Width="40" />
             <ColumnDefinition Width="40" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <TextBlock FontSize="10" Margin="6,0,0,0" Text="Achievement" />
+        <TextBlock FontSize="10" Margin="6,0,0,0" Text="Asset" />
         <TextBlock Grid.Column="1" FontSize="10" HorizontalAlignment="Center">
             <Hyperlink Command="{Binding ToggleSelectedForUpdateCommand}">
                 <TextBlock Text="Update" />
@@ -27,18 +31,23 @@
                 <TextBlock Text="Delete" />
             </Hyperlink>
         </TextBlock>
-        <ListView Grid.Row="1" Grid.ColumnSpan="4" ItemsSource="{Binding Achievements}"
+        <ListView Grid.Row="1" Grid.ColumnSpan="4" ItemsSource="{Binding Assets}"
                   Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="14" />
                             <ColumnDefinition Width="194" />
                             <ColumnDefinition Width="40" />
                             <ColumnDefinition Width="40" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="{Binding Title}" />
-                        <CheckBox Grid.Column="1" IsChecked="{Binding IsUpdated}" IsEnabled="{Binding CanUpdate}" HorizontalAlignment="Center" VerticalAlignment="Center">
+
+                        <Image Width="12" Height="12" Margin="0" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Source="{Binding Asset.ViewerImage}" ToolTip="{Binding Asset.ViewerType}" />
+                        <TextBlock Grid.Column="1" Text="{Binding Title}" />
+                        <CheckBox Grid.Column="2" IsChecked="{Binding IsUpdated}" IsEnabled="{Binding CanUpdate}" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <CheckBox.Style>
                                 <Style TargetType="{x:Type CheckBox}">
                                     <Style.Triggers>
@@ -50,7 +59,7 @@
                                 </Style>
                             </CheckBox.Style>
                         </CheckBox>
-                        <CheckBox Grid.Column="2" IsChecked="{Binding IsDeleted}" IsEnabled="{Binding CanDelete}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <CheckBox Grid.Column="3" IsChecked="{Binding IsDeleted}" IsEnabled="{Binding CanDelete}" HorizontalAlignment="Center" VerticalAlignment="Center">
                             <CheckBox.Style>
                                 <Style TargetType="{x:Type CheckBox}">
                                     <Style.Triggers>

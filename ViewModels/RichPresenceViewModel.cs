@@ -9,9 +9,10 @@ using System.IO;
 
 namespace RATools.ViewModels
 {
-    public class RichPresenceViewModel : GeneratedItemViewModelBase
+    public class RichPresenceViewModel : ViewerViewModelBase
     {
         public RichPresenceViewModel(GameViewModel owner, string richPresence)
+            : base(owner)
         {
             Title = "Rich Presence";
 
@@ -233,12 +234,17 @@ namespace RATools.ViewModels
         private bool _hasGenerated;
         private bool _hasLocal;
 
-        public override bool IsGenerated
+        public int SourceLine { get; set; }
+
+        public override string ViewerType
         {
-            get { return _hasGenerated; }
+            get { return "Rich Presence"; }
         }
 
-        public int SourceLine { get; set; }
+        public override string ViewerImage
+        {
+            get { return "/RATools;component/Resources/rich_presence.png"; }
+        }
 
         public int RichPresenceLength { get; private set; }
 

@@ -2,9 +2,11 @@
 using Jamiras.ViewModels;
 using RATools.Data;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace RATools.ViewModels
 {
+    [DebuggerDisplay("{Label}")]
     public class RequirementGroupViewModel : ViewModelBase
     {
         public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, NumberFormat numberFormat, IDictionary<int, string> notes)

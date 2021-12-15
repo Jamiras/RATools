@@ -179,6 +179,7 @@
     <Compile Include="Parser\Internal\AssignmentExpressionTests.cs" />
     <Compile Include="Parser\LocalAchievementsTests.cs" />
     <Compile Include="Parser\RegressionTests.cs" />
+    <Compile Include="ViewModels\AssetViewModelBaseTests.cs" />
     <Compile Include="ViewModels\GameViewModelTests.cs" />
   </ItemGroup>
   <Choose>

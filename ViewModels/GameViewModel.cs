@@ -41,6 +41,7 @@ namespace RATools.ViewModels
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _publishedAchievements = new List<Achievement>();
+            _publishedLeaderboards = new List<Leaderboard>();
 
             _logger = logger;
             _fileSystemService = fileSystemService;
@@ -49,7 +50,8 @@ namespace RATools.ViewModels
         private readonly ILogger _logger;
         protected readonly IFileSystemService _fileSystemService;
         protected readonly List<Achievement> _publishedAchievements;
-        protected LocalAchievements _localAchievements;
+        protected readonly List<Leaderboard> _publishedLeaderboards;
+        protected LocalAssets _localAssets;
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
@@ -67,9 +69,11 @@ namespace RATools.ViewModels
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
         { 
-            var editors = new List<GeneratedItemViewModelBase>();
+            var editors = new List<ViewerViewModelBase>();
             if (Script != null)
                 editors.Add(Script);
+
+            var selectedEditor = (SelectedEditor != null) ? SelectedEditor.Title : null;
 
             if (interpreter != null)
             {
@@ -88,67 +92,54 @@ namespace RATools.ViewModels
 
                 foreach (var achievement in interpreter.Achievements)
                 {
-                    var achievementViewModel = new GeneratedAchievementViewModel(this, achievement);
+                    var achievementViewModel = new AchievementViewModel(this);
+                    achievementViewModel.Generated.Asset = achievement;
                     editors.Add(achievementViewModel);
                 }
 
                 foreach (var leaderboard in interpreter.Leaderboards)
-                    editors.Add(new LeaderboardViewModel(this, leaderboard));
+                {
+                    var leaderboardViewModel = new LeaderboardViewModel(this);
+                    leaderboardViewModel.Generated.Asset = leaderboard;
+                    editors.Add(leaderboardViewModel);
+                }
             }
             else
             {
                 GeneratedAchievementCount = 0;
             }
 
-            if (_publishedAchievements.Count > 0)
+            if (_publishedAchievements.Count > 0 || _publishedLeaderboards.Count > 0)
                 MergePublished(editors);
 
-            if (_localAchievements != null)
+            if (_localAssets != null)
                 MergeLocal(editors);
 
             UpdateTemporaryIds(editors);
 
+            SelectedEditor = editors.FirstOrDefault(e => e.Title == selectedEditor);
             Editors = editors;
         }
 
-        private void UpdateTemporaryIds(List<GeneratedItemViewModelBase> editors)
+        private void UpdateTemporaryIds(List<ViewerViewModelBase> editors)
         {
             // find the maximum temporary id already assigned
             int nextLocalId = 111000001;
-            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
             {
-                if (achievement.Local != null && achievement.Local.Id >= nextLocalId)
-                    nextLocalId = achievement.Local.Id + 1;
-                else if (achievement.Generated != null && achievement.Generated.Id >= nextLocalId)
-                    nextLocalId = achievement.Generated.Id + 1;
+                var id = assetViewModel.Local.Id;
+                if (id == 0)
+                    id = assetViewModel.Generated.Id;
+                if (id >= nextLocalId)
+                    nextLocalId = id + 1;
             }
 
-            foreach (var achievement in editors.OfType<GeneratedAchievementViewModel>())
+            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
             {
-                // don't attempt to assign a temporary ID to a published achievement
-                if (achievement.Published == null || achievement.Published.Achievement == null)
-                {
-                    if (achievement.Local != null && achievement.Local.Achievement != null)
-                    {
-                        // if it's in the local file, generate a temporary ID if one was not previously generated
-                        if (achievement.Local.Achievement.Id == 0)
-                        {
-                            achievement.Local.Achievement.Id = nextLocalId++;
-                            achievement.Local.LoadAchievement(achievement.Local.Achievement); // refresh the viewmodel's ID property
-                        }
-                    }
-                    else if (achievement.Generated != null && achievement.Generated.Achievement != null)
-                    {
-                        // if it's not in the local file, generate a temporary ID if one was not provided by the code
-                        if (achievement.Generated.Achievement.Id == 0)
-                        {
-                            achievement.Generated.Achievement.Id = nextLocalId++;
-                            achievement.Generated.LoadAchievement(achievement.Generated.Achievement); // refresh the viewmodel's ID property
-                        }
-                    }
-                }
+                if (assetViewModel.AllocateLocalId(nextLocalId))
+                    nextLocalId++;
 
-                achievement.UpdateCommonProperties(this);
+                assetViewModel.Refresh();
             }
         }
 
@@ -170,17 +161,17 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<GeneratedItemViewModelBase>), new GeneratedItemViewModelBase[0]);
-        public IEnumerable<GeneratedItemViewModelBase> Editors
+        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<ViewerViewModelBase>), new ViewerViewModelBase[0]);
+        public IEnumerable<ViewerViewModelBase> Editors
         {
-            get { return (IEnumerable<GeneratedItemViewModelBase>)GetValue(EditorsProperty); }
+            get { return (IEnumerable<ViewerViewModelBase>)GetValue(EditorsProperty); }
             private set { SetValue(EditorsProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(GeneratedItemViewModelBase), null);
-        public GeneratedItemViewModelBase SelectedEditor
+        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(ViewerViewModelBase), null);
+        public ViewerViewModelBase SelectedEditor
         {
-            get { return (GeneratedItemViewModelBase)GetValue(SelectedEditorProperty); }
+            get { return (ViewerViewModelBase)GetValue(SelectedEditorProperty); }
             set { SetValue(SelectedEditorProperty, value); }
         }
 
@@ -190,7 +181,7 @@ namespace RATools.ViewModels
             {
                 _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localAchievement.Title));
 
-                var previous = _localAchievements.Replace(localAchievement, null);
+                var previous = _localAssets.Replace(localAchievement, null);
                 if (previous != null && previous.Points != 0)
                     LocalAchievementPoints -= previous.Points;
 
@@ -203,7 +194,7 @@ namespace RATools.ViewModels
                 else
                     _logger.WriteVerbose(String.Format("Committing {0} to local achievements", achievement.Title));
 
-                var previous = _localAchievements.Replace(localAchievement, achievement);
+                var previous = _localAssets.Replace(localAchievement, achievement);
                 if (previous != null)
                 {
                     var diff = achievement.Points - previous.Points;
@@ -218,7 +209,28 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
+        }
+
+        internal void UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, StringBuilder warning, bool validateAll)
+        {
+            if (leaderboard == null)
+            {
+                _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localLeaderboard.Title));
+                _localAssets.Replace(localLeaderboard, null);
+            }
+            else
+            {
+                if (localLeaderboard != null)
+                    _logger.WriteVerbose(String.Format("Updating {0} in local achievements", leaderboard.Title));
+                else
+                    _logger.WriteVerbose(String.Format("Committing {0} to local achievements", leaderboard.Title));
+
+                _localAssets.Replace(localLeaderboard, leaderboard);
+            }
+
+            if (_localAchievementCommitSuspendCount == 0)
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : leaderboard);
         }
 
         private int _localAchievementCommitSuspendCount = 0;
@@ -232,7 +244,7 @@ namespace RATools.ViewModels
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
             {
                 var warning = new StringBuilder();
-                _localAchievements.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, null);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, null);
             }
         }
 
@@ -303,10 +315,10 @@ namespace RATools.ViewModels
             ReadPublished();
 
             var fileName = Path.Combine(RACacheDirectory, GameId + "-User.txt");
-            _localAchievements = new LocalAchievements(fileName, _fileSystemService);
+            _localAssets = new LocalAssets(fileName, _fileSystemService);
 
-            if (String.IsNullOrEmpty(_localAchievements.Title))
-                _localAchievements.Title = Title;
+            if (String.IsNullOrEmpty(_localAssets.Title))
+                _localAssets.Title = Title;
         }
 
         private void ReadCodeNotes()
@@ -335,6 +347,9 @@ namespace RATools.ViewModels
 
         private void ReadPublished()
         {
+            _publishedAchievements.Clear();
+            _publishedLeaderboards.Clear();
+
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
             using (var stream = _fileSystemService.OpenFile(fileName, OpenFileMode.Read))
             {
@@ -349,32 +364,67 @@ namespace RATools.ViewModels
                 var corePoints = 0;
                 var unofficialCount = 0;
                 var unofficialPoints = 0;
-                foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
+                if (publishedAchievements.Type == JsonFieldType.ObjectArray)
                 {
-                    var builder = new AchievementBuilder();
-                    builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                    builder.Title = publishedAchievement.GetField("Title").StringValue;
-                    builder.Description = publishedAchievement.GetField("Description").StringValue;
-                    builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-                    builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
-                    builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
-
-                    var builtAchievement = builder.ToAchievement();
-                    builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
-                    builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
-
-                    builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
-                    if (builtAchievement.Category == 5)
+                    foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
                     {
-                        _publishedAchievements.Add(builtAchievement);
-                        unofficialCount++;
-                        unofficialPoints += builtAchievement.Points;
+                        var builder = new AchievementBuilder();
+                        builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+                        builder.Title = publishedAchievement.GetField("Title").StringValue;
+                        builder.Description = publishedAchievement.GetField("Description").StringValue;
+                        builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
+                        builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
+                        builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
+
+                        var builtAchievement = builder.ToAchievement();
+                        builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
+                        builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
+
+                        builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
+                        if (builtAchievement.Category == 5)
+                        {
+                            _publishedAchievements.Add(builtAchievement);
+                            unofficialCount++;
+                            unofficialPoints += builtAchievement.Points;
+                        }
+                        else if (builtAchievement.Category == 3)
+                        {
+                            _publishedAchievements.Add(builtAchievement);
+                            coreCount++;
+                            corePoints += builtAchievement.Points;
+                        }
                     }
-                    else if (builtAchievement.Category == 3)
+                }
+
+                var publishedLeaderboards = publishedData.GetField("Leaderboards");
+                if (publishedLeaderboards.Type == JsonFieldType.ObjectArray)
+                {
+                    foreach (var publishedLeaderboard in publishedLeaderboards.ObjectArrayValue)
                     {
-                        _publishedAchievements.Add(builtAchievement);
-                        coreCount++;
-                        corePoints += builtAchievement.Points;
+                        var leaderboard = new Leaderboard();
+                        leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
+                        leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
+                        leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
+                        leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
+
+                        var mem = publishedLeaderboard.GetField("Mem").StringValue;
+                        var tokenizer = Tokenizer.CreateTokenizer(mem);
+                        while (tokenizer.NextChar != '\0')
+                        {
+                            var part = tokenizer.ReadTo("::");
+                            if (part.StartsWith("STA:"))
+                                leaderboard.Start = part.Substring(4);
+                            else if (part.StartsWith("CAN:"))
+                                leaderboard.Cancel = part.Substring(4);
+                            else if (part.StartsWith("SUB:"))
+                                leaderboard.Submit = part.Substring(4);
+                            else if (part.StartsWith("VAL:"))
+                                leaderboard.Value = part.Substring(4);
+
+                            tokenizer.Advance(2);
+                        }
+
+                        _publishedLeaderboards.Add(leaderboard);
                     }
                 }
 
@@ -388,65 +438,104 @@ namespace RATools.ViewModels
             }
         }
 
-        private void MergePublished(List<GeneratedItemViewModelBase> achievements)
+        private void MergeAchievements(List<ViewerViewModelBase> editors, IEnumerable<AssetBase> assets,
+            Action<AssetViewModelBase, AssetBase> assign)
         {
-            foreach (var publishedAchievement in _publishedAchievements)
-            {
-                var achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => a.Generated.Id == publishedAchievement.Id);
-                if (achievement == null)
-                {
-                    achievement = achievements.OfType<GeneratedAchievementViewModel>().FirstOrDefault(a => String.Compare(a.Generated.Title.Text, publishedAchievement.Title, StringComparison.CurrentCultureIgnoreCase) == 0);
-                    if (achievement == null)
-                    {
-                        achievement = new GeneratedAchievementViewModel(this, null);
-                        achievements.Add(achievement);
-                    }
-                }
+            var mergeAssets = new List<AssetBase>(assets);
+            if (mergeAssets.Count == 0)
+                return;
 
-                achievement.Published.LoadAchievement(publishedAchievement);
+            var assetEditors = new List<AssetViewModelBase>();
+
+            if (assets.First() is Achievement)
+                assetEditors.AddRange(editors.OfType<AchievementViewModel>());
+            else
+                assetEditors.AddRange(editors.OfType<LeaderboardViewModel>());
+
+            // first pass - look for ID matches
+            for (int i = assetEditors.Count - 1; i >= 0; i--)
+            {
+                AssetBase mergeAsset = null;
+                var assetEditor = assetEditors[i];
+
+                if (assetEditor.Generated.Id > 0)
+                    mergeAsset = mergeAssets.FirstOrDefault(a => a.Id == assetEditor.Generated.Id);
+                if (mergeAsset == null && assetEditor.Published.Id > 0)
+                    mergeAsset = mergeAssets.FirstOrDefault(a => a.Id == assetEditor.Published.Id);
+
+                if (mergeAsset != null)
+                {
+                    assign(assetEditor, mergeAsset);
+
+                    mergeAssets.Remove(mergeAsset);
+                    assetEditors.RemoveAt(i);
+                }
+            }
+
+            // second pass - look for title matches
+            for (int i = mergeAssets.Count - 1; i >= 0; i--)
+            {
+                var mergeAsset = mergeAssets[i];
+                var assetEditor = assetEditors.FirstOrDefault(a =>
+                    (String.Compare(a.Generated.Title.Text, mergeAsset.Title, StringComparison.InvariantCultureIgnoreCase) == 0 ||
+                     String.Compare(a.Published.Title.Text, mergeAsset.Title, StringComparison.InvariantCultureIgnoreCase) == 0)
+                );
+
+                if (assetEditor != null)
+                {
+                    assign(assetEditor, mergeAsset);
+
+                    mergeAssets.RemoveAt(i);
+                    assetEditors.Remove(assetEditor);
+                }
+            }
+
+            // third pass - look for description matches
+            for (int i = mergeAssets.Count - 1; i >= 0; i--)
+            {
+                var mergeAsset = mergeAssets[i];
+                var assetEditor = assetEditors.FirstOrDefault(a =>
+                    String.Compare(a.Generated.Description.Text, mergeAsset.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+
+                if (assetEditor != null)
+                {
+                    assign(assetEditor, mergeAsset);
+
+                    mergeAssets.RemoveAt(i);
+                    assetEditors.Remove(assetEditor);
+                }
+            }
+
+            // TODO: attempt to match requirements
+
+            // create new entries for each remaining unmerged achievement
+            foreach (var mergeAsset in mergeAssets)
+            {
+                AssetViewModelBase assetEditor;
+
+                if (mergeAsset is Achievement)
+                    assetEditor = new AchievementViewModel(this);
+                else
+                    assetEditor = new LeaderboardViewModel(this);
+
+                assign(assetEditor, mergeAsset);
+                editors.Add(assetEditor);
             }
         }
 
-        private void MergeLocal(List<GeneratedItemViewModelBase> achievements)
+        private void MergePublished(List<ViewerViewModelBase> assets)
         {
-            var localAchievements = new List<Achievement>(_localAchievements.Achievements);
+            MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
+            MergeAchievements(assets, _publishedLeaderboards, (vm, a) => vm.Published.Asset = a);
+        }
 
-            foreach (var achievement in achievements.OfType<GeneratedAchievementViewModel>())
-            {
-                Achievement localAchievement = null;
-                if (achievement.Id > 0)
-                    localAchievement = localAchievements.FirstOrDefault(a => a.Id == achievement.Id);
+        private void MergeLocal(List<ViewerViewModelBase> assets)
+        {
+            MergeAchievements(assets, _localAssets.Achievements, (vm, a) => vm.Local.Asset = a);
+            MergeAchievements(assets, _localAssets.Leaderboards, (vm, a) => vm.Local.Asset = a);
 
-                if (localAchievement == null)
-                {
-                    localAchievement = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Generated.Title.Text, StringComparison.CurrentCultureIgnoreCase) == 0);
-                    if (localAchievement == null)
-                    {
-                        if (!String.IsNullOrEmpty(achievement.Generated.Description.Text))
-                            localAchievement = localAchievements.FirstOrDefault(a => a.Description == achievement.Generated.Description.Text);
-
-                        if (localAchievement == null)
-                        {
-                            // TODO: attempt to match achievements by requirements                        
-                            continue;
-                        }
-                    }
-                }
-
-                localAchievements.Remove(localAchievement);
-
-                achievement.Local.LoadAchievement(localAchievement);
-            }
-
-            foreach (var localAchievement in localAchievements)
-            {
-                var vm = new GeneratedAchievementViewModel(this, null);
-                vm.Local.LoadAchievement(localAchievement);
-                achievements.Add(vm);
-            }
-
-            LocalAchievementCount = _localAchievements.Achievements.Count();
-            LocalAchievementPoints = _localAchievements.Achievements.Sum(a => a.Points);
+            LocalAchievementCount = _localAssets.Achievements.Count();
+            LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
 
             _logger.WriteVerbose(String.Format("Merged {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
         }

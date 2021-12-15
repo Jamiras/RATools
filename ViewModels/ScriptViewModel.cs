@@ -1,6 +1,7 @@
 ﻿//#define DEBUG_RECORDING
 //#define DEBUG_PLAYBACK
 
+using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
@@ -9,7 +10,7 @@ using System.IO;
 
 namespace RATools.ViewModels
 {
-    public class ScriptViewModel : GeneratedItemViewModelBase
+    public class ScriptViewModel : ViewerViewModelBase
     {
         public ScriptViewModel(GameViewModel owner)
             : this()
@@ -26,11 +27,16 @@ namespace RATools.ViewModels
         }
 
         protected ScriptViewModel()
+            : base(null)
         {
             Title = "Script";
+            UpdateLocalCommand = DisabledCommand.Instance;
         }
 
-        public override bool IsGenerated { get { return true; } }
+        public override string ViewerType
+        {
+            get { return "Script"; }
+        }
 
         public EditorViewModel Editor { get; private set; }
 

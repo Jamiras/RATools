@@ -348,7 +348,7 @@ namespace RATools.ViewModels
                 existingViewModel.Script.SetContent(content);
                 viewModel = existingViewModel;
 
-                existingViewModel.SelectedEditor = Game.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+                existingViewModel.SelectedEditor = existingViewModel.Editors.FirstOrDefault(e => e.Title == selectedEditor);
                 existingViewModel.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
             }
             else
@@ -486,7 +486,7 @@ namespace RATools.ViewModels
             var game = vm.Game;
             if (game != null)
             {
-                foreach (var achievement in game.Editors)
+                foreach (var achievement in game.Editors.OfType<AssetViewModelBase>())
                     achievement.OnShowHexValuesChanged(e);
             }
         }

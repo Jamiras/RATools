@@ -1,23 +1,10 @@
-﻿using System.Diagnostics;
-
-namespace RATools.Data
+﻿namespace RATools.Data
 {
     /// <summary>
     /// Defines a leaderboard.
     /// </summary>
-    [DebuggerDisplay("{Title}")]
-    public class Leaderboard
+    public class Leaderboard : AssetBase
     {
-        /// <summary>
-        /// Gets or sets the title of the leaderboard.
-        /// </summary>
-        public string Title { get; set; }
-
-        /// <summary>
-        /// Gets or sets the description of the leaderboard.
-        /// </summary>
-        public string Description { get; set; }
-
         /// <summary>
         /// Gets or sets the serialized start condition for the leaderboard.
         /// </summary>
@@ -117,8 +104,6 @@ namespace RATools.Data
                     return "UNKNOWN";
             }
         }
-
-        internal int SourceLine { get; set; }
     }
 
     /// <summary>

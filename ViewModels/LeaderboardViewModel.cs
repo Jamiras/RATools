@@ -1,203 +1,93 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
-using Jamiras.DataModels;
 using Jamiras.Services;
 using RATools.Data;
-using RATools.Parser;
 using RATools.Services;
 using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.ViewModels
 {
-    public class LeaderboardViewModel : GeneratedItemViewModelBase
+    public class LeaderboardViewModel : AssetViewModelBase
     {
-        public LeaderboardViewModel(GameViewModel owner, Leaderboard leaderboard)
+        public LeaderboardViewModel(GameViewModel owner)
+            : base(owner)
         {
-            _clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
-
-            _leaderboard = leaderboard;
-            Title = leaderboard.Title;
-            Description = leaderboard.Description;
-
-            CopyTitleToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Title));
-            CopyDescriptionToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Description));
-
-            var groups = new List<LeaderboardGroupViewModel>();
-
-            var achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Start));
-            var achievement = achievementBuilder.ToAchievement();
-            groups.Add(new LeaderboardGroupViewModel("Start Conditions", achievement.CoreRequirements, owner.Notes)
-            {
-                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Start))
-            });
-            var i = 1;
-            foreach (var alt in achievement.AlternateRequirements)
-            {
-                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
-                i++;
-            }
-
-            achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Cancel));
-            achievement = achievementBuilder.ToAchievement();
-            groups.Add(new LeaderboardGroupViewModel("Cancel Condition", achievement.CoreRequirements, owner.Notes)
-            {
-                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Cancel))
-            });
-            i = 1;
-            foreach (var alt in achievement.AlternateRequirements)
-            {
-                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
-                i++;
-            }
-
-            achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Submit));
-            achievement = achievementBuilder.ToAchievement();
-            groups.Add(new LeaderboardGroupViewModel("Submit Condition", achievement.CoreRequirements, owner.Notes)
-            {
-                CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Submit))
-            });
-            i = 1;
-            foreach (var alt in achievement.AlternateRequirements)
-            {
-                groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
-                i++;
-            }
-
-            if (_leaderboard.Value.Length > 2 && _leaderboard.Value[1] == ':')
-            {
-                achievementBuilder = new AchievementBuilder();
-                achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(_leaderboard.Value));
-                achievement = achievementBuilder.ToAchievement();
-
-                groups.Add(new LeaderboardGroupViewModel("Value", achievement.CoreRequirements, owner.Notes)
-                {
-                    CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
-                });
-                i = 1;
-                foreach (var alt in achievement.AlternateRequirements)
-                {
-                    groups.Add(new LeaderboardGroupViewModel("Alt " + i, alt, owner.Notes));
-                    i++;
-                }
-            }
-            else
-            {
-                groups.Add(new LeaderboardGroupViewModel("Value", _leaderboard.Value, owner.Notes)
-                {
-                    CopyToClipboardCommand = new DelegateCommand(() => _clipboard.SetData(_leaderboard.Value))
-                });
-            }
-
-            Groups = groups;
-
-            UpdateLocalCommand = null;
-            CanUpdate = false;
         }
 
-        private readonly IClipboardService _clipboard;
-        private readonly Leaderboard _leaderboard;
-
-        public override bool IsGenerated
+        public override string ViewerType
         {
-            get { return true; }
+            get { return "Leaderboard"; }
         }
 
-        public int SourceLine
+        internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
         {
-            get { return _leaderboard.SourceLine; }
-        }
-
-        public CommandBase CopyTitleToClipboardCommand { get; private set; }
-        public CommandBase CopyDescriptionToClipboardCommand { get; private set; }
-
-        public class LeaderboardGroupViewModel
-        {
-            public LeaderboardGroupViewModel(string label, IEnumerable<Requirement> requirements, IDictionary<int, string> notes)
+            var triggers = new List<TriggerViewModel>();
+            var leaderboard = assetViewModel.Asset as Leaderboard;
+            if (leaderboard != null)
             {
-                Label = label;
-
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
-                var conditions = new List<RequirementViewModel>();
-                foreach (var requirement in requirements)
-                    conditions.Add(new RequirementViewModel(requirement, numberFormat, notes));
-                Conditions = conditions;
-            }
+                triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Submit Conditions", leaderboard.Submit, numberFormat, _owner.Notes));
+                triggers.Add(new TriggerViewModel("Value", leaderboard.Value, numberFormat, _owner.Notes));
 
-            public LeaderboardGroupViewModel(string label, string valueString, IDictionary<int, string> notes)
-            {
-                Label = label;
-
-                var conditions = new List<RequirementViewModel>();
-                var tokenizer = Tokenizer.CreateTokenizer(valueString);
-                while (tokenizer.NextChar != '\0')
+                if (assetViewModel.Source.StartsWith("Generated"))
                 {
-                    string requirement, note;
-                    if (tokenizer.NextChar == 'v')
-                    {
-                        tokenizer.Advance();
-
-                        var number = tokenizer.ReadNumber();
-                        requirement = number.ToString();
-                        note = null;
-                    }
-                    else
-                    {
-                        var field = Field.Deserialize(tokenizer);
-                        requirement = field.ToString();
-                        note = null;
-                        if (field.Type == FieldType.MemoryAddress)
-                            notes.TryGetValue((int)field.Value, out note);
-
-                        if (tokenizer.NextChar == '*')
-                        {
-                            requirement += " * ";
-
-                            tokenizer.Advance();
-                            if (tokenizer.NextChar == '-')
-                            {
-                                requirement += '-';
-                                tokenizer.Advance();
-                            }
-
-                            var number = tokenizer.ReadNumber();
-                            requirement += number.ToString();
-                        }
-                    }
-
-                    if (tokenizer.NextChar == '_')
-                    {
-                        tokenizer.Advance();
-                        requirement += " + ";
-                    }
-
-                    conditions.Add(new RequirementViewModel(requirement, note));
+                    triggers[0].CopyToClipboardCommand = new DelegateCommand(CopyStartToClipboard);
+                    triggers[1].CopyToClipboardCommand = new DelegateCommand(CopyCancelToClipboard);
+                    triggers[2].CopyToClipboardCommand = new DelegateCommand(CopySubmitToClipboard);
+                    triggers[3].CopyToClipboardCommand = new DelegateCommand(CopyValueToClipboard);
                 }
-
-                Conditions = conditions;
             }
 
-            public string Label { get; private set; }
-            public IEnumerable<RequirementViewModel> Conditions { get; private set; }
-            public CommandBase CopyToClipboardCommand { get; set; }
+            return triggers.ToArray();
+        }
 
-            internal void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
+        {
+            _owner.UpdateLocal((Leaderboard)asset, (Leaderboard)localAsset, warning, validateAll);
+        }
+
+        private void CopyStartToClipboard()
+        {
+            var leaderboard = Generated.Asset as Leaderboard;
+            if (leaderboard != null)
             {
-                foreach (var condition in Conditions)
-                    condition.OnShowHexValuesChanged(e);
+                var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+                clipboard.SetData(leaderboard.Start);
             }
         }
 
-        public IEnumerable<LeaderboardGroupViewModel> Groups { get; private set; }
-
-        internal override void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
+        private void CopyCancelToClipboard()
         {
-            foreach (var group in Groups)
-                group.OnShowHexValuesChanged(e);
-            base.OnShowHexValuesChanged(e);
+            var leaderboard = Generated.Asset as Leaderboard;
+            if (leaderboard != null)
+            {
+                var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+                clipboard.SetData(leaderboard.Cancel);
+            }
+        }
+
+        private void CopySubmitToClipboard()
+        {
+            var leaderboard = Generated.Asset as Leaderboard;
+            if (leaderboard != null)
+            {
+                var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+                clipboard.SetData(leaderboard.Submit);
+            }
+        }
+
+        private void CopyValueToClipboard()
+        {
+            var leaderboard = Generated.Asset as Leaderboard;
+            if (leaderboard != null)
+            {
+                var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+                clipboard.SetData(leaderboard.Value);
+            }
         }
     }
 }

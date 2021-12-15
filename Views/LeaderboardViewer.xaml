@@ -1,18 +1,14 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:vm="clr-namespace:RATools.ViewModels"
-                    xmlns:views="clr-namespace:RATools.Views">
+                    xmlns:vm="clr-namespace:RATools.ViewModels">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
-        <ResourceDictionary Source="Common.xaml" />
+        <ResourceDictionary Source="AssetViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
     <DataTemplate DataType="{x:Type vm:LeaderboardViewModel}">
         <Border Style="{StaticResource editorBorder}">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -21,103 +17,31 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <Image Width="48" Height="48" Grid.RowSpan="2" Source="/RATools;component/Resources/leaderboard.png" Margin="4,2,2,2" />
+                <ContentPresenter ContentTemplate="{StaticResource assetImageTemplate}" />
 
-                <TextBlock Grid.Column="1" Text="{Binding Title}" Style="{StaticResource editorTitle}" />
-                <TextBlock Grid.Column="1" Grid.Row="1" Text="{Binding Description}" FontSize="12"
-                           Style="{StaticResource editorSubtitle}" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Style="{StaticResource assetTitleStyle}" />
+                    <TextBlock Style="{StaticResource assetDescriptionStyle}" />
+                    <TextBlock Style="{StaticResource assetIDStyle}" />
 
-                <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="4,0,0,2" VerticalAlignment="Bottom" Orientation="Horizontal">
-                    <TextBlock FontSize="10" Margin="0,0,25,0">
-                        <TextBlock.Style>
-                            <Style TargetType="{x:Type TextBlock}">
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SourceLine}" Value="0">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                        <Hyperlink Command="{Binding Path=DataContext.Game.GoToSourceCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type views:MainWindow}}}"
-                                    CommandParameter="{Binding SourceLine}" Style="{StaticResource subtleHyperlink}">
-                            <TextBlock Text="Source" />
-                        </Hyperlink>
-                    </TextBlock>
+                    <StackPanel Margin="6,0,2,0" Orientation="Horizontal">
+                        <TextBlock FontSize="10" Margin="0,0,25,0">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyTitleToClipboardCommand}">
+                                <TextBlock Text="Copy Title to Clipboard" />
+                            </Hyperlink>
+                        </TextBlock>
 
-                    <TextBlock FontSize="10" Margin="0,0,25,0">
-                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyTitleToClipboardCommand}">
-                            <TextBlock Text="Copy Title to Clipboard" />
-                        </Hyperlink>
-                    </TextBlock>
-
-                    <TextBlock FontSize="10">
-                        <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyDescriptionToClipboardCommand}">
-                            <TextBlock Text="Copy Description to Clipboard" />
-                        </Hyperlink>
-                    </TextBlock>
+                        <TextBlock FontSize="10">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyDescriptionToClipboardCommand}">
+                                <TextBlock Text="Copy Description to Clipboard" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
-                
-                <ScrollViewer Grid.Row="3" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
+
+                <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
                               Template="{StaticResource themedScrollViewerTemplate}">
-                    <ItemsControl ItemsSource="{Binding Groups}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel>
-                                    <StackPanel.Style>
-                                        <Style TargetType="{x:Type StackPanel}">
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
-                                                    <Setter Property="Margin" Value="8,-4,0,0" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </StackPanel.Style>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Label}" Margin="4,4,0,0" FontWeight="DemiBold" VerticalAlignment="Bottom">
-                                            <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
-                                                    <Setter Property="FontSize" Value="16" />
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
-                                                            <Setter Property="FontSize" Value="14" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                        <TextBlock FontSize="10" VerticalAlignment="Bottom" Margin="8,0,0,2">
-                                            <TextBlock.Style>
-                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding CopyToClipboardCommand}" Value="{x:Null}">
-                                                            <Setter Property="Visibility" Value="Collapsed" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                            <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyToClipboardCommand}">
-                                                <TextBlock Text="Copy to Clipboard" />
-                                            </Hyperlink>
-                                        </TextBlock>
-                                    </StackPanel>
-                                    <ItemsControl ItemsSource="{Binding Conditions}" Margin="6,0,0,4" Grid.IsSharedSizeScope="True">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,2,0,2">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
-                                                        <ColumnDefinition Width="*" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" Style="{StaticResource themedTextBlock}" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding Notes}" Style="{StaticResource notesTextBlock}" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <ContentPresenter ContentTemplate="{StaticResource assetBodyTemplate}" />
                 </ScrollViewer>
             </Grid>
         </Border>
