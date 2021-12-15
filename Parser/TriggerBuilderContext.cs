@@ -250,6 +250,7 @@ namespace RATools.Parser
                     return false;
                 }
 
+                SetImpliedMeasuredTarget(requirements);
                 return ProcessMeasuredValue(requirements, expression, terms, out result);
             }
 
@@ -301,15 +302,69 @@ namespace RATools.Parser
             var conditionalExpression = expression as ConditionalExpression;
             if (conditionalExpression != null)
             {
+                ParseErrorExpression parseError;
                 var achievement = new ScriptInterpreterAchievementBuilder();
-                if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, expression, scope, out result))
+                if (!achievement.PopulateFromExpression(expression, scope, out parseError))
+                {
+                    result = parseError;
                     return false;
+                }
+
+                SetImpliedMeasuredTarget(achievement.CoreRequirements);
+                foreach (var alt in achievement.AlternateRequirements)
+                    SetImpliedMeasuredTarget(alt);
+
+                var message = achievement.Optimize();
+                if (message != null)
+                {
+                    result = new ParseErrorExpression(message, expression);
+                    return false;
+                }
+
+                if (achievement.AlternateRequirements.Any())
+                {
+                    result = new ParseErrorExpression("Alt groups not supported in value expression", expression);
+                    return false;
+                }
 
                 return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
             }
 
             result = new ParseErrorExpression("Value must be a constant or a memory accessor", expression);
             return false;
+        }
+
+        private static void SetImpliedMeasuredTarget(IEnumerable<Requirement> requirements)
+        {
+            bool seenMeasured = false;
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.Measured)
+                {
+                    seenMeasured = true;
+
+                    // when Measured is used in a value expression, it has an infinite hit target.
+                    // if a specific hit target is not provided, set it to MaxValue to prevent the
+                    // ResetIf/PauseIf flags from being optimized away.
+                    if (requirement.Operator != RequirementOperator.None && requirement.HitCount == 0)
+                        requirement.HitCount = uint.MaxValue;
+                }
+            }
+
+            // complex expression must be converted into a Measured statement
+            // if a Measured requirement does not exist, assign one
+            if (!seenMeasured)
+            {
+                foreach (var requirement in requirements)
+                {
+                    if (requirement.Type == RequirementType.None)
+                    {
+                        requirement.Type = RequirementType.Measured;
+                        SetImpliedMeasuredTarget(requirements);
+                        break;
+                    }
+                }
+            }
         }
 
         private static bool ProcessMeasuredValue(ICollection<Requirement> requirements, ExpressionBase expression, List<Term> terms, out ExpressionBase result)
@@ -329,19 +384,11 @@ namespace RATools.Parser
                 return true;
             }
 
-            // complex expression must be converted into a Measured statement
-            // if a Measured requirement does not exist, assign one
             var measured = requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
             if (measured == null)
             {
-                measured = requirements.FirstOrDefault(r => r.Type == RequirementType.None);
-                if (measured == null)
-                {
-                    result = new ParseErrorExpression("value could not be converted into a measured statement", expression);
-                    return false;
-                }
-
-                measured.Type = RequirementType.Measured;
+                result = new ParseErrorExpression("value could not be converted into a measured statement", expression);
+                return false;
             }
 
             foreach (var requirement in requirements)
@@ -378,6 +425,10 @@ namespace RATools.Parser
                         break;
                 }
             }
+
+
+            if (measured.HitCount == uint.MaxValue)
+                measured.HitCount = 0;
 
             terms.Last().measured = requirements;
 
