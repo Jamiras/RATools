@@ -202,10 +202,16 @@ namespace RATools.Parser
             leaderboard.Format = Leaderboard.ParseFormat(tokenizer.ReadIdentifier().ToString());
             tokenizer.Advance();
 
-            leaderboard.Title = tokenizer.ReadQuotedString().ToString();
+            if (tokenizer.NextChar == '"')
+                leaderboard.Title = tokenizer.ReadQuotedString().ToString();
+            else
+                leaderboard.Title = tokenizer.ReadTo(':').ToString();
             tokenizer.Advance();
 
-            leaderboard.Description = tokenizer.ReadQuotedString().ToString();
+            if (tokenizer.NextChar == '"')
+                leaderboard.Description = tokenizer.ReadQuotedString().ToString();
+            else
+                leaderboard.Description = tokenizer.ReadTo(':').ToString();
 
             _leaderboards.Add(leaderboard);
         }
