@@ -37,14 +37,28 @@ namespace RATools.Test.Parser.Internal
         [TestCase("1 <= byte(2)", "byte(2) >= 1")] // move constant to right side
         [TestCase("1 > byte(2)", "byte(2) < 1")] // move constant to right side
         [TestCase("1 >= byte(2)", "byte(2) <= 1")] // move constant to right side
+        [TestCase("byte(1) == 3.14", "Result can never be true using integer math")] // cannot compare byte() to float
+        [TestCase("byte(1) != 3.14", "Result is always true using integer math")] // cannot compare byte() to float
+        [TestCase("byte(1) < 3.14", "byte(1) <= 3")] // adjust to integer math
+        [TestCase("byte(1) <= 3.14", "byte(1) <= 3")] // adjust to integer math
+        [TestCase("byte(1) > 3.14", "byte(1) > 3")] // adjust to integer math
+        [TestCase("byte(1) >= 3.14", "byte(1) > 3")] // adjust to integer math
+        [TestCase("float(1) == 3.14", "float(1) == 3.14")] // cannot compare byte() to float
         [TestCase("byte(1) + 1 < byte(2) + 1", "byte(1) < byte(2)")] // same modifier on both sides can be eliminated
         [TestCase("byte(1) * 2 + 1 == byte(2) * 2 + 1", "byte(1) == byte(2)")] // same modifiers on both sides can be eliminated
         [TestCase("byte(1) + 6 < byte(2) + 3", "byte(1) + 3 < byte(2)")] // differing modifier should be merged
         [TestCase("byte(1) + variable1 < byte(2) + 3", "byte(1) + 95 < byte(2)")] // differing modifier should be merged
         [TestCase("byte(1) - 1 == 4", "byte(1) == 5")] // factor out subtraction
         [TestCase("byte(1) + 1 == 4", "byte(1) == 3")] // factor out addition
+        [TestCase("byte(1) + 1.2 == 4.8", "Result can never be true using integer math")] // will convert to "byte(1) == 3.6", which cannot be true
         [TestCase("byte(1) * 10 == 100", "byte(1) == 10")] // factor out multiplication
         [TestCase("byte(1) * 10 == 99", "Result can never be true using integer math")] // multiplication cannot be factored out
+        [TestCase("byte(1) * 10 == 99.0", "Result can never be true using integer math")] // multiplication cannot be factored out
+        [TestCase("byte(1) * 10.0 == 99", "Result can never be true using integer math")] // multiplication cannot be factored out
+        [TestCase("byte(1) * 10.0 == 99.0", "Result can never be true using integer math")] // multiplication cannot be factored out
+        [TestCase("float(1) * 10 == 99", "float(1) == 9.9")] // factor out multiplication
+        [TestCase("float(1) * 2.2 == 7.4", "float(1) == 3.363636")] // factor out multiplication
+        [TestCase("byte(1) * 2.2 == 6.6", "byte(1) == 3")] // factor out multiplication
         [TestCase("byte(1) * 10 != 100", "byte(1) != 10")] // factor out multiplication
         [TestCase("byte(1) * 10 != 99", "Result is always true using integer math")] // multiplication cannot be factored out
         [TestCase("byte(1) * 10 < 99", "byte(1) <= 9")] // factor out multiplication - become less than or equal
@@ -57,6 +71,8 @@ namespace RATools.Test.Parser.Internal
         [TestCase("byte(1) / 10 < 9", "byte(1) < 90")] // factor out division
         [TestCase("byte(1) * 10 * 2 == 100", "byte(1) == 5")] // factor out multiplication
         [TestCase("2 * byte(1) * 10 == 100", "byte(1) == 5")] // factor out multiplication
+        [TestCase("2.2 * byte(1) * 10 == 100", "Result can never be true using integer math")] // factor out multiplication
+        [TestCase("2.2 * float(1) * 10 == 100", "float(1) == 4.545455")] // factor out multiplication
         [TestCase("byte(1) * 10 / 2 == 100", "byte(1) == 20")] // factor out multiplication and division
         [TestCase("byte(1) * 10 / 3 == 100", "byte(1) == 30")] // factor out multiplication and division
         [TestCase("byte(1) * 10 + 10 == 100", "byte(1) == 9")] // factor out multiplication and addition
@@ -79,6 +95,9 @@ namespace RATools.Test.Parser.Internal
         [TestCase("bcd(byte(1)) == 24", "byte(1) == 36")] // bcd should be factored out
         [TestCase("byte(1) != bcd(byte(2))", "byte(1) != bcd(byte(2))")] // bcd cannot be factored out
         [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", "byte(1) != prev(byte(1))")] // bcd should be factored out
+        [TestCase("byte(1) / byte(2) < 0.8", "byte(1) / 0.8 < byte(2)")] // move float to avoid integer division
+        [TestCase("byte(1) * 100.0 / byte(2) > 75", "byte(1) * 100.0 / byte(2) > 75")] // division could not be moved
+        [TestCase("byte(1) / byte(2) * 100.0 > 75", "byte(1) / 0.75 > byte(2)")] // combine numbers, then move float to avoid integer division
         public void TestReplaceVariables(string input, string expected)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
@@ -346,6 +365,9 @@ namespace RATools.Test.Parser.Internal
         [TestCase("prev(byte(1)) - prev(byte(2)) - prev(byte(3)) < 2", // make sure the memory reference is seen inside the prev
                   "prev(byte(1)) - prev(byte(2)) - prev(byte(3)) + 510 < 512", // overflow of 510 calculated
                   "A:510=0_B:d0xH000003=0_B:d0xH000002=0_d0xH000001<512")]
+        [TestCase("(word(1) - word(2)) > 0 && (word(1) - word(2)) < 0x8000",
+                  "word(1) - word(2) + 65535 > 65535 && word(1) - word(2) + 65535 < 98303",
+                  "A:65535=0_B:0x 000002=0_0x 000001>65535_A:65535=0_B:0x 000002=0_0x 000001<98303")]
         public void TestUnderflowComplex(string input, string expected, string expectedSerialized)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
