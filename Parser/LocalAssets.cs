@@ -295,9 +295,19 @@ namespace RATools.Parser
             foreach (var achievement in _achievements)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
-                if (Double.Parse(achievementMinimumVersion) > version)
-                    Version = achievementMinimumVersion;
+                if (achievementMinimumVersion > version)
+                    version = achievementMinimumVersion;
             }
+
+            foreach (var leaderboard in _leaderboards)
+            {
+                var leaderboardMinimumVersion = AchievementBuilder.GetMinimumVersion(leaderboard);
+                if (leaderboardMinimumVersion > version)
+                    version = leaderboardMinimumVersion;
+            }
+
+            if (version > 0.30)
+                Version = String.Format("{0:F2}", version);
 
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {

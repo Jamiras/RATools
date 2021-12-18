@@ -115,6 +115,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new RichPresenceDisplayFunction());
                 _globalScope.AddFunction(new RichPresenceConditionalDisplayFunction());
                 _globalScope.AddFunction(new RichPresenceValueFunction());
+                _globalScope.AddFunction(new RichPresenceMacroFunction());
                 _globalScope.AddFunction(new RichPresenceLookupFunction());
 
                 _globalScope.AddFunction(new AlwaysTrueFunction());
@@ -379,6 +380,24 @@ namespace RATools.Parser
                     }
                 }
             }
+
+            double minimumVersion = 0.30;
+            foreach (var achievement in _achievements)
+            {
+                var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
+                if (achievementMinimumVersion > minimumVersion)
+                    minimumVersion = achievementMinimumVersion;
+            }
+
+            foreach (var leaderboard in _leaderboards)
+            {
+                var leaderboardMinimumVersion = AchievementBuilder.GetMinimumVersion(leaderboard);
+                if (leaderboardMinimumVersion > minimumVersion)
+                    minimumVersion = leaderboardMinimumVersion;
+            }
+
+            _richPresence.DisableLookupCollapsing = (minimumVersion < 0.79);
+            _richPresence.DisableBuiltInMacros = (minimumVersion < 0.80);
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
             {

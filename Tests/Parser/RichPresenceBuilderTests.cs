@@ -41,6 +41,7 @@ namespace RATools.Test.Parser
         {
             // explicitly initialize out of order
             var builder = new RichPresenceBuilder();
+            builder.DisableBuiltInMacros = true;
             builder.AddValueField(null, "Val", ValueFormat.Value);
             builder.AddValueField(null, "Score", ValueFormat.Score);
             builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
@@ -51,6 +52,24 @@ namespace RATools.Test.Parser
                 "\n" +
                 "Format:Score\n" +
                 "FormatType=SCORE\n" +
+                "\n" +
+                "Display:\n" +
+                "@Val(0xH1234) @Score(0xH2345)\n"
+            ));
+        }
+
+        [Test]
+        public void TestValueFieldsBuiltIn()
+        {
+            var builder = new RichPresenceBuilder();
+            builder.DisableBuiltInMacros = false;
+            builder.AddValueField(null, "Val", ValueFormat.Value);
+            builder.AddValueField(null, "Score", ValueFormat.Score);
+            builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
+
+            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+                "Format:Val\n" +
+                "FormatType=VALUE\n" +
                 "\n" +
                 "Display:\n" +
                 "@Val(0xH1234) @Score(0xH2345)\n"
