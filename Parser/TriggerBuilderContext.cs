@@ -183,7 +183,11 @@ namespace RATools.Parser
         private static ExpressionBase WrapInMeasured(ExpressionBase expression)
         {
             return new FunctionCallExpression("measured", new ExpressionBase[]
-                { expression, new FunctionCallExpression("always_true", new ExpressionBase[0]) });
+            {
+                expression,
+                new FunctionCallExpression("always_true", new ExpressionBase[0]),
+                new StringConstantExpression("raw")
+            });
         }
 
         private static bool MergeFields(Field field, Term term, MathematicOperation operation)
@@ -339,7 +343,7 @@ namespace RATools.Parser
             bool seenMeasured = false;
             foreach (var requirement in requirements)
             {
-                if (requirement.Type == RequirementType.Measured)
+                if (requirement.IsMeasured)
                 {
                     seenMeasured = true;
 

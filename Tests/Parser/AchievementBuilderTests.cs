@@ -237,6 +237,9 @@ namespace RATools.Test.Parser
         [TestCase("float(0x1111) < prev(float(0x1111))", "fF001111<dfF001111")]
         [TestCase("mbf32(0x2345) == -0.5", "fM002345=f-0.5")]
         [TestCase("never(float(0x1111) == 2.0)", "R:fF001111=f2.0")]
+        [TestCase("measured(byte(0x1234) < 40)", "M:0xH001234<40")]
+        [TestCase("measured(repeated(20, byte(0x1234) == 40))", "M:0xH001234=40.20.")]
+        [TestCase("measured(byte(0x1234) < 40, format=\"percent\")", "G:0xH001234<40")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder

@@ -129,6 +129,8 @@ namespace RATools.Parser
                         requirement.Type = RequirementType.AddAddress;
                     else if (tokenizer.Match("M:"))
                         requirement.Type = RequirementType.Measured;
+                    else if (tokenizer.Match("G:"))
+                        requirement.Type = RequirementType.MeasuredPercent;
                     else if (tokenizer.Match("Q:"))
                         requirement.Type = RequirementType.MeasuredIf;
                     else if (tokenizer.Match("Z:"))
@@ -299,6 +301,12 @@ namespace RATools.Parser
                             minVer = 79;
                         break;
 
+                    case RequirementType.MeasuredPercent:
+                        // 0.80 TBD
+                        if (minVer < 80)
+                            minVer = 80;
+                        break;
+
                     default:
                         break;
                 }
@@ -442,6 +450,7 @@ namespace RATools.Parser
                 case RequirementType.AndNext: builder.Append("N:"); break;
                 case RequirementType.OrNext: builder.Append("O:"); break;
                 case RequirementType.Measured: builder.Append("M:"); break;
+                case RequirementType.MeasuredPercent: builder.Append("G:"); break;
                 case RequirementType.MeasuredIf: builder.Append("Q:"); break;
                 case RequirementType.AddAddress: builder.Append("I:"); break;
                 case RequirementType.ResetNextIf: builder.Append("Z:"); break;
@@ -508,6 +517,7 @@ namespace RATools.Parser
                 switch (group.Requirements.Last().Type)
                 {
                     case RequirementType.Measured:
+                    case RequirementType.MeasuredPercent:
                         measured = group;
                         break;
 
@@ -1020,7 +1030,7 @@ namespace RATools.Parser
             foreach (var group in groups)
             {
                 // PauseIf may be protecting a Measured, if found don't invert PauseIf
-                bool hasMeasured = group.Any(g => g.Requirements.Any(r => r.Type == RequirementType.Measured));
+                bool hasMeasured = group.Any(g => g.Requirements.Any(r => r.IsMeasured));
 
                 foreach (var requirementEx in group)
                 {
@@ -1598,15 +1608,16 @@ namespace RATools.Parser
 
             // Measured and MeasuredIf cannot be separated. If any Measured or MeasuredIf items
             // remain in one of the alt groups (or exist in the core), don't promote any of the others.
-            if (requirementsFoundInAll.Any(r => r.Requirements.Last().Type == RequirementType.Measured || r.Requirements.Last().Type == RequirementType.MeasuredIf))
+            if (requirementsFoundInAll.Any(r => r.Requirements.Last().IsMeasured ||
+                                                r.Requirements.Last().Type == RequirementType.MeasuredIf))
             {
                 foreach (var group in groups)
                 {
                     bool allPromoted = true;
                     foreach (var requirementEx in group)
                     {
-                        var type = requirementEx.Requirements.Last().Type;
-                        if (type == RequirementType.Measured || type == RequirementType.MeasuredIf)
+                        var lastRequirement = requirementEx.Requirements.Last();
+                        if (lastRequirement.IsMeasured || lastRequirement.Type == RequirementType.MeasuredIf)
                         {
                             if (!requirementsFoundInAll.Contains(requirementEx))
                             {
@@ -1618,7 +1629,7 @@ namespace RATools.Parser
 
                     if (!allPromoted)
                     {
-                        requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.Measured || r.Requirements.Last().Type == RequirementType.MeasuredIf);
+                        requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().IsMeasured || r.Requirements.Last().Type == RequirementType.MeasuredIf);
                         break;
                     }
                 }
@@ -2166,7 +2177,7 @@ namespace RATools.Parser
         {
             foreach (var requirement in requirements)
             {
-                if (requirement.Type == RequirementType.Measured)
+                if (requirement.IsMeasured)
                 {
                     uint conditionTarget = requirement.HitCount;
                     if (conditionTarget == 0)
