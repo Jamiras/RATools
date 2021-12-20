@@ -4,7 +4,6 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Test.Parser.Functions
@@ -81,6 +80,44 @@ namespace RATools.Test.Parser.Functions
             Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), \"banana\")",
                 "1:1 leaderboard call failed\r\n- 1:94 banana is not a supported leaderboard format");
+        }
+
+        [Test]
+        public void TestValueMaxOf()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of(byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8))");
+            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3$0xH001235*5$0xH001236*8"));
+        }
+
+        [Test]
+        public void TestValueMeasured()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(byte(0x1234) * 10 + byte(0x2345)))");
+            Assert.That(leaderboard.Value, Is.EqualTo("A:0xH001234*10_M:0xH002345"));
+        }
+
+        [Test]
+        public void TestValueMeasuredWhen()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(byte(0x1234) * 10 + byte(0x2345), when=byte(0x3456) > 4))");
+            Assert.That(leaderboard.Value, Is.EqualTo("A:0xH001234*10_M:0xH002345_Q:0xH003456>4"));
+        }
+
+        [Test]
+        public void TestValueMeasuredWhenMaxOf()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of(measured(byte(0x1234), when=byte(0x3456) > 4), " +
+                       "measured(byte(0x1235), when=byte(0x3456) < 4), " +
+                       "measured(byte(0x1236), when=byte(0x3456) == 4)))");
+            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Q:0xH003456>4$M:0xH001235_Q:0xH003456<4$M:0xH001236_Q:0xH003456=4"));
         }
 
         [Test]
