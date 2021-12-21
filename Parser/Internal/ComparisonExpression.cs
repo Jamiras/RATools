@@ -78,8 +78,6 @@ namespace RATools.Parser.Internal
 
         private static bool MoveConstantsToRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
         {
-            ComparisonExpression newRoot;
-
             // if left side is not mathematic, we can't move anything
             var mathematicLeft = comparisonExpression.Left as MathematicExpression;
             if (mathematicLeft == null)
@@ -88,57 +86,91 @@ namespace RATools.Parser.Internal
                 if (comparisonExpression.Left.Type == ExpressionType.IntegerConstant &&
                     comparisonExpression.Right.Type != ExpressionType.IntegerConstant)
                 {
-                    var operation = InvertComparisonOperation(comparisonExpression.Operation);
-                    comparisonExpression = new ComparisonExpression(comparisonExpression.Right, operation, comparisonExpression.Left);
+                    var invertedComparisonOperation = InvertComparisonOperation(comparisonExpression.Operation);
+                    comparisonExpression = new ComparisonExpression(comparisonExpression.Right, invertedComparisonOperation, comparisonExpression.Left);
 
                     // recurse if necessary
                     if (comparisonExpression.Left.Type == ExpressionType.Mathematic)
                         return MoveConstantsToRightHandSide(comparisonExpression, scope, out result);
-
-                    result = comparisonExpression;
-                    return true;
                 }
 
                 result = comparisonExpression;
-                return true;
+            }
+            else
+            {
+                do
+                {
+                    if (!MoveConstantToRightHandSide(comparisonExpression, mathematicLeft, scope, out result))
+                        return false;
+
+                    if (ReferenceEquals(comparisonExpression, result))
+                    {
+                        if (MoveFloatToAvoidIntegerDivision(ref comparisonExpression))
+                            result = comparisonExpression;
+                        break;
+                    }
+
+                    comparisonExpression = result as ComparisonExpression;
+                    if (comparisonExpression == null)
+                        break;
+
+                    mathematicLeft = comparisonExpression.Left as MathematicExpression;
+                } while (mathematicLeft != null);
             }
 
+            if (comparisonExpression.Right.Type == ExpressionType.FloatConstant && !HasFloat(comparisonExpression.Left))
+            {
+                if (!TruncateFloatComparison(comparisonExpression, out result))
+                    return false;
+            }
+
+            return true;
+        }
+
+        private static bool MoveConstantToRightHandSide(ComparisonExpression comparisonExpression,
+            MathematicExpression mathematicLeft, InterpreterScope scope, out ExpressionBase result)
+        {
+            // if the same operation is being applied to both sides, just cancel it out
             var mathematicRight = comparisonExpression.Right as MathematicExpression;
             if (mathematicRight != null &&
                 mathematicLeft.Operation == mathematicRight.Operation &&
                 mathematicLeft.Right == mathematicRight.Right)
             {
-                // same operation being applied to both sides, just cancel it out
-                newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonExpression.Operation, mathematicRight.Left);
+                result = new ComparisonExpression(mathematicLeft.Left, comparisonExpression.Operation, mathematicRight.Left);
+                return true;
             }
-            else
+
+
+            // if it's not numeric, don't try to move it
+            if (mathematicLeft.Right.Type != ExpressionType.IntegerConstant &&
+                mathematicLeft.Right.Type != ExpressionType.FloatConstant)
             {
-                // if it's not an integer, we can't merge it, so don't move it
-                if (mathematicLeft.Right.Type != ExpressionType.IntegerConstant)
-                {
-                    result = comparisonExpression;
-                    return true;
-                }
+                result = comparisonExpression;
+                return true;
+            }
 
-                // move it to the other side by applying the inverse of the mathematical operation
-                var operation = MathematicExpression.GetOppositeOperation(mathematicLeft.Operation);
-                var right = new MathematicExpression(comparisonExpression.Right, operation, mathematicLeft.Right);
-                if (!right.ReplaceVariables(scope, out result))
-                    return false;
+            // move the left constant to the other side by applying the inverse of the mathematical operation
+            var operation = MathematicExpression.GetOppositeOperation(mathematicLeft.Operation);
+            var right = new MathematicExpression(comparisonExpression.Right, operation, mathematicLeft.Right);
+            if (!right.ReplaceVariables(scope, out result))
+                return false;
 
-                // if the operators could not be merged, keep them where they were
-                if (result is MathematicExpression)
-                {
-                    result = comparisonExpression;
-                    return true;
-                }
+            // if the operators could not be merged, keep them where they were
+            if (result.Type == ExpressionType.Mathematic)
+            {
+                result = comparisonExpression;
+                return true;
+            }
 
-                var newRight = result;
-                var comparisonOperation = comparisonExpression.Operation;
+            var newRight = result;
+            var comparisonOperation = comparisonExpression.Operation;
+            var truncatedIntegerDivision = false;
 
-                // multiplication is converted to division. if the division is not exact, modify the comparison 
-                // so its still logically valid (if possible).
-                if (operation == MathematicOperation.Divide && newRight is IntegerConstantExpression)
+            // multiplication is converted to division.
+            // if the division is not exact, modify the comparison so its still logically valid (if possible).
+            if (operation == MathematicOperation.Divide)
+            {
+                if (newRight.Type == ExpressionType.IntegerConstant)
                 {
                     var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematicLeft.Right);
                     if (!reversed.ReplaceVariables(scope, out result))
@@ -146,51 +178,117 @@ namespace RATools.Parser.Internal
 
                     if (comparisonExpression.Right != result)
                     {
-                        // division was not exact
-                        switch (comparisonOperation)
+                        // division was not exact, recalculate the float value
+                        if (comparisonExpression.Right.Type == ExpressionType.IntegerConstant)
                         {
-                            case ComparisonOperation.Equal:
-                                // a * 10 == 9999 can never be true
-                                result = new ParseErrorExpression("Result can never be true using integer math", comparisonExpression);
+                            newRight = new FloatConstantExpression((float)((IntegerConstantExpression)comparisonExpression.Right).Value);
+                            right = new MathematicExpression(newRight, operation, mathematicLeft.Right);
+                            if (!right.ReplaceVariables(scope, out result))
                                 return false;
 
-                            case ComparisonOperation.NotEqual:
-                                // a * 10 != 9999 is always true
-                                result = new ParseErrorExpression("Result is always true using integer math", comparisonExpression);
-                                return false;
+                            newRight = result;
 
-                            case ComparisonOperation.LessThan:
-                                // a * 10 < 9999 becomes a <= 999
-                                comparisonOperation = ComparisonOperation.LessThanOrEqual;
-                                break;
-
-                            case ComparisonOperation.LessThanOrEqual:
-                                // a * 10 <= 9999 becomes a <= 999
-                                break;
-
-                            case ComparisonOperation.GreaterThan:
-                                // a * 10 > 9999 becomes a > 999
-                                break;
-
-                            case ComparisonOperation.GreaterThanOrEqual:
-                                // a * 10 >= 9999 becomes a > 999
-                                comparisonOperation = ComparisonOperation.GreaterThan;
-                                break;
+                            truncatedIntegerDivision = !HasFloat(mathematicLeft.Left);
+                        }
+                        else
+                        {
+                            // unexpected - how did we get from a non-integer (comparisonExpression.Right) to an integer (newRight)?
+                            truncatedIntegerDivision = true;
                         }
                     }
                 }
+                else if (newRight.Type == ExpressionType.FloatConstant && !HasFloat(mathematicLeft.Left))
+                {
+                    var floatConstant = ((FloatConstantExpression)newRight).Value;
+                    if ((float)((int)floatConstant) != floatConstant)
+                    {
+                        var temp = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
 
-                // construct the new equation
-                newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
+                        if (MoveFloatToAvoidIntegerDivision(ref temp))
+                        {
+                            result = temp;
+                            return true;
+                        }
+
+                        truncatedIntegerDivision = true;
+                    }
+
+                    newRight = new IntegerConstantExpression((int)floatConstant);
+                    result.CopyLocation(newRight);
+                }
             }
 
-            // recurse if applicable
-            if (newRoot.Left.Type == ExpressionType.Mathematic)
-                return MoveConstantsToRightHandSide(newRoot, scope, out result);
-
+            // construct the new equation
+            var newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
             comparisonExpression.CopyLocation(newRoot);
             result = newRoot;
+
+            if (truncatedIntegerDivision)
+            {
+                // division was not exact, validate logic
+                if (!TruncateFloatComparison(newRoot, out result))
+                    return false;
+            }
+
             return true;
+        }
+
+        private static bool TruncateFloatComparison(ComparisonExpression comparison, out ExpressionBase result)
+        {
+            switch (comparison.Operation)
+            {
+                case ComparisonOperation.Equal:
+                    // a * 10 == 9999 can never be true
+                    result = new ParseErrorExpression("Result can never be true using integer math", comparison);
+                    return false;
+
+                case ComparisonOperation.NotEqual:
+                    // a * 10 != 9999 is always true
+                    result = new ParseErrorExpression("Result is always true using integer math", comparison);
+                    return false;
+
+                case ComparisonOperation.LessThan:
+                    // a * 10 < 9999 becomes a <= 999
+                    comparison.Operation = ComparisonOperation.LessThanOrEqual;
+                    break;
+
+                case ComparisonOperation.LessThanOrEqual:
+                    // a * 10 <= 9999 becomes a <= 999
+                    break;
+
+                case ComparisonOperation.GreaterThan:
+                    // a * 10 > 9999 becomes a > 999
+                    break;
+
+                case ComparisonOperation.GreaterThanOrEqual:
+                    // a * 10 >= 9999 becomes a > 999
+                    comparison.Operation = ComparisonOperation.GreaterThan;
+                    break;
+            }
+
+            comparison.Right = new IntegerConstantExpression((int)((FloatConstantExpression)comparison.Right).Value);
+            result = comparison;
+            return true;
+        }
+
+        private static bool MoveFloatToAvoidIntegerDivision(ref ComparisonExpression comparison)
+        {
+            // if the right side is a floating point value and the left side is integer division, move the float to the left side
+            if (comparison.Right.Type == ExpressionType.FloatConstant)
+            {
+                var mathematicLeft = comparison.Left as MathematicExpression;
+                if (mathematicLeft != null && mathematicLeft.Operation == MathematicOperation.Divide && !HasFloat(mathematicLeft.Right))
+                {
+                    // "a / b > f" => "a > f * b" => "a / f > b"
+                    var newLeft = new MathematicExpression(mathematicLeft.Left, mathematicLeft.Operation, comparison.Right);
+                    var newComparison = new ComparisonExpression(newLeft, comparison.Operation, mathematicLeft.Right);
+                    comparison.CopyLocation(newComparison);
+                    comparison = newComparison;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static ComparisonExpression EnsureSingleExpressionOnRightHandSide(ComparisonExpression comparison, InterpreterScope scope)
@@ -398,6 +496,43 @@ namespace RATools.Parser.Internal
 
                 if (HasSubtract(mathematic.Left) || HasSubtract(mathematic.Right))
                     return true;
+            }
+
+            return false;
+        }
+
+        private static bool HasFloat(ExpressionBase expression)
+        {
+            if (expression.Type == ExpressionType.FloatConstant)
+                return true;
+
+            var mathematic = expression as MathematicExpression;
+            if (mathematic != null)
+                return HasFloat(mathematic.Left) || HasFloat(mathematic.Right);
+
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                var functionDef = AchievementScriptInterpreter.GetGlobalScope().GetFunction(functionCall.FunctionName.Name);
+                var memoryAccessorFunction = functionDef as MemoryAccessorFunction;
+                if (memoryAccessorFunction != null)
+                {
+                    switch (memoryAccessorFunction.Size)
+                    {
+                        case FieldSize.Float:
+                        case FieldSize.MBF32:
+                            return true;
+
+                        default:
+                            return false;
+                    }
+                }
+
+                if (functionDef is PrevPriorFunction)
+                    return HasFloat(functionCall.Parameters.First());
+
+                // unknown function - assume it can return a float
+                return true;
             }
 
             return false;
@@ -903,17 +1038,19 @@ namespace RATools.Parser.Internal
             }
 
             // if the same operation is being applied to both sides, just cancel it out
-            var mathematicRight = right as MathematicExpression;
-            var mathematicLeft = left as MathematicExpression;
-            while (mathematicLeft != null && mathematicRight != null &&
-                mathematicLeft.Operation == mathematicRight.Operation &&
-                mathematicLeft.Right == mathematicRight.Right)
             {
-                left = mathematicLeft.Left;
-                right = mathematicRight.Left;
+                var mathematicRight = right as MathematicExpression;
+                var mathematicLeft = left as MathematicExpression;
+                while (mathematicLeft != null && mathematicRight != null &&
+                    mathematicLeft.Operation == mathematicRight.Operation &&
+                    mathematicLeft.Right == mathematicRight.Right)
+                {
+                    left = mathematicLeft.Left;
+                    right = mathematicRight.Left;
 
-                mathematicRight = right as MathematicExpression;
-                mathematicLeft = left as MathematicExpression;
+                    mathematicRight = right as MathematicExpression;
+                    mathematicLeft = left as MathematicExpression;
+                }
             }
 
             // prefer "a == 1" over "1 == a"
