@@ -90,6 +90,24 @@ namespace RATools.Data
             }
         }
 
+        /// <summary>
+        /// Gets whether or not the requirement can be measured.
+        /// </summary>
+        public bool IsMeasured
+        {
+            get
+            {
+                switch (Type)
+                {
+                    case RequirementType.Measured:
+                    case RequirementType.MeasuredPercent:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
 
         /// <summary>
         /// Gets or sets the requirement operator.
@@ -138,6 +156,7 @@ namespace RATools.Data
                     break;
 
                 case RequirementType.Measured:
+                case RequirementType.MeasuredPercent:
                     builder.Append("measured(");
                     AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
                     if (measuredIf != null)
@@ -145,6 +164,8 @@ namespace RATools.Data
                         builder.Append(", when=");
                         builder.Append(measuredIf);
                     }
+                    if (Type == RequirementType.MeasuredPercent)
+                        builder.Append(", format=\"percent\"");
                     builder.Append(')');
                     break;
 
@@ -631,7 +652,7 @@ namespace RATools.Data
         OrNext,
 
         /// <summary>
-        /// Meta-flag indicating that this condition tracks progress.
+        /// Meta-flag indicating that this condition tracks progress as a raw value.
         /// </summary>
         Measured,
 
@@ -654,5 +675,10 @@ namespace RATools.Data
         /// While all non-Trigger conditions are true, a challenge indicator will be displayed.
         /// </summary>
         Trigger,
+
+        /// <summary>
+        /// Meta-flag indicating that this condition tracks progress as a percentage.
+        /// </summary>
+        MeasuredPercent,
     }
 }
