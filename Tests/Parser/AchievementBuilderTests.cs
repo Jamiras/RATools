@@ -733,5 +733,16 @@ namespace RATools.Test.Parser
         {
             CreateAchievement("(byte(0x1234) == 2) == 1", "comparison did not evaluate to a valid comparison");
         }
+
+        [Test]
+        public void TestTriggerWhenDistribution()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "trigger_when(byte(0x2345) == 2 && byte(0x2346) == 3 && (byte(0x2347) == 0 || byte(0x2347) == 1)) && " +
+                "never(byte(0x3456) == 2)");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(), 
+                Is.EqualTo("0xH001234=1.1._T:0xH002345=2_T:0xH002346=3_R:0xH003456=2ST:0xH002347=0ST:0xH002347=1"));
+        }
     }
 }
