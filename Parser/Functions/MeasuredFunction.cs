@@ -56,16 +56,13 @@ namespace RATools.Parser.Functions
 
             if (formatStr.Value != "raw")
             {
-                // TODO: restrict non-achievement uses to 'raw'
+                if (scope.GetContext<ValueBuilderContext>() != null)
+                    return new ParseErrorExpression("Value fields only support raw measured values", format);
 
                 if (formatStr.Value == "percent")
-                {
                     context.LastRequirement.Type = RequirementType.MeasuredPercent;
-                }
                 else
-                {
                     return new ParseErrorExpression("Unknown format: " + formatStr.Value, format);
-                }
             }
 
             var when = functionCall.Parameters.ElementAt(1);

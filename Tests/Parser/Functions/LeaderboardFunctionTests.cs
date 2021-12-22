@@ -130,6 +130,17 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestValueMeasuredRaw()
+        {
+            Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(byte(0x1234) * 10 + byte(0x2345), format=\"percent\"))",
+                "1:1 leaderboard call failed\r\n" +
+                "- 1:80 Function call failed.\r\n" +
+                "- 1:130 Value fields only support raw measured values");
+        }
+
+        [Test]
         public void TestValueMeasuredAddSourceScaled()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
