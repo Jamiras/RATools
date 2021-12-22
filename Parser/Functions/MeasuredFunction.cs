@@ -10,8 +10,10 @@ namespace RATools.Parser.Functions
             : base("measured", RequirementType.Measured, ConditionalOperation.Or)
         {
             Parameters.Add(new VariableDefinitionExpression("when"));
+            Parameters.Add(new VariableDefinitionExpression("format"));
 
             DefaultParameters["when"] = new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            DefaultParameters["format"] = new StringConstantExpression("raw");
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
@@ -24,7 +26,14 @@ namespace RATools.Parser.Functions
                 return true;
 
             var when = GetParameter(scope, "when", out result);
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { func.Parameters.First(), when });
+            if (result != null)
+                return false;
+
+            var format = GetStringParameter(scope, "format", out result);
+            if (result != null)
+                return false;
+
+            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { func.Parameters.First(), when, format });
             CopyLocation(result);
 
             return true;
@@ -36,10 +45,32 @@ namespace RATools.Parser.Functions
             if (error != null)
                 return error;
 
+            ExpressionBase result;
+            var format = functionCall.Parameters.ElementAt(2);
+            if (!format.ReplaceVariables(scope, out result))
+                return (ParseErrorExpression)result;
+
+            StringConstantExpression formatStr = result as StringConstantExpression;
+            if (formatStr == null)
+                return new ParseErrorExpression("format is not a string", format);
+
+            if (formatStr.Value != "raw")
+            {
+                // TODO: restrict non-achievement uses to 'raw'
+
+                if (formatStr.Value == "percent")
+                {
+                    context.LastRequirement.Type = RequirementType.MeasuredPercent;
+                }
+                else
+                {
+                    return new ParseErrorExpression("Unknown format: " + formatStr.Value, format);
+                }
+            }
+
             var when = functionCall.Parameters.ElementAt(1);
 
             var builder = new ScriptInterpreterAchievementBuilder();
-            ExpressionBase result;
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, when, scope, out result))
                 return new ParseErrorExpression("when did not evaluate to a valid comparison", when) { InnerError = (ParseErrorExpression)result };
 

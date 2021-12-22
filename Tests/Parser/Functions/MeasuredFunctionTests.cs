@@ -17,9 +17,10 @@ namespace RATools.Test.Parser.Functions
         {
             var def = new MeasuredFunction();
             Assert.That(def.Name.Name, Is.EqualTo("measured"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(2));
+            Assert.That(def.Parameters.Count, Is.EqualTo(3));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("comparison"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("when"));
+            Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("format"));
         }
 
         private List<Requirement> Evaluate(string input, string expectedError = null)
@@ -163,6 +164,36 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[2].Right.ToString(), Is.EqualTo("7"));
             Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.MeasuredIf));
             Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestComparisonFormatRaw()
+        {
+            var requirements = Evaluate("measured(byte(0x1234) == 120, format=\"raw\")");
+            Assert.That(requirements.Count, Is.EqualTo(1));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestComparisonFormatPercent()
+        {
+            var requirements = Evaluate("measured(byte(0x1234) == 120, format=\"percent\")");
+            Assert.That(requirements.Count, Is.EqualTo(1));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.MeasuredPercent));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestComparisonFormatUnknown()
+        {
+            Evaluate("measured(byte(0x1234) == 120, format=\"unknown\")", "Unknown format: unknown");
         }
 
         [Test]

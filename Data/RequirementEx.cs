@@ -207,7 +207,7 @@ namespace RATools.Data
                             addHits.Length > 0 ? addHits.ToString() : null,
                             andNext.Length > 0 ? andNext.ToString() : null,
                             addAddress.Length > 0 ? addAddress.ToString() : null,
-                            (requirement.Type == RequirementType.Measured) ? measuredIf : null,
+                            requirement.IsMeasured ? measuredIf : null,
                             resetNextIf.Length > 0 ? resetNextIf.ToString() : null);
 
                         addSources.Clear();

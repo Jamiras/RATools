@@ -439,6 +439,9 @@ namespace RATools.Parser
                     if (error != null)
                         return error;
 
+                    if (context.LastRequirement.Operator != RequirementOperator.None)
+                        return new ParseErrorExpression("Cannot generate condition using both " + context.LastRequirement.Operator + " and " + operation);
+
                     context.LastRequirement.Operator = (operation == MathematicOperation.Multiply) ?
                         RequirementOperator.Multiply : RequirementOperator.Divide;
                     context.LastRequirement.Right = operand;
@@ -886,6 +889,15 @@ namespace RATools.Parser
                         // if left side is an AddAddress chain, but right side is a not, we have to keep the
                         // dummy condition to prevent the AddAddress from modifying the memory address on the
                         // right side. integers are handled above.
+                        requirement.Type = RequirementType.AddSource;
+                        extraRequirement.Right = extraRequirement.Left;
+                        extraRequirement.Left = new Field { Type = FieldType.Value, Value = 0 };
+                        extraRequirement.Operator = op;
+                        context.Trigger.Add(extraRequirement);
+                    }
+                    else if (requirement.Operator != RequirementOperator.None)
+                    {
+                        // if left side is a complex expression (a * 4), add a new dummy condition for the comparison
                         requirement.Type = RequirementType.AddSource;
                         extraRequirement.Right = extraRequirement.Left;
                         extraRequirement.Left = new Field { Type = FieldType.Value, Value = 0 };

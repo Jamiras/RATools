@@ -53,6 +53,7 @@ namespace RATools.ViewModels
                 new LookupItem((int)RequirementType.AndNext, "AndNext"),
                 new LookupItem((int)RequirementType.OrNext, "OrNext"),
                 new LookupItem((int)RequirementType.Measured, "Measured"),
+                new LookupItem((int)RequirementType.MeasuredPercent, "MeasuredPercent"),
                 new LookupItem((int)RequirementType.MeasuredIf, "AddHits"),
             };
 
