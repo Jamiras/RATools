@@ -10,6 +10,13 @@ namespace RATools.Parser.Functions
         {
         }
 
+        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        {
+            // add another TriggerBuilderContext scope to prevent optimizing the expression at this time
+            var nestedScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext() };
+            return base.BuildTrigger(context, nestedScope, functionCall);
+        }
+
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             var comparison = GetParameter(scope, "comparison", out result);
