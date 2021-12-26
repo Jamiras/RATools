@@ -82,7 +82,7 @@ namespace RATools.Parser
                             // value is a complex number, output the parts
                             builder.Append(term.field.Value);
                             builder.Append('*');
-                            builder.Append(term.multiplier);
+                            builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", term.multiplier);
                         }
                         break;
 
@@ -91,7 +91,16 @@ namespace RATools.Parser
                         if (term.multiplier != 1.0)
                         {
                             builder.Append('*');
-                            builder.Append(term.multiplier);
+
+                            if ((term.multiplier % 1) == 0)
+                            {
+                                // value is a whole number, just output it
+                                builder.Append((int)term.multiplier);
+                            }
+                            else
+                            {
+                                builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", term.multiplier);
+                            }
                         }
                         break;
                 }

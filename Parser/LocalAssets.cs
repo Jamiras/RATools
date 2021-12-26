@@ -307,7 +307,7 @@ namespace RATools.Parser
             }
 
             if (version > 0.30)
-                Version = String.Format("{0:F2}", version);
+                Version = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:F2}", version);
 
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
