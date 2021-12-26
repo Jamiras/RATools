@@ -8,7 +8,7 @@ namespace RATools.Parser.Functions
     internal class DisableWhenFunction : FlagConditionFunction
     {
         public DisableWhenFunction()
-            : base("disable_when", RequirementType.PauseIf, ConditionalOperation.None)
+            : base("disable_when", RequirementType.PauseIf)
         {
             Parameters.Add(new VariableDefinitionExpression("until"));
 

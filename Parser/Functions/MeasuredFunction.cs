@@ -7,7 +7,7 @@ namespace RATools.Parser.Functions
     internal class MeasuredFunction : FlagConditionFunction
     {
         public MeasuredFunction()
-            : base("measured", RequirementType.Measured, ConditionalOperation.Or)
+            : base("measured", RequirementType.Measured)
         {
             Parameters.Add(new VariableDefinitionExpression("when"));
             Parameters.Add(new VariableDefinitionExpression("format"));
