@@ -246,8 +246,9 @@ namespace RATools.Parser
             if (functionCall != null)
             {
                 var requirements = new List<Requirement>();
-                var context = new TriggerBuilderContext() { Trigger = requirements };
-                var error = context.CallFunction(functionCall, scope);
+                var context = new ValueBuilderContext() { Trigger = requirements };
+                var valueScope = new InterpreterScope(scope) { Context = context };
+                var error = context.CallFunction(functionCall, valueScope);
                 if (error != null)
                 {
                     result = error;
@@ -526,5 +527,9 @@ namespace RATools.Parser
 
             return achievement.SerializeRequirements();
         }
+    }
+
+    internal class ValueBuilderContext : TriggerBuilderContext
+    {
     }
 }

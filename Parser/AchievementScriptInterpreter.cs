@@ -111,6 +111,7 @@ namespace RATools.Parser
 
                 _globalScope.AddFunction(new AchievementFunction());
                 _globalScope.AddFunction(new LeaderboardFunction());
+                _globalScope.AddFunction(new MaxOfFunction());
 
                 _globalScope.AddFunction(new RichPresenceDisplayFunction());
                 _globalScope.AddFunction(new RichPresenceConditionalDisplayFunction());
