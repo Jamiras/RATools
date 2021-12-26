@@ -53,10 +53,16 @@ namespace RATools.Test.Parser.Functions
         [TestCase("trigger_when(byte(1) == 56)", "trigger_when(byte(1) == 56)")]
         [TestCase("trigger_when(repeated(6, byte(1) == 56))", "trigger_when(repeated(6, byte(1) == 56))")]
         [TestCase("trigger_when(byte(1) == 56 && byte(2) == 3)", "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3)")] // and clauses can be separated
-        [TestCase("trigger_when(byte(1) == 56 || byte(2) == 3)", "trigger_when(byte(1) == 56 || byte(2) == 3)")] // or clauses cannot be separated
+        [TestCase("trigger_when(byte(1) == 56 || byte(2) == 3)", "trigger_when(byte(1) == 56) || trigger_when(byte(2) == 3)")] // or clauses can be separated
         [TestCase("trigger_when(repeated(6, byte(1) == 56) && unless(byte(2) == 3))", "trigger_when(repeated(6, byte(1) == 56)) && unless(byte(2) == 3)")] // PauseIf clause can be extracted
         [TestCase("trigger_when(repeated(6, byte(1) == 56) && never(byte(2) == 3))", "trigger_when(repeated(6, byte(1) == 56)) && never(byte(2) == 3)")] // ResetIf clause can be extracted
         [TestCase("trigger_when(repeated(6, byte(1) == 56 && never(byte(2) == 3)))", "trigger_when(repeated(6, byte(1) == 56 && never(byte(2) == 3)))")] // ResetNextIf clause should not be extracted
+        [TestCase("trigger_when((byte(1) == 56 && byte(2) == 3) || (byte(1) == 55 && byte(2) == 4))",
+            "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3) || trigger_when(byte(1) == 55) && trigger_when(byte(2) == 4)")] // or with ands can be separated
+        [TestCase("trigger_when((byte(1) == 56 || byte(2) == 3) && (byte(1) == 55 || byte(2) == 4))",
+            "trigger_when(byte(1) == 56 || byte(2) == 3) && trigger_when(byte(1) == 55 || byte(2) == 4)")] // and can be separated, but not nested ors
+        [TestCase("trigger_when((byte(1) == 56 && byte(2) == 3) && (byte(1) == 55 || byte(2) == 4))",
+            "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3) && trigger_when(byte(1) == 55 || byte(2) == 4)")] // and can be separated, but not nested ors
         public void TestReplaceVariables(string input, string expected)
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
@@ -120,7 +126,7 @@ namespace RATools.Test.Parser.Functions
         public void TestNeverExplicitCall()
         {
             // not providing a TriggerBuilderContext simulates calling the function at a global scope
-            var funcDef = new FlagConditionFunction("never", RequirementType.ResetIf, ConditionalOperation.Or);
+            var funcDef = new NeverFunction();
 
             var input = "never(byte(0x1234) == 56)";
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));

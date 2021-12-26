@@ -234,6 +234,34 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
+        /// Gets the boolean parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected BooleanConstantExpression GetBooleanParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as BooleanConstantExpression;
+            if (typedParameter == null)
+            {
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null)
+                    parameter = originalParameter;
+
+                parseError = new ParseErrorExpression(name + " is not a boolean", parameter);
+                return null;
+            }
+
+            parseError = null;
+            return typedParameter;
+        }
+
+        /// <summary>
         /// Gets the dictionary parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
         /// </summary>
         /// <param name="scope">The scope.</param>

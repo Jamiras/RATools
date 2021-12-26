@@ -233,6 +233,8 @@ namespace RATools.Parser.Internal
             }
             else
             {
+                bool isLogicalUnit = value.IsLogicalUnit;
+
                 // not a basic type, evaluate it
                 var assignmentScope = new InterpreterScope(scope) { Context = assignment };
                 if (!value.ReplaceVariables(assignmentScope, out value))
@@ -241,6 +243,7 @@ namespace RATools.Parser.Internal
                     return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
                 }
 
+                value.IsLogicalUnit = isLogicalUnit;
                 assignment.Value.CopyLocation(value);
             }
 

@@ -1,6 +1,8 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 namespace RATools.Parser.Functions
 {
@@ -86,7 +88,58 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return null;
 
+            var functionCallExpression = expression as FunctionCallExpression;
+            if (functionCallExpression != null)
+            {
+                var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
+                if (functionDefinition is MaxOfFunction)
+                {
+                    var builder = new StringBuilder();
+                    foreach (var value in functionCallExpression.Parameters)
+                    {
+                        if (builder.Length > 0)
+                            builder.Append('$');
+
+                        builder.Append(TriggerBuilderContext.GetValueString(value, scope, out result));
+                    }
+                    return builder.ToString();
+                }
+            }
+
             return TriggerBuilderContext.GetValueString(expression, scope, out result);
+        }
+    }
+
+    internal class MaxOfFunction : FunctionDefinitionExpression
+    {
+        public MaxOfFunction()
+            : base("max_of")
+        {
+            Parameters.Add(new VariableDefinitionExpression("..."));
+        }
+
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
+            if (varargs == null)
+            {
+                if (!(result is ParseErrorExpression))
+                    result = new ParseErrorExpression("unexpected varargs");
+                return false;
+            }
+
+            var parameters = new List<ExpressionBase>();
+            foreach (var entry in varargs.Entries)
+            {
+                if (!entry.ReplaceVariables(scope, out result))
+                    return false;
+
+                parameters.Add(result);
+            }
+
+            result = new FunctionCallExpression(Name.Name, parameters.ToArray());
+            CopyLocation(result);
+            return true;
         }
     }
 }

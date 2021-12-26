@@ -102,6 +102,9 @@
     <Compile Include="Data\RequirementEx.cs" />
     <Compile Include="Parser\AchievementScriptContext.cs" />
     <Compile Include="Parser\Functions\RichPresenceMacroFunction.cs" />
+    <Compile Include="Parser\Functions\UnlessFunction.cs" />
+    <Compile Include="Parser\Functions\NeverFunction.cs" />
+    <Compile Include="Parser\Functions\TriggerWhenFunction.cs" />
     <Compile Include="Parser\Functions\SumOfFunction.cs" />
     <Compile Include="Parser\Functions\NoneOfFunction.cs" />
     <Compile Include="Parser\Functions\AllOfFunction.cs" />
