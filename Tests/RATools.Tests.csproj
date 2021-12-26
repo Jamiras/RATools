@@ -132,6 +132,7 @@
     <Compile Include="Data\RequirementTests.cs" />
     <Compile Include="Data\FieldTests.cs" />
     <Compile Include="Parser\Functions\PrevPriorFunctionTests.cs" />
+    <Compile Include="Parser\Functions\RichPresenceMacroFunctionTests.cs" />
     <Compile Include="Parser\Functions\SumOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\NoneOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\AllOfFunctionTests.cs" />

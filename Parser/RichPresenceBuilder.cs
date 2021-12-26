@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
@@ -40,6 +41,8 @@ namespace RATools.Parser
         public int Line { get; set; }
 
         public bool DisableLookupCollapsing { get; set; }
+
+        public bool DisableBuiltInMacros { get; set; }
 
         public void AddConditionalDisplayString(string condition, string displayString)
         {
@@ -107,6 +110,12 @@ namespace RATools.Parser
 
             foreach (var value in _valueFields)
             {
+                if (!DisableBuiltInMacros)
+                {
+                    if (RichPresenceMacroFunction.GetValueFormat(value.Key) == value.Value.Format)
+                        continue;
+                }
+
                 builder.Append("Format:");
                 builder.AppendLine(value.Key);
 

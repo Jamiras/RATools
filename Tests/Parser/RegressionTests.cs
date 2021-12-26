@@ -128,7 +128,8 @@ namespace RATools.Test.Parser
             var outputFileName = Path.ChangeExtension(expectedFileName, ".updated.txt");
 
             var interpreter = new AchievementScriptInterpreter();
-            interpreter.Run(Tokenizer.CreateTokenizer(File.Open(scriptPath, FileMode.Open)));
+            var content = File.ReadAllText(scriptPath);
+            interpreter.Run(Tokenizer.CreateTokenizer(content));
 
             if (!String.IsNullOrEmpty(interpreter.ErrorMessage))
             {
@@ -190,9 +191,14 @@ namespace RATools.Test.Parser
                         {
                             fileWriter.WriteLine("=== Rich Presence ===");
 
-                            if (Double.Parse(localAchievements.Version) < 0.79)
+                            var minimumVersion = Double.Parse(localAchievements.Version);
+                            if (minimumVersion < 0.80)
                             {
-                                interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
+                                interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
+
+                                if (minimumVersion < 0.79)
+                                    interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
+
                                 fileWriter.WriteLine(interpreter.RichPresenceBuilder.ToString());
                             }
                             else

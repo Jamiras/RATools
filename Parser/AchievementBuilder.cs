@@ -252,22 +252,38 @@ namespace RATools.Parser
             return RequirementOperator.None;
         }
 
-        public static string GetMinimumVersion(Achievement achievement)
+        public static double GetMinimumVersion(Achievement achievement)
         {
-            int minimumVersion = MinimumVersion(achievement.CoreRequirements);
+            var minimumVersion = MinimumVersion(achievement.CoreRequirements);
             foreach (var group in achievement.AlternateRequirements)
             {
-                int altMinimumVersion = MinimumVersion(group);
+                var altMinimumVersion = MinimumVersion(group);
                 if (altMinimumVersion > minimumVersion)
                     minimumVersion = altMinimumVersion;
             }
 
-            return String.Format("0.{0}", minimumVersion);
+            return minimumVersion;
         }
 
-        private static int MinimumVersion(IEnumerable<Requirement> requirements)
+        private static double GetMinimumVersion(string trigger)
         {
-            int minVer = 0;
+            var achievementBuilder = new AchievementBuilder();
+            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
+            return GetMinimumVersion(achievementBuilder.ToAchievement());
+        }
+
+        public static double GetMinimumVersion(Leaderboard leaderboard)
+        {
+            var minimumVersion = GetMinimumVersion(leaderboard.Start);
+            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Cancel));
+            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Submit));
+            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Value));
+            return minimumVersion;
+        }
+
+        private static double MinimumVersion(IEnumerable<Requirement> requirements)
+        {
+            double minVer = 0.30;
 
             foreach (var requirement in requirements)
             {
@@ -275,36 +291,36 @@ namespace RATools.Parser
                 {
                     case RequirementType.AndNext:
                         // 0.76 21 Jun 2019
-                        if (minVer < 76)
-                            minVer = 76;
+                        if (minVer < 0.76)
+                            minVer = 0.76;
                         break;
 
                     case RequirementType.AddAddress:
                     case RequirementType.Measured:
                         // 0.77 30 Nov 2019
-                        if (minVer < 77)
-                            minVer = 77;
+                        if (minVer < 0.77)
+                            minVer = 0.77;
                         break;
 
                     case RequirementType.MeasuredIf:
                     case RequirementType.OrNext:
                         // 0.78 18 May 2020
-                        if (minVer < 78)
-                            minVer = 78;
+                        if (minVer < 0.78)
+                            minVer = 0.78;
                         break;
 
                     case RequirementType.ResetNextIf:
                     case RequirementType.Trigger:
                     case RequirementType.SubHits:
                         // 0.79 22 May 2021
-                        if (minVer < 79)
-                            minVer = 79;
+                        if (minVer < 0.79)
+                            minVer = 0.79;
                         break;
 
                     case RequirementType.MeasuredPercent:
                         // 0.80 TBD
-                        if (minVer < 80)
-                            minVer = 80;
+                        if (minVer < 0.80)
+                            minVer = 0.80;
                         break;
 
                     default:
@@ -317,8 +333,8 @@ namespace RATools.Parser
                     case RequirementOperator.Divide:
                     case RequirementOperator.LogicalAnd:
                         // 0.78 18 May 2020
-                        if (minVer < 78)
-                            minVer = 78;
+                        if (minVer < 0.78)
+                            minVer = 0.78;
                         break;
 
                     default:
@@ -331,8 +347,8 @@ namespace RATools.Parser
                     {
                         case FieldType.PriorValue:
                             // 0.76 21 Jun 2019
-                            if (minVer < 76)
-                                minVer = 76;
+                            if (minVer < 0.76)
+                                minVer = 0.76;
                             break;
 
                         default:
@@ -346,14 +362,14 @@ namespace RATools.Parser
                     {
                         case FieldSize.TByte:
                             // 0.77 30 Nov 2019
-                            if (minVer < 77)
-                                minVer = 77;
+                            if (minVer < 0.77)
+                                minVer = 0.77;
                             break;
 
                         case FieldSize.BitCount:
                             // 0.78 18 May 2020
-                            if (minVer < 78)
-                                minVer = 78;
+                            if (minVer < 0.78)
+                                minVer = 0.78;
                             break;
 
                         case FieldSize.BigEndianWord:
@@ -362,8 +378,8 @@ namespace RATools.Parser
                         case FieldSize.Float:
                         case FieldSize.MBF32:
                             // 0.80 TBD
-                            if (minVer < 80)
-                                minVer = 80;
+                            if (minVer < 0.80)
+                                minVer = 0.80;
                             break;
 
                         default:
@@ -396,10 +412,10 @@ namespace RATools.Parser
             var builder = new StringBuilder();
 
             // if no new features are found, prefer the legacy format for greatest compatibility with older versions of RetroArch
-            int minimumVersion = MinimumVersion(core);
+            var minimumVersion = MinimumVersion(core);
             foreach (var group in alts)
             {
-                int altMinimumVersion = MinimumVersion(group);
+                var altMinimumVersion = MinimumVersion(group);
                 if (altMinimumVersion > minimumVersion)
                     minimumVersion = altMinimumVersion;
             }
@@ -437,7 +453,7 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, int minimumVersion)
+        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, double minimumVersion)
         {
             switch (requirement.Type)
             {
@@ -459,42 +475,38 @@ namespace RATools.Parser
 
             requirement.Left.Serialize(builder);
 
-            switch (requirement.Type)
+            if (requirement.IsScalable)
             {
-                case RequirementType.AddSource:
-                case RequirementType.SubSource:
-                case RequirementType.AddAddress:
-                    switch (requirement.Operator)
-                    {
-                        case RequirementOperator.Multiply: builder.Append('*'); break;
-                        case RequirementOperator.Divide: builder.Append('/'); break;
-                        case RequirementOperator.LogicalAnd: builder.Append('&'); break;
-                        default:
-                            if (minimumVersion < 77)
-                                builder.Append("=0");
-                            return;
-                    }
+                switch (requirement.Operator)
+                {
+                    case RequirementOperator.Multiply: builder.Append('*'); break;
+                    case RequirementOperator.Divide: builder.Append('/'); break;
+                    case RequirementOperator.LogicalAnd: builder.Append('&'); break;
+                    default:
+                        if (minimumVersion < 0.77)
+                            builder.Append("=0");
+                        return;
+                }
 
-                    requirement.Right.Serialize(builder);
-                    return;
+                requirement.Right.Serialize(builder);
+            }
+            else
+            {
+                switch (requirement.Operator)
+                {
+                    case RequirementOperator.Equal: builder.Append('='); break;
+                    case RequirementOperator.NotEqual: builder.Append("!="); break;
+                    case RequirementOperator.LessThan: builder.Append('<'); break;
+                    case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
+                    case RequirementOperator.GreaterThan: builder.Append('>'); break;
+                    case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                    case RequirementOperator.Multiply: builder.Append('*'); break;
+                    case RequirementOperator.Divide: builder.Append('/'); break;
+                    case RequirementOperator.LogicalAnd: builder.Append('&'); break;
+                    case RequirementOperator.None: return;
+                }
 
-                default:
-                    switch (requirement.Operator)
-                    {
-                        case RequirementOperator.Equal: builder.Append('='); break;
-                        case RequirementOperator.NotEqual: builder.Append("!="); break;
-                        case RequirementOperator.LessThan: builder.Append('<'); break;
-                        case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
-                        case RequirementOperator.GreaterThan: builder.Append('>'); break;
-                        case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
-                        case RequirementOperator.Multiply: builder.Append('*'); break;
-                        case RequirementOperator.Divide: builder.Append('/'); break;
-                        case RequirementOperator.LogicalAnd: builder.Append('&'); break;
-                        case RequirementOperator.None: return;
-                    }
-
-                    requirement.Right.Serialize(builder);
-                    break;
+                requirement.Right.Serialize(builder);
             }
 
             if (requirement.HitCount > 0)

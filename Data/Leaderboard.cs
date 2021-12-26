@@ -67,6 +67,24 @@
                 case "OTHER":
                     return ValueFormat.Other;
 
+                case "FLOAT1":
+                    return ValueFormat.Float1;
+
+                case "FLOAT2":
+                    return ValueFormat.Float2;
+
+                case "FLOAT3":
+                    return ValueFormat.Float3;
+
+                case "FLOAT4":
+                    return ValueFormat.Float4;
+
+                case "FLOAT5":
+                    return ValueFormat.Float5;
+
+                case "FLOAT6":
+                    return ValueFormat.Float6;
+
                 default:
                     return ValueFormat.None;
             }
@@ -158,6 +176,46 @@
         /// Convert the value (in seconds) to hours/minutes - %dh%02d
         /// </summary>
         TimeSecsAsMins,
+
+        /// <summary>
+        /// A floating point value with one digit after the decimal
+        /// </summary>
+        Float1,
+
+        /// <summary>
+        /// A floating point value with two digits after the decimal
+        /// </summary>
+        Float2,
+
+        /// <summary>
+        /// A floating point value with three digits after the decimal
+        /// </summary>
+        Float3,
+
+        /// <summary>
+        /// A floating point value with four digits after the decimal
+        /// </summary>
+        Float4,
+
+        /// <summary>
+        /// A floating point value with five digits after the decimal
+        /// </summary>
+        Float5,
+
+        /// <summary>
+        /// A floating point value with six digits after the decimal
+        /// </summary>
+        Float6,
+
+        /// <summary>
+        /// Virtual format for ASCII char lookup table
+        /// </summary>
+        ASCIIChar,
+
+        /// <summary>
+        /// Virtual format for Unciode char lookup table
+        /// </summary>
+        UnicodeChar,
     }
 
 }
