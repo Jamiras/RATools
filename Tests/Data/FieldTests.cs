@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Data;
 using System;
+using System.Globalization;
 using System.Text;
 
 namespace RATools.Tests.Data
@@ -47,6 +48,18 @@ namespace RATools.Tests.Data
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Float = (float)value };
             Assert.That(field.ToString(), Is.EqualTo(expected));
+        }
+
+        [TestCase(FieldSize.Float, FieldType.Float, 2.0, "2.0")]
+        [TestCase(FieldSize.Float, FieldType.Float, 3.14, "3.14")]
+        [TestCase(FieldSize.Float, FieldType.Float, -6.12345, "-6.12345")]
+        public void TestToStringCulture(FieldSize fieldSize, FieldType fieldType, double value, string expected)
+        {
+            using (var cultureOverride = new CultureOverride("fr-FR"))
+            {
+                var field = new Field { Size = fieldSize, Type = fieldType, Float = (float)value };
+                Assert.That(field.ToString(), Is.EqualTo(expected));
+            }
         }
 
         [TestCase(FieldSize.Bit0, 0, "0x0")]
@@ -252,5 +265,33 @@ namespace RATools.Tests.Data
             Assert.That(field1 != field3);
             Assert.That(!field1.Equals(field3));
         }
+    }
+
+    internal class CultureOverride : IDisposable
+    {
+        public CultureOverride(string name)
+        {
+            try
+            {
+                // CurrentCulture is readonly prior to .NET 4.5.2. Use reflection to change it.
+                Type cultureInfoType = typeof(CultureInfo);
+                _defaultCultureField = cultureInfoType.GetField("s_userDefaultCulture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+                _oldCulture = (CultureInfo)_defaultCultureField.GetValue(null);
+                _defaultCultureField.SetValue(null, CultureInfo.CreateSpecificCulture(name));
+            }
+            catch
+            {
+                Assert.Fail("Could not change current culture");
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_defaultCultureField != null)
+                _defaultCultureField.SetValue(null, _oldCulture);
+        }
+
+        private CultureInfo _oldCulture;
+        private System.Reflection.FieldInfo _defaultCultureField;
     }
 }

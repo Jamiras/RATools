@@ -3,6 +3,7 @@ using Moq;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Tests.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -158,6 +159,95 @@ namespace RATools.Test.Parser
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
             Assert.That(output, Is.EqualTo("0.030\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+        }
+
+        [Test]
+        public void TestCommitNew()
+        {
+            var memoryStream = new MemoryStream();
+            var achievements = Initialize(null, memoryStream);
+            achievements.Title = "Title";
+            Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
+
+            var builder = new AchievementBuilder();
+            builder.Title = "T";
+            builder.Description = "D";
+            builder.Points = 1;
+            builder.CoreRequirements.Add(new Requirement
+            {
+                Left = new Field { Size = FieldSize.Byte, Type = FieldType.MemoryAddress, Value = 0x1234 },
+                Operator = RequirementOperator.Equal,
+                Right = new Field { Type = FieldType.Value, Value = 1 }
+            });
+            var achievement = builder.ToAchievement();
+
+            achievements.Replace(null, achievement);
+
+            achievements.Commit("Test", null, null);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo("0.030\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+        }
+
+        [Test]
+        public void TestCommitVersionDetected()
+        {
+            var memoryStream = new MemoryStream();
+            var achievements = Initialize(null, memoryStream);
+            achievements.Title = "Title";
+            Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
+
+            var builder = new AchievementBuilder();
+            builder.Title = "T";
+            builder.Description = "D";
+            builder.Points = 1;
+            builder.CoreRequirements.Add(new Requirement
+            {
+                Type = RequirementType.Trigger,
+                Left = new Field { Size = FieldSize.Byte, Type = FieldType.MemoryAddress, Value = 0x1234 },
+                Operator = RequirementOperator.Equal,
+                Right = new Field { Type = FieldType.Value, Value = 1 }
+            });;
+            var achievement = builder.ToAchievement();
+
+            achievements.Replace(null, achievement);
+
+            achievements.Commit("Test", null, null);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+        }
+
+        [Test]
+        public void TestCommitVersionDetectedCulture()
+        {
+            using (var cultureOverride = new CultureOverride("fr-FR"))
+            {
+                var memoryStream = new MemoryStream();
+                var achievements = Initialize(null, memoryStream);
+                achievements.Title = "Title";
+                Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
+
+                var builder = new AchievementBuilder();
+                builder.Title = "T";
+                builder.Description = "D";
+                builder.Points = 1;
+                builder.CoreRequirements.Add(new Requirement
+                {
+                    Type = RequirementType.Trigger,
+                    Left = new Field { Size = FieldSize.Byte, Type = FieldType.MemoryAddress, Value = 0x1234 },
+                    Operator = RequirementOperator.Equal,
+                    Right = new Field { Type = FieldType.Value, Value = 1 }
+                }); ;
+                var achievement = builder.ToAchievement();
+
+                achievements.Replace(null, achievement);
+
+                achievements.Commit("Test", null, null);
+
+                var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+                Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+            }
         }
     }
 }

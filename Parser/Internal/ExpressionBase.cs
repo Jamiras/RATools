@@ -398,7 +398,7 @@ namespace RATools.Parser.Internal
                     }
 
                     float floatValue;
-                    if (!float.TryParse(number, out floatValue))
+                    if (!float.TryParse(number, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out floatValue))
                         return new ParseErrorExpression("Number too large");
 
                     var floatExpression = new FloatConstantExpression(floatValue);

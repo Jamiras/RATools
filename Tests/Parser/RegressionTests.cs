@@ -191,7 +191,7 @@ namespace RATools.Test.Parser
                         {
                             fileWriter.WriteLine("=== Rich Presence ===");
 
-                            var minimumVersion = Double.Parse(localAchievements.Version);
+                            var minimumVersion = Double.Parse(localAchievements.Version, System.Globalization.NumberFormatInfo.InvariantInfo);
                             if (minimumVersion < 0.80)
                             {
                                 interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;

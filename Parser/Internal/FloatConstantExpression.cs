@@ -36,7 +36,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            builder.AppendFormat("{0:0.0#####}", Value);
+            builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", Value);
         }
 
         /// <summary>

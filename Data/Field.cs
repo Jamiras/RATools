@@ -109,7 +109,7 @@ namespace RATools.Data
                     break;
 
                 case FieldType.Float:
-                    builder.AppendFormat("{0:0.0#####}", Float);
+                    builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", Float);
                     break;
 
                 case FieldType.PreviousValue:
@@ -281,7 +281,7 @@ namespace RATools.Data
                     break;
 
                 case FieldType.Float:
-                    builder.AppendFormat("f{0:0.0#####}", Float);
+                    builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "f{0:0.0#####}", Float);
                     return;
 
                 default:
@@ -492,7 +492,7 @@ namespace RATools.Data
             }
 
             var token = tokenizer.ReadNumber();
-            var value = float.Parse(token.ToString());
+            var value = float.Parse(token.ToString(), System.Globalization.CultureInfo.InvariantCulture);
             if (isNegative)
                 value = -value;
 
