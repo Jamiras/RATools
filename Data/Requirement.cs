@@ -303,6 +303,24 @@ namespace RATools.Data
                     break;
             }
 
+            // scaling operators need to be appended before chained operations
+            switch (Operator)
+            {
+                case RequirementOperator.Multiply:
+                    builder.Append(" * ");
+                    Right.AppendString(builder, numberFormat, addAddress);
+                    break;
+                case RequirementOperator.Divide:
+                    builder.Append(" / ");
+                    Right.AppendString(builder, numberFormat, addAddress);
+                    break;
+                case RequirementOperator.LogicalAnd:
+                    builder.Append(" & ");
+                    Right.AppendString(builder, numberFormat, addAddress);
+                    break;
+            }
+
+            // append chained operations
             if (!string.IsNullOrEmpty(subSources))
             {
                 builder.Append(subSources);
@@ -313,6 +331,7 @@ namespace RATools.Data
                 builder.Append(')');
             }
 
+            // handle comparison operators
             switch (Operator)
             {
                 case RequirementOperator.Equal:
@@ -335,14 +354,9 @@ namespace RATools.Data
                     break;
 
                 case RequirementOperator.Multiply:
-                    builder.Append(" * ");
-                    break;
                 case RequirementOperator.Divide:
-                    builder.Append(" / ");
-                    break;
                 case RequirementOperator.LogicalAnd:
-                    builder.Append(" & ");
-                    break;
+                    // handled above, treat like none
 
                 case RequirementOperator.None:
                     if (suffix != null)

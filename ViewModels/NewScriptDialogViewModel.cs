@@ -35,7 +35,7 @@ namespace RATools.ViewModels
 
             GameId = new IntegerFieldViewModel("Game _ID", 1, 999999);
 
-            _achievements = new ObservableCollection<DumpAchievementItem>();
+            _assets = new ObservableCollection<DumpAsset>();
             _memoryItems = new List<MemoryItem>();
             _ticketNotes = new TinyDictionary<int, string>();
             _macros = new List<RichPresenceMacro>();
@@ -43,7 +43,7 @@ namespace RATools.ViewModels
             CodeNoteFilters = new[]
             {
                 new CodeNoteFilterLookupItem(CodeNoteFilter.All, "All"),
-                new CodeNoteFilterLookupItem(CodeNoteFilter.ForSelectedAchievements, "For Selected Achievements"),
+                new CodeNoteFilterLookupItem(CodeNoteFilter.ForSelectedAssets, "For Selected Assets"),
             };
 
             NoteDumps = new[]
@@ -98,6 +98,124 @@ namespace RATools.ViewModels
             return;
         }
 
+        private void LoadGame(int gameId, string raCacheDirectory)
+        {
+            _game = new GameViewModel(gameId, "");
+            _game.AssociateRACacheDirectory(raCacheDirectory);
+            _game.PopulateEditorList(null);
+            DialogTitle = "New Script - " + _game.Title;
+
+            _assets.Clear();
+            _ticketNotes.Clear();
+            _memoryItems.Clear();
+            MemoryAddresses.Rows.Clear();
+
+            LoadAchievements();
+            LoadLeaderboards();
+            LoadNotes();
+
+            if (_assets.Count == 0)
+                SelectedCodeNotesFilter = CodeNoteFilter.All;
+
+            UpdateMemoryGrid();
+
+            IsGameLoaded = true;
+            GameId.IsEnabled = false;
+
+            if (_assets.Count > 0)
+                ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
+        }
+
+        private void AddMemoryReferences(AssetViewModelBase asset, DumpAsset dumpAsset)
+        {
+            foreach (var trigger in asset.Published.TriggerList)
+            {
+                foreach (var group in trigger.Groups)
+                {
+                    foreach (var requirement in group.Requirements)
+                    {
+                        if (requirement.Requirement == null)
+                            continue;
+
+                        if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
+                        {
+                            var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
+                            if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
+                                dumpAsset.MemoryAddresses.Add(memoryItem);
+                        }
+
+                        if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
+                        {
+                            var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
+                            if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
+                                dumpAsset.MemoryAddresses.Add(memoryItem);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void LoadAchievements()
+        {
+            var unofficialAchievements = new List<DumpAsset>();
+            foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
+            {
+                var publishedAchievement = achievement.Published.Asset as Achievement;
+                if (publishedAchievement == null)
+                    continue;
+
+                var dumpAchievement = new DumpAsset(achievement.Id, publishedAchievement.Title)
+                {
+                    Type = DumpAssetType.Achievement,
+                    ViewerImage = achievement.ViewerImage,
+                    ViewerType = achievement.ViewerType
+                };
+
+                if (publishedAchievement.IsUnofficial)
+                {
+                    dumpAchievement.IsUnofficial = true;
+                    dumpAchievement.ViewerType = "Unofficial Achievement";
+                    unofficialAchievements.Add(dumpAchievement);
+                }
+                else
+                {
+                    _assets.Add(dumpAchievement);
+                }
+
+                AddMemoryReferences(achievement, dumpAchievement);
+
+                dumpAchievement.IsSelected = true;
+                dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
+            }
+
+            foreach (var unofficialAchievement in unofficialAchievements)
+                _assets.Add(unofficialAchievement);
+        }
+
+        private void LoadLeaderboards()
+        {
+            foreach (var leaderboard in _game.Editors.OfType<LeaderboardViewModel>())
+            {
+                var publishedLeaderboard = leaderboard.Published.Asset as Leaderboard;
+                if (publishedLeaderboard == null)
+                    continue;
+
+                var dumpLeaderboard = new DumpAsset(leaderboard.Id, publishedLeaderboard.Title)
+                {
+                    Type = DumpAssetType.Leaderboard,
+                    ViewerImage = leaderboard.ViewerImage,
+                    ViewerType = leaderboard.ViewerType
+                };
+
+                _assets.Add(dumpLeaderboard);
+
+                AddMemoryReferences(leaderboard, dumpLeaderboard);
+
+                dumpLeaderboard.IsSelected = true;
+                dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
+            }
+        }
+
         private static FieldSize CheckForBigEndian(Token token, FieldSize leSize, FieldSize beSize)
         {
             if (token.Contains("bit-BE", StringComparison.OrdinalIgnoreCase) ||
@@ -109,69 +227,8 @@ namespace RATools.ViewModels
             return leSize;
         }
 
-        private void LoadGame(int gameId, string raCacheDirectory)
+        private void LoadNotes()
         {
-            _game = new GameViewModel(gameId, "");
-            _game.AssociateRACacheDirectory(raCacheDirectory);
-            _game.PopulateEditorList(null);
-            DialogTitle = "New Script - " + _game.Title;
-
-            _achievements.Clear();
-            _ticketNotes.Clear();
-            _memoryItems.Clear();
-            MemoryAddresses.Rows.Clear();
-
-            var unofficialAchievements = new List<DumpAchievementItem>();
-            foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
-            {
-                var publishedAchievement = achievement.Published.Asset as Achievement;
-                if (publishedAchievement == null)
-                    continue;
-
-                var dumpAchievement = new DumpAchievementItem(achievement.Id, publishedAchievement.Title);
-                if (publishedAchievement.IsUnofficial)
-                {
-                    dumpAchievement.IsUnofficial = true;
-                    unofficialAchievements.Add(dumpAchievement);
-                }
-                else
-                {
-                    _achievements.Add(dumpAchievement);
-                }
-
-                foreach (var trigger in achievement.Published.TriggerList)
-                {
-                    foreach (var group in trigger.Groups)
-                    {
-                        foreach (var requirement in group.Requirements)
-                        {
-                            if (requirement.Requirement == null)
-                                continue;
-
-                            if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
-                            {
-                                var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
-                                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                                    dumpAchievement.MemoryAddresses.Add(memoryItem);
-                            }
-
-                            if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
-                            {
-                                var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
-                                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                                    dumpAchievement.MemoryAddresses.Add(memoryItem);
-                            }
-                        }
-                    }
-                }
-
-                dumpAchievement.IsSelected = true;
-                dumpAchievement.PropertyChanged += DumpAchievement_PropertyChanged;
-            }
-
-            foreach (var unofficialAchievement in unofficialAchievements)
-                _achievements.Add(unofficialAchievement);
-
             foreach (var kvp in _game.Notes)
             {
                 FieldSize size = FieldSize.Byte;
@@ -208,17 +265,6 @@ namespace RATools.ViewModels
 
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = (uint)kvp.Key });
             }
-
-            if (_achievements.Count == 0)
-                SelectedCodeNotesFilter = CodeNoteFilter.All;
-
-            UpdateMemoryGrid();
-
-            IsGameLoaded = true;
-            GameId.IsEnabled = false;
-
-            if (_achievements.Count > 0)
-                ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
         private class RichPresenceMacro
@@ -290,15 +336,25 @@ namespace RATools.ViewModels
             {
                 if (macro.LookupEntries != null)
                 {
-                    var dumpLookup = new DumpAchievementItem(0, macro.Name) { IsLookup = true };
-                    dumpLookup.PropertyChanged += DumpAchievement_PropertyChanged;
-                    _achievements.Add(dumpLookup);
+                    var dumpLookup = new DumpAsset(0, macro.Name)
+                    {
+                        Type = DumpAssetType.Lookup,
+                        ViewerImage = "/RATools;component/Resources/script.png",
+                        ViewerType = "Lookup"
+                    };
+                    dumpLookup.PropertyChanged += DumpAsset_PropertyChanged;
+                    _assets.Add(dumpLookup);
                 }
             }
 
             if (displayMacro != null)
             {
-                var dumpRichPresence = new DumpAchievementItem(0, "Rich Presence Script") { IsRichPresence = true };
+                var dumpRichPresence = new DumpAsset(0, "Rich Presence Script")
+                {
+                    Type = DumpAssetType.RichPresence,
+                    ViewerImage = "/RATools;component/Resources/rich_presence.png",
+                    ViewerType = "Rich Presence"
+                };
 
                 for (int i = 0; i < displayMacro.DisplayLines.Count; ++i)
                 {
@@ -332,12 +388,12 @@ namespace RATools.ViewModels
                     }
                 }
 
-                dumpRichPresence.PropertyChanged += DumpAchievement_PropertyChanged;
-                _achievements.Add(dumpRichPresence);
+                dumpRichPresence.PropertyChanged += DumpAsset_PropertyChanged;
+                _assets.Add(dumpRichPresence);
             }
         }
 
-        private void AddMacroMemoryReferences(DumpAchievementItem displayRichPresence, string displayString)
+        private void AddMacroMemoryReferences(DumpAsset displayRichPresence, string displayString)
         {
             var index = 0;
             do
@@ -355,7 +411,7 @@ namespace RATools.ViewModels
                 var name = displayString.Substring(index + 1, index2 - index - 1);
                 var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
 
-                var macro = _achievements.FirstOrDefault(a => a.IsLookup && a.Label == name);
+                var macro = _assets.FirstOrDefault(a => a.Type == DumpAssetType.Lookup && a.Label == name);
                 if (macro == null)
                     macro = displayRichPresence;
 
@@ -399,7 +455,7 @@ namespace RATools.ViewModels
             var tickets = OpenTicketsViewModel.GetGameTickets(_game.GameId);
             foreach (var kvp in tickets)
             {
-                var achievement = _achievements.FirstOrDefault(a => a.Id == kvp.Key);
+                var achievement = _assets.FirstOrDefault(a => a.Id == kvp.Key && a.Type == DumpAssetType.Achievement);
                 if (achievement != null)
                 {
                     openTickets.AddRange(kvp.Value.OpenTickets);
@@ -421,20 +477,20 @@ namespace RATools.ViewModels
             }
         }
 
-        private void AddMemoryReferences(DumpAchievementItem dumpAchievement, Requirement requirement)
+        private void AddMemoryReferences(DumpAsset dumpAsset, Requirement requirement)
         {
             if (requirement.Left != null && requirement.Left.IsMemoryReference)
             {
                 var memoryItem = AddMemoryAddress(requirement.Left);
-                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                    dumpAchievement.MemoryAddresses.Add(memoryItem);
+                if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
+                    dumpAsset.MemoryAddresses.Add(memoryItem);
             }
 
             if (requirement.Right != null && requirement.Right.IsMemoryReference)
             {
                 var memoryItem = AddMemoryAddress(requirement.Right);
-                if (memoryItem != null && !dumpAchievement.MemoryAddresses.Contains(memoryItem))
-                    dumpAchievement.MemoryAddresses.Add(memoryItem);
+                if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
+                    dumpAsset.MemoryAddresses.Add(memoryItem);
             }
         }
 
@@ -468,9 +524,18 @@ namespace RATools.ViewModels
         private GameViewModel _game;
         private readonly TinyDictionary<int, string> _ticketNotes;
         
-        public class DumpAchievementItem : LookupItem
+        public enum DumpAssetType
         {
-            public DumpAchievementItem(int id, string label)
+            None,
+            Achievement,
+            Leaderboard,
+            RichPresence,
+            Lookup
+        }
+
+        public class DumpAsset : LookupItem
+        {
+            public DumpAsset(int id, string label)
                 : base(id, label)
             {
                 OpenTickets = new List<int>();
@@ -479,9 +544,11 @@ namespace RATools.ViewModels
 
             public bool IsUnofficial { get; set; }
 
-            public bool IsLookup { get; set; }
-            
-            public bool IsRichPresence { get; set; }
+            public DumpAssetType Type { get; set; }
+
+            public string ViewerImage { get; set; }
+
+            public string ViewerType { get; set; }
 
             public int OpenTicketCount
             {
@@ -497,33 +564,33 @@ namespace RATools.ViewModels
             internal List<MemoryItem> MemoryAddresses { get; private set; }
         }
 
-        public IEnumerable<DumpAchievementItem> Achievements
+        public IEnumerable<DumpAsset> Assets
         {
-            get { return _achievements; }
+            get { return _assets; }
         }
-        private readonly ObservableCollection<DumpAchievementItem> _achievements;
+        private readonly ObservableCollection<DumpAsset> _assets;
         
-        private void DumpAchievement_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        private void DumpAsset_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == "IsSelected")
             {
-                var item = sender as DumpAchievementItem;
+                var item = sender as DumpAsset;
                 if (item != null)
                 {
-                    if (item.IsRichPresence && item.IsSelected)
+                    if (item.Type == DumpAssetType.RichPresence && item.IsSelected)
                     {
-                        foreach (var achievement in _achievements)
+                        foreach (var asset in _assets)
                         {
-                            if (achievement.IsLookup)
-                                achievement.IsSelected = true;
+                            if (asset.Type == DumpAssetType.Lookup)
+                                asset.IsSelected = true;
                         }
                     }
-                    else if (item.IsLookup && !item.IsSelected)
+                    else if (item.Type == DumpAssetType.Lookup && !item.IsSelected)
                     {
-                        foreach (var achievement in _achievements)
+                        foreach (var asset in _assets)
                         {
-                            if (achievement.IsRichPresence)
-                                achievement.IsSelected = false;
+                            if (asset.Type == DumpAssetType.RichPresence)
+                                asset.IsSelected = false;
                         }
                     }
                 }
@@ -535,29 +602,29 @@ namespace RATools.ViewModels
         public CommandBase CheckAllCommand { get; private set; }
         private void CheckAll()
         {
-            foreach (var achievment in _achievements)
-                achievment.IsSelected = true;
+            foreach (var asset in _assets)
+                asset.IsSelected = true;
         }
 
         public CommandBase UncheckAllCommand { get; private set; }
         private void UncheckAll()
         {
-            foreach (var achievement in _achievements)
-                achievement.IsSelected = false;
+            foreach (var asset in _assets)
+                asset.IsSelected = false;
         }
 
         public CommandBase CheckWithTicketsCommand { get; private set; }
         private void CheckWithTickets()
         {
-            foreach (var achievement in _achievements)
-                achievement.IsSelected = (achievement.OpenTicketCount > 0);
+            foreach (var asset in _assets)
+                asset.IsSelected = (asset.OpenTicketCount > 0);
         }
 
         public enum CodeNoteFilter
         {
             None = 0,
             All,
-            ForSelectedAchievements,
+            ForSelectedAssets,
         }
 
         public enum NoteDump
@@ -592,7 +659,7 @@ namespace RATools.ViewModels
         public IEnumerable<NoteDumpLookupItem> NoteDumps { get; private set; }
 
         public static readonly ModelProperty SelectedCodeNotesFilterProperty = 
-            ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedCodeNotesFilter", typeof(CodeNoteFilter), CodeNoteFilter.ForSelectedAchievements, OnSelectedCodeNotesFilterChanged);
+            ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedCodeNotesFilter", typeof(CodeNoteFilter), CodeNoteFilter.ForSelectedAssets, OnSelectedCodeNotesFilterChanged);
         public CodeNoteFilter SelectedCodeNotesFilter
         {
             get { return (CodeNoteFilter)GetValue(SelectedCodeNotesFilterProperty); }
@@ -643,7 +710,7 @@ namespace RATools.ViewModels
                     // will merge in all references from selected achievements
                 }
 
-                foreach (var achievement in _achievements)
+                foreach (var achievement in _assets)
                 {
                     if (!achievement.IsSelected)
                         continue;
@@ -772,205 +839,19 @@ namespace RATools.ViewModels
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
 
-                bool needLine = true;
-                bool hadFunction = false;
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
-                string addressFormat = "{0:X4}";
-                if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
-                    addressFormat = "{0:X6}"; // TODO: addressFormat is only used in note comments - also apply to generated code
 
-                var lookupsToDump = _achievements.Where(a => a.IsLookup && a.IsSelected).ToList();
+                var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
-                bool first;
-                var dumpNotes = SelectedNoteDump;
-                var filter = SelectedCodeNotesFilter;
-                uint previousNoteAddress = UInt32.MaxValue;
-                foreach (var memoryItem in _memoryItems)
-                {
-                    if (filter == CodeNoteFilter.ForSelectedAchievements)
-                    {
-                        if (MemoryAddresses.GetRow(memoryItem) == null)
-                            continue;
-                    }
-
-                    string notes = null;
-                    if (dumpNotes != NoteDump.None)
-                    {
-                        if (_game.Notes.TryGetValue((int)memoryItem.Address, out notes))
-                        {
-                            if (String.IsNullOrEmpty(memoryItem.FunctionName))
-                            {
-                                if (dumpNotes == NoteDump.OnlyForDefinedMethods)
-                                    continue;
-
-                                if (memoryItem.Address == previousNoteAddress)
-                                    continue;
-                            }
-                        }
-                    }
-
-                    if (!String.IsNullOrEmpty(notes))
-                    {
-                        notes = notes.Trim();
-                        if (notes.Length > 0)
-                        {
-                            if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
-                            {
-                                needLine = false;
-                                stream.WriteLine();
-                            }
-
-                            var lines = notes.Split('\n');
-                            stream.Write("// $");
-
-                            previousNoteAddress = memoryItem.Address;
-                            var address = String.Format(addressFormat, memoryItem.Address);
-                            stream.Write(address);
-                            stream.Write(": ");
-                            stream.WriteLine(lines[0].Trim());
-
-                            for (int i = 1; i < lines.Length; i++)
-                            {
-                                stream.Write("//        ");
-                                if (address.Length > 4)
-                                    stream.Write("   ".ToCharArray(), 0, address.Length - 4);
-                                stream.WriteLine(lines[i].Trim());
-                            }
-                        }
-                    }
-
-                    if (!String.IsNullOrEmpty(memoryItem.FunctionName))
-                    {
-                        if (needLine)
-                        {
-                            needLine = false;
-                            stream.WriteLine();
-                        }
-                        hadFunction = true;
-
-                        if (memoryItem.FunctionName.EndsWith("()"))
-                            memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
-
-                        stream.Write("function ");
-                        stream.Write(memoryItem.FunctionName);
-                        stream.Write("() => ");
-                        var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                        stream.WriteLine(memoryReference);
-
-                        foreach (var dumpLookup in lookupsToDump)
-                        {
-                            if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
-                            {
-                                DumpLookup(stream, dumpLookup);
-                                lookupsToDump.Remove(dumpLookup);
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        hadFunction = false;
-                    }
-                }
+                DumpMemoryAccessors(stream, lookupsToDump);
 
                 foreach (var dumpLookup in lookupsToDump)
                     DumpLookup(stream, dumpLookup);
 
-                foreach (var dumpAchievement in _achievements.Where(a => a.IsSelected && !a.IsLookup && !a.IsRichPresence))
-                {
-                    var achievementViewModel = _game.Editors.OfType<AchievementViewModel>().FirstOrDefault(a => a.Id == dumpAchievement.Id);
-                    if (achievementViewModel == null)
-                        continue;
+                DumpAchievements(stream, numberFormat);
+                DumpLeaderboards(stream, numberFormat);
 
-                    stream.WriteLine();
-
-                    foreach (var ticket in dumpAchievement.OpenTickets)
-                    {
-                        string notes;
-                        if (_ticketNotes.TryGetValue(ticket, out notes))
-                        {
-                            var lines = notes.Replace("<br/>", "\n").Split('\n');
-
-                            stream.Write("// Ticket ");
-                            stream.Write(ticket);
-                            stream.Write(": ");
-
-                            first = true;
-                            const int MaxLength = 103; // 120 - "// Ticket XXXXX: ".Length 
-                            for (int i = 0; i < lines.Length; i++)
-                            {
-                                if (first)
-                                    first = false;
-                                else
-                                    stream.Write("//               ");
-
-                                var line = lines[i].Trim();
-                                if (line.Length == 0)
-                                {
-                                    stream.WriteLine("");
-                                    continue;
-                                }
-
-                                while (line.Length > MaxLength)
-                                {
-                                    var index = line.LastIndexOf(' ', MaxLength - 1);
-                                    if (index < 0)
-                                    {
-                                        stream.WriteLine(line);
-                                        line = "";
-                                    }
-                                    else
-                                    {
-                                        var front = line.Substring(0, index).Trim();
-                                        stream.WriteLine(front);
-                                        line = line.Substring(index + 1).Trim();
-
-                                        if (line.Length > 0)
-                                            stream.Write("//               ");
-                                    }
-                                }
-
-                                if (line.Length > 0)
-                                    stream.WriteLine(line);
-                            }
-
-                            if (first)
-                                stream.WriteLine();
-                        }
-                    }
-
-                    stream.WriteLine("achievement(");
-
-                    var achievementData = achievementViewModel.Published.Asset as Achievement;
-
-                    stream.Write("    title = \"");
-                    stream.Write(EscapeString(achievementData.Title));
-                    stream.Write("\", description = \"");
-                    stream.Write(EscapeString(achievementData.Description));
-                    stream.Write("\", points = ");
-                    stream.Write(achievementData.Points);
-                    stream.WriteLine(",");
-
-                    stream.Write("    id = ");
-                    stream.Write(achievementData.Id);
-                    stream.Write(", badge = \"");
-                    stream.Write(achievementData.BadgeName);
-                    stream.Write("\", published = \"");
-                    stream.Write(achievementData.Published);
-                    stream.Write("\", modified = \"");
-                    stream.Write(achievementData.LastModified);
-                    stream.WriteLine("\",");
-
-                    stream.Write("    trigger = ");
-                    const int indent = 14; // "    trigger = ".length
-
-                    DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published.TriggerList.First(), indent);
-                    stream.WriteLine();
-
-                    stream.WriteLine(")");
-                }
-
-                foreach (var dumpRichPresence in _achievements.Where(a => a.IsRichPresence && a.IsSelected))
+                foreach (var dumpRichPresence in _assets.Where(a => a.Type == DumpAssetType.RichPresence && a.IsSelected))
                 {
                     var displayMacro = _macros.FirstOrDefault(m => m.DisplayLines != null);
                     DumpRichPresence(stream, displayMacro, dumpRichPresence, numberFormat);
@@ -978,7 +859,265 @@ namespace RATools.ViewModels
             }
         }
 
-        private void DumpLookup(StreamWriter stream, DumpAchievementItem dumpLookup)
+        private void DumpMemoryAccessors(StreamWriter stream, List<DumpAsset> lookupsToDump)
+        {
+            string addressFormat = "{0:X4}";
+            if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
+                addressFormat = "{0:X6}"; // TODO: addressFormat is only used in note comments - also apply to generated code
+
+            bool needLine = true;
+            bool hadFunction = false;
+
+            var dumpNotes = SelectedNoteDump;
+            var filter = SelectedCodeNotesFilter;
+            uint previousNoteAddress = UInt32.MaxValue;
+            foreach (var memoryItem in _memoryItems)
+            {
+                if (filter == CodeNoteFilter.ForSelectedAssets)
+                {
+                    if (MemoryAddresses.GetRow(memoryItem) == null)
+                        continue;
+                }
+
+                string notes = null;
+                if (dumpNotes != NoteDump.None)
+                {
+                    if (_game.Notes.TryGetValue((int)memoryItem.Address, out notes))
+                    {
+                        if (String.IsNullOrEmpty(memoryItem.FunctionName))
+                        {
+                            if (dumpNotes == NoteDump.OnlyForDefinedMethods)
+                                continue;
+
+                            if (memoryItem.Address == previousNoteAddress)
+                                continue;
+                        }
+                    }
+                }
+
+                if (!String.IsNullOrEmpty(notes))
+                {
+                    notes = notes.Trim();
+                    if (notes.Length > 0)
+                    {
+                        if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
+                        {
+                            needLine = false;
+                            stream.WriteLine();
+                        }
+
+                        var lines = notes.Split('\n');
+                        stream.Write("// $");
+
+                        previousNoteAddress = memoryItem.Address;
+                        var address = String.Format(addressFormat, memoryItem.Address);
+                        stream.Write(address);
+                        stream.Write(": ");
+                        stream.WriteLine(lines[0].Trim());
+
+                        for (int i = 1; i < lines.Length; i++)
+                        {
+                            stream.Write("//        ");
+                            if (address.Length > 4)
+                                stream.Write("   ".ToCharArray(), 0, address.Length - 4);
+                            stream.WriteLine(lines[i].Trim());
+                        }
+                    }
+                }
+
+                if (!String.IsNullOrEmpty(memoryItem.FunctionName))
+                {
+                    if (needLine)
+                    {
+                        needLine = false;
+                        stream.WriteLine();
+                    }
+                    hadFunction = true;
+
+                    if (memoryItem.FunctionName.EndsWith("()"))
+                        memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
+
+                    stream.Write("function ");
+                    stream.Write(memoryItem.FunctionName);
+                    stream.Write("() => ");
+                    var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                    stream.WriteLine(memoryReference);
+
+                    foreach (var dumpLookup in lookupsToDump)
+                    {
+                        if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
+                        {
+                            DumpLookup(stream, dumpLookup);
+                            lookupsToDump.Remove(dumpLookup);
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    hadFunction = false;
+                }
+            }
+        }
+
+        private void DumpTickets(StreamWriter stream, DumpAsset dumpAsset)
+        {
+            foreach (var ticket in dumpAsset.OpenTickets)
+            {
+                string notes;
+                if (!_ticketNotes.TryGetValue(ticket, out notes))
+                    continue;
+
+                var lines = notes.Replace("<br/>", "\n").Split('\n');
+
+                stream.Write("// Ticket ");
+                stream.Write(ticket);
+                stream.Write(": ");
+
+                bool first = true;
+                const int MaxLength = 103; // 120 - "// Ticket XXXXX: ".Length 
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (first)
+                        first = false;
+                    else
+                        stream.Write("//               ");
+
+                    var line = lines[i].Trim();
+                    if (line.Length == 0)
+                    {
+                        stream.WriteLine("");
+                        continue;
+                    }
+
+                    while (line.Length > MaxLength)
+                    {
+                        var index = line.LastIndexOf(' ', MaxLength - 1);
+                        if (index < 0)
+                        {
+                            stream.WriteLine(line);
+                            line = "";
+                        }
+                        else
+                        {
+                            var front = line.Substring(0, index).Trim();
+                            stream.WriteLine(front);
+                            line = line.Substring(index + 1).Trim();
+
+                            if (line.Length > 0)
+                                stream.Write("//               ");
+                        }
+                    }
+
+                    if (line.Length > 0)
+                        stream.WriteLine(line);
+                }
+
+                if (first)
+                    stream.WriteLine();
+            }
+        }
+
+        private void DumpAchievements(StreamWriter stream, NumberFormat numberFormat)
+        {
+            foreach (var dumpAchievement in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Achievement))
+            {
+                var achievementViewModel = _game.Editors.OfType<AchievementViewModel>().FirstOrDefault(a => a.Id == dumpAchievement.Id);
+                if (achievementViewModel == null)
+                    continue;
+
+                stream.WriteLine();
+
+                DumpTickets(stream, dumpAchievement);
+
+                stream.WriteLine("achievement(");
+
+                var achievementData = achievementViewModel.Published.Asset as Achievement;
+
+                stream.Write("    title = \"");
+                stream.Write(EscapeString(achievementData.Title));
+                stream.Write("\", description = \"");
+                stream.Write(EscapeString(achievementData.Description));
+                stream.Write("\", points = ");
+                stream.Write(achievementData.Points);
+                stream.WriteLine(",");
+
+                stream.Write("    id = ");
+                stream.Write(achievementData.Id);
+                stream.Write(", badge = \"");
+                stream.Write(achievementData.BadgeName);
+                stream.Write("\", published = \"");
+                stream.Write(achievementData.Published);
+                stream.Write("\", modified = \"");
+                stream.Write(achievementData.LastModified);
+                stream.WriteLine("\",");
+
+                stream.Write("    trigger = ");
+                const int indent = 14; // "    trigger = ".length
+
+                DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published.TriggerList.First(), indent);
+                stream.WriteLine();
+
+                stream.WriteLine(")");
+            }
+        }
+
+        private void DumpLeaderboards(StreamWriter stream, NumberFormat numberFormat)
+        {
+            foreach (var dumpLeaderboard in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Leaderboard))
+            {
+                var leaderboardViewModel = _game.Editors.OfType<LeaderboardViewModel>().FirstOrDefault(a => a.Id == dumpLeaderboard.Id);
+                if (leaderboardViewModel == null)
+                    continue;
+
+                stream.WriteLine();
+
+                DumpTickets(stream, dumpLeaderboard);
+
+                stream.WriteLine("leaderboard(");
+
+                var leaderboardData = leaderboardViewModel.Published.Asset as Leaderboard;
+
+                stream.Write("    id = ");
+                stream.Write(leaderboardData.Id);
+                stream.Write(", title = \"");
+                stream.Write(EscapeString(leaderboardData.Title));
+                stream.WriteLine("\",");
+                stream.Write("    description = \"");
+                stream.Write(EscapeString(leaderboardData.Description));
+                stream.WriteLine("\",");
+
+                const int indent = 13; // "    start  = ".length
+
+                stream.Write("    start  = ");
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.First(), indent);
+                stream.WriteLine(",");
+
+                stream.Write("    cancel = ");
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(1), indent);
+                stream.WriteLine(",");
+
+                stream.Write("    submit = ");
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(2), indent);
+                stream.WriteLine(",");
+
+                stream.Write("    value = ");
+                var valueTrigger = leaderboardViewModel.Published.TriggerList.ElementAt(3);
+                if (valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
+                    DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(3), indent);
+                else
+                    DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard);
+                stream.WriteLine(",");
+
+                stream.Write("    format = \"");
+                stream.Write(Leaderboard.GetFormatString(leaderboardData.Format));
+                stream.WriteLine("\"");
+
+                stream.WriteLine(")");
+            }
+        }
+
+        private void DumpLookup(StreamWriter stream, DumpAsset dumpLookup)
         {
             var macro = _macros.FirstOrDefault(m => m.Name == dumpLookup.Label);
             if (macro == null)
@@ -1001,7 +1140,7 @@ namespace RATools.ViewModels
             stream.WriteLine("}");
         }
 
-        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAchievementItem dumpRichPresence, NumberFormat numberFormat)
+        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, NumberFormat numberFormat)
         {
             int index;
 
@@ -1139,7 +1278,7 @@ namespace RATools.ViewModels
             }
         }
 
-        private static void DumpLegacyExpression(StreamWriter stream, string parameter, DumpAchievementItem dumpRichPresence)
+        private static void DumpLegacyExpression(StreamWriter stream, string parameter, DumpAsset dumpAsset)
         {
             var builder = new StringBuilder();
 
@@ -1219,7 +1358,7 @@ namespace RATools.ViewModels
 
                         if (field.IsMemoryReference)
                         {
-                            var memoryItem = dumpRichPresence.MemoryAddresses.FirstOrDefault(m => m.Address == field.Value && m.Size == field.Size);
+                            var memoryItem = dumpAsset.MemoryAddresses.FirstOrDefault(m => m.Address == field.Value && m.Size == field.Size);
                             if (memoryItem != null && !String.IsNullOrEmpty(memoryItem.FunctionName))
                             {
                                 builder.Append(memoryItem.FunctionName);
@@ -1244,14 +1383,14 @@ namespace RATools.ViewModels
             stream.Write(builder.ToString());
         }
 
-        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAchievementItem dumpAchievement, TriggerViewModel triggerViewModel, int indent)
+        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)
         {
             var groupEnumerator = triggerViewModel.Groups.GetEnumerator();
             groupEnumerator.MoveNext();
 
             bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
             if (!isCoreEmpty)
-                DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent);
+                DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent);
 
             bool first = true;
             while (groupEnumerator.MoveNext())
@@ -1281,23 +1420,23 @@ namespace RATools.ViewModels
                     stream.Write(" (");
                 }
 
-                DumpPublishedRequirements(stream, dumpAchievement, groupEnumerator.Current, numberFormat, indent + 2);
+                DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
                 stream.Write(")");
             }
             if (!first)
                 stream.Write(')');
         }
 
-        private static void DumpPublishedRequirements(StreamWriter stream, DumpAchievementItem dumpAchievement, 
+        private static void DumpPublishedRequirements(StreamWriter stream, DumpAsset dumpAsset,
             RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent)
         {
             const int MaxWidth = 120;
 
             var definition = new StringBuilder();
-            Parser.AchievementBuilder.AppendStringGroup(definition, 
+            AchievementBuilder.AppendStringGroup(definition,
                 requirementGroupViewModel.Requirements.Select(r => r.Requirement), numberFormat, MaxWidth, indent);
 
-            foreach (var memoryItem in dumpAchievement.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
+            foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
             {
                 var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
                 var functionCall = memoryItem.FunctionName + "()";

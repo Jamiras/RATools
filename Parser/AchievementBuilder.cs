@@ -188,6 +188,72 @@ namespace RATools.Parser
             } while (true);
         }
 
+        public void ParseValue(Tokenizer tokenizer)
+        {
+            var current = _core;
+            do
+            {
+                do
+                {
+                    var requirement = new Requirement();
+                    requirement.Type = RequirementType.AddSource;
+
+                    requirement.Left = Field.Deserialize(tokenizer);
+
+                    requirement.Operator = ReadOperator(tokenizer);
+                    if (requirement.Operator != RequirementOperator.None)
+                    {
+                        requirement.Right = Field.Deserialize(tokenizer);
+                        if (requirement.Right.Type == FieldType.Value &&
+                            (requirement.Right.Value & 0x80000000) != 0)
+                        {
+                            requirement.Type = RequirementType.SubSource;
+                            if (requirement.Right.Value == 0xFFFFFFFF)
+                            {
+                                requirement.Operator = RequirementOperator.None;
+                                requirement.Right = new Field { Type = FieldType.Value, Value = 1 };
+                            }
+                            else
+                            {
+                                requirement.Right = new Field
+                                {
+                                    Type = FieldType.Value,
+                                    Value = (uint)(-(int)requirement.Right.Value)
+                                };
+                            }
+                        }
+                    }
+
+                    current.Add(requirement);
+
+                    if (tokenizer.NextChar != '_')
+                        break;
+
+                    tokenizer.Advance();
+                } while (true);
+
+                var lastAddSource = current.Last();
+                if (lastAddSource.Type != RequirementType.AddSource)
+                {
+                    lastAddSource = current.Last(r => r.Type == RequirementType.AddSource);
+                    current.Remove(lastAddSource);
+                    current.Add(lastAddSource);
+                }
+                lastAddSource.Type = RequirementType.None;
+
+                if (tokenizer.NextChar != '$')
+                    break;
+
+                tokenizer.Advance();
+
+                if (current.Count != 0)
+                {
+                    current = new List<Requirement>();
+                    _alts.Add(current);
+                }
+            } while (true);
+        }
+
         private static uint ReadNumber(Tokenizer tokenizer)
         {
             uint value = 0;

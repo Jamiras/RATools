@@ -156,13 +156,16 @@ namespace RATools.Tests.Data
         [TestCase("d0xH001234", FieldSize.Byte, FieldType.PreviousValue, 0x1234)]
         [TestCase("p0xH001234", FieldSize.Byte, FieldType.PriorValue, 0x1234)]
         [TestCase("b0xH001234", FieldSize.Byte, FieldType.BinaryCodedDecimal, 0x1234)]
-        [TestCase("4660", FieldSize.None, FieldType.Value, 0x1234)]
+        [TestCase("4660", FieldSize.None, FieldType.Value, 4660U)]
+        [TestCase("v4660", FieldSize.None, FieldType.Value, 4660U)]
+        [TestCase("-4660", FieldSize.None, FieldType.Value, 0xFFFFEDCC)]
+        [TestCase("v-4660", FieldSize.None, FieldType.Value, 0xFFFFEDCC)]
         [TestCase("h4660", FieldSize.None, FieldType.Value, 0x4660)]
         [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456)]
         [TestCase("fF123456", FieldSize.Float, FieldType.MemoryAddress, 0x123456)]
         [TestCase("fM123456", FieldSize.MBF32, FieldType.MemoryAddress, 0x123456)]
         [TestCase("dfM123456", FieldSize.MBF32, FieldType.PreviousValue, 0x123456)]
-        public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, int value)
+        public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, uint value)
         {
             var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
             Assert.That(field, Is.Not.Null);

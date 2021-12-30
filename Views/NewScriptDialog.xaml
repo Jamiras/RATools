@@ -46,9 +46,9 @@
             </Button>
         </Grid>
 
-        <TextBlock Grid.Row="1" Margin="4,0,0,0" FontSize="11" Text="Achievements to dump" />
+        <TextBlock Grid.Row="1" Margin="4,0,0,0" FontSize="11" Text="Assets to dump" />
         <TextBlock Grid.Row="1" Margin="0,0,24,0" FontSize="11" Text="Open Tickets" HorizontalAlignment="Right" />
-        <ListView Grid.Row="2" ItemsSource="{Binding Achievements}" Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <ListView Grid.Row="2" ItemsSource="{Binding Assets}" Margin="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <Grid>
@@ -60,33 +60,9 @@
                         </Grid.ColumnDefinitions>
                         <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding IsSelected}" />
                         <Grid Grid.Column="1" Width="14" Height="13" Background="Transparent">
-                            <Image Margin="0,-1,0,-1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                                <Image.Style>
-                                    <Style TargetType="{x:Type Image}">
-                                        <Setter Property="Width" Value="12" />
-                                        <Setter Property="Height" Value="12" />
-                                        <Setter Property="Source" Value="/RATools;component/Resources/achievement.png" />
-                                        <Setter Property="ToolTip" Value="Achievement" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsRichPresence}" Value="True">
-                                                <Setter Property="Width" Value="14" />
-                                                <Setter Property="Height" Value="14" />
-                                                <Setter Property="Source" Value="/RATools;component/Resources/rich_presence.png" />
-                                                <Setter Property="ToolTip" Value="Rich Presence" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsLookup}" Value="True">
-                                                <Setter Property="Width" Value="14" />
-                                                <Setter Property="Height" Value="14" />
-                                                <Setter Property="Source" Value="/RATools;component/Resources/script.png" />
-                                                <Setter Property="ToolTip" Value="Lookup" />
-                                            </DataTrigger>
-                                            <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
-                                                <Setter Property="ToolTip" Value="Unofficial Achievement" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Image.Style>
-                            </Image>
+                            <Image Width="12" Height="12" Margin="0,-1,0,-1"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Source="{Binding ViewerImage}" ToolTip="{Binding ViewerType}" />
                         </Grid>
                         <TextBlock Grid.Column="2" Text="{Binding Label}" Margin="0,0,0,1" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
                             <TextBlock.Style>

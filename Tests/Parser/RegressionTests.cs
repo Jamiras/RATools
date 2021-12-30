@@ -151,37 +151,9 @@ namespace RATools.Test.Parser
                 localAchievements.Title = Path.GetFileNameWithoutExtension(scriptFileName);
                 foreach (var achievement in interpreter.Achievements)
                     localAchievements.Replace(null, achievement);
+                foreach (var leaderboard in interpreter.Leaderboards)
+                    localAchievements.Replace(null, leaderboard);
                 localAchievements.Commit("Author", null, null);
-
-                if (interpreter.Leaderboards.Any())
-                {
-                    using (var file = File.Open(outputFileName, FileMode.Append))
-                    {
-                        using (var fileWriter = new StreamWriter(file))
-                        {
-                            fileWriter.WriteLine("=== Leaderboards ===");
-                            foreach (var leaderboard in interpreter.Leaderboards)
-                            {
-                                fileWriter.Write("0:");
-                                fileWriter.Write("\"STA:");
-                                fileWriter.Write(leaderboard.Start);
-                                fileWriter.Write("::CAN:");
-                                fileWriter.Write(leaderboard.Cancel);
-                                fileWriter.Write("::SUB:");
-                                fileWriter.Write(leaderboard.Submit);
-                                fileWriter.Write("::VAL:");
-                                fileWriter.Write(leaderboard.Value);
-                                fileWriter.Write("\":");
-                                fileWriter.Write(leaderboard.Format);
-                                fileWriter.Write(":\"");
-                                fileWriter.Write(leaderboard.Title);
-                                fileWriter.Write("\":\"");
-                                fileWriter.Write(leaderboard.Description);
-                                fileWriter.WriteLine("\"");
-                            }
-                        }
-                    }
-                }
 
                 if (!String.IsNullOrEmpty(interpreter.RichPresence))
                 {

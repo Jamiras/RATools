@@ -18,13 +18,21 @@ namespace RATools.ViewModels
             var groups = new List<RequirementGroupViewModel>();
             if (achievement != null)
             {
-                groups.Add(new RequirementGroupViewModel("Core", achievement.CoreRequirements, numberFormat, notes));
+                var groupLabel = (this is ValueViewModel) ? "Value" : "Core";
+                groups.Add(new RequirementGroupViewModel(groupLabel, achievement.CoreRequirements, numberFormat, notes));
 
                 int i = 0;
+                groupLabel = "Alt ";
+                if (this is ValueViewModel)
+                {
+                    i++;
+                    groupLabel = "Value ";
+                }
+
                 foreach (var alt in achievement.AlternateRequirements)
                 {
                     i++;
-                    groups.Add(new RequirementGroupViewModel("Alt " + i, alt, numberFormat, notes));
+                    groups.Add(new RequirementGroupViewModel(groupLabel + i, alt, numberFormat, notes));
                 }
             }
 
@@ -47,5 +55,26 @@ namespace RATools.ViewModels
         public IEnumerable<RequirementGroupViewModel> Groups { get; protected set; }
 
         public CommandBase CopyToClipboardCommand { get; set; }
+    }
+
+    public class ValueViewModel : TriggerViewModel
+    {
+        public ValueViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<int, string> notes)
+            : base(label, CreateValue(definition), numberFormat, notes)
+        {
+        }
+
+        private static Achievement CreateValue(string definition)
+        {
+            var achievementBuilder = new AchievementBuilder();
+            if (definition.Length > 2)
+            {
+                if (definition[1] == ':')
+                    achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(definition));
+                else
+                    achievementBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
+            }
+            return achievementBuilder.ToAchievement();
+        }
     }
 }
