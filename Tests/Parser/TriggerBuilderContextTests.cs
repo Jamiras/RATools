@@ -4,6 +4,7 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Tests.Data;
 
 namespace RATools.Test.Parser
 {
@@ -51,7 +52,7 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234)", "0xH001234")]
         [TestCase("byte(0x1234) * 10", "0xH001234*10")]
         [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
-        [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.33333333333333")]
+        [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) + 10", "0xH001234_v10")]
         [TestCase("byte(0x1234) - 10", "0xH001234_v-10")]
         [TestCase("(byte(0) + byte(1)) * 10", "0xH000000*10_0xH000001*10")]
@@ -93,6 +94,29 @@ namespace RATools.Test.Parser
             var result = TriggerBuilderContext.GetValueString(expression, scope, out error);
             Assert.That(error, Is.Null);
             Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
+        [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
+        [TestCase("(byte(0) + byte(1)) / 10", "0xH000000*0.1_0xH000001*0.1")]
+        [TestCase("byte(0x1234) * 2.0", "0xH001234*2")]
+        [TestCase("byte(0x1234) / 2", "0xH001234*0.5")]
+        [TestCase("byte(0x1234) * 2 / 100", "0xH001234*0.02")]
+        [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
+        public void TestGetValueStringCulture(string input, string expected)
+        {
+            using (var cultureOverride = new CultureOverride("fr-FR"))
+            {
+                ExpressionBase error;
+                InterpreterScope scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+                scope.Context = new TriggerBuilderContext();
+
+                var expression = Parse(input);
+                var result = TriggerBuilderContext.GetValueString(expression, scope, out error);
+                Assert.That(error, Is.Null);
+                Assert.That(result, Is.EqualTo(expected));
+            }
         }
     }
 }

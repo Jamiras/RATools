@@ -1178,7 +1178,7 @@ namespace RATools.ViewModels
                     else if (operand.Length > 2 && operand[1] == '.' && operand[0] == '0' && builder[builder.Length - 2] == '*')
                     {
                         bool isDivisor = false;
-                        var f = Double.Parse(operand);
+                        var f = Double.Parse(operand, System.Globalization.NumberFormatInfo.InvariantInfo);
                         if (f > 0.0)
                         {
                             var divisor = 1 / f;
