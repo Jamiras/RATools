@@ -366,8 +366,11 @@ namespace RATools.ViewModels
                     // NOTE: this only lists the ~50 most recent unlocks! For games with more than 50 users who have mastered it, the oldest may be missed!
                     do
                     {
-                        tokenizer.ReadTo("<a href='/user/");
+                        var front = tokenizer.ReadTo("<a href='/user/");
                         if (tokenizer.NextChar == '\0')
+                            break;
+
+                        if (front.Contains("<div id=\"rightcontainer\">"))
                             break;
 
                         tokenizer.ReadTo("'>");

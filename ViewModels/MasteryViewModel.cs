@@ -714,7 +714,7 @@ namespace RATools.ViewModels
                         diff = String.Compare(l.Game.GameName, r.Game.GameName);
                     return diff;
                 });
-                for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count; i++)
+                for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || (i > 0 && cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count); i++)
                 {
                     file.WriteLine(String.Format("{0,2:D} {1,5:D} {2}", cheatedGames[i].Users.Count, 
                         cheatedGames[i].Game.GameId, cheatedGames[i].Game.GameName));
