@@ -323,25 +323,36 @@ namespace RATools.Data
         internal static Field Deserialize(Tokenizer tokenizer)
         {
             var fieldType = FieldType.MemoryAddress;
-            if (tokenizer.NextChar == 'd')
+            switch (tokenizer.NextChar)
             {
-                fieldType = FieldType.PreviousValue;
-                tokenizer.Advance();
-            }
-            else if (tokenizer.NextChar == 'p')
-            {
-                fieldType = FieldType.PriorValue;
-                tokenizer.Advance();
-            }
-            else if (tokenizer.NextChar == 'b')
-            {
-                fieldType = FieldType.BinaryCodedDecimal;
-                tokenizer.Advance();
-            }
-            else if (tokenizer.NextChar == 'h')
-            {
-                tokenizer.Advance();
-                return new Field { Type = FieldType.Value, Value = ReadHexNumber(tokenizer) };
+                case 'd':
+                    fieldType = FieldType.PreviousValue;
+                    tokenizer.Advance();
+                    break;
+
+                case 'p':
+                    fieldType = FieldType.PriorValue;
+                    tokenizer.Advance();
+                    break;
+
+                case 'b':
+                    fieldType = FieldType.BinaryCodedDecimal;
+                    tokenizer.Advance();
+                    break;
+
+                case 'h': // explicit hex value
+                    tokenizer.Advance();
+                    return new Field { Type = FieldType.Value, Value = ReadHexNumber(tokenizer) };
+
+                case 'v': // explicit decimal value
+                    tokenizer.Advance();
+                    if (tokenizer.NextChar == '-')
+                        goto case '-';
+                    return new Field { Type = FieldType.Value, Value = ReadNumber(tokenizer) };
+
+                case '-': // explicit negative decimal value
+                    tokenizer.Advance();
+                    return new Field { Type = FieldType.Value, Value = (uint)(-(int)ReadNumber(tokenizer)) };
             }
 
             if (tokenizer.NextChar == 'f')

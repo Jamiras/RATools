@@ -16,7 +16,7 @@ namespace RATools.Test.Parser.Functions
         {
             var def = new LeaderboardFunction();
             Assert.That(def.Name.Name, Is.EqualTo("leaderboard"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(7));
+            Assert.That(def.Parameters.Count, Is.EqualTo(8));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("title"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("description"));
             Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("start"));
@@ -24,10 +24,13 @@ namespace RATools.Test.Parser.Functions
             Assert.That(def.Parameters.ElementAt(4).Name, Is.EqualTo("submit"));
             Assert.That(def.Parameters.ElementAt(5).Name, Is.EqualTo("value"));
             Assert.That(def.Parameters.ElementAt(6).Name, Is.EqualTo("format"));
+            Assert.That(def.Parameters.ElementAt(7).Name, Is.EqualTo("id"));
 
-            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(1));
+            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(2));
             Assert.That(def.DefaultParameters["format"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["format"]).Value, Is.EqualTo("value"));
+            Assert.That(def.DefaultParameters["id"], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)def.DefaultParameters["id"]).Value, Is.EqualTo(0));
         }
 
         private Leaderboard Evaluate(string input, string expectedError = null)

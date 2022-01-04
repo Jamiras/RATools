@@ -31,7 +31,7 @@ namespace RATools.ViewModels
                 triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, _owner.Notes));
                 triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, _owner.Notes));
                 triggers.Add(new TriggerViewModel("Submit Conditions", leaderboard.Submit, numberFormat, _owner.Notes));
-                triggers.Add(new TriggerViewModel("Value", leaderboard.Value, numberFormat, _owner.Notes));
+                triggers.Add(new ValueViewModel("Value", leaderboard.Value, numberFormat, _owner.Notes));
 
                 if (assetViewModel.Source.StartsWith("Generated"))
                 {
