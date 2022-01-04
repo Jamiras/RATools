@@ -1,3 +1,29 @@
+v1.8.3 - 4 Jan 2022
+* add true and false constants for script logic (continue to use always_true() and always_false() for trigger definitions)
+* add word_be(), tbyte_be(), and dword_be() big-endian memory accessor functions
+* add max_of() helper function for leaderboard() value clause
+* add rich_presence_macro() function
+* support for floating point numbers
+* support for writing leaderboards to local file (direct import to 0.80 DLL)
+* support for generating code for leaderboards from New Script dialog
+* add format parameter to measured() function to support raw vs. percent display
+* allow negative offsets when processing pointers
+* allow bcd() to be called inside prev()
+* allow trigger(a || b) to expand to alt groups
+* allow loading file without a game id
+* lookup entries that match the fallback value are no longer included in the generated Rich Presence script
+* improved underflow adjustment calculations
+* fix empty array/dictionary showing up orange
+* fix loss of hit target when final condition of clause is optimized out
+* fix loss of ResetIf when used in Measured value
+* fix cannot apply Trigger to ResetIf error when using never inside repeated in trigger_when()
+* fix highlighting issue when pasting lines that start with combining characters (&&, +, ...)
+* fix stack overflow processing very long chain of conditions
+* fix maximum recursion error when processing very long AddSource chain inside prev
+* fix maximum recursion error when editing the same function over and over
+* fix crash updating local achievements when system culture uses comma as decimal separator
+* fix stats not showing up without an ApiKey
+
 v1.8.2 - 21 Aug 2021
 * add disable_when() function
 * add any_of(), all_of(), none_of(), and sum_of() functions
