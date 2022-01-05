@@ -1840,6 +1840,10 @@ namespace RATools.Parser
                 {
                     if (requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext))
                     {
+                        // MeasuredIf only applies to the current group, don't split it up
+                        if (requirementEx.Requirements.Last().Type == RequirementType.MeasuredIf)
+                            continue;
+
                         if (orNextGroup != null)
                             return;
 
