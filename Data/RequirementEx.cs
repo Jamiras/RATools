@@ -221,30 +221,24 @@ namespace RATools.Data
                 }
             }
 
-            while (definition.Length > wrapWidth)
+            while (definition.Length > width)
             {
-                var index = width;
-                while (index > 0 && definition[index] != ' ')
-                    index--;
+                if (width > 0)
+                {
+                    var index = width;
+                    while (index > 0 && definition[index] != ' ')
+                        index--;
 
-                builder.Append(definition.ToString(), 0, index);
-                builder.AppendLine();
-                builder.Append(' ', indent);
-                definition.Remove(0, index);
-                width = wrapWidth - indent;
-            }
+                    builder.Append(definition.ToString(), 0, index);
+                    definition.Remove(0, index);
+                }
 
-            if (width - definition.Length < 0)
-            {
                 builder.AppendLine();
                 builder.Append(' ', indent);
                 width = wrapWidth - indent;
             }
-            else
-            {
-                width -= definition.Length;
-            }
 
+            width -= definition.Length;
             builder.Append(definition.ToString());
         }
 

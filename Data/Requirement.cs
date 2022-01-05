@@ -205,7 +205,7 @@ namespace RATools.Data
         private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
             string addSources, string subSources, string addHits, string andNext, string addAddress, string resetNextIf)
         {
-            if (HitCount == 0)
+            if (HitCount == 0 && addHits == null)
             {
                 if (!string.IsNullOrEmpty(andNext) && andNext[0] != '(' &&
                     (andNext.Contains(" && ") || andNext.Contains(" || ")))
