@@ -71,14 +71,15 @@ namespace RATools.Parser.Functions
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, when, scope, out result))
                 return new ParseErrorExpression("when did not evaluate to a valid comparison", when) { InnerError = (ParseErrorExpression)result };
 
-            if (builder.AlternateRequirements.Count > 0)
-                return new ParseErrorExpression(Name.Name + " does not support ||'d conditions", when);
+            error = builder.CollapseForSubClause();
+            if (error != null)
+                return error;
 
             if (builder.CoreRequirements.Count != 1 || builder.CoreRequirements.First().Evaluate() != true)
             {
                 foreach (var requirement in builder.CoreRequirements)
                 {
-                    if (requirement.Type == RequirementType.None)
+                    if (requirement.Type == RequirementType.None || requirement.Type == RequirementType.AndNext)
                         requirement.Type = RequirementType.MeasuredIf;
 
                     context.Trigger.Add(requirement);
