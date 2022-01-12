@@ -2535,6 +2535,10 @@ namespace RATools.Parser
 
                 if (!hasAndNext)
                 {
+                    // ignore always false alt groups
+                    if (alt.All(r => r.Evaluate() == false))
+                        continue;
+
                     // single clause, just append it
                     newCore.AddRange(alt);
                 }

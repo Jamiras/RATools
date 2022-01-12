@@ -351,8 +351,17 @@ namespace RATools.Data
                 {
                     // "A || always_false()" and "A && always_true()" are both just "A",
                     // but we need to preserve the flag and hit target from the second condition.
+
+                    // create a copy without the hit count for evaluation
+                    var newRequirement = new Requirement
+                    {
+                        Left = requirement.Left,
+                        Operator = requirement.Operator,
+                        Right = requirement.Right
+                    };
+
                     bool redundantEvaluation = (combiningRequirement.Type == RequirementType.AndNext);
-                    if (requirement.Evaluate() == redundantEvaluation)
+                    if (newRequirement.Evaluate() == redundantEvaluation)
                     {
                         if (combiningRequirement.HitCount != 0 && requirement.HitCount != 0)
                         {
@@ -360,14 +369,28 @@ namespace RATools.Data
                         }
                         else
                         {
+                            // going to be modifying the combiningRequirement, create a copy
+                            newRequirement = new Requirement
+                            {
+                                // use the flag from the redundant condition
+                                Type = requirement.Type,
+
+                                Left = combiningRequirement.Left,
+                                Operator = combiningRequirement.Operator,
+                                Right = combiningRequirement.Right
+                            };
+
                             // one of the two conditions has a hit count of zero, so this
                             // effectively takes whichever isn't zero.
-                            combiningRequirement.HitCount += requirement.HitCount;
+                            newRequirement.HitCount = requirement.HitCount + combiningRequirement.HitCount;
 
-                            // copy the flag and decide if the condition is still combining
-                            combiningRequirement.Type = requirement.Type;
-                            if (!requirement.IsCombining)
-                                combiningRequirement = null;
+                            // replace the last requirement with the updated requirement
+                            var lastGroupRequirements = group.Last().Requirements;
+                            lastGroupRequirements.Remove(combiningRequirement);
+                            lastGroupRequirements.Add(newRequirement);
+
+                            // decide if the condition is still combining
+                            combiningRequirement = requirement.IsCombining ? newRequirement : null;
 
                             continue;
                         }
