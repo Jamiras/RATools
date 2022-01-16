@@ -3,6 +3,7 @@ using Jamiras.ViewModels;
 using RATools.Data;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.ViewModels
 {
@@ -304,6 +305,39 @@ namespace RATools.ViewModels
         {
             foreach (var requirement in Requirements)
                 requirement.OnShowHexValuesChanged(e);
+        }
+
+        public bool RequirementsAreEqual(RequirementGroupViewModel that)
+        {
+            // quick check to make sure the same number of requirements exist
+            if (Requirements.Count() != that.Requirements.Count())
+                return false;
+
+            // convert to requirement clauses and compare
+            var requirementExs = RequirementEx.Combine(Requirements.Select(r => r.Requirement));
+            var compareRequirementExs = RequirementEx.Combine(that.Requirements.Select(r => r.Requirement));
+
+            if (requirementExs.Count != compareRequirementExs.Count)
+                return false;
+
+            foreach (var requirementEx in requirementExs)
+            {
+                bool matched = false;
+                for (int i = 0; i < compareRequirementExs.Count; i++)
+                {
+                    if (compareRequirementExs[i] == requirementEx)
+                    {
+                        compareRequirementExs.RemoveAt(i);
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched)
+                    return false;
+            }
+
+            return true;
         }
     }
 }

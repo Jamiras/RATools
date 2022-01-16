@@ -15,7 +15,7 @@ namespace RATools.ViewModels
 
             foreach (var triggerGroup in trigger.Groups)
             {
-                var compareTriggerGroup = compareTriggerGroups.FirstOrDefault(t => t.Label == triggerGroup.Label);
+                var compareTriggerGroup = compareTriggerGroups.FirstOrDefault(t => t.RequirementsAreEqual(triggerGroup));
                 if (compareTriggerGroup != null)
                 {
                     groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
