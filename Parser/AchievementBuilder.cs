@@ -2057,126 +2057,246 @@ namespace RATools.Parser
             }
         }
 
-
-        private static bool IsMergable(Requirement requirement)
+        private class BitReferences
         {
-            if (requirement.Operator != RequirementOperator.Equal)
-                return false;
-            if (requirement.Left.Type != FieldType.MemoryAddress)
-                return false;
-            if (requirement.Right.Type != FieldType.Value)
-                return false;
-            if (requirement.HitCount != 0)
-                return false;
-            if (requirement.Type != RequirementType.None)
-                return false;
+            public uint address;
+            public FieldType memoryType;
+            public ushort flags;
+            public ushort value;
+            public List<Requirement> requirements;
 
-            return true;
+            public static BitReferences Find(List<BitReferences> references, uint address, FieldType memoryType)
+            {
+                BitReferences bitReferences = references.FirstOrDefault(r => r.address == address && r.memoryType == memoryType);
+                if (bitReferences == null)
+                {
+                    bitReferences = new BitReferences();
+                    bitReferences.address = address;
+                    bitReferences.memoryType = memoryType;
+                    bitReferences.requirements = new List<Requirement>();
+                    references.Add(bitReferences);
+                }
+
+                return bitReferences;
+            }
+        };
+
+        private static void MergeBitCount(RequirementEx requirementEx)
+        {
+            var references = new List<BitReferences>();
+            bool inAddAddress = false;
+            for (int i = 0; i < requirementEx.Requirements.Count; i++)
+            {
+                var requirement = requirementEx.Requirements[i];
+                if (i != requirementEx.Requirements.Count - 1)
+                {
+                    switch (requirement.Type)
+                    {
+                        case RequirementType.AddAddress:
+                            inAddAddress = true;
+                            continue;
+
+                        case RequirementType.AddSource:
+                            if (requirement.Operator != RequirementOperator.None)
+                                goto default;
+                            break;
+
+                        default:
+                            inAddAddress = false;
+                            continue;
+                    }
+                }
+
+                if (!inAddAddress &&
+                    requirement.Left.Size >= FieldSize.Bit0 && requirement.Left.Size <= FieldSize.Bit7)
+                {
+                    BitReferences bitReferences = BitReferences.Find(references, requirement.Left.Value, requirement.Left.Type);
+                    bitReferences.requirements.Add(requirement);
+                    bitReferences.flags |= (ushort)(1 << (requirement.Left.Size - FieldSize.Bit0));
+                }
+
+                inAddAddress = false;
+            }
+
+            var comparison = requirementEx.Requirements.Last();
+            foreach (var bitReference in references)
+            {
+                if (bitReference.flags == 0xFF)
+                {
+                    var requirements = bitReference.requirements;
+                    while (requirements.Count >= 8)
+                    {
+                        var matches = new List<Requirement>();
+                        for (var bit = FieldSize.Bit0; bit <= FieldSize.Bit7; bit++)
+                        {
+                            var requirement = requirements.FirstOrDefault(r => r.Left.Size == bit);
+                            requirements.Remove(requirement);
+                            matches.Add(requirement);
+                        }
+
+                        int insertIndex = requirementEx.Requirements.Count - 1;
+                        foreach (var requirement in matches)
+                        {
+                            var index = requirementEx.Requirements.IndexOf(requirement);
+                            if (index < insertIndex)
+                                insertIndex = index;
+
+                            requirementEx.Requirements.RemoveAt(index);
+                        }
+
+                        requirementEx.Requirements.Insert(insertIndex, new Requirement
+                        {
+                            Type = RequirementType.AddSource,
+                            Left = new Field
+                            {
+                                Size = FieldSize.BitCount,
+                                Type = bitReference.memoryType,
+                                Value = bitReference.address
+                            }
+                        });
+                    }
+                }
+            }
+
+            var comparisonIndex = requirementEx.Requirements.IndexOf(comparison);
+            if (comparisonIndex == -1)
+            {
+                var requirement = requirementEx.Requirements.Last();
+                comparison.Left = requirement.Left;
+                requirementEx.Requirements.RemoveAt(requirementEx.Requirements.Count - 1);
+                requirementEx.Requirements.Add(comparison);
+            }
+            else
+            {
+                requirementEx.Requirements.RemoveAt(comparisonIndex);
+                requirementEx.Requirements.Add(comparison);
+            }
         }
 
         private static void MergeBits(IList<RequirementEx> group)
         {
-            var mergableRequirements = new List<RequirementEx>();
-
-            var references = new TinyDictionary<uint, int>();
+            var references = new List<BitReferences>();
             foreach (var requirementEx in group)
             {
-                if (requirementEx.Requirements.Count == 1 && IsMergable(requirementEx.Requirements[0]))
-                    mergableRequirements.Add(requirementEx);
-            }
+                // convert AddSource bit chain to bitcount
+                if (requirementEx.Requirements.Count >= 8)
+                    MergeBitCount(requirementEx);
 
-            foreach (var requirementEx in mergableRequirements)
-            {
+                // ignore complex conditions (AddAddress, AndNext, etc)
+                if (requirementEx.Requirements.Count != 1)
+                    continue;
+
+                // can only merge equality comparisons (bit0=0, bit1=1, etc)
                 var requirement = requirementEx.Requirements[0];
+                if (requirement.Operator != RequirementOperator.Equal)
+                    continue;
+                if (!requirement.Left.IsMemoryReference || requirement.Right.Type != FieldType.Value)
+                    continue;
 
-                int flags;
-                references.TryGetValue(requirement.Left.Value, out flags);
+                // cannot merge unless all hit counts are the same
+                if (requirement.HitCount != 0)
+                    continue;
+
+                // cannot merge if logic is attached to the condition
+                if (requirement.Type != RequirementType.None)
+                    continue;
+
+                var bitReference = BitReferences.Find(references, requirement.Left.Value, requirement.Left.Type);
                 switch (requirement.Left.Size)
                 {
                     case FieldSize.Bit0:
-                        flags |= 0x01;
+                        bitReference.flags |= 0x01;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x0100;
+                            bitReference.value |= 0x01;
                         break;
                     case FieldSize.Bit1:
-                        flags |= 0x02;
+                        bitReference.flags |= 0x02;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x0200;
+                            bitReference.value |= 0x02;
                         break;
                     case FieldSize.Bit2:
-                        flags |= 0x04;
+                        bitReference.flags |= 0x04;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x0400;
+                            bitReference.value |= 0x04;
                         break;
                     case FieldSize.Bit3:
-                        flags |= 0x08;
+                        bitReference.flags |= 0x08;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x0800;
+                            bitReference.value |= 0x08;
                         break;
                     case FieldSize.Bit4:
-                        flags |= 0x10;
+                        bitReference.flags |= 0x10;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x1000;
+                            bitReference.value |= 0x10;
                         break;
                     case FieldSize.Bit5:
-                        flags |= 0x20;
+                        bitReference.flags |= 0x20;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x2000;
+                            bitReference.value |= 0x20;
                         break;
                     case FieldSize.Bit6:
-                        flags |= 0x40;
+                        bitReference.flags |= 0x40;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x4000;
+                            bitReference.value |= 0x40;
                         break;
                     case FieldSize.Bit7:
-                        flags |= 0x80;
+                        bitReference.flags |= 0x80;
                         if (requirement.Right.Value != 0)
-                            flags |= 0x8000;
+                            bitReference.value |= 0x80;
                         break;
                     case FieldSize.LowNibble:
-                        flags |= 0x0F;
-                        flags |= (ushort)(requirement.Right.Value & 0x0F) << 8;
+                        bitReference.flags |= 0x0F;
+                        bitReference.value |= (ushort)(requirement.Right.Value & 0x0F);
                         break;
                     case FieldSize.HighNibble:
-                        flags |= 0xF0;
-                        flags |= (ushort)(requirement.Right.Value & 0x0F) << 12;
+                        bitReference.flags |= 0xF0;
+                        bitReference.value |= (ushort)((requirement.Right.Value & 0x0F) << 4);
                         break;
                     case FieldSize.Byte:
-                        flags |= 0xFF;
-                        flags |= (ushort)(requirement.Right.Value & 0xFF) << 8;
+                        bitReference.flags |= 0xFF;
+                        bitReference.value |= (ushort)(requirement.Right.Value & 0xFF);
                         break;
+                    default:
+                        continue;
                 }
 
-                references[requirement.Left.Value] = flags;
+                bitReference.requirements.Add(requirement);
             }
 
-            foreach (var kvp in references)
+            foreach (var bitReference in references)
             {
-                if ((kvp.Value & 0xFF) == 0xFF)
-                {
-                    MergeBits(group, mergableRequirements, kvp.Key, FieldSize.Byte, (kvp.Value >> 8) & 0xFF);
-                }
-                else
-                {
-                    if ((kvp.Value & 0x0F) == 0x0F)
-                        MergeBits(group, mergableRequirements, kvp.Key, FieldSize.LowNibble, (kvp.Value >> 8) & 0x0F);
-                    if ((kvp.Value & 0xF0) == 0xF0)
-                        MergeBits(group, mergableRequirements, kvp.Key, FieldSize.HighNibble, (kvp.Value >> 12) & 0x0F);
-                }
+                if ((bitReference.flags & 0xFF) == 0xFF)
+                    MergeBits(group, bitReference, FieldSize.Byte);
+                else if ((bitReference.flags & 0x0F) == 0x0F)
+                    MergeBits(group, bitReference, FieldSize.LowNibble);
+                else if ((bitReference.flags & 0xF0) == 0xF0)
+                    MergeBits(group, bitReference, FieldSize.HighNibble);
             }
         }
 
-        private static void MergeBits(IList<RequirementEx> group, ICollection<RequirementEx> mergableRequirements, uint address, FieldSize newSize, int newValue)
+        private static void MergeBits(IList<RequirementEx> group, BitReferences bitReference, FieldSize newSize)
         {
+            uint newValue = bitReference.value;
+            switch (newSize)
+            {
+                case FieldSize.LowNibble:
+                    newValue &= 0x0F;
+                    break;
+
+                case FieldSize.HighNibble:
+                    newValue = (newValue >> 4) & 0x0F;
+                    break;
+            }
+
             bool insert = true;
             int insertAt = 0;
             for (int i = group.Count - 1; i >= 0; i--)
             {
-                if (!mergableRequirements.Contains(group[i]))
+                if (group[i].Requirements.Count != 1)
                     continue;
 
                 var requirement = group[i].Requirements[0];
-                if (requirement.Left.Value != address)
+                if (!bitReference.requirements.Contains(requirement))
                     continue;
 
                 if (requirement.Left.Size == newSize)
@@ -2245,7 +2365,7 @@ namespace RATools.Parser
             if (insert)
             {
                 var requirement = new Requirement();
-                requirement.Left = new Field { Size = newSize, Type = FieldType.MemoryAddress, Value = address };
+                requirement.Left = new Field { Size = newSize, Type = bitReference.memoryType, Value = bitReference.address };
                 requirement.Operator = RequirementOperator.Equal;
                 requirement.Right = new Field { Size = newSize, Type = FieldType.Value, Value = (uint)newValue };
                 var requirementEx = new RequirementEx();
