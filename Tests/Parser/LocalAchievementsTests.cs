@@ -3,7 +3,7 @@ using Moq;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Tests.Data;
+using RATools.Test.Data;
 using System.IO;
 using System.Linq;
 using System.Text;

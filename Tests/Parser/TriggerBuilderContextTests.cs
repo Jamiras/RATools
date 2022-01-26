@@ -1,10 +1,8 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Data;
 using RATools.Parser;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using RATools.Tests.Data;
+using RATools.Test.Data;
 
 namespace RATools.Test.Parser
 {
