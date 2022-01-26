@@ -609,6 +609,44 @@ namespace RATools.Test.ViewModels
         }
 
         [Test]
+        public void TestRefreshGeneratedSameAsCoreAndLocalExceptBadge()
+        {
+            var vmAsset = new AssetViewModelBaseHarness();
+            vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
+            {
+                BadgeName = "Badge"
+            };
+            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            {
+                BadgeName = "00000"
+            };
+            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            {
+                BadgeName = "0",
+                SourceLine = 65
+            };
+
+            vmAsset.Refresh();
+
+            Assert.That(vmAsset.Id, Is.EqualTo(1234));
+            Assert.That(vmAsset.Title, Is.EqualTo("Title"));
+            Assert.That(vmAsset.Description, Is.EqualTo("Description"));
+            Assert.That(vmAsset.IsTitleModified, Is.False);
+            Assert.That(vmAsset.IsDescriptionModified, Is.False);
+            Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Same));
+            Assert.That(vmAsset.ModificationMessage, Is.Null);
+            Assert.That(vmAsset.IsGenerated, Is.True);
+            Assert.That(vmAsset.CanUpdate, Is.False);
+            Assert.That(vmAsset.Other, Is.Null);
+            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
+            Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
+            Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
+            Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Core and Local)"));
+        }
+
+        [Test]
         public void TestRefreshGeneratedSameAsUnofficialAndLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();

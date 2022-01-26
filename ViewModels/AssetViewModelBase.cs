@@ -377,6 +377,18 @@ namespace RATools.ViewModels
             return null;
         }
 
+        private static bool IsValidBadgeName(string badgeName)
+        {
+            if (String.IsNullOrEmpty(badgeName))
+                return false;
+            if (badgeName == "0")
+                return false;
+            if (badgeName == "00000")
+                return false;
+
+            return true;
+        }
+
         public override void Refresh()
         {
             var generatedAsset = Generated.Asset;
@@ -400,11 +412,11 @@ namespace RATools.ViewModels
             else
                 Id = Published.Id;
 
-            if (!String.IsNullOrEmpty(Generated.BadgeName) && Generated.BadgeName != "0")
+            if (IsValidBadgeName(Generated.BadgeName))
                 BadgeName = Generated.BadgeName;
-            else if (!String.IsNullOrEmpty(Local.BadgeName) && Local.BadgeName != "0")
+            else if (IsValidBadgeName(Local.BadgeName))
                 BadgeName = Local.BadgeName;
-            else if (!String.IsNullOrEmpty(Published.BadgeName) && Published.BadgeName != "0")
+            else if (IsValidBadgeName(Published.BadgeName))
                 BadgeName = Published.BadgeName;
             else
                 BadgeName = null;
