@@ -1,20 +1,92 @@
-﻿using System;
+﻿using Jamiras.Components;
+using RATools.Parser.Functions;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ConditionalExpression : LeftRightExpressionBase
+    internal class ConditionalExpression : ExpressionBase, INestedExpressions
     {
         public ConditionalExpression(ExpressionBase left, ConditionalOperation operation, ExpressionBase right)
-            : base(left, right, ExpressionType.Conditional)
+            : base(ExpressionType.Conditional)
         {
             Operation = operation;
+
+            if (operation == ConditionalOperation.Not)
+            {
+                Debug.Assert(left == null);
+                Debug.Assert(right != null);
+
+                _conditions = new ExpressionBase[1] { right };
+            }
+            else
+            {
+                Debug.Assert(left != null);
+                Debug.Assert(right != null);
+
+                int length = 0;
+
+                var conditionalLeft = left as ConditionalExpression;
+                if (conditionalLeft != null && conditionalLeft.Operation == operation)
+                    length += conditionalLeft._conditions.Length;
+                else
+                    length += 1;
+
+                var conditionalRight = right as ConditionalExpression;
+                if (conditionalRight != null && conditionalRight.Operation == operation)
+                    length += conditionalRight._conditions.Length;
+                else
+                    length += 1;
+
+                _conditions = new ExpressionBase[length];
+                int index = 0;
+
+                if (conditionalLeft != null && conditionalLeft.Operation == operation)
+                {
+                    index = conditionalLeft._conditions.Length;
+                    Array.Copy(conditionalLeft._conditions, _conditions, index);
+                }
+                else
+                {
+                    _conditions[0] = left;
+                    index = 1;
+                }
+
+                if (conditionalRight != null && conditionalRight.Operation == operation)
+                    Array.Copy(conditionalRight._conditions, 0, _conditions, index, conditionalRight._conditions.Length);
+                else
+                    _conditions[index] = right;
+            }
+
+            if (left != null)
+                Location = new TextRange(left.Location.Start, right.Location.End);
+            else
+                Location = right.Location;
+        }
+
+        public ConditionalExpression(ConditionalOperation operation, ExpressionBase[] conditions)
+            : base(ExpressionType.Conditional)
+        {
+            Operation = operation;
+            _conditions = conditions;
+
+            Location = new TextRange(conditions[0].Location.Start, conditions[conditions.Length - 1].Location.End);
         }
 
         /// <summary>
         /// Gets the conditional operation.
         /// </summary>
         public ConditionalOperation Operation { get; private set; }
+
+        public IEnumerable<ExpressionBase> Conditions
+        {
+            get { return _conditions; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly ExpressionBase[] _conditions;
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -24,34 +96,34 @@ namespace RATools.Parser.Internal
             if (Operation == ConditionalOperation.Not)
             {
                 builder.Append('!');
-                if (Right.Type == ExpressionType.Conditional || Right.Type == ExpressionType.Comparison)
+                var right = _conditions[0];
+                if (right.Type == ExpressionType.Conditional || right.Type == ExpressionType.Comparison)
                 {
                     builder.Append('(');
-                    Right.AppendString(builder);
+                    right.AppendString(builder);
                     builder.Append(')');
                 }
                 else
                 {
-                    Right.AppendString(builder);
+                    right.AppendString(builder);
                 }
                 return;
             }
 
-            if (Left.IsLogicalUnit)
-                builder.Append('(');
-            Left.AppendString(builder);
-            if (Left.IsLogicalUnit)
-                builder.Append(')');
-            builder.Append(' ');
+            var operatorString = ' ' + GetOperatorString(Operation) + ' ';
 
-            builder.Append(GetOperatorString(Operation));
+            for (int i = 0; i < _conditions.Length; ++i)
+            {
+                if (i > 0)
+                    builder.Append(operatorString);
 
-            builder.Append(' ');
-            if (Right.IsLogicalUnit)
-                builder.Append('(');
-            Right.AppendString(builder);
-            if (Right.IsLogicalUnit)
-                builder.Append(')');
+                var condition = _conditions[i];
+                if (condition.IsLogicalUnit)
+                    builder.Append('(');
+                condition.AppendString(builder);
+                if (condition.IsLogicalUnit)
+                    builder.Append(')');
+            }
         }
 
         internal static string GetOperatorString(ConditionalOperation operation)
@@ -75,71 +147,120 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase left = null;
-            if (Left != null && !Left.ReplaceVariables(scope, out left))
-            {
-                result = left;
-                return false;
-            }
+            bool hasTrue = false;
+            bool hasFalse = false;
+            bool isChanged = false;
 
-            ExpressionBase right;
-            if (!Right.ReplaceVariables(scope, out right))
+            var updatedConditions = new List<ExpressionBase>(_conditions.Length);
+            for (int i = 0; i < _conditions.Length; ++i)
             {
-                result = right;
-                return false;
-            }
-
-            if (Operation == ConditionalOperation.Not)
-            {
-                result = InvertExpression(right);
-                if (result.Type == ExpressionType.ParseError)
+                if (!_conditions[i].ReplaceVariables(scope, out result))
                     return false;
 
-                CopyLocation(result);
+                isChanged |= !ReferenceEquals(result, _conditions[i]);
 
-                // InvertExpression may distribute Nots to subnodes, recurse
-                return result.ReplaceVariables(scope, out result);
-            }
-
-            BooleanConstantExpression booleanExpression = left as BooleanConstantExpression;
-            if (booleanExpression != null)
-            {
-                switch (Operation)
+                ParseErrorExpression parseError;
+                bool? logicalValue = result.IsTrue(scope, out parseError);
+                if (parseError != null)
                 {
-                    case ConditionalOperation.Or:
-                        // true || n => true
-                        // false || n => n
-                        result = (booleanExpression.Value) ? left : right;
-                        return true;
-
-                    case ConditionalOperation.And:
-                        // true && n => n
-                        // false && n => false
-                        result = (booleanExpression.Value) ? right : left;
-                        return true;
+                    result = parseError;
+                    return false;
                 }
-            }
 
-            booleanExpression = right as BooleanConstantExpression;
-            if (booleanExpression != null)
-            {
-                switch (Operation)
+                if (logicalValue == true)
                 {
-                    case ConditionalOperation.Or:
-                        // n || true => true
-                        // n || false => n
-                        result = (booleanExpression.Value) ? right : left;
-                        return true;
+                    hasTrue = true;
 
-                    case ConditionalOperation.And:
-                        // n && true => n
-                        // n && false => false
-                        result = (booleanExpression.Value) ? left : right;
-                        return true;
+                    if (Operation == ConditionalOperation.And)
+                    {
+                        isChanged = true;
+                        continue;
+                    }
                 }
+                else if (logicalValue == false)
+                {
+                    hasFalse = true;
+
+                    if (Operation == ConditionalOperation.Or)
+                    {
+                        isChanged = true;
+                        continue;
+                    }
+                }
+
+                updatedConditions.Add(result);
             }
 
-            result = new ConditionalExpression(left, Operation, right);
+            bool? logicalResult = null;
+            switch (Operation)
+            {
+                case ConditionalOperation.Not:
+                    if (hasTrue)
+                    {
+                        logicalResult = false;
+                    }
+                    else if (hasFalse)
+                    {
+                        logicalResult = true;
+                    }
+                    else
+                    {
+                        result = InvertExpression(updatedConditions[0]);
+                        if (result.Type == ExpressionType.ParseError)
+                            return false;
+
+                        CopyLocation(result);
+
+                        // InvertExpression may distribute Nots to subnodes, recurse
+                        return result.ReplaceVariables(scope, out result);
+                    }
+                    break;
+
+                case ConditionalOperation.Or:
+                    if (hasTrue)
+                    {
+                        // anything or true is true
+                        logicalResult = true;
+                    }
+                    else if (hasFalse && updatedConditions.Count == 0)
+                    {
+                        // all conditions were false, entire condition is false
+                        logicalResult = false;
+                    }
+                    break;
+
+                case ConditionalOperation.And:
+                    if (hasFalse)
+                    {
+                        // anything and false is false
+                        logicalResult = false;
+                    }
+                    if (hasTrue && updatedConditions.Count == 0)
+                    {
+                        // all conditions were true, entire condition is true
+                        logicalResult = true;
+                    }
+                    break;
+            }
+
+            if (logicalResult == true)
+            {
+                result = new BooleanConstantExpression(true);
+            }
+            else if (logicalResult == false)
+            {
+                result = new BooleanConstantExpression(false);
+            }
+            else if (!isChanged)
+            {
+                result = this;
+                return true;
+            }
+            else
+            {
+                result = new ConditionalExpression(Operation, updatedConditions.ToArray());
+            }
+
             CopyLocation(result);
             return true;
         }
@@ -150,25 +271,23 @@ namespace RATools.Parser.Internal
             var condition = expression as ConditionalExpression;
             if (condition != null)
             {
+                var newConditions = new ExpressionBase[condition._conditions.Length];
+                for (int i =0; i < newConditions.Length; ++i)
+                    newConditions[i] = InvertExpression(condition._conditions[i]);
+
                 switch (condition.Operation)
                 {
                     case ConditionalOperation.Not:
                         // !(!A) => A
-                        return condition.Right;
+                        return newConditions[0];
 
                     case ConditionalOperation.And:
                         // !(A && B) => !A || !B
-                        return new ConditionalExpression(
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
-                            ConditionalOperation.Or,
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+                        return new ConditionalExpression(ConditionalOperation.Or, newConditions);
 
                     case ConditionalOperation.Or:
                         // !(A || B) => !A && !B
-                        return new ConditionalExpression(
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Left),
-                            ConditionalOperation.And,
-                            new ConditionalExpression(null, ConditionalOperation.Not, condition.Right));
+                        return new ConditionalExpression(ConditionalOperation.And, newConditions);
 
                     default:
                         throw new NotImplementedException("Unsupported condition operation");
@@ -214,7 +333,7 @@ namespace RATools.Parser.Internal
         /// </returns>
         internal override ExpressionBase Rebalance()
         {
-            if (!Right.IsLogicalUnit)
+            if (Operation == ConditionalOperation.And && _conditions.Length == 2)
             {
                 // the tree will be built weighted to the right. AND has higher priority than OR, so if an
                 // ungrouped AND is followed by an OR, shift them around so the AND will be evaluated first
@@ -224,14 +343,14 @@ namespace RATools.Parser.Internal
                 //     &&                      ||
                 //   A      ||           &&       C
                 //        B    C       A    B
-                if (Operation == ConditionalOperation.And)
+                var conditionalRight = _conditions[1] as ConditionalExpression;
+                if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
                 {
-                    var conditionalRight = Right as ConditionalExpression;
-                    if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
-                    {
-                        // enforce order of operations
-                        return Rebalance(conditionalRight);
-                    }
+                    // enforce order of operations
+                    var conditions = conditionalRight.Conditions.ToArray();
+                    _conditions[_conditions.Length - 1] = conditions[0];
+                    conditions[0] = this;
+                    return new ConditionalExpression(ConditionalOperation.Or, conditions);
                 }
             }
 
@@ -248,32 +367,54 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
         {
-            bool? result = false;
-            error = null;
+            bool? isTrue;
 
             switch (Operation)
             {
                 case ConditionalOperation.And:
-                    result = Left.IsTrue(scope, out error);
-                    if (result == true && error == null)
-                        result = Right.IsTrue(scope, out error);
-                    break;
+                    foreach (var condition in _conditions)
+                    {
+                        isTrue = condition.IsTrue(scope, out error);
+                        if (error != null)
+                            return isTrue;
+
+                        if (isTrue == false)
+                            return false;
+
+                        if (isTrue == null)
+                            return null;
+                    }
+
+                    error = null;
+                    return true;
 
                 case ConditionalOperation.Or:
-                    result = Left.IsTrue(scope, out error);
-                    if (result == false && error == null)
-                        result = Right.IsTrue(scope, out error);
-                    break;
+                    foreach (var condition in _conditions)
+                    {
+                        isTrue = condition.IsTrue(scope, out error);
+                        if (error != null)
+                            return isTrue;
+
+                        if (isTrue == true)
+                            return true;
+
+                        if (isTrue == null)
+                            return null;
+                    }
+
+                    error = null;
+                    return false;
 
                 case ConditionalOperation.Not:
-                    result = !Right.IsTrue(scope, out error);
-                    break;
+                    isTrue = _conditions[0].IsTrue(scope, out error);
+                    if (isTrue == null)
+                        return null;
+                    return !isTrue;
+
+                default:
+                    error = null;
+                    return null;
             }
-
-            if (error != null)
-                result = null;
-
-            return result;
         }
 
         /// <summary>
@@ -286,7 +427,26 @@ namespace RATools.Parser.Internal
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as ConditionalExpression;
-            return that != null && Operation == that.Operation && Left == that.Left && Right == that.Right;
+            return that != null && Operation == that.Operation && _conditions == that._conditions;
+        }
+
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get { return _conditions; }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+            foreach (var condition in _conditions)
+            {
+                var nested = condition as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
         }
     }
 

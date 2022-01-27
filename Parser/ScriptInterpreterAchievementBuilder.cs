@@ -29,11 +29,11 @@ namespace RATools.Parser
 
         private static void FlattenOrClause(ExpressionBase clause, List<ExpressionBase> flattened)
         {
-            var condition = clause as ConditionalExpression;
-            if (condition != null && condition.Operation == ConditionalOperation.Or)
+            var conditionExpression = clause as ConditionalExpression;
+            if (conditionExpression != null && conditionExpression.Operation == ConditionalOperation.Or)
             {
-                FlattenOrClause(condition.Left, flattened);
-                FlattenOrClause(condition.Right, flattened);
+                foreach (var condition in conditionExpression.Conditions)
+                    FlattenOrClause(condition, flattened);
             }
             else
             {
@@ -197,74 +197,74 @@ namespace RATools.Parser
 
         private static ConditionalExpression BubbleUpOrs(ConditionalExpression condition)
         {
-            bool modified = false;
-            bool hasChildOr = false;
+            //bool modified = false;
+            //bool hasChildOr = false;
 
-            ConditionalExpression left = condition.Left as ConditionalExpression;
-            if (left != null)
-            {
-                left = BubbleUpOrs(left);
-                modified |= !ReferenceEquals(left, condition.Left);
-                hasChildOr |= (left.Operation == ConditionalOperation.Or);
-            }
+            //ConditionalExpression left = condition.Left as ConditionalExpression;
+            //if (left != null)
+            //{
+            //    left = BubbleUpOrs(left);
+            //    modified |= !ReferenceEquals(left, condition.Left);
+            //    hasChildOr |= (left.Operation == ConditionalOperation.Or);
+            //}
 
-            ConditionalExpression right = condition.Right as ConditionalExpression;
-            if (right != null)
-            {
-                right = BubbleUpOrs(right);
-                modified |= !ReferenceEquals(right, condition.Right);
-                hasChildOr |= (right.Operation == ConditionalOperation.Or);
-            }
+            //ConditionalExpression right = condition.Right as ConditionalExpression;
+            //if (right != null)
+            //{
+            //    right = BubbleUpOrs(right);
+            //    modified |= !ReferenceEquals(right, condition.Right);
+            //    hasChildOr |= (right.Operation == ConditionalOperation.Or);
+            //}
 
-            if (modified)
-            {
-                var newCondition = new ConditionalExpression(
-                    left ?? condition.Left, condition.Operation, right ?? condition.Right);
-                condition.CopyLocation(newCondition);
-                condition = newCondition;
-            }
+            //if (modified)
+            //{
+            //    var newCondition = new ConditionalExpression(
+            //        left ?? condition.Left, condition.Operation, right ?? condition.Right);
+            //    condition.CopyLocation(newCondition);
+            //    condition = newCondition;
+            //}
 
-            if (condition.Operation == ConditionalOperation.And && hasChildOr)
-            {
-                var orConditions = new List<ExpressionBase>();
-                orConditions.Add(left ?? condition.Left);
-                orConditions.Add(right ?? condition.Right);
+            //if (condition.Operation == ConditionalOperation.And && hasChildOr)
+            //{
+            //    var orConditions = new List<ExpressionBase>();
+            //    orConditions.Add(left ?? condition.Left);
+            //    orConditions.Add(right ?? condition.Right);
 
-                var expression = CrossMultiplyOrConditions(orConditions);
-                return (ConditionalExpression)expression;
-            }
+            //    var expression = CrossMultiplyOrConditions(orConditions);
+            //    return (ConditionalExpression)expression;
+            //}
 
             return condition;
         }
 
         private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ParseErrorExpression error)
         {
-            var condition = expression as ConditionalExpression;
-            if (condition == null)
-            {
-                andedConditions.Add(expression);
-                error = null;
-                return true;
-            }
+            //var condition = expression as ConditionalExpression;
+            //if (condition == null)
+            //{
+            //    andedConditions.Add(expression);
+            //    error = null;
+            //    return true;
+            //}
 
-            switch (condition.Operation)
-            {
-                case ConditionalOperation.And:
-                    if (!SortConditions(condition.Left, andedConditions, orConditions, out error))
-                        return false;
-                    if (!SortConditions(condition.Right, andedConditions, orConditions, out error))
-                        return false;
-                    break;
+            //switch (condition.Operation)
+            //{
+            //    case ConditionalOperation.And:
+            //        if (!SortConditions(condition.Left, andedConditions, orConditions, out error))
+            //            return false;
+            //        if (!SortConditions(condition.Right, andedConditions, orConditions, out error))
+            //            return false;
+            //        break;
 
-                case ConditionalOperation.Or:
-                    condition = BubbleUpOrs(condition);
-                    orConditions.Add(condition);
-                    break;
+            //    case ConditionalOperation.Or:
+            //        condition = BubbleUpOrs(condition);
+            //        orConditions.Add(condition);
+            //        break;
 
-                default:
-                    error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
-                    return false;
-            }
+            //    default:
+            //        error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
+            //        return false;
+            //}
 
             error = null;
             return true;
@@ -575,58 +575,22 @@ namespace RATools.Parser
 
         private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope, TriggerBuilderContext context)
         {
-            ParseErrorExpression error;
+            if (condition.Operation == ConditionalOperation.Not)
+                return new ParseErrorExpression("! operator should have been normalized out", condition);
 
-            // conditions are typically chained, so attempt to process them without recursion to prevent potential stack overflow
-            do
+            foreach (var clause in condition.Conditions)
             {
-                switch (condition.Operation)
-                {
-                    case ConditionalOperation.And:
-                        break;
-
-                    case ConditionalOperation.Or:
-                        // important to separate both clauses from the core group or previous alt group - does nothing if previous
-                        // alt group is empty
-                        BeginAlt(context);
-                        break;
-
-                    case ConditionalOperation.Not:
-                        return new ParseErrorExpression("! operator should have been normalized out", condition);
-
-                    default:
-                        return new ParseErrorExpression("Unsupported conditional", condition);
-                }
-
-                var leftConditional = condition.Left as ConditionalExpression;
-                if (leftConditional != null)
-                {
-                    // we can't actually chain left side conditionals without keeping our own stack,
-                    // but we can quickly call back into this function instead of going through
-                    // three levels of other functions to get back here.
-                    error = ExecuteAchievementConditional(leftConditional, scope, context);
-                }
-                else
-                {
-                    // actual logic, process it
-                    error = ExecuteAchievementClause(condition.Left, scope);
-                }
-
-                if (error != null)
-                    return error;
-
+                // important to separate both clauses from the core group or previous alt group -
+                // does nothing if previous alt group is empty
                 if (condition.Operation == ConditionalOperation.Or)
                     BeginAlt(context);
 
-                var rightConditional = condition.Right as ConditionalExpression;
-                if (rightConditional == null)
-                {
-                    // actual logic, end of expression. process it and return
-                    return ExecuteAchievementClause(condition.Right, scope);
-                }
+                var error = ExecuteAchievementClause(clause, scope);
+                if (error != null)
+                    return error;
+            }
 
-                condition = rightConditional;
-            } while (true);
+            return null;
         }
 
         private static ParseErrorExpression HandleAddAddressComparison(ExpressionBase comparison,

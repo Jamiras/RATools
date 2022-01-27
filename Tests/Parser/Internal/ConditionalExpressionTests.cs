@@ -17,7 +17,7 @@ namespace RATools.Test.Parser.Internal
         [TestCase(ConditionalOperation.Not, "!99")]
         public void TestAppendString(ConditionalOperation op, string expected)
         {
-            var variable = new VariableExpression("variable");
+            ExpressionBase variable = (op == ConditionalOperation.Not) ? null : new VariableExpression("variable");
             var value = new IntegerConstantExpression(99);
             var expr = new ConditionalExpression(variable, op, value);
 
@@ -58,9 +58,9 @@ namespace RATools.Test.Parser.Internal
         [TestCase("!(A == 1 && B == 1 && C == 1)", "A != 1 || B != 1 || C != 1")]
         [TestCase("!(!(A == B))", "A == B")]
         [TestCase("!(A == 1 || !(B == 1 && C == 1))", "A != 1 && B == 1 && C == 1")]
-        [TestCase("!always_true()", "always_false()")]
-        [TestCase("!always_false()", "always_true()")]
-        [TestCase("!(always_false() || A == 1)", "always_true() && A != 1")]
+        [TestCase("!always_true()", "false")]
+        [TestCase("!always_false()", "true")]
+        [TestCase("!(always_false() || A == 1)", "A != 1")]
         public void TestReplaceVariables(string input, string expected)
         {
             input = input.Replace("A", "byte(10)");
@@ -90,16 +90,14 @@ namespace RATools.Test.Parser.Internal
 
         private static void SetLogicalUnit(ExpressionBase expressionBase)
         {
-            var leftRight = expressionBase as LeftRightExpressionBase;
-            if (leftRight != null)
+            var conditional = expressionBase as ConditionalExpression;
+            if (conditional != null)
             {
-                if (leftRight.Left != null) // ignore Not
-                {
-                    leftRight.IsLogicalUnit = true;
-                    SetLogicalUnit(leftRight.Left);
-                }
+                if (conditional.Operation != ConditionalOperation.Not)
+                    conditional.IsLogicalUnit = true;
 
-                SetLogicalUnit(leftRight.Right);
+                foreach (var clause in conditional.Conditions)
+                    SetLogicalUnit(clause);
             }
         }
 
@@ -121,8 +119,8 @@ namespace RATools.Test.Parser.Internal
         [TestCase("(A || B) && (C || D)", "(A || B) && (C || D)")]
         [TestCase("A || B && (C || D)", "A || (B && (C || D))")]
         [TestCase("A || (B && C) || D", "A || ((B && C) || D)")] // ungrouped tree is right-weighted
-        [TestCase("A && B && C || D && E && F", "(A && (B && C)) || (D && (E && F))")] // AND has higher priority than OR
-        [TestCase("(A && B && C) || (D && E && F)", "(A && (B && C)) || (D && (E && F))")]
+        [TestCase("A && B && C || D && E && F", "(A && B && C) || (D && E && F)")] // AND has higher priority than OR
+        [TestCase("(A && B && C) || (D && E && F)", "(A && B && C) || (D && E && F)")]
         [TestCase("A && B || C && D || E && F", "(A && B) || ((C && D) || (E && F))")] // AND has higher priority than OR
         [TestCase("(A && B || C) && (D || E && F)", "((A && B) || C) && (D || (E && F))")] // AND has higher priority than OR
         public void TestRebalance(string input, string expected)

@@ -197,9 +197,10 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
-            Assert.That(cond.Left, Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Right, Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(2));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -209,9 +210,11 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
-            Assert.That(cond.Left, Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Right, Is.InstanceOf<ConditionalExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(3));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(2), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -221,9 +224,10 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
-            Assert.That(cond.Left, Is.InstanceOf<ConditionalExpression>());
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Right, Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(2));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<ConditionalExpression>());
+            Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -233,9 +237,11 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
-            Assert.That(cond.Left, Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Right, Is.InstanceOf<ConditionalExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(2));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(3), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -245,9 +251,11 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
-            Assert.That(cond.Left, Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Right, Is.InstanceOf<ConditionalExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(3));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(2), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -315,8 +323,8 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Not));
-            Assert.That(cond.Left, Is.Null);
-            Assert.That(cond.Right, Is.InstanceOf<FunctionCallExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(1));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<FunctionCallExpression>());
         }
 
         [Test]

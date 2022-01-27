@@ -20,8 +20,8 @@ namespace RATools.Parser.Functions
             var condition = expression as ConditionalExpression;
             if (condition != null && condition.Operation == op)
             {
-                SplitConditions(conditions, condition.Left, op);
-                SplitConditions(conditions, condition.Right, op);
+                foreach (var clause in condition.Conditions)
+                    SplitConditions(conditions, clause, op);
             }
             else
             {

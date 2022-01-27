@@ -120,9 +120,9 @@ namespace RATools.Parser.Internal
                 if (comparisonRight != null)
                     return Rebalance(comparisonRight);
 
-                var conditionalRight = Right as ConditionalExpression;
-                if (conditionalRight != null)
-                    return Rebalance(conditionalRight);
+                //var conditionalRight = Right as ConditionalExpression;
+                //if (conditionalRight != null)
+                //    return Rebalance(conditionalRight);
             }
 
             return base.Rebalance();

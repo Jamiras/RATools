@@ -434,9 +434,10 @@ namespace RATools.Test.Parser.Internal
             var result = expr.Rebalance() as ConditionalExpression;
             Assert.That(result, Is.Not.Null);
             var expected = new ComparisonExpression(expr.Left, expr.Operation, value);
-            Assert.That(result.Left, Is.EqualTo(expected));
-            Assert.That(result.Operation, Is.EqualTo(ConditionalOperation.And));
-            Assert.That(result.Right, Is.EqualTo(variable2));
+            //Assert.That(result.Left, Is.EqualTo(expected));
+            //Assert.That(result.Operation, Is.EqualTo(ConditionalOperation.And));
+            //Assert.That(result.Right, Is.EqualTo(variable2));
+            Assert.Fail("TODO");
         }
 
         [Test]

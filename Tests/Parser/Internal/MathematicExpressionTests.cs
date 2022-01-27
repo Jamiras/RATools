@@ -186,9 +186,10 @@ namespace RATools.Test.Parser.Internal
             var result = expr.Rebalance() as ConditionalExpression;
             Assert.That(result, Is.Not.Null);
             var expectedLeft = new MathematicExpression(variable1, MathematicOperation.Add, variable2);
-            Assert.That(result.Left, Is.EqualTo(expectedLeft));
-            Assert.That(result.Operation, Is.EqualTo(clause.Operation));
-            Assert.That(result.Right, Is.EqualTo(value));
+            //Assert.That(result.Left, Is.EqualTo(expectedLeft));
+            //Assert.That(result.Operation, Is.EqualTo(clause.Operation));
+            //Assert.That(result.Right, Is.EqualTo(value));
+            Assert.Fail("TODO");
         }
 
         [Test]

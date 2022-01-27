@@ -16,6 +16,11 @@ namespace RATools.Parser.Functions
             return null;
         }
 
+        public static FunctionCallExpression CreateAlwaysFalseFunctionCall()
+        {
+            return new FunctionCallExpression("always_true", new ExpressionBase[0]);
+        }
+
         public static Requirement CreateAlwaysFalseRequirement()
         {
             var requirement = new Requirement();
