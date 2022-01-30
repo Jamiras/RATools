@@ -292,6 +292,9 @@ namespace RATools.ViewModels
                 TaskDialogViewModel.ShowWarningMessage("Could not find game ID", "The loaded file did not contain an #ID comment indicating which game the script is associated to.");
             }
 
+            if (gameTitle == null)
+                gameTitle = Path.GetFileNameWithoutExtension(filename);
+
             if (!usingBackup)
                 AddRecentFile(filename);
 

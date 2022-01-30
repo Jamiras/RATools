@@ -52,6 +52,10 @@ namespace RATools.Parser.Functions
 
                 if (wrap)
                 {
+                    // no need to force a logical unit when provided as a parameter.
+                    // allows ReplaceVariables to further separate it if necessary.
+                    result.IsLogicalUnit = false;
+
                     result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { result });
                     if (!result.ReplaceVariables(scope, out result))
                         return false;

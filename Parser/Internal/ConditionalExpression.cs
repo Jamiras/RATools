@@ -30,13 +30,16 @@ namespace RATools.Parser.Internal
                 int length = 0;
 
                 var conditionalLeft = left as ConditionalExpression;
-                if (conditionalLeft != null && conditionalLeft.Operation == operation)
+                bool mergeLeft = (conditionalLeft != null && conditionalLeft.Operation == operation);
+
+                if (mergeLeft)
                     length += conditionalLeft._conditions.Length;
                 else
                     length += 1;
 
                 var conditionalRight = right as ConditionalExpression;
-                if (conditionalRight != null && conditionalRight.Operation == operation)
+                bool mergeRight = (conditionalRight != null && conditionalRight.Operation == operation);
+                if (mergeRight)
                     length += conditionalRight._conditions.Length;
                 else
                     length += 1;
@@ -44,7 +47,7 @@ namespace RATools.Parser.Internal
                 _conditions = new ExpressionBase[length];
                 int index = 0;
 
-                if (conditionalLeft != null && conditionalLeft.Operation == operation)
+                if (mergeLeft)
                 {
                     index = conditionalLeft._conditions.Length;
                     Array.Copy(conditionalLeft._conditions, _conditions, index);
@@ -55,7 +58,7 @@ namespace RATools.Parser.Internal
                     index = 1;
                 }
 
-                if (conditionalRight != null && conditionalRight.Operation == operation)
+                if (mergeRight)
                     Array.Copy(conditionalRight._conditions, 0, _conditions, index, conditionalRight._conditions.Length);
                 else
                     _conditions[index] = right;
@@ -157,37 +160,34 @@ namespace RATools.Parser.Internal
                 if (!_conditions[i].ReplaceVariables(scope, out result))
                     return false;
 
+                // can eliminate true/false now, but not things that evaluate to true/false.
+                // (like always_true or always_false) as those may be used to generate explicit alt groups.
+                var booleanExpression = result as BooleanConstantExpression;
+                if (booleanExpression != null)
+                {
+                    if (booleanExpression.Value)
+                    {
+                        hasTrue = true;
+
+                        if (Operation == ConditionalOperation.And)
+                        {
+                            isChanged = true;
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        hasFalse = true;
+
+                        if (Operation == ConditionalOperation.Or)
+                        {
+                            isChanged = true;
+                            continue;
+                        }
+                    }
+                }
+
                 isChanged |= !ReferenceEquals(result, _conditions[i]);
-
-                ParseErrorExpression parseError;
-                bool? logicalValue = result.IsTrue(scope, out parseError);
-                if (parseError != null)
-                {
-                    result = parseError;
-                    return false;
-                }
-
-                if (logicalValue == true)
-                {
-                    hasTrue = true;
-
-                    if (Operation == ConditionalOperation.And)
-                    {
-                        isChanged = true;
-                        continue;
-                    }
-                }
-                else if (logicalValue == false)
-                {
-                    hasFalse = true;
-
-                    if (Operation == ConditionalOperation.Or)
-                    {
-                        isChanged = true;
-                        continue;
-                    }
-                }
-
                 updatedConditions.Add(result);
             }
 
@@ -323,38 +323,6 @@ namespace RATools.Parser.Internal
 
             // unsupported inversion
             return new ParseErrorExpression("! operator cannot be applied to " + expression.Type, expression);
-        }
-
-        /// <summary>
-        /// Rebalances this expression based on the precendence of operators.
-        /// </summary>
-        /// <returns>
-        /// Rebalanced expression
-        /// </returns>
-        internal override ExpressionBase Rebalance()
-        {
-            if (Operation == ConditionalOperation.And && _conditions.Length == 2)
-            {
-                // the tree will be built weighted to the right. AND has higher priority than OR, so if an
-                // ungrouped AND is followed by an OR, shift them around so the AND will be evaluated first
-                //
-                //   A && B || C  ~>  (A && B) || C
-                //
-                //     &&                      ||
-                //   A      ||           &&       C
-                //        B    C       A    B
-                var conditionalRight = _conditions[1] as ConditionalExpression;
-                if (conditionalRight != null && conditionalRight.Operation == ConditionalOperation.Or)
-                {
-                    // enforce order of operations
-                    var conditions = conditionalRight.Conditions.ToArray();
-                    _conditions[_conditions.Length - 1] = conditions[0];
-                    conditions[0] = this;
-                    return new ConditionalExpression(ConditionalOperation.Or, conditions);
-                }
-            }
-
-            return base.Rebalance();
         }
 
         /// <summary>

@@ -28,28 +28,6 @@ namespace RATools.Parser.Internal
         /// </summary>
         public ExpressionBase Right { get; internal set; }
 
-        /// <summary>
-        /// Rebalances the current node and the <paramref name="newRoot"/> so <paramref name="newRoot" /> becomes the parent node.
-        /// </summary>
-        /// <param name="newRoot">The new root. (must be <see cref="Right"/>)</param>
-        /// <returns>The new root.</returns>
-        protected ExpressionBase Rebalance(LeftRightExpressionBase newRoot)
-        {
-            // newRoot has to be Right, or we're joining trees instead of rebalancing.
-            Debug.Assert(ReferenceEquals(newRoot, Right));
-
-            //     A             C            A = this              D = Right.Left
-            //   B   C    >    A   E          B = Left              E = Right.Right
-            //      D E       B D             C = Right (newRoot)
-            Right = newRoot.Left;
-            Location = new TextRange(Location.Start, Right.Location.End);
-
-            newRoot.Left = this.Rebalance();
-            newRoot.Location = new TextRange(newRoot.Left.Location.Start, newRoot.Location.End);
-
-            return newRoot;
-        }
-
         protected static bool ConvertToFloat(ref ExpressionBase left, ref ExpressionBase right, out ExpressionBase result)
         {
             left = FloatConstantExpression.ConvertFrom(left);

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Internal;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Test.Parser.Internal
 {
@@ -178,16 +179,228 @@ namespace RATools.Test.Parser.Internal
             Assert.That(func.Expressions.First(), Is.InstanceOf<ReturnExpression>());
         }
 
-        [Test]
-        public void TestParseComparison()
+        private void SetLogicalUnit(ExpressionBase expression)
         {
-            var tokenizer = CreateTokenizer("var < 3");
+            var nestedExpressions = expression as INestedExpressions;
+            if (nestedExpressions != null)
+            {
+                int count = 0;
+
+                foreach (var nestedExpression in nestedExpressions.NestedExpressions)
+                {
+                    count++;
+                    SetLogicalUnit(nestedExpression);
+                }
+
+                if (count > 1)
+                    expression.IsLogicalUnit = true;
+            }
+        }
+
+        [Test]
+        [TestCase("A < 3", "A < 3")]
+        [TestCase("A < 3 && B < 3", "(A < 3) && (B < 3)")]
+        [TestCase("A && B || C", "(A && B) || C")] // AND has higher priority than OR
+        [TestCase("A && (B || C)", "A && (B || C)")]
+        [TestCase("A || B && C", "A || (B && C)")] // AND has higher priority than OR
+        [TestCase("A || (B && C)", "A || (B && C)")]
+        [TestCase("A && B && C", "A && B && C")]
+        [TestCase("A && (B && C)", "A && B && C")]
+        [TestCase("!A && B || C", "(!A && B) || C")] // AND has higher priority than OR
+        [TestCase("A && !B || C", "(A && !B) || C")] // AND has higher priority than OR
+        [TestCase("A && B || !C", "(A && B) || !C")] // AND has higher priority than OR
+        [TestCase("A && B || C && D", "(A && B) || (C && D)")] // AND has higher priority than OR
+        [TestCase("(A && B) || (C && D)", "(A && B) || (C && D)")]
+        [TestCase("A && B || (C && D)", "(A && B) || (C && D)")] // AND has higher priority than OR
+        [TestCase("A && (B || C) && D", "A && (B || C) && D")]
+        [TestCase("A || B && C || D", "A || (B && C) || D")] // AND has higher priority than OR
+        [TestCase("(A || B) && (C || D)", "(A || B) && (C || D)")]
+        [TestCase("A || B && (C || D)", "A || (B && (C || D))")]
+        [TestCase("A || (B && C) || D", "A || (B && C) || D")]
+        [TestCase("A && B && C || D && E && F", "(A && B && C) || (D && E && F)")] // AND has higher priority than OR
+        [TestCase("(A && B && C) || (D && E && F)", "(A && B && C) || (D && E && F)")]
+        [TestCase("A && B || C && D || E && F", "(A && B) || (C && D) || (E && F)")] // AND has higher priority than OR
+        [TestCase("(A && B || C) && (D || E && F)", "((A && B) || C) && (D || (E && F))")] // AND has higher priority than OR
+        public void TestParseExpressionGrouping(string input, string expected)
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);
-            Assert.That(expression, Is.InstanceOf<ComparisonExpression>());
-            var comp = (ComparisonExpression)expression;
-            Assert.That(comp.Left, Is.InstanceOf<VariableExpression>());
-            Assert.That(comp.Operation, Is.EqualTo(ComparisonOperation.LessThan));
-            Assert.That(comp.Right, Is.InstanceOf<IntegerConstantExpression>());
+
+            SetLogicalUnit(expression);
+
+            var builder = new StringBuilder();
+            expression.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("A + B + C", true)]
+        [TestCase("A + B - C", true)]
+        [TestCase("A + B * C", false)]
+        [TestCase("A + B / C", false)]
+        [TestCase("A + B % C", false)]
+        [TestCase("A - B + C", true)]
+        [TestCase("A - B - C", true)]
+        [TestCase("A - B * C", false)]
+        [TestCase("A - B / C", false)]
+        [TestCase("A - B % C", false)]
+        [TestCase("A * B + C", true)]
+        [TestCase("A * B - C", true)]
+        [TestCase("A * B * C", true)]
+        [TestCase("A * B / C", true)]
+        [TestCase("A * B % C", true)]
+        [TestCase("A / B + C", true)]
+        [TestCase("A / B - C", true)]
+        [TestCase("A / B * C", true)]
+        [TestCase("A / B / C", true)]
+        [TestCase("A / B % C", true)]
+        [TestCase("A % B + C", true)]
+        [TestCase("A % B - C", true)]
+        [TestCase("A % B * C", true)]
+        [TestCase("A % B / C", true)]
+        [TestCase("A % B % C", true)]
+        [TestCase("\"A\" + B + C", false)]
+        [TestCase("A + B + \"C\"", true)]
+        public void TestParseExpressionGroupingMathematic(string input, bool leftPrioritized)
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer) as MathematicExpression;
+
+            Assert.That(expression, Is.Not.Null);
+
+            var parts = input.Split(' ');
+            string expectedLeft, expectedRight;
+
+            if (leftPrioritized)
+            {
+                expectedLeft = parts[0] + ' ' + parts[1] + ' ' + parts[2];
+                expectedRight = parts[4];
+            }
+            else
+            {
+                expectedLeft = parts[0];
+                expectedRight = parts[2] + ' ' + parts[3] + ' ' + parts[4];
+            }
+
+            var builder = new StringBuilder();
+            expression.Left.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expectedLeft));
+
+            builder.Clear();
+            expression.Right.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo(expectedRight));
+        }
+
+        [TestCase("A + B < C", true)]
+        [TestCase("A < B + C", false)]
+        public void TestParseExpressionGroupingComparison(string input, bool leftPrioritized)
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer) as ComparisonExpression;
+
+            Assert.That(expression, Is.Not.Null);
+            if (leftPrioritized)
+            {
+                var builder = new StringBuilder();
+                expression.Left.AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(0, 5)));
+
+                builder.Clear();
+                expression.Right.AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(8, 1)));
+            }
+            else
+            {
+                var builder = new StringBuilder();
+                expression.Left.AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(0, 1)));
+
+                builder.Clear();
+                expression.Right.AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(4, 5)));
+            }
+        }
+
+        [TestCase("A < B &&C", true)]
+        [TestCase("A&& B < C", false)]
+        public void TestParseExpressionGroupingLogical(string input, bool leftPrioritized)
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer) as ConditionalExpression;
+
+            Assert.That(expression, Is.Not.Null);
+            if (leftPrioritized)
+            {
+                var builder = new StringBuilder();
+                expression.Conditions.ElementAt(0).AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(0, 5)));
+
+                builder.Clear();
+                expression.Conditions.ElementAt(1).AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(8, 1)));
+            }
+            else
+            {
+                var builder = new StringBuilder();
+                expression.Conditions.ElementAt(0).AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(0, 1)));
+
+                builder.Clear();
+                expression.Conditions.ElementAt(1).AppendString(builder);
+                Assert.That(builder.ToString(), Is.EqualTo(input.Substring(4, 5)));
+            }
+        }
+
+        [Test]
+        public void TestParseExpressionGroupingStringBuildingWithAddition()
+        {
+            var input = "\"A\" + B + \"C\" + D + E + \"F\"";
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer) as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("StringConstant: \"A\""));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("Variable: B"));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("StringConstant: \"C\""));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Right.ToString(), Is.EqualTo("StringConstant: \"F\""));
+
+            expression = expression.Left as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.ToString(), Is.EqualTo("Mathematic: D + E"));
+        }
+
+        [Test]
+        public void TestParseExpressionGroupingStringBuildingWithSubtraction()
+        {
+            var input = "\"A\" + B + \"C\" + D - E + \"F\"";
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expression = ExpressionBase.Parse(tokenizer) as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("StringConstant: \"A\""));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("Variable: B"));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Left.ToString(), Is.EqualTo("StringConstant: \"C\""));
+
+            expression = expression.Right as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.Right.ToString(), Is.EqualTo("StringConstant: \"F\""));
+
+            expression = expression.Left as MathematicExpression;
+            Assert.That(expression, Is.Not.Null);
+            Assert.That(expression.ToString(), Is.EqualTo("Mathematic: D - E"));
         }
 
         [Test]
@@ -225,9 +438,10 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Conditions.Count(), Is.EqualTo(2));
-            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<ConditionalExpression>());
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(3));
+            Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(2), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]
@@ -238,10 +452,10 @@ namespace RATools.Test.Parser.Internal
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
             var cond = (ConditionalExpression)expression;
             Assert.That(cond.Operation, Is.EqualTo(ConditionalOperation.Or));
-            Assert.That(cond.Conditions.Count(), Is.EqualTo(2));
+            Assert.That(cond.Conditions.Count(), Is.EqualTo(3));
             Assert.That(cond.Conditions.ElementAt(0), Is.InstanceOf<VariableExpression>());
             Assert.That(cond.Conditions.ElementAt(1), Is.InstanceOf<VariableExpression>());
-            Assert.That(cond.Conditions.ElementAt(3), Is.InstanceOf<VariableExpression>());
+            Assert.That(cond.Conditions.ElementAt(2), Is.InstanceOf<VariableExpression>());
         }
 
         [Test]

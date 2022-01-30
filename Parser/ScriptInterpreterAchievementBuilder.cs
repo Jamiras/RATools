@@ -197,74 +197,75 @@ namespace RATools.Parser
 
         private static ConditionalExpression BubbleUpOrs(ConditionalExpression condition)
         {
-            //bool modified = false;
-            //bool hasChildOr = false;
+            bool modified = false;
+            bool hasChildOr = false;
 
-            //ConditionalExpression left = condition.Left as ConditionalExpression;
-            //if (left != null)
-            //{
-            //    left = BubbleUpOrs(left);
-            //    modified |= !ReferenceEquals(left, condition.Left);
-            //    hasChildOr |= (left.Operation == ConditionalOperation.Or);
-            //}
+            var conditions = condition.Conditions.ToArray();
 
-            //ConditionalExpression right = condition.Right as ConditionalExpression;
-            //if (right != null)
-            //{
-            //    right = BubbleUpOrs(right);
-            //    modified |= !ReferenceEquals(right, condition.Right);
-            //    hasChildOr |= (right.Operation == ConditionalOperation.Or);
-            //}
+            for (int i = 0; i < conditions.Length; ++i)
+            {
+                ConditionalExpression clause = conditions[i] as ConditionalExpression;
+                if (clause != null)
+                {
+                    clause = BubbleUpOrs(clause);
+                    if (!ReferenceEquals(clause, conditions[i]))
+                    {
+                        conditions[i] = clause;
+                        modified = true;
+                    }
 
-            //if (modified)
-            //{
-            //    var newCondition = new ConditionalExpression(
-            //        left ?? condition.Left, condition.Operation, right ?? condition.Right);
-            //    condition.CopyLocation(newCondition);
-            //    condition = newCondition;
-            //}
+                    hasChildOr |= (clause.Operation == ConditionalOperation.Or);
+                }
+            }
 
-            //if (condition.Operation == ConditionalOperation.And && hasChildOr)
-            //{
-            //    var orConditions = new List<ExpressionBase>();
-            //    orConditions.Add(left ?? condition.Left);
-            //    orConditions.Add(right ?? condition.Right);
+            if (modified)
+            {
+                var newCondition = new ConditionalExpression(condition.Operation, conditions);
+                condition.CopyLocation(newCondition);
+                condition = newCondition;
+            }
 
-            //    var expression = CrossMultiplyOrConditions(orConditions);
-            //    return (ConditionalExpression)expression;
-            //}
+            if (condition.Operation == ConditionalOperation.And && hasChildOr)
+            {
+                var orConditions = new List<ExpressionBase>();
+                orConditions.AddRange(conditions);
+
+                var expression = CrossMultiplyOrConditions(orConditions);
+                return (ConditionalExpression)expression;
+            }
 
             return condition;
         }
 
         private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ParseErrorExpression error)
         {
-            //var condition = expression as ConditionalExpression;
-            //if (condition == null)
-            //{
-            //    andedConditions.Add(expression);
-            //    error = null;
-            //    return true;
-            //}
+            var condition = expression as ConditionalExpression;
+            if (condition == null)
+            {
+                andedConditions.Add(expression);
+                error = null;
+                return true;
+            }
 
-            //switch (condition.Operation)
-            //{
-            //    case ConditionalOperation.And:
-            //        if (!SortConditions(condition.Left, andedConditions, orConditions, out error))
-            //            return false;
-            //        if (!SortConditions(condition.Right, andedConditions, orConditions, out error))
-            //            return false;
-            //        break;
+            switch (condition.Operation)
+            {
+                case ConditionalOperation.And:
+                    foreach (var clause in condition.Conditions)
+                    {
+                        if (!SortConditions(clause, andedConditions, orConditions, out error))
+                            return false;
+                    }
+                    break;
 
-            //    case ConditionalOperation.Or:
-            //        condition = BubbleUpOrs(condition);
-            //        orConditions.Add(condition);
-            //        break;
+                case ConditionalOperation.Or:
+                    condition = BubbleUpOrs(condition);
+                    orConditions.Add(condition);
+                    break;
 
-            //    default:
-            //        error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
-            //        return false;
-            //}
+                default:
+                    error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
+                    return false;
+            }
 
             error = null;
             return true;

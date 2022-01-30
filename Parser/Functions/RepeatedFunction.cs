@@ -42,23 +42,6 @@ namespace RATools.Parser.Functions
             return BuildTriggerConditions(context, scope, comparison, count.Value);
         }
 
-        private static void ExtractResetIf(ExpressionBase expression, List<ExpressionBase> neverExpressions)
-        {
-            var condition = expression as ConditionalExpression;
-            if (condition != null)
-            {
-                if (condition.Operation == ConditionalOperation.And)
-                {
-
-                }
-                else
-                {
-                    foreach (var clause in condition.Conditions)
-                        ExtractResetIf(clause, neverExpressions);
-                }
-            }
-        }
-
         protected ParseErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
         {
             ParseErrorExpression error;
@@ -68,18 +51,25 @@ namespace RATools.Parser.Functions
             {
                 // extract never() conditions from And sequence and build a ResetNextIf clause
                 var nonNeverExpressions = new List<ExpressionBase>();
-                var neverExpressions = new List<ExpressionBase>();
+                ExpressionBase neverExpression = null;
 
                 foreach (var clause in condition.Conditions)
                 {
                     var functionCall = clause as FunctionCallExpression;
                     if (functionCall != null && functionCall.FunctionName.Name == "never")
-                        neverExpressions.Add(clause);
+                    {
+                        if (neverExpression != null)
+                            return new ParseErrorExpression("Only one never() clause allowed inside " + Name.Name + "()", clause);
+
+                        neverExpression = clause;
+                    }
                     else
+                    {
                         nonNeverExpressions.Add(clause);
+                    }
                 }
 
-                if (neverExpressions.Count > 0 && nonNeverExpressions.Count == 0)
+                if (neverExpression != null && nonNeverExpressions.Count > 0)
                 {
                     // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
                     // from optimizing out the ResetIf
@@ -88,9 +78,7 @@ namespace RATools.Parser.Functions
                     var innerScope = new InterpreterScope(scope);
                     innerScope.Context = nestedContext;
 
-                    condition = new ConditionalExpression(ConditionalOperation.And, neverExpressions.ToArray());
-
-                    error = BuildTriggerCondition(nestedContext, innerScope, condition);
+                    error = BuildTriggerCondition(nestedContext, innerScope, neverExpression);
                     if (error != null)
                         return error;
 
