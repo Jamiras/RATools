@@ -93,33 +93,18 @@ namespace RATools.Test.Parser.Functions
         public void TestConstructAltsExcessive()
         {
             // don't call Evaluate() on this as the AchievementBuilder.Optimize call takes over 10 seconds
-            var input = "trigger = always_false()\n" +
-                        "for i in range(0, 9000)\n" +
-                        "    trigger = trigger || word(0x1000+i) == 10 && prev(word(0x1000+i)) < 10";
+            var achievement = Evaluate("trigger = always_false()\n" +
+                                       "for i in range(0, 9000)\n" +
+                                       "    trigger = trigger || word(0x1000+i) == 10 && prev(word(0x1000+i)) < 10" +
+                                       "achievement(\"A\", \"B\", 10, trigger)");
 
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            var expressionGroups = new ExpressionGroupCollection();
-            expressionGroups.Parse(tokenizer);
-            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = new TriggerBuilderContext() };
-
-            // process the script to build the trigger parameter
-            var interpreter = new AchievementScriptInterpreter();
-            foreach (var group in expressionGroups.Groups)
-                interpreter.Evaluate(group.Expressions, scope);
-            var trigger = scope.GetVariable("trigger");
-            Assert.That(trigger, Is.InstanceOf<ConditionalExpression>());
-
-            // construct an unoptimized achievement
-            var achievement = new ScriptInterpreterAchievementBuilder();
-            achievement.PopulateFromExpression(trigger);
-
-            // serialize the unoptimized achievement for validation (will still have the always_false() alt group)
             var expected = new StringBuilder();
-            expected.Append("1=1S0=1");
+            expected.Append("1=1");
             for (int i = 0; i <= 9000; i++)
                 expected.AppendFormat("S0x {0:x6}=10_d0x {0:x6}<10", i + 0x1000);
 
-            Assert.That(achievement.SerializeRequirements(), Is.EqualTo(expected.ToString()));
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected.ToString()));
         }
     }
 }
