@@ -20,7 +20,7 @@ namespace RATools.Parser.Internal
                 Debug.Assert(left == null);
                 Debug.Assert(right != null);
 
-                _conditions = new ExpressionBase[1] { right };
+                _conditions = new List<ExpressionBase>() { right };
             }
             else
             {
@@ -33,35 +33,28 @@ namespace RATools.Parser.Internal
                 bool mergeLeft = (conditionalLeft != null && conditionalLeft.Operation == operation);
 
                 if (mergeLeft)
-                    length += conditionalLeft._conditions.Length;
+                    length += conditionalLeft._conditions.Count;
                 else
                     length += 1;
 
                 var conditionalRight = right as ConditionalExpression;
                 bool mergeRight = (conditionalRight != null && conditionalRight.Operation == operation);
                 if (mergeRight)
-                    length += conditionalRight._conditions.Length;
+                    length += conditionalRight._conditions.Count;
                 else
                     length += 1;
 
-                _conditions = new ExpressionBase[length];
-                int index = 0;
+                _conditions = new List<ExpressionBase>(length);
 
                 if (mergeLeft)
-                {
-                    index = conditionalLeft._conditions.Length;
-                    Array.Copy(conditionalLeft._conditions, _conditions, index);
-                }
+                    _conditions.AddRange(conditionalLeft.Conditions);
                 else
-                {
-                    _conditions[0] = left;
-                    index = 1;
-                }
+                    _conditions.Add(left);
 
                 if (mergeRight)
-                    Array.Copy(conditionalRight._conditions, 0, _conditions, index, conditionalRight._conditions.Length);
+                    _conditions.AddRange(conditionalRight.Conditions);
                 else
-                    _conditions[index] = right;
+                    _conditions.Add(right);
             }
 
             if (left != null)
@@ -70,13 +63,13 @@ namespace RATools.Parser.Internal
                 Location = right.Location;
         }
 
-        public ConditionalExpression(ConditionalOperation operation, ExpressionBase[] conditions)
+        public ConditionalExpression(ConditionalOperation operation, List<ExpressionBase> conditions)
             : base(ExpressionType.Conditional)
         {
             Operation = operation;
             _conditions = conditions;
 
-            Location = new TextRange(conditions[0].Location.Start, conditions[conditions.Length - 1].Location.End);
+            Location = new TextRange(conditions[0].Location.Start, conditions[conditions.Count - 1].Location.End);
         }
 
         /// <summary>
@@ -89,7 +82,9 @@ namespace RATools.Parser.Internal
             get { return _conditions; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private readonly ExpressionBase[] _conditions;
+        private readonly List<ExpressionBase> _conditions;
+
+        private bool _fullyExpanded = false;
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
@@ -115,7 +110,7 @@ namespace RATools.Parser.Internal
 
             var operatorString = ' ' + GetOperatorString(Operation) + ' ';
 
-            for (int i = 0; i < _conditions.Length; ++i)
+            for (int i = 0; i < _conditions.Count; ++i)
             {
                 if (i > 0)
                     builder.Append(operatorString);
@@ -150,12 +145,18 @@ namespace RATools.Parser.Internal
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            if (_fullyExpanded)
+            {
+                result = this;
+                return true;
+            }
+
             bool hasTrue = false;
             bool hasFalse = false;
             bool isChanged = false;
 
-            var updatedConditions = new List<ExpressionBase>(_conditions.Length);
-            for (int i = 0; i < _conditions.Length; ++i)
+            var updatedConditions = new List<ExpressionBase>(_conditions.Count);
+            for (int i = 0; i < _conditions.Count; ++i)
             {
                 if (!_conditions[i].ReplaceVariables(scope, out result))
                     return false;
@@ -251,14 +252,32 @@ namespace RATools.Parser.Internal
             {
                 result = new BooleanConstantExpression(false);
             }
-            else if (!isChanged)
-            {
-                result = this;
-                return true;
-            }
             else
             {
-                result = new ConditionalExpression(Operation, updatedConditions.ToArray());
+                // merge with nested logic when possible
+                for (int i = updatedConditions.Count - 1; i >= 0; i--)
+                {
+                    var conditionalExpression = updatedConditions[i] as ConditionalExpression;
+                    if (conditionalExpression != null && conditionalExpression.Operation == Operation)
+                    {
+                        updatedConditions.RemoveAt(i);
+                        updatedConditions.InsertRange(i, conditionalExpression._conditions);
+                        isChanged = true;
+                    }
+                }
+
+                if (!isChanged)
+                {
+                    _fullyExpanded = true;
+                    result = this;
+                    return true;
+                }
+                else
+                {
+                    var newConditionalExpression = new ConditionalExpression(Operation, updatedConditions);
+                    newConditionalExpression._fullyExpanded = true;
+                    result = newConditionalExpression;
+                }
             }
 
             CopyLocation(result);
@@ -271,9 +290,9 @@ namespace RATools.Parser.Internal
             var condition = expression as ConditionalExpression;
             if (condition != null)
             {
-                var newConditions = new ExpressionBase[condition._conditions.Length];
-                for (int i =0; i < newConditions.Length; ++i)
-                    newConditions[i] = InvertExpression(condition._conditions[i]);
+                var newConditions = new List<ExpressionBase>(condition._conditions.Count);
+                foreach (var oldCondition in condition._conditions)
+                    newConditions.Add(InvertExpression(oldCondition));
 
                 switch (condition.Operation)
                 {

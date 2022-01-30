@@ -200,9 +200,9 @@ namespace RATools.Parser
             bool modified = false;
             bool hasChildOr = false;
 
-            var conditions = condition.Conditions.ToArray();
+            var conditions = condition.Conditions.ToList();
 
-            for (int i = 0; i < conditions.Length; ++i)
+            for (int i = 0; i < conditions.Count; ++i)
             {
                 ConditionalExpression clause = conditions[i] as ConditionalExpression;
                 if (clause != null)

@@ -86,7 +86,7 @@ namespace RATools.Parser.Functions
                     foreach (var requirement in nestedContext.Trigger)
                         context.Trigger.Add(requirement);
 
-                    comparison = new ConditionalExpression(ConditionalOperation.And, nonNeverExpressions.ToArray());
+                    comparison = new ConditionalExpression(ConditionalOperation.And, nonNeverExpressions);
                 }
             }
 
