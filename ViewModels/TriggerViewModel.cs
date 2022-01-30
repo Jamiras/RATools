@@ -36,6 +36,15 @@ namespace RATools.ViewModels
                 }
             }
 
+            // if there are too many groups, the rendering engine will "hang" while trying to cerate the layout
+            const int maxGroups = 600;
+            if (groups.Count > maxGroups)
+            {
+                const int keepGroups = maxGroups - 100;
+                groups.RemoveRange(keepGroups / 2, groups.Count - keepGroups);
+                groups.Insert(keepGroups / 2, new RequirementGroupViewModel("...", new Requirement[0], numberFormat, notes));
+            }
+
             Groups = groups.ToArray();
         }
 
