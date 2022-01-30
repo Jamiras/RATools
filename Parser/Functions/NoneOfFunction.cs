@@ -25,7 +25,7 @@ namespace RATools.Parser.Functions
 
         protected override ExpressionBase GenerateEmptyResult()
         {
-            return new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            return AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
         }
     }
 }

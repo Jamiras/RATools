@@ -18,7 +18,7 @@ namespace RATools.Parser.Functions
 
         public static FunctionCallExpression CreateAlwaysFalseFunctionCall()
         {
-            return new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            return new FunctionCallExpression("always_false", new ExpressionBase[0]);
         }
 
         public static Requirement CreateAlwaysFalseRequirement()

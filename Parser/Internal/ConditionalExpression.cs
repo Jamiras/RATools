@@ -312,13 +312,13 @@ namespace RATools.Parser.Internal
 
             // special handling for built-in functions
             var function = expression as FunctionCallExpression;
-            if (function != null)
+            if (function != null && function.Parameters.Count() == 0)
             {
                 if (function.FunctionName.Name == "always_true")
-                    return new FunctionCallExpression("always_false", function.Parameters);
+                    return AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
 
                 if (function.FunctionName.Name == "always_false")
-                    return new FunctionCallExpression("always_true", function.Parameters);
+                    return AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
             }
 
             // unsupported inversion

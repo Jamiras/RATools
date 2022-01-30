@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -194,7 +195,7 @@ namespace RATools.Parser
             return new FunctionCallExpression("measured", new ExpressionBase[]
             {
                 expression,
-                new FunctionCallExpression("always_true", new ExpressionBase[0]),
+                AlwaysTrueFunction.CreateAlwaysTrueFunctionCall(),
                 new StringConstantExpression("raw")
             });
         }

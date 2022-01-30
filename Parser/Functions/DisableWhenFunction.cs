@@ -12,7 +12,7 @@ namespace RATools.Parser.Functions
         {
             Parameters.Add(new VariableDefinitionExpression("until"));
 
-            DefaultParameters["until"] = new FunctionCallExpression("always_false", new ExpressionBase[0]);
+            DefaultParameters["until"] = AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
