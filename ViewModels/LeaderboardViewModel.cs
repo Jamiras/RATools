@@ -20,6 +20,18 @@ namespace RATools.ViewModels
             get { return "Leaderboard"; }
         }
 
+        protected override bool AreAssetSpecificPropertiesModified(AssetSourceViewModel left, AssetSourceViewModel right)
+        {
+            var leftLeaderboard = left.Asset as Leaderboard;
+            var rightLeaderboard = right.Asset as Leaderboard;
+            if (leftLeaderboard == null || rightLeaderboard == null)
+                return false;
+
+            bool isFormatModified = (leftLeaderboard.Format != rightLeaderboard.Format);
+            bool isLowerBetterModified = (leftLeaderboard.LowerIsBetter != rightLeaderboard.LowerIsBetter);
+            return isFormatModified || isLowerBetterModified;
+        }
+
         internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
         {
             var triggers = new List<TriggerViewModel>();

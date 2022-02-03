@@ -406,6 +406,7 @@ namespace RATools.ViewModels
                         leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
                         leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
                         leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
+                        leaderboard.LowerIsBetter = publishedLeaderboard.GetField("LowerIsBetter").BooleanValue;
 
                         var mem = publishedLeaderboard.GetField("Mem").StringValue;
                         var tokenizer = Tokenizer.CreateTokenizer(mem);

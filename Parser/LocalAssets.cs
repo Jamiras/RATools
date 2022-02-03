@@ -212,6 +212,11 @@ namespace RATools.Parser
                 leaderboard.Description = tokenizer.ReadQuotedString().ToString();
             else
                 leaderboard.Description = tokenizer.ReadTo(':').ToString();
+            tokenizer.Advance();
+
+            part = tokenizer.ReadTo(':');
+            if (Int32.TryParse(part.ToString(), out num))
+                leaderboard.LowerIsBetter = (num != 0);
 
             _leaderboards.Add(leaderboard);
         }
@@ -392,7 +397,9 @@ namespace RATools.Parser
             writer.Write("\":\"");
 
             WriteEscaped(writer, leaderboard.Description);
-            writer.Write("\"");
+            writer.Write("\":");
+
+            writer.Write(leaderboard.LowerIsBetter ? '1' : '0');
 
             writer.WriteLine();
         }

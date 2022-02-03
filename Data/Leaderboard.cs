@@ -31,6 +31,11 @@
         public ValueFormat Format { get; set; }
 
         /// <summary>
+        /// Gets or sets whether lower scores are better than higher scores.
+        /// </summary>
+        public bool LowerIsBetter { get; set; }
+
+        /// <summary>
         /// Converts a format string to a <see cref="ValueFormat"/>.
         /// </summary>
         /// <param name="format">The format as a string.</param>

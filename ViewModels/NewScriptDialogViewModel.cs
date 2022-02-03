@@ -1111,8 +1111,12 @@ namespace RATools.ViewModels
 
                 stream.Write("    format = \"");
                 stream.Write(Leaderboard.GetFormatString(leaderboardData.Format));
-                stream.WriteLine("\"");
+                stream.Write("\"");
 
+                if (leaderboardData.LowerIsBetter)
+                    stream.Write(", lower_is_better = true");
+
+                stream.WriteLine();
                 stream.WriteLine(")");
             }
         }

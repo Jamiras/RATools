@@ -27,6 +27,12 @@ namespace RATools.ViewModels
                 BadgeName = "00000";
         }
 
+        protected override bool AreAssetSpecificPropertiesModified(AssetSourceViewModel left, AssetSourceViewModel right)
+        {
+            IsPointsModified = (left.Points.Value != right.Points.Value);
+            return IsPointsModified;
+        }
+
         internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
         {
             var achievement = assetViewModel.Asset as Achievement;
