@@ -1512,30 +1512,75 @@ namespace RATools.Parser
 
         private static void MergeDuplicateAlts(List<List<RequirementEx>> groups)
         {
+            // determine which addresses each group depends on and how many groups depend on each address
+            var memoryReferences = new Dictionary<uint, uint>();
+            var groupAddresses = new List<HashSet<uint>>(groups.Count);
+            foreach (var group in groups)
+            {
+                var addresses = new HashSet<uint>();
+                foreach (var requirementEx in group)
+                {
+                    foreach (var requirement in requirementEx.Requirements)
+                    {
+                        if (requirement.Left.IsMemoryReference)
+                            addresses.Add(requirement.Left.Value);
+                        if (requirement.Right.IsMemoryReference)
+                            addresses.Add(requirement.Right.Value);
+                    }
+                }
+                foreach (var address in addresses)
+                {
+                    uint count;
+                    memoryReferences.TryGetValue(address, out count);
+                    memoryReferences[address] = ++count;
+                }
+                groupAddresses.Add(addresses);
+            }
+
             // if two alt groups are exactly identical, or can otherwise be represented by merging their
             // logic, eliminate the redundant group.
             for (int i = groups.Count - 1; i > 1; i--)
             {
-                var altsI = groups[i];
+                // if any address that this group depends on is not used by at least one other group, it can't be merged
+                var groupAddressesI = groupAddresses[i];
+                if (groupAddressesI.Any(a => memoryReferences[a] == 1))
+                    continue;
+
+                var groupI = groups[i];
+                bool[] matches = new bool[groupI.Count];
+                RequirementEx[] merged = new RequirementEx[groupI.Count];
 
                 for (int j = i - 1; j >= 1; j--)
                 {
-                    var altsJ = groups[j];
+                    var groupJ = groups[j];
 
-                    if (altsI.Count != altsJ.Count)
+                    // only check groups that have the same number of requirements
+                    if (groupI.Count != groupJ.Count)
                         continue;
 
-                    bool[] matches = new bool[altsI.Count];
-                    RequirementEx[] merged = new RequirementEx[altsI.Count];
+                    // make sure the other group is dependent on exactly the same set of addresses
+                    var groupAddressesJ = groupAddresses[j];
+                    if (groupAddressesJ.Count != groupAddressesI.Count)
+                        continue;
+                    if (!groupAddressesJ.All(a => groupAddressesI.Contains(a)))
+                        continue;
+
+                    // found another group with the same number of requirements and same address dependencies
+                    // try to merge them
+                    for (int k = 0; k < matches.Length; k++)
+                        matches[k] = false;
+
+                    bool matched = true;
                     for (int k = 0; k < matches.Length; k++)
                     {
-                        bool matched = false;
+                        matched = false;
+                        var reqExK = groupI[k];
                         for (int l = 0; l < matches.Length; l++)
                         {
                             if (matches[l])
                                 continue;
 
-                            if (MergeRequirements(altsI[k], altsJ[l], ConditionalOperation.Or, out merged[k]))
+                            if (MergeRequirements(reqExK, groupJ[l], ConditionalOperation.Or, out merged[k]))
                             {
                                 matched = true;
                                 matches[l] = true;
@@ -1547,11 +1592,11 @@ namespace RATools.Parser
                             break;
                     }
 
-                    if (matches.All(m => m == true))
+                    if (matched)
                     {
-                        altsJ.Clear();
-                        foreach (var requirement in merged)
-                            altsJ.Add(requirement);
+                        // merge successful. replace groups[j] with the result of the merge and remove groups[i]
+                        groupJ.Clear();
+                        groupJ.AddRange(merged);
                         groups.RemoveAt(i);
                         break;
                     }

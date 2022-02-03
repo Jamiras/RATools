@@ -16,11 +16,6 @@ namespace RATools.Test.Parser.Internal
             {
             }
 
-            public ExpressionBase DoRebalance()
-            {
-                return base.Rebalance((LeftRightExpressionBase)Right);
-            }
-
             protected override bool Equals(ExpressionBase obj)
             {
                 return true;
@@ -60,38 +55,6 @@ namespace RATools.Test.Parser.Internal
             Assert.That(node.Location.Start.Column, Is.EqualTo(right.Location.Start.Column));
             Assert.That(node.Location.End.Line, Is.EqualTo(right.Location.End.Line));
             Assert.That(node.Location.End.Column, Is.EqualTo(right.Location.End.Column));
-        }
-
-        [Test]
-        public void TestRebalance()
-        {
-            var one = new TestExpression(1, 1);
-            var two = new TestExpression(2, 3);
-            var three = new TestExpression(3, 5);
-
-            var left = one;
-            var right = new LeftRightExpression(two, three);
-            var node = new LeftRightExpression(left, right);
-
-            var newNode = node.DoRebalance() as LeftRightExpression;
-
-            Assert.That(newNode, Is.SameAs(right));
-            Assert.That(newNode.Location.Start.Line, Is.EqualTo(one.Location.Start.Line));
-            Assert.That(newNode.Location.Start.Column, Is.EqualTo(one.Location.Start.Column));
-            Assert.That(newNode.Location.End.Line, Is.EqualTo(three.Location.End.Line));
-            Assert.That(newNode.Location.End.Column, Is.EqualTo(three.Location.End.Column));
-
-            Assert.That(newNode.Right, Is.SameAs(three));
-
-            var newLeft = newNode.Left as LeftRightExpression;
-            Assert.That(newLeft, Is.Not.Null);
-            Assert.That(newLeft.Left, Is.SameAs(one));
-            Assert.That(newLeft.Right, Is.SameAs(two));
-
-            Assert.That(newLeft.Location.Start.Line, Is.EqualTo(one.Location.Start.Line));
-            Assert.That(newLeft.Location.Start.Column, Is.EqualTo(one.Location.Start.Column));
-            Assert.That(newLeft.Location.End.Line, Is.EqualTo(two.Location.End.Line));
-            Assert.That(newLeft.Location.End.Column, Is.EqualTo(two.Location.End.Column));
         }
 
         [Test]

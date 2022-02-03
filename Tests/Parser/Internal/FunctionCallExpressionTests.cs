@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using RATools.Parser;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -609,7 +610,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestIsTrueAlwaysTrueFunction()
         {
-            var expr = new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            var expr = AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
             ParseErrorExpression error;
@@ -620,7 +621,7 @@ namespace RATools.Test.Parser.Internal
         [Test]
         public void TestIsTrueAlwaysFalseFunction()
         {
-            var expr = new FunctionCallExpression("always_false", new ExpressionBase[0]);
+            var expr = AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
             ParseErrorExpression error;

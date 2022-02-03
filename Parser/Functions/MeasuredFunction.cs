@@ -12,7 +12,7 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("when"));
             Parameters.Add(new VariableDefinitionExpression("format"));
 
-            DefaultParameters["when"] = new FunctionCallExpression("always_true", new ExpressionBase[0]);
+            DefaultParameters["when"] = AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
             DefaultParameters["format"] = new StringConstantExpression("raw");
         }
 

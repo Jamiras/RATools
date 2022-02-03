@@ -97,38 +97,6 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Rebalances this expression based on the precendence of operators.
-        /// </summary>
-        internal override ExpressionBase Rebalance()
-        {
-            if (!Right.IsLogicalUnit)
-            {
-                var mathematicRight = Right as MathematicExpression;
-                if (mathematicRight != null && !(Left is StringConstantExpression))
-                {
-                    // multiply and divide should happen before add or subtract.
-                    // at the same priority, they should happen left-to-right.
-                    if (GetPriority(Operation) >= GetPriority(mathematicRight.Operation))
-                    {
-                        var newLeft = new MathematicExpression(Left, Operation, mathematicRight.Left);
-                        newLeft = newLeft.Rebalance() as MathematicExpression;
-                        return new MathematicExpression(newLeft, mathematicRight.Operation, mathematicRight.Right);
-                    }
-                }
-
-                var comparisonRight = Right as ComparisonExpression;
-                if (comparisonRight != null)
-                    return Rebalance(comparisonRight);
-
-                var conditionalRight = Right as ConditionalExpression;
-                if (conditionalRight != null)
-                    return Rebalance(conditionalRight);
-            }
-
-            return base.Rebalance();
-        }
-
-        /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>

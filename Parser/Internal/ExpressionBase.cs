@@ -91,24 +91,6 @@ namespace RATools.Parser.Internal
             AppendString(builder);
         }
 
-        /// <summary>
-        /// Rebalances this expression based on the precendence of operators.
-        /// </summary>
-        /// <returns>Rebalanced expression</returns>
-        /// <remarks>
-        /// Called after parsing an expression to ensure the logical tree correctly represents the order
-        /// of operations for evaluating the expression. NOTE: may modify the original Expression object,
-        /// so the original Expression object should not be used after calling. Should normally be called
-        /// as a self-referential replacement:
-        ///
-        ///     expr = expr.Rebalance()
-        ///
-        /// </remarks>
-        internal virtual ExpressionBase Rebalance()
-        {
-            return this;
-        }
-
         internal static void SkipWhitespace(PositionalTokenizer tokenizer)
         {
             tokenizer.SkipWhitespace();
@@ -162,11 +144,31 @@ namespace RATools.Parser.Internal
             return error;
         }
 
+        // logical evalation happens from highest priority to lowest
+        private enum OperationPriority
+        {
+            None = 0,
+            Assign,
+            Or,
+            And,
+            Compare,
+            AppendString,
+            AddSubtract,
+            MulDivMod,
+            Not,
+            Parenthesis,
+        }
+
         /// <summary>
         /// Gets the next expression from the input.
         /// </summary>
         /// <returns>The next expression, <c>null</c> if at end of file.</returns>
         public static ExpressionBase Parse(PositionalTokenizer tokenizer)
+        {
+            return ParseExpression(tokenizer, OperationPriority.None);
+        }
+
+        private static ExpressionBase ParseExpression(PositionalTokenizer tokenizer, OperationPriority priority)
         {
             var expressionTokenizer = tokenizer as ExpressionTokenizer;
             if (expressionTokenizer != null)
@@ -181,139 +183,13 @@ namespace RATools.Parser.Internal
             if (tokenizer.NextChar == '\0')
                 return ParseError(tokenizer, "Unexpected end of script");
 
-            var clause = ExpressionBase.ParseClause(tokenizer);
+            var clause = ParseClause(tokenizer);
             if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
                 return clause;
 
-            var clauseEndLine = tokenizer.Line;
-            var clauseEndColumn = tokenizer.Column;
-
-            SkipWhitespace(tokenizer);
-
-            var joinerLine = tokenizer.Line;
-            var joinerColumn = tokenizer.Column;
-
-            switch (tokenizer.NextChar)
-            {
-                case '+':
-                    tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Add, joinerLine, joinerColumn);
-                    break;
-
-                case '-':
-                    tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Subtract, joinerLine, joinerColumn);
-                    break;
-
-                case '*':
-                    tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Multiply, joinerLine, joinerColumn);
-                    break;
-
-                case '/':
-                    tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Divide, joinerLine, joinerColumn);
-                    break;
-
-                case '%':
-                    tokenizer.Advance();
-                    clause = ParseMathematic(tokenizer, clause, MathematicOperation.Modulus, joinerLine, joinerColumn);
-                    break;
-
-                case '=':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.Equal, joinerLine, joinerColumn);
-                    }
-                    else if (tokenizer.NextChar == '>')
-                    {
-                        tokenizer.Advance();
-                        clause = AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
-                    }
-                    else
-                    {
-                        clause = ParseAssignment(tokenizer, clause, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                case '!':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar != '=')
-                    {
-                        ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
-                    }
-                    else
-                    {
-                        tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.NotEqual, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                case '<':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThanOrEqual, joinerLine, joinerColumn);
-                    }
-                    else
-                    {
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThan, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                case '>':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThanOrEqual, joinerLine, joinerColumn);
-                    }
-                    else
-                    {
-                        clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThan, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                case '&':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar != '&')
-                    {
-                        ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
-                    }
-                    else
-                    {
-                        tokenizer.Advance();
-                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                case '|':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar != '|')
-                    {
-                        ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
-                    }
-                    else
-                    {
-                        tokenizer.Advance();
-                        clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
-                    }
-                    break;
-
-                default:
-                    if (clause.Location.End.Column == 0)
-                        clause.Location = new TextRange(clause.Location.Start, new TextLocation(clauseEndLine, clauseEndColumn));
-
-                    return clause;
-            }
-
+            clause = ParseClauseExtension(clause, tokenizer, priority);
             if (clause.Type == ExpressionType.ParseError)
                 return clause;
-
-            clause = clause.Rebalance();
 
             Debug.Assert(clause.Location.Start.Line != 0);
             Debug.Assert(clause.Location.Start.Column != 0);
@@ -321,6 +197,183 @@ namespace RATools.Parser.Internal
             Debug.Assert(clause.Location.End.Column != 0);
 
             return clause;
+        }
+
+        private static ExpressionBase ParseClauseExtension(ExpressionBase clause, PositionalTokenizer tokenizer, OperationPriority priority)
+        {
+            do
+            {
+                var clauseEndLine = tokenizer.Line;
+                var clauseEndColumn = tokenizer.Column;
+
+                SkipWhitespace(tokenizer);
+
+                var joinerLine = tokenizer.Line;
+                var joinerColumn = tokenizer.Column;
+
+                switch (tokenizer.NextChar)
+                {
+                    case '+':
+                        if (priority == OperationPriority.AddSubtract && clause.Type == ExpressionType.StringConstant)
+                            priority = OperationPriority.AppendString;
+
+                        if (priority >= OperationPriority.AddSubtract)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.Add, joinerLine, joinerColumn);
+                        break;
+
+                    case '-':
+                        if (priority >= OperationPriority.AddSubtract)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.Subtract, joinerLine, joinerColumn);
+                        break;
+
+                    case '*':
+                        if (priority >= OperationPriority.MulDivMod)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.Multiply, joinerLine, joinerColumn);
+                        break;
+
+                    case '/':
+                        if (priority >= OperationPriority.MulDivMod)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.Divide, joinerLine, joinerColumn);
+                        break;
+
+                    case '%':
+                        if (priority >= OperationPriority.MulDivMod)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.Modulus, joinerLine, joinerColumn);
+                        break;
+
+                    case '=':
+                        if (tokenizer.MatchSubstring("==") == 2)
+                        {
+                            if (priority >= OperationPriority.Compare)
+                                return clause;
+
+                            tokenizer.Advance(2);
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.Equal, joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            if (priority > OperationPriority.Assign)
+                                return clause;
+
+                            tokenizer.Advance();
+                            if (tokenizer.NextChar == '>')
+                            {
+                                tokenizer.Advance();
+                                clause = AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer, clause);
+                            }
+                            else
+                            {
+                                clause = ParseAssignment(tokenizer, clause, joinerLine, joinerColumn);
+                            }
+                        }
+                        break;
+
+                    case '!':
+                        if (priority >= OperationPriority.Compare)
+                            return clause;
+
+                        tokenizer.Advance();
+                        if (tokenizer.NextChar != '=')
+                        {
+                            ParseError(tokenizer, "= expected following !", joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            tokenizer.Advance();
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.NotEqual, joinerLine, joinerColumn);
+                        }
+                        break;
+
+                    case '<':
+                        if (priority >= OperationPriority.Compare)
+                            return clause;
+
+                        tokenizer.Advance();
+                        if (tokenizer.NextChar == '=')
+                        {
+                            tokenizer.Advance();
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThanOrEqual, joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.LessThan, joinerLine, joinerColumn);
+                        }
+                        break;
+
+                    case '>':
+                        if (priority >= OperationPriority.Compare)
+                            return clause;
+
+                        tokenizer.Advance();
+                        if (tokenizer.NextChar == '=')
+                        {
+                            tokenizer.Advance();
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThanOrEqual, joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            clause = ParseComparison(tokenizer, clause, ComparisonOperation.GreaterThan, joinerLine, joinerColumn);
+                        }
+                        break;
+
+                    case '&':
+                        if (priority >= OperationPriority.And)
+                            return clause;
+
+                        tokenizer.Advance();
+                        if (tokenizer.NextChar != '&')
+                        {
+                            ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            tokenizer.Advance();
+                            clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
+                        }
+                        break;
+
+                    case '|':
+                        if (priority >= OperationPriority.Or)
+                            return clause;
+
+                        tokenizer.Advance();
+                        if (tokenizer.NextChar != '|')
+                        {
+                            ParseError(tokenizer, "| expected following |", joinerLine, joinerColumn);
+                        }
+                        else
+                        {
+                            tokenizer.Advance();
+                            clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
+                        }
+                        break;
+
+                    default:
+                        if (clause.Location.End.Column == 0)
+                            clause.Location = new TextRange(clause.Location.Start, new TextLocation(clauseEndLine, clauseEndColumn));
+
+                        return clause;
+                }
+
+                if (clause.Type == ExpressionType.ParseError)
+                    return clause;
+
+            } while (true);
         }
 
         internal void AdjustLines(int amount)
@@ -630,7 +683,33 @@ namespace RATools.Parser.Internal
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
         {
-            var right = ExpressionBase.Parse(tokenizer);
+            OperationPriority priority;
+            switch (operation)
+            {
+                case MathematicOperation.Add:
+                    if (left is StringConstantExpression)
+                    {
+                        priority = OperationPriority.AppendString;
+                        break;
+                    }
+                    priority = OperationPriority.AddSubtract;
+                    break;
+
+                case MathematicOperation.Subtract:
+                    priority = OperationPriority.AddSubtract;
+                    break;
+
+                case MathematicOperation.Multiply:
+                case MathematicOperation.Divide:
+                case MathematicOperation.Modulus:
+                    priority = OperationPriority.MulDivMod;
+                    break;
+
+                default:
+                    return new ParseErrorExpression("Unknown operator: " + operation);
+            }
+
+            var right = ParseExpression(tokenizer, priority);
             switch (right.Type)
             {
                 case ExpressionType.ParseError:
@@ -655,12 +734,18 @@ namespace RATools.Parser.Internal
                     return ParseError(tokenizer, "Incompatible mathematical operation", right);
             }
 
+            if (priority == OperationPriority.AddSubtract)
+            {
+                var mathematicRight = right as MathematicExpression;
+
+            }
+
             return new MathematicExpression(left, operation, right);
         }
 
         private static ExpressionBase ParseComparison(PositionalTokenizer tokenizer, ExpressionBase left, ComparisonOperation operation, int joinerLine, int joinerColumn)
         {
-            var right = ExpressionBase.Parse(tokenizer);
+            var right = ParseExpression(tokenizer, OperationPriority.Compare);
             switch (right.Type)
             {
                 case ExpressionType.ParseError:
@@ -690,7 +775,23 @@ namespace RATools.Parser.Internal
 
         private static ExpressionBase ParseConditional(PositionalTokenizer tokenizer, ExpressionBase left, ConditionalOperation operation, int joinerLine, int joinerColumn)
         {
-            var right = ExpressionBase.Parse(tokenizer);
+            OperationPriority priority;
+            switch (operation)
+            {
+                case ConditionalOperation.And:
+                    priority = OperationPriority.And;
+                    break;
+                case ConditionalOperation.Or:
+                    priority = OperationPriority.Or;
+                    break;
+                case ConditionalOperation.Not:
+                    priority = OperationPriority.Not;
+                    break;
+                default:
+                    return new ParseErrorExpression("Unknown operation: " + operation);
+            }
+
+            var right = ParseExpression(tokenizer, priority);
 
             switch (right.Type)
             {
@@ -721,7 +822,7 @@ namespace RATools.Parser.Internal
             if (variable.Type != ExpressionType.Variable)
                 return ParseError(tokenizer, "Cannot assign value to non-variable", variable);
 
-            var value = ExpressionBase.Parse(tokenizer);
+            var value = ParseExpression(tokenizer, OperationPriority.Assign);
             switch (value.Type)
             {
                 case ExpressionType.ParseError:

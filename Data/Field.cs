@@ -523,6 +523,11 @@ namespace RATools.Data
                 return false;
 
             var that = (Field)obj;
+            return Equals(that);
+        }
+
+        private bool Equals(Field that)
+        {
             if (that.Type != Type)
                 return false;
 

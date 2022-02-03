@@ -1109,24 +1109,6 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Rebalances this expression based on the precendence of operators.
-        /// </summary>
-        /// <returns>
-        /// Rebalanced expression
-        /// </returns>
-        internal override ExpressionBase Rebalance()
-        {
-            if (!Right.IsLogicalUnit)
-            {
-                var conditionalRight = Right as ConditionalExpression;
-                if (conditionalRight != null)
-                    return Rebalance(conditionalRight);
-            }
-
-            return base.Rebalance();
-        }
-
-        /// <summary>
         /// Determines whether the expression evaluates to true for the provided <paramref name="scope" />
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>

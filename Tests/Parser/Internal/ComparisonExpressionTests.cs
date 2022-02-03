@@ -408,55 +408,6 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
-        public void TestRebalance()
-        {
-            var variable = new VariableExpression("variable");
-            var value = new IntegerConstantExpression(99);
-            var expr = new ComparisonExpression(variable, ComparisonOperation.LessThan, value);
-
-            var result = expr.Rebalance() as ComparisonExpression;
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.Left, Is.EqualTo(expr.Left));
-            Assert.That(result.Operation, Is.EqualTo(expr.Operation));
-            Assert.That(result.Right, Is.EqualTo(expr.Right));
-        }
-
-        [Test]
-        public void TestRebalanceConditional()
-        {
-            // "A < B && C" => "(A < B) && C"
-            var variable1 = new VariableExpression("variable1");
-            var variable2 = new VariableExpression("variable2");
-            var value = new IntegerConstantExpression(99);
-            var conditional = new ConditionalExpression(value, ConditionalOperation.And, variable2);
-            var expr = new ComparisonExpression(variable1, ComparisonOperation.LessThan, conditional);
-
-            var result = expr.Rebalance() as ConditionalExpression;
-            Assert.That(result, Is.Not.Null);
-            var expected = new ComparisonExpression(expr.Left, expr.Operation, value);
-            Assert.That(result.Left, Is.EqualTo(expected));
-            Assert.That(result.Operation, Is.EqualTo(ConditionalOperation.And));
-            Assert.That(result.Right, Is.EqualTo(variable2));
-        }
-
-        [Test]
-        public void TestRebalanceMathematical()
-        {
-            // "A < B + C" => "A < (B + C)"
-            var variable1 = new VariableExpression("variable1");
-            var variable2 = new VariableExpression("variable2");
-            var value = new IntegerConstantExpression(99);
-            var conditional = new MathematicExpression(value, MathematicOperation.Add, variable2);
-            var expr = new ComparisonExpression(variable1, ComparisonOperation.LessThan, conditional);
-
-            var result = expr.Rebalance() as ComparisonExpression;
-            Assert.That(result, Is.Not.Null);
-            Assert.That(result.Left, Is.EqualTo(expr.Left));
-            Assert.That(result.Operation, Is.EqualTo(expr.Operation));
-            Assert.That(result.Right, Is.EqualTo(expr.Right));
-        }
-
-        [Test]
         [TestCase("0 == 0", true)]
         [TestCase("0 == 1", false)]
         [TestCase("byte(0) == 0", null)]
