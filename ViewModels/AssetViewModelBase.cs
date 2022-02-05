@@ -265,8 +265,8 @@ namespace RATools.ViewModels
                 IsTitleModified = isModified = true;
             if (assetViewModel.Description.Text != Generated.Description.Text)
                 IsDescriptionModified = isModified = true;
-            if (assetViewModel.Points.Value != Generated.Points.Value)
-                IsPointsModified = isModified = true;
+
+            isModified |= AreAssetSpecificPropertiesModified(assetViewModel, Generated);
 
             var compareTriggers = new List<TriggerViewModel>(assetViewModel.TriggerList);
             var triggers = new List<TriggerViewModel>();
@@ -294,6 +294,11 @@ namespace RATools.ViewModels
 
             return isModified || 
                 triggers.Any(t => t.Groups.Any(g => g.Requirements.OfType<RequirementComparisonViewModel>().Any(r => r.IsModified)));
+        }
+
+        protected virtual bool AreAssetSpecificPropertiesModified(AssetSourceViewModel left, AssetSourceViewModel right)
+        {
+            return false;
         }
 
         public int SourceLine
