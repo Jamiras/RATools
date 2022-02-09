@@ -189,10 +189,24 @@ namespace RATools.ViewModels
                     unmatchedCompareRequirements.RemoveAt(compareIndex);
                 }
 
+                var rightIndex = 0;
+
                 foreach (var requirement in left.Requirements)
                 {
                     Requirement match;
-                    matches.TryGetValue(requirement, out match);
+                    if (matches.TryGetValue(requirement, out match))
+                    {
+                        var matchIndex = right.Requirements.IndexOf(match);
+                        while (rightIndex < matchIndex)
+                        {
+                            var rightRequirement = right.Requirements[rightIndex++];
+                            if (unmatchedCompareRequirements.Remove(rightRequirement))
+                                list.Add(new RequirementComparisonViewModel(null, rightRequirement, numberFormat, notes));
+                        }
+
+                        rightIndex++;
+                    }
+
                     list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
                 }
 
@@ -281,6 +295,47 @@ namespace RATools.ViewModels
                 matches.TryGetValue(requirementEx, out match);
                 AppendRequirements(list, requirementEx, match, numberFormat, notes);
             }
+
+            // attempt to merge requirements that may have been separated into separate RequirementExs
+            bool merged;
+            do
+            {
+                merged = false;
+                for (int i = 0; i < list.Count; i++)
+                {
+                    var removedRequirement = list[i] as RequirementComparisonViewModel;
+                    if (removedRequirement == null || removedRequirement.Requirement != null)
+                        continue;
+
+                    int bestScore = 0;
+                    int mergeIndex = -1;
+
+                    for (int j = 0; j < list.Count; j++)
+                    {
+                        if (j == i)
+                            continue;
+
+                        var compareRequirement = list[j] as RequirementComparisonViewModel;
+                        if (compareRequirement == null || compareRequirement.CompareRequirement != null)
+                            continue;
+
+                        var score = CalculateScore(removedRequirement.CompareRequirement, compareRequirement.Requirement);
+                        if (score > bestScore)
+                        {
+                            bestScore = score;
+                            mergeIndex = j;
+                        }
+                    }
+
+                    if (mergeIndex != -1)
+                    {
+                        list[i] = new RequirementComparisonViewModel(list[mergeIndex].Requirement, removedRequirement.CompareRequirement, numberFormat, notes);
+                        list.RemoveAt(mergeIndex);
+                        merged = true;
+                        break;
+                    }
+                }
+            } while (merged);
 
             // allow an always_true() group to match an empty group
             if (list.Count == 0 &&
