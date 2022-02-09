@@ -77,7 +77,7 @@ namespace RATools.ViewModels
                 new LookupItem((int)RequirementOperator.GreaterThanOrEqual, ">="),
                 new LookupItem((int)RequirementOperator.Multiply, "*"),
                 new LookupItem((int)RequirementOperator.Divide, "/"),
-                new LookupItem((int)RequirementOperator.LogicalAnd, "&"),
+                new LookupItem((int)RequirementOperator.BitwiseAnd, "&"),
             };
 
             Flag = new LookupFieldViewModel("Flag", flagLookup) { SelectedId = -1 };

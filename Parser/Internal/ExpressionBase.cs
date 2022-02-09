@@ -152,6 +152,7 @@ namespace RATools.Parser.Internal
             Or,
             And,
             Compare,
+            BitwiseAnd,
             AppendString,
             AddSubtract,
             MulDivMod,
@@ -332,18 +333,21 @@ namespace RATools.Parser.Internal
                         break;
 
                     case '&':
-                        if (priority >= OperationPriority.And)
-                            return clause;
-
-                        tokenizer.Advance();
-                        if (tokenizer.NextChar != '&')
+                        if (tokenizer.MatchSubstring("&&") == 2)
                         {
-                            ParseError(tokenizer, "& expected following &", joinerLine, joinerColumn);
+                            if (priority >= OperationPriority.And)
+                                return clause;
+
+                            tokenizer.Advance(2);
+                            clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
                         }
                         else
                         {
+                            if (priority >= OperationPriority.BitwiseAnd)
+                                return clause;
+
                             tokenizer.Advance();
-                            clause = ParseConditional(tokenizer, clause, ConditionalOperation.And, joinerLine, joinerColumn);
+                            clause = ParseMathematic(tokenizer, clause, MathematicOperation.BitwiseAnd, joinerLine, joinerColumn);
                         }
                         break;
 
@@ -703,6 +707,10 @@ namespace RATools.Parser.Internal
                 case MathematicOperation.Divide:
                 case MathematicOperation.Modulus:
                     priority = OperationPriority.MulDivMod;
+                    break;
+
+                case MathematicOperation.BitwiseAnd:
+                    priority = OperationPriority.BitwiseAnd;
                     break;
 
                 default:

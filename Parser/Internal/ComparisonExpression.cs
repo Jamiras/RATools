@@ -431,6 +431,12 @@ namespace RATools.Parser.Internal
                             min = 0;
                             max = rightMax - 1;
                             break;
+
+                        case MathematicOperation.BitwiseAnd:
+                            // bitwise and will either return between 0 and all bits in the mask
+                            min = 0;
+                            max = rightMax;
+                            break;
                     }
                     break;
 

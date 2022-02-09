@@ -16,6 +16,8 @@ namespace RATools.Test.Parser.Internal
         [TestCase(MathematicOperation.Subtract, "variable - 99")]
         [TestCase(MathematicOperation.Multiply, "variable * 99")]
         [TestCase(MathematicOperation.Divide, "variable / 99")]
+        [TestCase(MathematicOperation.Modulus, "variable % 99")]
+        [TestCase(MathematicOperation.BitwiseAnd, "variable & 99")]
         public void TestAppendString(MathematicOperation op, string expected)
         {
             var variable = new VariableExpression("variable");
@@ -309,6 +311,34 @@ namespace RATools.Test.Parser.Internal
             Assert.That(result.ToString(), Is.EqualTo(new IntegerConstantExpression(0).ToString()));
         }
 
+        [Test]
+        public void TestBitwiseAnd()
+        {
+            var left = new IntegerConstantExpression(0xCF);
+            var right = new IntegerConstantExpression(0x56);
+            var expr = new MathematicExpression(left, MathematicOperation.BitwiseAnd, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(0x46));
+        }
+
+        [Test]
+        public void TestBitwiseAndZero()
+        {
+            var left = new IntegerConstantExpression(0xCF);
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.BitwiseAnd, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(0));
+        }
+
         private MathematicOperation GetOperation(char c)
         {
             switch (c)
@@ -317,6 +347,8 @@ namespace RATools.Test.Parser.Internal
                 case '-': return MathematicOperation.Subtract;
                 case '*': return MathematicOperation.Multiply;
                 case '/': return MathematicOperation.Divide;
+                case '%': return MathematicOperation.Modulus;
+                case '&': return MathematicOperation.BitwiseAnd;
                 default: return MathematicOperation.None;
             }
         }
@@ -343,6 +375,9 @@ namespace RATools.Test.Parser.Internal
         [TestCase("byte(0) / 3 * 3", "byte(0) / 3 * 3")] // divide followed by multiply removes the modulus portion, cannot combine
         [TestCase("byte(0) / 4.0 / 2", "byte(0) / 8.0")]
         [TestCase("byte(0) / 4.0 * 2", "byte(0) * 0.5")] // divide followed by multiply with floats can be merged
+        [TestCase("byte(0) & 12 & 5", "byte(0) & 4")] // bitwise and is commutative. prefer merging constants
+        [TestCase("byte(0) & 12 * 5", "byte(0) & 60")] // multiplication has higher precedence
+        [TestCase("byte(0) & 12 - 5", "byte(0) & 7")] // addition has higher precedence
         public void TestCombining(string input, string expected)
         {
             var expr = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));

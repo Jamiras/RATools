@@ -49,6 +49,7 @@ namespace RATools.Parser.Internal
                 case MathematicOperation.Multiply: return '*';
                 case MathematicOperation.Divide: return '/';
                 case MathematicOperation.Modulus: return '%';
+                case MathematicOperation.BitwiseAnd: return '&';
                 default: return '?';
             }
         }
@@ -62,6 +63,7 @@ namespace RATools.Parser.Internal
                 case MathematicOperation.Multiply: return "multiplication";
                 case MathematicOperation.Divide: return "division";
                 case MathematicOperation.Modulus: return "modulus";
+                case MathematicOperation.BitwiseAnd: return "bitwise and";
                 default: return "mathematic";
             }
         }
@@ -78,6 +80,9 @@ namespace RATools.Parser.Internal
                 case MathematicOperation.Divide:
                 case MathematicOperation.Modulus:
                     return MathematicPriority.Multiply;
+
+                case MathematicOperation.BitwiseAnd:
+                    return MathematicPriority.BitwiseAnd;
 
                 default:
                     return MathematicPriority.None;
@@ -221,6 +226,9 @@ namespace RATools.Parser.Internal
 
                     case MathematicOperation.Modulus:
                         return MergeModulus(left, right, out result);
+
+                    case MathematicOperation.BitwiseAnd:
+                        return MergeBitwiseAnd(left, right, out result);
                 }
             }
 
@@ -359,7 +367,7 @@ namespace RATools.Parser.Internal
 
             if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
             {
-                if (((IntegerConstantExpression)right).Value == 0.0)
+                if (((IntegerConstantExpression)right).Value == 0)
                 {
                     result = new ParseErrorExpression("Division by zero");
                     return false;
@@ -370,6 +378,18 @@ namespace RATools.Parser.Internal
             }
 
             result = new ParseErrorExpression("Cannot modulus expressions");
+            return false;
+        }
+
+        private static bool MergeBitwiseAnd(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
+        {
+            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
+            {
+                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value & ((IntegerConstantExpression)right).Value);
+                return true;
+            }
+
+            result = new ParseErrorExpression("Cannot bitwise and expressions");
             return false;
         }
 
@@ -557,6 +577,18 @@ namespace RATools.Parser.Internal
                     }
                     break;
 
+                case MathematicOperation.BitwiseAnd:
+                    // (a & 12) & 5 => a & (12 & 5)
+                    if (operation != MathematicOperation.BitwiseAnd)
+                        return false;
+
+                    if (!MergeBitwiseAnd(left, right, out newRight))
+                    {
+                        result = newRight;
+                        return false;
+                    }
+                    break;
+
                 default:
                     return false;
             }
@@ -625,7 +657,9 @@ namespace RATools.Parser.Internal
                         return true;
 
                     case MathematicOperation.Multiply:
+                    case MathematicOperation.BitwiseAnd:
                         // anything times 0 is 0
+                        // anything bitwise and 0 is 0
                         result = right;
                         return true;
 
@@ -806,6 +840,11 @@ namespace RATools.Parser.Internal
         /// Get the remainder from dividing the first value by the second.
         /// </summary>
         Modulus,
+
+        /// <summary>
+        /// Gets the bits that are set in both the first value and the second.
+        /// </summary>
+        BitwiseAnd,
     }
 
     /// <summary>
@@ -827,6 +866,11 @@ namespace RATools.Parser.Internal
         /// Multiply/Divide/Modulus
         /// </summary>
         Multiply,
+
+        /// <summary>
+        /// BitwiseAnd
+        /// </summary>
+        BitwiseAnd,
     }
 
     /// <summary>
@@ -901,6 +945,9 @@ namespace RATools.Parser.Internal
 
                 case MathematicOperation.Modulus:
                     return value % amount;
+
+                case MathematicOperation.BitwiseAnd:
+                    return value & amount;
 
                 default:
                     return 0;

@@ -42,7 +42,7 @@ namespace RATools.Data
                     requirement.Right.AppendString(builder, numberFormat);
                     break;
 
-                case RequirementOperator.LogicalAnd:
+                case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
                     requirement.Right.AppendString(builder, numberFormat);
                     break;
