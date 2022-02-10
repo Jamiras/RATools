@@ -184,6 +184,9 @@
     <Compile Include="Parser\RegressionTests.cs" />
     <Compile Include="ViewModels\AssetViewModelBaseTests.cs" />
     <Compile Include="ViewModels\GameViewModelTests.cs" />
+    <Compile Include="ViewModels\RequirementGroupViewModelTests.cs" />
+    <Compile Include="ViewModels\RequirementComparisonViewModelTests.cs" />
+    <Compile Include="ViewModels\RequirementViewModelTests.cs" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(SolutionFileName)' == 'RATools + Core.sln'">
