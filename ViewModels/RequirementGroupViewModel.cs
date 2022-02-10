@@ -96,20 +96,37 @@ namespace RATools.ViewModels
             var unmatchedRequirements = new List<Requirement>(left.Requirements);
             foreach (var requirement in right.Requirements)
             {
-                bool matched = false;
+                int bestScore = 0;
+                int bestIndex = -1;
+
                 for (int i = 0; i < unmatchedRequirements.Count; i++)
                 {
                     if (unmatchedRequirements[i] == requirement)
                     {
-                        unmatchedRequirements.RemoveAt(i);
-                        score += 40;
-                        matched = true;
+                        bestScore = 40;
+                        bestIndex = i;
                         break;
+                    }
+                    else
+                    {
+                        var matchScore = CalculateScore(unmatchedRequirements[i], requirement);
+                        if (matchScore > bestScore)
+                        {
+                            bestScore = matchScore;
+                            bestIndex = i;
+                        }
                     }
                 }
 
-                if (!matched)
+                if (bestIndex == -1)
+                {
                     score -= 10;
+                }
+                else
+                {
+                    score += bestScore;
+                    unmatchedRequirements.RemoveAt(bestIndex);
+                }
             }
 
             score -= unmatchedRequirements.Count * 10;
