@@ -54,6 +54,9 @@ namespace RATools.ViewModels
                         Notes = note;
                 }
             }
+
+            if (Notes == null)
+                Notes = String.Empty;
         }
 
         public RequirementViewModel(string definition, string notes)
@@ -64,7 +67,7 @@ namespace RATools.ViewModels
 
         internal Requirement Requirement { get; private set; }
 
-        public static readonly ModelProperty DefinitionProperty = ModelProperty.Register(typeof(RequirementViewModel), "Definition", typeof(string), "");
+        public static readonly ModelProperty DefinitionProperty = ModelProperty.Register(typeof(RequirementViewModel), "Definition", typeof(string), String.Empty);
         public string Definition
         {
             get { return (string)GetValue(DefinitionProperty); }

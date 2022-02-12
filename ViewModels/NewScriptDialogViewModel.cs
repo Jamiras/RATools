@@ -1147,6 +1147,7 @@ namespace RATools.ViewModels
         private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, NumberFormat numberFormat)
         {
             int index;
+            var notes = new Dictionary<int, string>();
 
             foreach (var line in displayMacro.DisplayLines)
             {
@@ -1162,11 +1163,10 @@ namespace RATools.ViewModels
                         var achievement = new AchievementBuilder();
                         achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
 
-                        var vmAchievement = new AssetSourceViewModel(null, "RichPresence");
-                        vmAchievement.Asset = achievement.ToAchievement();
+                        var vmTrigger = new TriggerViewModel("RichPresence", achievement.ToAchievement(), numberFormat, notes);
 
                         stream.Write("rich_presence_conditional_display(");
-                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 4);
+                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmTrigger, 4);
                         stream.Write(", \"");
                     }
 
