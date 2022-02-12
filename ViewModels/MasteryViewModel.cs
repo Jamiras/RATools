@@ -17,6 +17,9 @@ namespace RATools.ViewModels
 {
     public class MasteryViewModel : DialogViewModelBase
     {
+        // put a user name here for detailed analysis of a user's masteries in the Summarize output file.
+        private static string UserMasteryDetails = null;
+
         public MasteryViewModel()
             : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>(), ServiceRepository.Instance.FindService<ISettings>())
         {
@@ -363,12 +366,48 @@ namespace RATools.ViewModels
                 return (l.GameId - r.GameId);
             });
 
+            var detailedUserMasteryInfo = new List<string>();
+
             Progress.Label = "Analyzing data...";
             Progress.Reset(results.Count);
             Progress.IsEnabled = true;
             foreach (var result in results)
             {
                 ++Progress.Current;
+
+                GameStatsViewModel gameStats = null;
+
+                if (!String.IsNullOrEmpty(UserMasteryDetails))
+                {
+                    gameStats = new GameStatsViewModel() { GameId = result.GameId };
+                    gameStats.LoadGame();
+
+                    GameStatsViewModel.UserStats userStats = null;
+                    int userIndex = -1;
+                    int masteredCount = 0;
+                    foreach (var user in gameStats.TopUsers)
+                    {
+                        if (user.PointsEarned < gameStats.TotalPoints)
+                            break;
+
+                        if (user.User == UserMasteryDetails)
+                        {
+                            userIndex = masteredCount;
+                            userStats = user;
+                        }
+
+                        masteredCount++;
+                    }
+
+                    if (userStats != null)
+                    {
+                        detailedUserMasteryInfo.Add(String.Format("{2,3}/{3,3} | {0,4}m/{1,4}m | {4,3}x {5,6}:{6}",
+                            (int)userStats.GameTime.TotalMinutes, (int)result.MeanTimeToMaster,
+                            userIndex + 1, masteredCount,
+                            gameStats.Achievements.Count(), result.GameId, result.GameName));
+                    }
+                }
+
                 if (result.HardcoreMasteredUserCount < 8 || result.Points < 50)
                     continue;
 
@@ -376,10 +415,13 @@ namespace RATools.ViewModels
                 if (threshold > result.MeanTimeToMaster - result.StdDevTimeToMaster * 2)
                     continue;
 
-                var gameStats = new GameStatsViewModel() { GameId = result.GameId };
-                gameStats.LoadGame();
-                var usersToRefresh = new List<GameStatsViewModel.UserStats>();
+                if (gameStats == null)
+                {
+                    gameStats = new GameStatsViewModel() { GameId = result.GameId };
+                    gameStats.LoadGame();
+                }
 
+                var usersToRefresh = new List<GameStatsViewModel.UserStats>();
                 CheatedGameInfo gameEntry = null;
 
                 foreach (var user in gameStats.TopUsers)
@@ -721,6 +763,18 @@ namespace RATools.ViewModels
                 }
                 file.WriteLine("```");
                 file.WriteLine();
+
+                if (!String.IsNullOrEmpty(UserMasteryDetails))
+                {
+                    file.Write("Details for ");
+                    file.WriteLine(UserMasteryDetails);
+                    file.WriteLine("  rank  |   mastery   | achs gameid:name");
+                    file.WriteLine(" ------ | ----------- | -----------------------------------------------------------------------");
+
+                    detailedUserMasteryInfo.Sort();
+                    foreach (var line in detailedUserMasteryInfo)
+                        file.WriteLine(line);
+                }
             }
 
             Progress.Label = String.Empty;
