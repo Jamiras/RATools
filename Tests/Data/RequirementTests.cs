@@ -75,6 +75,9 @@ namespace RATools.Test.Data
         [TestCase(RequirementType.PauseIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "unless(byte(0x001234) == 0x63)")]
         [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) + ")]
         [TestCase(RequirementType.SubSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, " - byte(0x001234)")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.Multiply, TestField.Value99, 0, "byte(0x001234) * 0x63 + ")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.Divide, TestField.Value99, 0, "byte(0x001234) / 0x63 + ")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.BitwiseAnd, TestField.Value99, 0, "byte(0x001234) & 0x63 + ")]
         public void TestAppendStringHex(RequirementType requirementType, TestField left, RequirementOperator requirementOperator, TestField right, int hitCount, string expected)
         {
             var requirement = new Requirement

@@ -418,6 +418,7 @@ namespace RATools.Parser
 
                 case MathematicOperation.Multiply:
                 case MathematicOperation.Divide:
+                case MathematicOperation.BitwiseAnd:
                     // generate the condition for the right side
                     Field operand = CreateFieldFromExpression(mathematic.Right);
                     if (operand.Type == FieldType.None)
@@ -443,8 +444,19 @@ namespace RATools.Parser
                     if (context.LastRequirement.Operator != RequirementOperator.None)
                         return new ParseErrorExpression("Cannot generate condition using both " + context.LastRequirement.Operator + " and " + operation);
 
-                    context.LastRequirement.Operator = (operation == MathematicOperation.Multiply) ?
-                        RequirementOperator.Multiply : RequirementOperator.Divide;
+                    switch (operation)
+                    {
+                        case MathematicOperation.Multiply:
+                            context.LastRequirement.Operator = RequirementOperator.Multiply;
+                            break;
+                        case MathematicOperation.Divide:
+                            context.LastRequirement.Operator = RequirementOperator.Divide;
+                            break;
+                        case MathematicOperation.BitwiseAnd:
+                            context.LastRequirement.Operator = RequirementOperator.BitwiseAnd;
+                            break;
+                    }
+
                     context.LastRequirement.Right = operand;
                     return null;
 

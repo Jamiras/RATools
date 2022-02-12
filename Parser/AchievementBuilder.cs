@@ -312,7 +312,7 @@ namespace RATools.Parser
 
                 case '&':
                     tokenizer.Advance();
-                    return RequirementOperator.LogicalAnd;
+                    return RequirementOperator.BitwiseAnd;
             }
 
             return RequirementOperator.None;
@@ -397,7 +397,7 @@ namespace RATools.Parser
                 {
                     case RequirementOperator.Multiply:
                     case RequirementOperator.Divide:
-                    case RequirementOperator.LogicalAnd:
+                    case RequirementOperator.BitwiseAnd:
                         // 0.78 18 May 2020
                         if (minVer < 0.78)
                             minVer = 0.78;
@@ -547,7 +547,7 @@ namespace RATools.Parser
                 {
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
-                    case RequirementOperator.LogicalAnd: builder.Append('&'); break;
+                    case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
                     default:
                         if (minimumVersion < 0.77)
                             builder.Append("=0");
@@ -568,7 +568,7 @@ namespace RATools.Parser
                     case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
-                    case RequirementOperator.LogicalAnd: builder.Append('&'); break;
+                    case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
                     case RequirementOperator.None: return;
                 }
 

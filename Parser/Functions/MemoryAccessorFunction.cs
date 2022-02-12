@@ -79,6 +79,7 @@ namespace RATools.Parser.Functions
 
             IntegerConstantExpression offsetConstant = null;
             IntegerConstantExpression scalarConstant = null;
+            RequirementOperator scalarOperation = RequirementOperator.None;
             var originalAddress = address;
 
             var funcCall = address as FunctionCallExpression;
@@ -112,18 +113,45 @@ namespace RATools.Parser.Functions
                     mathematic = address as MathematicExpression;
                 }
 
-                if (mathematic != null && mathematic.Operation == MathematicOperation.Multiply)
+                if (mathematic != null)
                 {
-                    scalarConstant = mathematic.Right as IntegerConstantExpression;
-                    if (scalarConstant != null)
+                    switch (mathematic.Operation)
                     {
-                        address = mathematic.Left;
-                    }
-                    else
-                    {
-                        scalarConstant = mathematic.Left as IntegerConstantExpression;
-                        if (scalarConstant != null)
-                            address = mathematic.Right;
+                        case MathematicOperation.Multiply:
+                            scalarConstant = mathematic.Right as IntegerConstantExpression;
+                            if (scalarConstant != null)
+                            {
+                                address = mathematic.Left;
+                                scalarOperation = RequirementOperator.Multiply;
+                            }
+                            else
+                            {
+                                scalarConstant = mathematic.Left as IntegerConstantExpression;
+                                if (scalarConstant != null)
+                                {
+                                    scalarOperation = RequirementOperator.Multiply;
+                                    address = mathematic.Right;
+                                }
+                            }
+                            break;
+
+                        case MathematicOperation.Divide:
+                            scalarConstant = mathematic.Right as IntegerConstantExpression;
+                            if (scalarConstant != null)
+                            {
+                                address = mathematic.Left;
+                                scalarOperation = RequirementOperator.Divide;
+                            }
+                            break;
+
+                        case MathematicOperation.BitwiseAnd:
+                            scalarConstant = mathematic.Right as IntegerConstantExpression;
+                            if (scalarConstant != null)
+                            {
+                                address = mathematic.Left;
+                                scalarOperation = RequirementOperator.BitwiseAnd;
+                            }
+                            break;
                     }
                 }
 
@@ -146,7 +174,7 @@ namespace RATools.Parser.Functions
 
                         if (scalarConstant != null && scalarConstant.Value != 1)
                         {
-                            lastRequirement.Operator = RequirementOperator.Multiply;
+                            lastRequirement.Operator = scalarOperation;
                             lastRequirement.Right = new Field { Size = FieldSize.DWord, Type = FieldType.Value, Value = (uint)scalarConstant.Value };
                         }
 

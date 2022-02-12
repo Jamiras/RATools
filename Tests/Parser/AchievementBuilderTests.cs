@@ -257,6 +257,10 @@ namespace RATools.Test.Parser
         [TestCase("measured(byte(0x1234) < 40)", "M:0xH001234<40")]
         [TestCase("measured(repeated(20, byte(0x1234) == 40))", "M:0xH001234=40.20.")]
         [TestCase("measured(byte(0x1234) < 40, format=\"percent\")", "G:0xH001234<40")]
+        [TestCase("byte(0x1234) & 7 == 1", "A:0xH001234&7_0=1")]
+        [TestCase("word(byte(0x1234) & 7) == 1", "I:0xH001234&7_0x 000000=1")]
+        [TestCase("word((byte(0x1234) & 7) + 17) == 1", "I:0xH001234&7_0x 000011=1")]
+        [TestCase("dword((dword(0x12345) & 0x1ffffff) + 0xff7f6255) == 60", "I:0xX012345&33554431_0xXff7f6255=60")]
         public void TestSerializeRequirements(string input, string expected)
         {
             // verify serialization of the builder

@@ -314,7 +314,7 @@ namespace RATools.Data
                     builder.Append(" / ");
                     Right.AppendString(builder, numberFormat, addAddress);
                     break;
-                case RequirementOperator.LogicalAnd:
+                case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
                     Right.AppendString(builder, numberFormat, addAddress);
                     break;
@@ -355,7 +355,7 @@ namespace RATools.Data
 
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
-                case RequirementOperator.LogicalAnd:
+                case RequirementOperator.BitwiseAnd:
                     // handled above, treat like none
 
                 case RequirementOperator.None:
@@ -612,7 +612,7 @@ namespace RATools.Data
         /// <summary>
         /// The left value is masked by the right value. (combining conditions only)
         /// </summary>
-        LogicalAnd,
+        BitwiseAnd,
     }
 
     /// <summary>
