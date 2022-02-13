@@ -2171,13 +2171,18 @@ namespace RATools.Parser
                     var requirements = bitReference.requirements;
                     while (requirements.Count >= 8)
                     {
-                        var matches = new List<Requirement>();
+                        var matches = new List<Requirement>(8);
                         for (var bit = FieldSize.Bit0; bit <= FieldSize.Bit7; bit++)
                         {
                             var requirement = requirements.FirstOrDefault(r => r.Left.Size == bit);
+                            if (requirement == null) // second pass may not have enough items for a second BitCount
+                                break;
                             requirements.Remove(requirement);
                             matches.Add(requirement);
                         }
+
+                        if (matches.Count < 8) // second pass may not have enough items for a second BitCount
+                            break;
 
                         int insertIndex = requirementEx.Requirements.Count - 1;
                         foreach (var requirement in matches)
