@@ -209,7 +209,7 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : achievement);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { achievement });
         }
 
         internal void UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, StringBuilder warning, bool validateAll)
@@ -230,7 +230,7 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : leaderboard);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { leaderboard });
         }
 
         private int _localAchievementCommitSuspendCount = 0;
@@ -239,13 +239,10 @@ namespace RATools.ViewModels
             ++_localAchievementCommitSuspendCount;
         }
 
-        internal void ResumeCommitLocalAchievements()
+        internal void ResumeCommitLocalAchievements(StringBuilder warning, List<AssetBase> assetsToValidate)
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
-            {
-                var warning = new StringBuilder();
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, null);
-            }
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, assetsToValidate);
         }
 
 
