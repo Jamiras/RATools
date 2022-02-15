@@ -66,6 +66,8 @@ namespace RATools.ViewModels
             {
                 if (left.Left.Size == right.Left.Size)
                     score += 2;
+                else if (!left.Left.IsMemoryReference && !right.Left.IsMemoryReference)
+                    score += 2;
                 else
                     score--;
 
@@ -82,6 +84,8 @@ namespace RATools.ViewModels
             if (left.Right.Type == right.Right.Type)
             {
                 if (left.Right.Size == right.Right.Size)
+                    score += 2;
+                else if (!left.Right.IsMemoryReference && !right.Right.IsMemoryReference)
                     score += 2;
                 else
                     score--;
@@ -410,7 +414,8 @@ namespace RATools.ViewModels
                         }
                     }
 
-                    indices[insertIndex + 1] = requirementIndex;
+                    if (insertIndex < indices.Length - 1)
+                        indices[insertIndex + 1] = requirementIndex;
                     pairs.Insert(insertIndex, new Tuple<RequirementEx, RequirementEx>(null, requirementEx));
                 }
             }

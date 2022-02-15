@@ -20,6 +20,8 @@ namespace RATools.Test.ViewModels
         [TestCase("0xH1234=7", "0x 1234=7", "byte(0x001234) == 7", "word(0x001234) == 7", true)]
         [TestCase("0xH1234=7", "R:0xH1234=7", "byte(0x001234) == 7", "never(byte(0x001234) == 7)", true)]
         [TestCase("0xH1234=7", "0xH1234=7.1.", "byte(0x001234) == 7", "once(byte(0x001234) == 7)", true)]
+        [TestCase("0xH1234>0.1.", "0xH1234!=0.1.", "once(byte(0x001234) > 0)", "once(byte(0x001234) != 0)", true)]
+        [TestCase("0xM1234>0.1.", "0xM1234=1.1.", "once(bit0(0x001234) > 0)", "once(bit0(0x001234) == 1)", true)]
         public void TestDefinitions(string leftSerialized, string rightSerialized, 
             string expectedDefinition, string expectedOtherDefinition, bool expectedModified)
         {
