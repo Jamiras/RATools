@@ -293,7 +293,7 @@ namespace RATools.Parser
         /// <summary>
         /// Commits the asset list back to the 'XXX-User.txt' file.
         /// </summary>
-        public void Commit(string author, StringBuilder warning, AssetBase assetToValidate)
+        public void Commit(string author, StringBuilder warning, List<AssetBase> assetsToValidate)
         {
             double version = 0.30;
 
@@ -320,10 +320,10 @@ namespace RATools.Parser
                 writer.WriteLine(Title);
 
                 foreach (var achievement in _achievements)
-                    WriteAchievement(writer, author, achievement, (assetToValidate == null || ReferenceEquals(assetToValidate, achievement)) ? warning : null);
+                    WriteAchievement(writer, author, achievement, (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
 
                 foreach (var leaderboard in _leaderboards)
-                    WriteLeaderboard(writer, leaderboard, (assetToValidate == null || ReferenceEquals(assetToValidate, leaderboard)) ? warning : null);
+                    WriteLeaderboard(writer, leaderboard, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
             }
         }
 

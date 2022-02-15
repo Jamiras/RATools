@@ -1,6 +1,7 @@
 ﻿using Jamiras.Commands;
 using Jamiras.DataModels;
 using Jamiras.ViewModels;
+using RATools.Data;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -38,27 +39,36 @@ namespace RATools.ViewModels
 
         protected override void ExecuteOkCommand()
         {
-            var warning = new StringBuilder();
+            var warnings = new StringBuilder();
+            var assetsToValidate = new List<AssetBase>();
 
             _game.SuspendCommitLocalAchievements();
 
-            foreach (var achievement in _assets)
+            foreach (var assetViewModel in _assets)
             {
-                if (achievement.IsUpdated)
+                if (assetViewModel.IsUpdated)
                 {
-                    warning.Clear();
-                    achievement.Asset.UpdateLocal(warning, true);
+                    assetsToValidate.Add(assetViewModel.Asset.Generated.Asset);
+
+                    var warning = new StringBuilder();
+                    assetViewModel.Asset.UpdateLocal(warning, true);
+                    if (warning.Length > 0)
+                    {
+                        warnings.AppendFormat("{0} \"{1}\": {2}", assetViewModel.Asset.ViewerType,
+                            assetViewModel.Title, warning.ToString());
+                        warnings.AppendLine();
+                    }
                 }
-                else if (achievement.IsDeleted)
+                else if (assetViewModel.IsDeleted)
                 {
-                    achievement.Asset.DeleteLocalCommand.Execute();
+                    assetViewModel.Asset.DeleteLocalCommand.Execute();
                 }
             }
 
-            _game.ResumeCommitLocalAchievements();
+            _game.ResumeCommitLocalAchievements(warnings, assetsToValidate);
 
-            if (warning.Length > 0)
-                TaskDialogViewModel.ShowWarningMessage("Your achievements may not function as expected.", warning.ToString());
+            if (warnings.Length > 0)
+                TaskDialogViewModel.ShowWarningMessage("Your achievements may not function as expected.", warnings.ToString());
 
             DialogResult = DialogResult.Ok;
         }
