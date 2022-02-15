@@ -1,3 +1,15 @@
+v1.8.4 - 15 Feb 2022
+* support for bitwise and (&)
+* add lower_is_better flag to leaderboard() function
+* support for collapsing AddSource bit chain into BitCount
+* support joining multiple MeasuredIfs for when parameter of measured() function when dumping New Script
+* allow || in when parameter of measured() function.
+* use core badge when merging local/generated achievement with badge "00000"
+* improved matching for trigger diffs - most notably, when alt group indices change
+* show serialization warnings when using Update Local dialog
+* fix premature optimization of subclause causing complex condition to evaluate to always_false()
+* fix exception when line-wrapping some complex expressions when dumping script via New Script
+
 v1.8.3 - 4 Jan 2022
 * add true and false constants for script logic (continue to use always_true() and always_false() for trigger definitions)
 * add word_be(), tbyte_be(), and dword_be() big-endian memory accessor functions
