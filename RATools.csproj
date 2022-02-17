@@ -95,6 +95,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Data\Achievement.cs" />
+    <Compile Include="Data\CodeNote.cs" />
     <Compile Include="Data\Field.cs" />
     <Compile Include="Data\AssetBase.cs" />
     <Compile Include="Data\Leaderboard.cs" />

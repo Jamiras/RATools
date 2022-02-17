@@ -129,6 +129,7 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
+    <Compile Include="Data\CodeNoteTests.cs" />
     <Compile Include="Data\RequirementExTests.cs" />
     <Compile Include="Data\RequirementTests.cs" />
     <Compile Include="Data\FieldTests.cs" />
