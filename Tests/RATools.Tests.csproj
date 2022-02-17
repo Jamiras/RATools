@@ -181,7 +181,7 @@
     <Compile Include="Parser\Internal\ComparisonExpressionTests.cs" />
     <Compile Include="Parser\Internal\AssignmentExpressionTests.cs" />
     <Compile Include="Parser\LocalAchievementsTests.cs" />
-    <Compile Include="Parser\RegressionTests.cs" />
+    <Compile Include="Parser\Regression\RegressionTests.cs" />
     <Compile Include="ViewModels\AssetViewModelBaseTests.cs" />
     <Compile Include="ViewModels\GameViewModelTests.cs" />
     <Compile Include="ViewModels\RequirementGroupViewModelTests.cs" />
