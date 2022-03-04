@@ -190,7 +190,7 @@ namespace RATools.ViewModels
         {
             var ticketsPage = RAWebCache.Instance.GetOpenTicketsForGame(gameId);
             if (ticketsPage == null)
-                return null;
+                return new Dictionary<int, AchievementTickets>();
 
             var games = new Dictionary<int, GameTickets>();
             var tickets = new Dictionary<int, AchievementTickets>();
