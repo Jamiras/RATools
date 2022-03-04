@@ -143,6 +143,7 @@
     <Compile Include="Parser\Internal\FloatConstantExpression.cs" />
     <Compile Include="Parser\Internal\KeywordExpression.cs" />
     <Compile Include="Parser\Internal\LeftRightExpressionBase.cs" />
+    <Compile Include="Parser\RequirementMerger.cs" />
     <Compile Include="Parser\RichPresenceBuilder.cs" />
     <Compile Include="Parser\ScriptInterpreterAchievementBuilder.cs" />
     <Compile Include="Parser\TriggerBuilderContext.cs" />

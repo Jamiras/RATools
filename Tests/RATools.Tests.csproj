@@ -144,6 +144,7 @@
     <Compile Include="Parser\Functions\AnyOfFunctionTests.cs" />
     <Compile Include="Parser\Internal\BooleanConstantExpressionTests.cs" />
     <Compile Include="Parser\Internal\FloatConstantExpressionTests.cs" />
+    <Compile Include="Parser\RequirementMergerTests.cs" />
     <Compile Include="Parser\RichPresenceBuilderTests.cs" />
     <Compile Include="Parser\TriggerBuilderContextTests.cs" />
     <Compile Include="Parser\AchievementBuilderTests.cs" />

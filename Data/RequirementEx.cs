@@ -14,6 +14,57 @@ namespace RATools.Data
 
         public List<Requirement> Requirements { get; private set; }
 
+        public RequirementType Type
+        {
+            get
+            {
+                if (Requirements.Count == 0)
+                    return RequirementType.None;
+
+                return Requirements.Last().Type;
+            }
+        }
+
+        public bool IsMeasured
+        {
+            get
+            {
+                if (Requirements.Count == 0)
+                    return false;
+
+                return Requirements.Last().IsMeasured;
+            }
+        }
+
+        public bool IsAffectedByPauseIf
+        {
+            get
+            {
+                if (Requirements.Count == 0)
+                    return false;
+
+                switch (Requirements.Last().Type)
+                {
+                    case RequirementType.ResetIf:
+                        // ResetIf can't fire when paused
+                        return true;
+
+                    case RequirementType.Measured:
+                    case RequirementType.MeasuredPercent:
+                        // Measured values don't update while paused (even non-HitCount ones)
+                        return true;
+
+                    case RequirementType.PauseIf:
+                        // a PauseIf is only affected by other PauseIfs if it has a HitCount
+                        return Requirements.Last().HitCount > 0;
+
+                    default:
+                        // if any clause in the complex condition chain has a HitCount, pausing will stop it from incrementing
+                        return HasHitCount;
+                }
+            }
+        }
+
         public bool HasHitCount
         {
             get
@@ -73,7 +124,7 @@ namespace RATools.Data
         }
 
         private static void AppendAndOrNext(StringBuilder andNext, Requirement requirement, NumberFormat numberFormat,
-            StringBuilder addSources, StringBuilder subSources, StringBuilder addAddress, ref RequirementType lastAndNext)
+            StringBuilder addSources, StringBuilder subSources, StringBuilder addAddress, ref Requirement lastAndNext)
         {
             if (addSources.Length > 0 || subSources.Length > 0 || addAddress.Length > 0)
             {
@@ -90,21 +141,24 @@ namespace RATools.Data
                 addSources.Clear();
                 subSources.Clear();
             }
+            else if (requirement.HitCount > 0 && lastAndNext != null && lastAndNext.HitCount == 0)
+            {
+                var andNextString = andNext.ToString();
+                andNext.Clear();
+                requirement.AppendString(andNext, numberFormat, null, null, null, andNextString);
+            }
             else
             {
                 requirement.AppendString(andNext, numberFormat);
             }
 
-            if (lastAndNext != requirement.Type)
+            if (lastAndNext != null && lastAndNext.Type != requirement.Type)
             {
-                if (lastAndNext != RequirementType.None)
-                {
-                    andNext.Insert(0, '(');
-                    andNext.Append(')');
-                }
-
-                lastAndNext = requirement.Type;
+                andNext.Insert(0, '(');
+                andNext.Append(')');
             }
+
+            lastAndNext = requirement;
 
             if (requirement.Type == RequirementType.OrNext)
                 andNext.Append(" || ");
@@ -151,7 +205,7 @@ namespace RATools.Data
             var addAddress = new StringBuilder();
             var resetNextIf = new StringBuilder();
             var definition = new StringBuilder();
-            RequirementType lastAndNext = RequirementType.None;
+            Requirement lastAndNext = null;
 
             foreach (var requirement in requirements)
             {
@@ -216,7 +270,7 @@ namespace RATools.Data
                         andNext.Clear();
                         addAddress.Clear();
                         resetNextIf.Clear();
-                        lastAndNext = RequirementType.None;
+                        lastAndNext = null;
                         break;
                 }
             }
@@ -264,6 +318,9 @@ namespace RATools.Data
         {
             if (Requirements.Count == 1)
                 return Requirements[0].Evaluate();
+
+            if (Requirements.Count == 0)
+                return true;
 
             return null;
         }
