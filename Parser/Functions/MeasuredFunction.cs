@@ -77,9 +77,12 @@ namespace RATools.Parser.Functions
 
             if (builder.CoreRequirements.Count != 1 || builder.CoreRequirements.First().Evaluate() != true)
             {
+                bool hasHitCount = builder.CoreRequirements.Last().HitCount != 0;
                 foreach (var requirement in builder.CoreRequirements)
                 {
-                    if (requirement.Type == RequirementType.None || requirement.Type == RequirementType.AndNext)
+                    if (requirement.Type == RequirementType.None)
+                        requirement.Type = RequirementType.MeasuredIf;
+                    else if (requirement.Type == RequirementType.AndNext && !hasHitCount)
                         requirement.Type = RequirementType.MeasuredIf;
 
                     context.Trigger.Add(requirement);
