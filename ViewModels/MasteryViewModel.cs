@@ -408,12 +408,14 @@ namespace RATools.ViewModels
                     }
                 }
 
+                // if the set has less than 8 masteries, we can't assume the median and standard deviation are
+                // a viable gauge of cheating
                 if (result.HardcoreMasteredUserCount < 8 || result.Points < 50)
                     continue;
 
-                var threshold = result.MeanTimeToMaster / 5;
-                if (threshold > result.MeanTimeToMaster - result.StdDevTimeToMaster * 2)
-                    continue;
+                // identify anyone who completes the set more than two standard deviations faster than the average user.
+                // if two standard deviations is more than 90% faster than median, look for anyone who is more than 90% faster than median.
+                var threshold = Math.Max(result.MeanTimeToMaster / 10, result.MeanTimeToMaster - result.StdDevTimeToMaster * 2);
 
                 if (gameStats == null)
                 {
@@ -693,10 +695,15 @@ namespace RATools.ViewModels
                 file.WriteLine("```");
                 file.WriteLine();
 
-                file.WriteLine("Possible cheaters: TimeToMaster < 20% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 2 stddevs from median]");
+                Progress.Label = "Identifying potential cheaters...";
+                Progress.Reset(cheaters.Count);
+
+                file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
                 file.WriteLine();
                 foreach (var cheater in cheaters)
                 {
+                    ++Progress.Current;
+
                     foreach (var kvp in cheater.Results)
                     {
                         var result = kvp.Key;
@@ -716,8 +723,26 @@ namespace RATools.ViewModels
                             dumpTimes = false;
                         }
 
+                        var gameStats = new GameStatsViewModel() { GameId = result.GameId };
+                        gameStats.LoadGame();
+
+                        int userIndex = -1;
+                        int masteredCount = 0;
+                        foreach (var scan in gameStats.TopUsers)
+                        {
+                            if (scan.PointsEarned < gameStats.TotalPoints)
+                                break;
+
+                            masteredCount++;
+
+                            if (scan.User == user.User)
+                                userIndex = masteredCount;
+                        }
+
                         var performance = 1.0 - (user.GameTime.TotalMinutes / result.MeanTimeToMaster);
-                        file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2})", user.GameTime.TotalMinutes, performance * 100, result.MeanTimeToMaster, result.StdDevTimeToMaster);
+                        file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2}) (rank:{4}/{5})", 
+                            user.GameTime.TotalMinutes, performance * 100, result.MeanTimeToMaster, result.StdDevTimeToMaster,
+                            userIndex, masteredCount);
 
                         if (dumpTimes)
                         {
@@ -726,9 +751,6 @@ namespace RATools.ViewModels
                             foreach (var achievement in user.Achievements)
                                 achievements.Add(new AchievementTime { Id = achievement.Key, When = achievement.Value });
                             achievements.Sort((l, r) => DateTime.Compare(l.When, r.When));
-
-                            var gameStats = new GameStatsViewModel() { GameId = result.GameId };
-                            gameStats.LoadGame();
 
                             foreach (var achievement in achievements)
                             {
