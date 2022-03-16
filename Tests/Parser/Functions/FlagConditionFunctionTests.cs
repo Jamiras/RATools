@@ -230,7 +230,7 @@ namespace RATools.Test.Parser.Functions
             // the hit target will prevent the optimizer from inverting the inner logic,
             // so the inner clause will retain its PauseIf. PauseIf and ResetIf are
             // mutually exclusive, so expect an error.
-            Evaluate("never(unless(byte(0x1234) == 56 && once(byte(0x2345) == 67)))", 
+            Evaluate("never(unless(byte(0x1234) == 56) && once(byte(0x2345) == 67))", 
                 "Cannot apply 'never' to condition already flagged with PauseIf");
         }
 

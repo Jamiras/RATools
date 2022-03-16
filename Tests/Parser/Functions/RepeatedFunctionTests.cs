@@ -420,7 +420,6 @@ namespace RATools.Test.Parser.Functions
         {
             var errorMessage = "Modifier not allowed in subclause";
             Evaluate("repeated(4, never(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
-            Evaluate("repeated(4, unless(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
             Evaluate("repeated(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", errorMessage);
         }
 

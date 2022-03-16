@@ -82,6 +82,8 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<ICollection<Requirement>> _alts;
 
+        internal bool IsDumped { get; set; }
+
         /// <summary>
         /// Constructs an <see cref="Achievement"/> from the current state of the builder.
         /// </summary>
@@ -592,20 +594,10 @@ namespace RATools.Parser
             var measuredIfs = new List<RequirementEx>();
             foreach (var group in groups)
             {
-                switch (group.Requirements.Last().Type)
-                {
-                    case RequirementType.Measured:
-                    case RequirementType.MeasuredPercent:
-                        measured = group;
-                        break;
-
-                    case RequirementType.MeasuredIf:
-                        measuredIfs.Add(group);
-                        break;
-
-                    default:
-                        break;
-                }
+                if (group.IsMeasured)
+                    measured = group;
+                else if (group.Type == RequirementType.MeasuredIf)
+                    measuredIfs.Add(group);
             }
 
             string measuredIfString = null;
@@ -1049,7 +1041,7 @@ namespace RATools.Parser
                 for (int i = requirements.Count - 1; i >= 0; i--)
                 {
                     var requirement = requirements[i];
-                    switch (requirement.Requirements.Last().Type)
+                    switch (requirement.Type)
                     {
                         case RequirementType.PauseIf:
                         case RequirementType.ResetIf:
@@ -1095,603 +1087,127 @@ namespace RATools.Parser
             return false;
         }
 
-        private void NormalizeNonHitCountResetAndPauseIfs(List<List<RequirementEx>> groups, bool hasHitCount)
+        private static bool InvertRequirementLogic(RequirementEx requirementEx)
         {
-            // if this is a dumped achievement, don't convert these, it just makes the diff hard to read.
-            if (Id != 0)
-                return;
+            bool hasAndNext = false;
+            bool hasOrNext = false;
 
+            foreach (var requirement in requirementEx.Requirements)
+            {
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddHits:
+                        // if AddHits is present, we can't invert the logic because we can't determine which conditions
+                        // will be true or false for any given frame
+                        return false;
+
+                    case RequirementType.AndNext:
+                        hasAndNext = true;
+                        break;
+
+                    case RequirementType.OrNext:
+                        hasOrNext = true;
+                        break;
+                }
+            }
+
+            // if both AndNext and OrNext are present, we can't just invert the logic as the order of operations may be affected
+            if (hasAndNext && hasOrNext)
+                return false;
+
+            if (hasAndNext)
+            {
+                // convert an AndNext chain into an OrNext chain
+                foreach (var r in requirementEx.Requirements)
+                {
+                    if (r.Type == RequirementType.AndNext)
+                    {
+                        r.Type = RequirementType.OrNext;
+                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                    }
+                }
+            }
+            else if (hasOrNext)
+            {
+                // convert an OrNext chain into an AndNext chain
+                foreach (var r in requirementEx.Requirements)
+                {
+                    if (r.Type == RequirementType.OrNext)
+                    {
+                        r.Type = RequirementType.AndNext;
+                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                    }
+                }
+            }
+
+            var lastRequirement = requirementEx.Requirements.Last();
+            lastRequirement.Operator = Requirement.GetOpposingOperator(lastRequirement.Operator);
+            return true;
+        }
+
+        private bool NormalizeResetIfs(List<List<RequirementEx>> groups)
+        {
             // a ResetIf condition in an achievement without any HitCount conditions is the same as a non-ResetIf 
             // condition for the opposite comparison (i.e. ResetIf val = 0 is the same as val != 0). Some developers 
             // use ResetIf conditions to keep the HitCount counter at 0 until the achievement is activated. This is 
             // a bad practice, as it makes the achievement harder to read, and it normally adds an additional 
             // condition to be evaluated every frame.
-
-            // a PauseIf condition in an achievement without any HitCount conditions prevents the achievement from
-            // triggering while the PauseIf condition is true. Conversely, the achievement can only trigger if the 
-            // condition is false, so invert the logic on the condition and make it a requirement.
-
-            if (hasHitCount)
-                return;
-
-            // if no hit counts are found, then invert any PauseIfs or ResetIfs.
+            bool converted = false;
             foreach (var group in groups)
             {
-                // PauseIf may be protecting a Measured, if found don't invert PauseIf
-                bool hasMeasured = group.Any(g => g.Requirements.Any(r => r.IsMeasured));
-
-                foreach (var requirementEx in group)
+                foreach (var requirementEx in group.Where(r => r.Type == RequirementType.ResetIf))
                 {
-                    var requirement = requirementEx.Requirements.Last();
-                    if ((requirement.Type == RequirementType.PauseIf && !hasMeasured) ||
-                        requirement.Type == RequirementType.ResetIf)
+                    if (InvertRequirementLogic(requirementEx))
                     {
-                        bool hasAndNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.AndNext);
-                        bool hasOrNext = requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext);
-                        if (hasAndNext && hasOrNext)
-                        {
-                            // if both AndNext and OrNext is present, we can't just invert the logic as the order of operations may be affected
-                        }
-                        else
-                        {
-                            if (hasAndNext)
-                            {
-                                // convert an AndNext chain into an OrNext chain
-                                foreach (var r in requirementEx.Requirements)
-                                {
-                                    if (r.Type == RequirementType.AndNext)
-                                    {
-                                        r.Type = RequirementType.OrNext;
-                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
-                                    }
-                                }
-                            }
-                            else if (hasOrNext)
-                            {
-                                // convert an OrNext chain into an AndNext chain
-                                foreach (var r in requirementEx.Requirements)
-                                {
-                                    if (r.Type == RequirementType.OrNext)
-                                    {
-                                        r.Type = RequirementType.AndNext;
-                                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
-                                    }
-                                }
-                            }
-
-                            requirement.Type = RequirementType.None;
-                            requirement.Operator = Requirement.GetOpposingOperator(requirement.Operator);
-                        }
+                        var lastRequirement = requirementEx.Requirements.Last();
+                        lastRequirement.Type = RequirementType.None;
+                        lastRequirement.HitCount = 0;
+                        converted = true;
                     }
                 }
             }
+
+            return converted;
         }
 
-        private static bool MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
+        private void NormalizePauseIfs(List<List<RequirementEx>> groups)
         {
-            merged = null;
-
-            if (left.Type != right.Type)
-                return false;
-
-            if (left.Left != right.Left)
-                return false;
-
-            if (left.Operator == RequirementOperator.None)
+            // a PauseIf condition in an group that's not guarding anything is the same as a non-PauseIf
+            // condition for the opposite comparison (i.e. PauseIf val = 0 is the same as val != 0).
+            foreach (var group in groups)
             {
-                // AddSource, SubSource, and AddAddress don't have a right side or hit counts
-                merged = left;
-                return true;
-            }
+                if (!group.Any(r => r.Type == RequirementType.PauseIf))
+                    continue;
+                if (group.Any(r => r.IsAffectedByPauseIf))
+                    continue;
 
-            if (left.Operator == right.Operator && left.HitCount == right.HitCount && left.Right == right.Right)
-            {
-                // 100% match, use it
-                merged = left;
-                return true;
-            }
+                foreach (var requirementEx in group.Where(r => r.Type == RequirementType.PauseIf))
+                {
+                    // if the PauseIf has a HitTarget, it's a PauseLock. don't invert it even if
+                    // nothing else is affected.
+                    var lastRequirement = requirementEx.Requirements.Last();
+                    if (lastRequirement.HitCount != 0)
+                        continue;
 
-            // create a copy that we can modify
-            merged = new Requirement
-            {
-                Type = left.Type,
-                Left = left.Left,
-                Operator = left.Operator,
-                Right = left.Right,
-                HitCount = left.HitCount
-            };
-
-            // merge hit counts
-            if (left.HitCount != right.HitCount)
-            {
-                // cannot merge hit counts if one of them is infinite
-                if (left.HitCount == 0 || right.HitCount == 0)
-                    return false;
-
-                merged.HitCount = Math.Max(left.HitCount, right.HitCount);
-
-                if (left.Operator == right.Operator && left.Right == right.Right)
-                    return true;
-            }
-
-            // if either right is not a value field, we can't merge
-            if (left.Right.Type != FieldType.Value || right.Right.Type != FieldType.Value)
-                return false;
-
-            // both rights are value fields, see if there's overlap in the logic
-            bool useRight = false, useLeft = false, conflicting = false;
-            RequirementOperator newOperator = RequirementOperator.None;
-            switch (left.Operator)
-            {
-                case RequirementOperator.Equal:
-                    switch (right.Operator)
+                    if (InvertRequirementLogic(requirementEx))
                     {
-                        case RequirementOperator.GreaterThan:
-                            if (right.Right.Value == left.Right.Value)
-                                newOperator = RequirementOperator.GreaterThanOrEqual;
-                            else if (right.Right.Value < left.Right.Value)
-                                useRight = true;
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            useRight = right.Right.Value <= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.LessThan:
-                            if (right.Right.Value == left.Right.Value)
-                                newOperator = RequirementOperator.LessThanOrEqual;
-                            else if (right.Right.Value > left.Right.Value)
-                                useRight = right.Right.Value > left.Right.Value;
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            useRight = right.Right.Value >= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.NotEqual:
-                            if (right.Right.Value != left.Right.Value)
-                                useRight = true;
-                            break;
-
-                        case RequirementOperator.Equal:
-                            if (right.Right.Value == left.Right.Value)
-                                useRight = true;
-                            else
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
+                        lastRequirement = requirementEx.Requirements.Last();
+                        lastRequirement.Type = RequirementType.None;
+                        lastRequirement.HitCount = 0;
                     }
-                    break;
-
-                case RequirementOperator.GreaterThan:
-                    switch (right.Operator)
-                    {
-                        case RequirementOperator.GreaterThan:
-                            useRight = right.Right.Value < left.Right.Value;
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            useRight = right.Right.Value <= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.Equal:
-                            if (right.Right.Value == left.Right.Value)
-                                newOperator = RequirementOperator.GreaterThanOrEqual;
-                            else if (right.Right.Value > left.Right.Value)
-                                useLeft = true;
-                            break;
-
-                        case RequirementOperator.LessThan:
-                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.Or)
-                                newOperator = RequirementOperator.NotEqual;
-                            else if (right.Right.Value <= left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            if (right.Right.Value < left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-                    }
-                    break;
-
-                case RequirementOperator.GreaterThanOrEqual:
-                    switch (right.Operator)
-                    {
-                        case RequirementOperator.GreaterThan:
-                            if (right.Right.Value == left.Right.Value)
-                                useLeft = true;
-                            else
-                                useRight = right.Right.Value < left.Right.Value;
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            useRight = right.Right.Value <= left.Right.Value;
-                            break;
-                            
-                        case RequirementOperator.Equal:
-                            useLeft = right.Right.Value >= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.LessThan:
-                            if (right.Right.Value <= left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.And)
-                                newOperator = RequirementOperator.Equal;
-                            else if (right.Right.Value < left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-                    }
-                    break;
-
-                case RequirementOperator.LessThan:
-                    switch (right.Operator)
-                    {
-                        case RequirementOperator.LessThan:
-                            useRight = right.Right.Value > left.Right.Value;
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            useRight = right.Right.Value >= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.Equal:
-                            if (right.Right.Value == left.Right.Value)
-                                newOperator = RequirementOperator.LessThanOrEqual;
-                            else if (right.Right.Value < left.Right.Value)
-                                useLeft = true;
-                            break;
-
-                        case RequirementOperator.GreaterThan:
-                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.Or)
-                                newOperator = RequirementOperator.NotEqual;
-                            else if (right.Right.Value >= left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            if (right.Right.Value > left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-                    }
-                    break;
-
-                case RequirementOperator.LessThanOrEqual:
-                    switch (right.Operator)
-                    {
-                        case RequirementOperator.LessThan:
-                            if (right.Right.Value == left.Right.Value)
-                                useLeft = true;
-                            else
-                                useRight = right.Right.Value > left.Right.Value;
-                            break;
-
-                        case RequirementOperator.LessThanOrEqual:
-                            useRight = right.Right.Value >= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.Equal:
-                            useLeft = right.Right.Value <= left.Right.Value;
-                            break;
-
-                        case RequirementOperator.GreaterThan:
-                            if (right.Right.Value >= left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-
-                        case RequirementOperator.GreaterThanOrEqual:
-                            if (right.Right.Value == left.Right.Value && condition == ConditionalOperation.And)
-                                newOperator = RequirementOperator.Equal;
-                            else if (right.Right.Value > left.Right.Value)
-                                conflicting = (condition == ConditionalOperation.And);
-                            break;
-                    }
-                    break;
-
-                case RequirementOperator.NotEqual:
-                    switch (right.Operator)
-                    {
-                        case RequirementOperator.Equal:
-                            if (right.Right.Value != left.Right.Value)
-                                useLeft = true;
-                            break;
-                    }
-                    break;
-            }
-
-            // check for conflict
-            if (conflicting)
-            {
-                if (left.HitCount > 0 || right.HitCount > 0)
-                    return false;
-                if (left.Type == RequirementType.PauseIf)
-                    return false;
-                if (left.Type == RequirementType.ResetIf)
-                    return false;
-
-                // conditions conflict with each other, trigger is impossible
-                merged = null;
-                return true;
-            }
-
-            // when processing never() [ResetIf], invert the conditional operation as we expect the
-            // conditions to be false when the achievement triggers
-            if (left.Type == RequirementType.ResetIf)
-            {
-                switch (condition)
-                {
-                    case ConditionalOperation.And:
-                        // "never(A) && never(B)" => "never(A || B)"
-                        condition = ConditionalOperation.Or;
-                        break;
-                    case ConditionalOperation.Or:
-                        // "never(A) || never(B)" => "never(A && B)"
-                        condition = ConditionalOperation.And;
-                        break;
                 }
             }
-
-            if (condition == ConditionalOperation.Or)
-            {
-                // "A || B" => keep the less restrictive condition (intersection)
-                if (useRight)
-                {
-                    merged.Operator = right.Operator;
-                    merged.Right = right.Right;
-                    return true;
-                }
-
-                if (useLeft)
-                    return true;
-
-                if (newOperator != RequirementOperator.None)
-                {
-                    merged.Operator = newOperator;
-                    return true;
-                }
-            }
-            else
-            {
-                // "A && B" => keep the more restrictive condition (union)
-                if (useRight)
-                    return true;
-
-                if (useLeft)
-                {
-                    merged.Operator = right.Operator;
-                    merged.Right = right.Right;
-                    return true;
-                }
-
-                if (newOperator != RequirementOperator.None)
-                {
-                    merged.Operator = newOperator;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool MergeRequirements(RequirementEx first, RequirementEx second, ConditionalOperation condition, out RequirementEx merged)
-        {
-            if (first.Requirements.Count != second.Requirements.Count)
-            {
-                merged = null;
-                return false;
-            }
-
-            merged = new RequirementEx();
-            for (int i = 0; i < first.Requirements.Count; i++)
-            {
-                var left = first.Requirements[i];
-                var right = second.Requirements[i];
-
-                Requirement mergedRequirement;
-                if (!MergeRequirements(left, right, condition, out mergedRequirement))
-                {
-                    merged = null;
-                    return false;
-                }
-
-                if (mergedRequirement == null)
-                {
-                    // conflicting requirements, replace the entire requirement set with an always_false()
-                    merged.Requirements.Clear();
-                    merged.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-                    return true;
-                }
-
-                merged.Requirements.Add(mergedRequirement);
-            }
-
-            return true;
         }
 
         private static void MergeDuplicateAlts(List<List<RequirementEx>> groups)
         {
-            // determine which addresses each group depends on and how many groups depend on each address
-            var memoryReferences = new Dictionary<uint, uint>();
-            var groupAddresses = new List<HashSet<uint>>(groups.Count);
-            foreach (var group in groups)
-            {
-                var addresses = new HashSet<uint>();
-                foreach (var requirementEx in group)
-                {
-                    foreach (var requirement in requirementEx.Requirements)
-                    {
-                        if (requirement.Left.IsMemoryReference)
-                            addresses.Add(requirement.Left.Value);
-                        if (requirement.Right.IsMemoryReference)
-                            addresses.Add(requirement.Right.Value);
-                    }
-                }
-                foreach (var address in addresses)
-                {
-                    uint count;
-                    memoryReferences.TryGetValue(address, out count);
-                    memoryReferences[address] = ++count;
-                }
-                groupAddresses.Add(addresses);
-            }
-
-            // if two alt groups are exactly identical, or can otherwise be represented by merging their
-            // logic, eliminate the redundant group.
-            for (int i = groups.Count - 1; i > 1; i--)
-            {
-                // if any address that this group depends on is not used by at least one other group, it can't be merged
-                var groupAddressesI = groupAddresses[i];
-                if (groupAddressesI.Any(a => memoryReferences[a] == 1))
-                    continue;
-
-                var groupI = groups[i];
-                bool[] matches = new bool[groupI.Count];
-                RequirementEx[] merged = new RequirementEx[groupI.Count];
-
-                for (int j = i - 1; j >= 1; j--)
-                {
-                    var groupJ = groups[j];
-
-                    // only check groups that have the same number of requirements
-                    if (groupI.Count != groupJ.Count)
-                        continue;
-
-                    // make sure the other group is dependent on exactly the same set of addresses
-                    var groupAddressesJ = groupAddresses[j];
-                    if (groupAddressesJ.Count != groupAddressesI.Count)
-                        continue;
-                    if (!groupAddressesJ.All(a => groupAddressesI.Contains(a)))
-                        continue;
-
-                    // found another group with the same number of requirements and same address dependencies
-                    // try to merge them
-                    for (int k = 0; k < matches.Length; k++)
-                        matches[k] = false;
-
-                    bool matched = true;
-                    for (int k = 0; k < matches.Length; k++)
-                    {
-                        matched = false;
-                        var reqExK = groupI[k];
-                        for (int l = 0; l < matches.Length; l++)
-                        {
-                            if (matches[l])
-                                continue;
-
-                            if (MergeRequirements(reqExK, groupJ[l], ConditionalOperation.Or, out merged[k]))
-                            {
-                                matched = true;
-                                matches[l] = true;
-                                break;
-                            }
-                        }
-
-                        if (!matched)
-                            break;
-                    }
-
-                    if (matched)
-                    {
-                        // merge successful. replace groups[j] with the result of the merge and remove groups[i]
-                        groupJ.Clear();
-                        groupJ.AddRange(merged);
-                        groups.RemoveAt(i);
-                        break;
-                    }
-                }
-            }
-
-            // if at least two alt groups still exist, check for always_true and always_false placeholders
-            if (groups.Count > 2)
-            {
-                bool hasAlwaysTrue = false;
-
-                for (int j = groups.Count - 1; j >= 1; j--)
-                {
-                    if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1)
-                    {
-                        var result = groups[j][0].Requirements[0].Evaluate();
-                        if (result == false)
-                        {
-                            // an always_false alt group is used for two cases:
-                            // 1) building an alt group list (safe to remove)
-                            // 2) keeping a PauseIf out of core (safe to remove if at least two other alt groups still exist)
-                            if (groups.Count > 3)
-                                groups.RemoveAt(j);
-                        }
-                        else if (result == true)
-                        {
-                            // an always_true alt group supercedes all other alt groups.
-                            // if we see one, keep track of that and we'll process it later.
-                            hasAlwaysTrue = true;
-                        }
-                    }
-                }
-
-                // if a trigger contains an always_true alt group, remove any other alt groups that don't have PauseIf or ResetIf conditions as they are unimportant
-                if (hasAlwaysTrue)
-                {
-                    for (int j = groups.Count - 1; j >= 1; j--)
-                    {
-                        if (groups[j].Count == 1 && groups[j][0].Requirements.Count == 1 && groups[j][0].Requirements[0].Evaluate() == true)
-                            continue;
-
-                        bool hasPauseIf = false;
-                        bool hasResetIf = false;
-                        foreach (var requirementEx in groups[j])
-                        {
-                            switch (requirementEx.Requirements.Last().Type)
-                            {
-                                case RequirementType.PauseIf:
-                                    hasPauseIf = true;
-                                    break;
-                                case RequirementType.ResetIf:
-                                    hasResetIf = true;
-                                    break;
-                            }
-                        }
-
-                        if (!hasPauseIf && !hasResetIf)
-                            groups.RemoveAt(j);
-                    }
-
-                    // if only the always_true group is left, get rid of it
-                    if (groups.Count == 2)
-                    {
-                        groups.RemoveAt(1);
-
-                        // if the core group is empty, add an explicit always_true
-                        if (groups[0].Count == 0)
-                        {
-                            var requirementEx = new RequirementEx();
-                            requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
-                            groups[0].Add(requirementEx);
-                        }
-                    }
-                }
-            }
-
-            // if only one alt group is left, merge it into the core group
-            if (groups.Count == 2)
-            {
-                groups[0].AddRange(groups[1]);
-                groups.RemoveAt(1);
-            }
+            RequirementMerger.MergeRequirementGroups(groups);
         }
 
         private static void PromoteCommonAltsToCore(List<List<RequirementEx>> groups)
         {
             if (groups.Count < 2) // no alts
                 return;
-
-            if (groups.Count == 2) // only one alt group, merge to core
-            {
-                groups[0].AddRange(groups[1]);
-                groups.RemoveAt(1);
-                return;
-            }
 
             // identify requirements present in all alt groups.
             var requirementsFoundInAll = new List<RequirementEx>();
@@ -1722,35 +1238,98 @@ namespace RATools.Parser
                     requirementsFoundInAll.Add(requirementI);
             }
 
-            // PauseIf only affects the alt group that it's in, so it can only be promoted if the entire alt group is promoted
-            if (requirementsFoundInAll.Any(r=> r.Requirements.Last().Type == RequirementType.PauseIf))
+            if (requirementsFoundInAll.Any())
+                PromoteCommonAltsToCore(groups, requirementsFoundInAll);
+
+            // if only two groups remain, merge the alt group into the core (unless ResetIf/PauseIf conflict)
+            if (groups.Count == 2)
+            {
+                if (groups[1].Any(r => r.Type == RequirementType.PauseIf))
+                {
+                    // PauseIf cannot be promoted if a ResetIf or HitTarget exists in core as the PauseIf may trump the ResetIf/HitTarget
+                    if (groups[0].Any(r => r.IsAffectedByPauseIf))
+                        return;
+                }
+
+                // ResetIf/HitTarget cannot be promoted if a PauseIf exists in core as the PauseIf may trump the ResetIf/HitTarget
+                if (groups[0].Any(r => r.Type == RequirementType.PauseIf))
+                {
+                    if (groups[1].Any(r => r.IsAffectedByPauseIf))
+                        return;
+                }
+
+                groups[0].AddRange(groups[1]);
+                groups.RemoveAt(1);
+            }
+        }
+
+        private static void PromoteCommonAltsToCore(List<List<RequirementEx>> groups, List<RequirementEx> requirementsFoundInAll)
+        {
+            if (groups[0].Any(r => r.IsAffectedByPauseIf))
+            {
+                // PauseIf cannot be promoted if a ResetIf exists in core as the PauseIf may trump the ResetIf
+                // PauseIf cannot be promoted if a HitTarget exists in core as the PauseIf may trump the HitTarget
+                requirementsFoundInAll.RemoveAll(r => r.Type == RequirementType.PauseIf);
+            }
+            else
+            {
+                // PauseIf only affects the alt group that it's in, so it can only be promoted if the entire alt group is promoted
+                if (requirementsFoundInAll.Any(r => r.Type == RequirementType.PauseIf))
+                {
+                    bool canPromote = true;
+                    for (int i = 1; i < groups.Count; i++)
+                    {
+                        if (groups[i].Count != requirementsFoundInAll.Count)
+                        {
+                            canPromote = false;
+                            break;
+                        }
+                    }
+
+                    if (!canPromote)
+                        requirementsFoundInAll.RemoveAll(r => r.Type == RequirementType.PauseIf);
+                }
+            }
+
+            // ResetIf and HitTargets cannot be promoted if a PauseIf exists in core as the PauseIf may trump the ResetIf/HitTarget
+            if (groups[0].Any(r => r.Type == RequirementType.PauseIf))
+                requirementsFoundInAll.RemoveAll(r => r.IsAffectedByPauseIf);
+
+            // ResetIf and HitTargets cannot be promoted if they were being guarded by a PauseIf that wasn't promoted
+            if (requirementsFoundInAll.Any(r => r.IsAffectedByPauseIf))
             {
                 bool canPromote = true;
+
                 for (int i = 1; i < groups.Count; i++)
                 {
-                    if (groups[i].Count != requirementsFoundInAll.Count)
+                    foreach (var requirementEx in groups[i])
                     {
-                        canPromote = false;
-                        break;
+                        if (requirementEx.Type == RequirementType.PauseIf &&
+                            !requirementsFoundInAll.Contains(requirementEx))
+                        {
+                            canPromote = false;
+                            break;
+                        }
                     }
+
+                    if (!canPromote)
+                        break;
                 }
 
                 if (!canPromote)
-                    requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().Type == RequirementType.PauseIf);
+                    requirementsFoundInAll.RemoveAll(r => r.IsAffectedByPauseIf);
             }
 
             // Measured and MeasuredIf cannot be separated. If any Measured or MeasuredIf items
             // remain in one of the alt groups (or exist in the core), don't promote any of the others.
-            if (requirementsFoundInAll.Any(r => r.Requirements.Last().IsMeasured ||
-                                                r.Requirements.Last().Type == RequirementType.MeasuredIf))
+            if (requirementsFoundInAll.Any(r => r.IsMeasured || r.Type == RequirementType.MeasuredIf))
             {
-                foreach (var group in groups)
+                for (int i = 1; i < groups.Count; i++)
                 {
                     bool allPromoted = true;
-                    foreach (var requirementEx in group)
+                    foreach (var requirementEx in groups[i])
                     {
-                        var lastRequirement = requirementEx.Requirements.Last();
-                        if (lastRequirement.IsMeasured || lastRequirement.Type == RequirementType.MeasuredIf)
+                        if (requirementEx.IsMeasured || requirementEx.Type == RequirementType.MeasuredIf)
                         {
                             if (!requirementsFoundInAll.Contains(requirementEx))
                             {
@@ -1762,83 +1341,26 @@ namespace RATools.Parser
 
                     if (!allPromoted)
                     {
-                        requirementsFoundInAll.RemoveAll(r => r.Requirements.Last().IsMeasured || r.Requirements.Last().Type == RequirementType.MeasuredIf);
+                        requirementsFoundInAll.RemoveAll(r => r.IsMeasured || r.Type == RequirementType.MeasuredIf);
                         break;
                     }
                 }
             }
 
-            foreach (var requirement in requirementsFoundInAll)
+            // remove the redundant requirements from each alt group
+            if (requirementsFoundInAll.Any())
             {
-                // ResetIf or HitCount in an alt group may be disabled by a PauseIf, don't promote if
-                // any PauseIfs are not promoted
-                if (requirement.Requirements.Last().Type == RequirementType.ResetIf || 
-                    requirement.Requirements.Last().HitCount > 0)
-                {
-                    bool canPromote = true;
-
-                    for (int i = 1; i < groups.Count; i++)
-                    {
-                        foreach (var requirementJ in groups[i])
-                        {
-                            if (requirementJ.Requirements.Last().Type == RequirementType.PauseIf && !requirementsFoundInAll.Contains(requirementJ))
-                            {
-                                canPromote = false;
-                                break;
-                            }
-                        }
-
-                        if (!canPromote)
-                            break;
-                    }
-
-                    if (!canPromote)
-                        continue;
-                }
-
-                // remove the requirement from each alt group
                 for (int i = 1; i < groups.Count; i++)
                 {
-                    for (int j = groups[i].Count - 1; j >= 0; j--)
-                    {
-                        if (groups[i][j] == requirement)
-                        {
-                            groups[i].RemoveAt(j);
-                            break;
-                        }
-                    }
-                }
+                    groups[i].RemoveAll(r => requirementsFoundInAll.Any(r2 => r2 == r));
 
-                // put one copy of the repeated requirement it in the core group
-                groups[0].Add(requirement);
-            }
-
-            // if any group has been completely moved to the core group, it's a subset of
-            // all other groups, and any trivial logic can be removed from the other groups
-            bool removeTrivialLogic = false;
-            for (int i = 1; i < groups.Count; ++i)
-            {
-                if (groups[i].Count == 0)
-                {
-                    removeTrivialLogic = true;
-                    break;
-                }
-            }
-
-            if (removeTrivialLogic)
-            {
-                for (int i = groups.Count - 1; i > 0; --i)
-                {
-                    for (int j = groups[i].Count - 1; j >= 0; --j)
-                    {
-                        var finalCondition = groups[i][j].Requirements.Last();
-                        if (finalCondition.Type == RequirementType.None && finalCondition.HitCount == 0)
-                            groups[i].RemoveAt(j);
-                    }
-
+                    // if the alt group has been fully moved into core, it can be discarded
                     if (groups[i].Count == 0)
                         groups.RemoveAt(i);
                 }
+
+                // put one copy of the repeated requirements in the core group
+                groups[0].AddRange(requirementsFoundInAll);
             }
         }
 
@@ -1846,8 +1368,8 @@ namespace RATools.Parser
         {
             bool alwaysFalse = false;
 
-            Predicate<List<RequirementEx>> isAlwaysFalse = group =>
-               (group.Count == 1 && group[0].Requirements.Count == 1 && group[0].Requirements[0].Evaluate() == false);
+            Predicate<List<RequirementEx>> isAlwaysFalse = 
+                group => group.Count == 1 && group[0].Evaluate() == false;
 
             if (isAlwaysFalse(groups[0]))
             {
@@ -1883,18 +1405,36 @@ namespace RATools.Parser
             {
                 foreach (var requirementEx in groups[0])
                 {
-                    if (requirementEx.Requirements.Any(r => r.Type == RequirementType.OrNext))
-                    {
-                        // MeasuredIf only applies to the current group, don't split it up
-                        if (requirementEx.Requirements.Last().Type == RequirementType.MeasuredIf)
-                            continue;
+                    // MeasuredIf only applies to the current group, don't split it up
+                    if (requirementEx.Type == RequirementType.MeasuredIf)
+                        continue;
 
+                    int orNextIndex = requirementEx.Requirements.FindIndex(r => r.Type == RequirementType.OrNext);
+                    if (orNextIndex != -1)
+                    {
+                        // multiple OrNext groups, can't denormalize
                         if (orNextGroup != null)
                             return;
 
                         // if there's a hit target, we can't split it up
-                        if (requirementEx.Requirements.Last().HitCount == 0)
-                            orNextGroup = requirementEx;
+                        if (requirementEx.Requirements.Last().HitCount != 0)
+                            continue;
+
+                        // if there's an AndNext after the OrNext, we can't split it up.
+                        // ((A || B) && C)
+                        int andNextIndex = -1;
+                        for (int i = orNextIndex + 1; i < requirementEx.Requirements.Count; ++i)
+                        {
+                            if (requirementEx.Requirements[i].Type == RequirementType.AndNext)
+                            {
+                                andNextIndex = i;
+                                break;
+                            }
+                        }
+                        if (andNextIndex != -1)
+                            continue;
+
+                        orNextGroup = requirementEx;
                     }
                 }
             }
@@ -1915,7 +1455,7 @@ namespace RATools.Parser
 
                     if (requirement.Type == RequirementType.OrNext)
                     {
-                        requirement.Type = orNextGroup.Requirements.Last().Type;
+                        requirement.Type = orNextGroup.Type;
 
                         alt = new RequirementEx();
                         altGroup = new List<RequirementEx>();
@@ -1952,7 +1492,7 @@ namespace RATools.Parser
                                 // always_true has special meaning and shouldn't be eliminated if present in the core group
                                 remove = false;
                             }
-                            else if (group[j].Requirements.Last().Type == RequirementType.PauseIf)
+                            else if (group[j].Type == RequirementType.PauseIf)
                             {
                                 // if the PauseIf wasn't eliminated by NormalizeNonHitCountResetAndPauseIfs, it's protecting something. Keep it.
                                 remove = false;
@@ -2011,20 +1551,24 @@ namespace RATools.Parser
                 }
 
                 // merge overlapping comparisons (a > 3 && a > 4 => a > 4)
-                if (requirement.Right.Type == FieldType.Value)
+                for (int j = 0; j < i; j++)
                 {
-                    for (int j = 0; j < i; j++)
-                    {
-                        if (group[j].Requirements.Count > 1)
-                            continue;
+                    if (group[j].Requirements.Count > 1)
+                        continue;
 
-                        RequirementEx merged;
-                        if (MergeRequirements(group[i], group[j], ConditionalOperation.And, out merged))
+                    RequirementEx merged = RequirementMerger.MergeRequirements(group[i], group[j], ConditionalOperation.And);
+                    if (merged != null)
+                    {
+                        if (group[i] == merged)
+                        {
+                            group.RemoveAt(j);
+                        }
+                        else
                         {
                             group[j] = merged;
                             group.RemoveAt(i);
-                            break;
                         }
+                        break;
                     }
                 }
             }
@@ -2583,15 +2127,27 @@ namespace RATools.Parser
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(RequirementEx.Combine(_alts[i]));
 
+            // combine multiple constants in an AddSource chain
             foreach (var group in groups)
                 MergeAddSourceConstants(group);
 
-            // attempt to extract ResetNextIf into alt group
+            // convert PauseIfs not guarding anything to standard requirements
+            NormalizePauseIfs(groups);
+
+            // attempt to convert ResetNextIf into ResetIf and place in alt group
             NormalizeResetNextIfs(groups);
 
-            // convert ResetIfs and PauseIfs without HitCounts to standard requirements
+            // convert ResetIfs to standard requirements if there aren't any hits to reset
             bool hasHitCount = HasHitCount(groups);
-            NormalizeNonHitCountResetAndPauseIfs(groups, hasHitCount);
+            if (!hasHitCount)
+            {
+                if (NormalizeResetIfs(groups))
+                {
+                    // if at least one ResetIf was converted, check for unnecessary PauseIfs again
+                    // in case one of them was guarding the affected ResetIf
+                    NormalizePauseIfs(groups);
+                }
+            }
 
             // clamp memory reference comparisons to bounds; identify comparisons that can never
             // be true, or are always true; ensures constants are on the right
@@ -2623,8 +2179,8 @@ namespace RATools.Parser
 
             // if the core group contains an always_true statement in addition to any other promoted statements, 
             // remove the always_true statement
-            if (groups[0].Count > 1 && groups[0][0].Requirements.Count == 1 && groups[0][0].Requirements[0].Evaluate() == true)
-                groups[0].RemoveAt(0);
+            if (groups[0].Count > 1)
+                groups[0].RemoveAll(g => g.Evaluate() == true);
 
             // if core is always_false, or all alts are always_false, the entire trigger is always_false.
             // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.

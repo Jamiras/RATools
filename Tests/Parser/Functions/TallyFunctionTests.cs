@@ -83,6 +83,50 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestMultipleLimited()
+        {
+            var requirements = Evaluate("tally(4, once(byte(0x1234) == 56), once(byte(0x1234) == 67))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestMultipleOr()
+        {
+            var requirements = Evaluate("tally(4, once(byte(0x1234) == 56) || once(byte(0x1234) == 67))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.OrNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.OrNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
         public void TestNonConditionConstant()
         {
             Evaluate("tally(4, 6+2)", "comparison did not evaluate to a valid comparison");
@@ -410,7 +454,6 @@ namespace RATools.Test.Parser.Functions
         {
             var errorMessage = "Modifier not allowed in subclause";
             Evaluate("tally(4, never(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
-            Evaluate("tally(4, unless(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
             Evaluate("tally(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", errorMessage);
         }
 

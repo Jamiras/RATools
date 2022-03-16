@@ -54,6 +54,10 @@ namespace RATools.Parser.Functions
                 return false;
             achievement.Id = integerExpression.Value;
 
+            stringExpression = GetStringParameter(scope, "published", out result);
+            if (stringExpression != null && !string.IsNullOrEmpty(stringExpression.Value))
+                achievement.IsDumped = true;
+
             var trigger = GetParameter(scope, "trigger", out result);
             if (trigger == null)
                 return false;

@@ -330,7 +330,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        // ==== NormalizeLimits ====
+        // ==== NormalizeLimits ===
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
@@ -380,7 +380,7 @@ namespace RATools.Test.Parser
         [TestCase("bitcount(0x1234) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
         [TestCase("bitcount(0x1234) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         [TestCase("once(bit1(0x001234) == 255) && byte(0x002345) == 4", "always_false()")] // bit can never be 255, entire group is false
-        // ==== NormalizeBCD ====
+        // ==== NormalizeBCD ===
         [TestCase("bcd(byte(0x1234)) == 20", "byte(0x001234) == 32")]
         [TestCase("bcd(byte(0x1234)) == 100", "always_false()")] // BCD of a byte cannot exceed 99
         [TestCase("bcd(byte(0x1234)) < 100", "always_true()")] // BCD of a byte cannot exceed 99
@@ -393,7 +393,7 @@ namespace RATools.Test.Parser
         [TestCase("low4(0x1234) == bcd(low4(0x2345))", "low4(0x001234) == low4(0x002345)")] // BCD can be removed for memory accessors of 4 bits or less
         [TestCase("bcd(low4(0x1234)) == 6", "low4(0x001234) == 6")] // BCD can be removed for memory accessors of 4 bits or less
         [TestCase("bcd(low4(0x1234)) == 10", "always_false()")] // BCD of a nummber cannot exceed 9
-        // ==== NormalizeComparisons ====
+        // ==== NormalizeComparisons ===
         [TestCase("byte(0x001234) == prev(byte(0x001234))", "byte(0x001234) == prev(byte(0x001234))")] // non-deterministic
         [TestCase("byte(0x001234) == word(0x001234)", "byte(0x001234) == word(0x001234)")] // non-deterministic
         [TestCase("byte(0x001234) == byte(0x001234)", "always_true()")] // always true
@@ -427,13 +427,21 @@ namespace RATools.Test.Parser
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && unless(once(byte(0x2345) == 0x2345))", "byte(0x001234) == 1")] // condition becomes always_false(), and unless(always_false()) can be eliminated
-        // ==== NormalizeResetNextIfs ===
+        public void TestOptimizeNormalizeComparisons(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
                   "never(byte(0x002345) == 2) && repeated(2, byte(0x001234) == 1)")] // ResetNextIf can be turned into a ResetIf
-        [TestCase("unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
-                  "unless(repeated(2, byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+        [TestCase("never(byte(0x2222) == 2) && unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
+                  "never(byte(0x002222) == 2) && unless(repeated(2, byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
         [TestCase("byte(0x2222) == 2 || unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
-                  "byte(0x002222) == 2 || unless(repeated(2, byte(0x001234) == 1)) || (never(byte(0x002345) == 2) && always_false())")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an always false alt group
+                  "byte(0x002222) == 2 || unless(repeated(2, byte(0x001234) == 1)) || (never(byte(0x002345) == 2) && always_false())")] // PauseLock cannot be eliminated, ResetNextIf turned into a ResetIf and moved to a separate alt
+        [TestCase("byte(0x2222) == 2 || never(byte(0x3333) == 1) && unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
+                  "byte(0x002222) == 2 || (never(byte(0x003333) == 1) && unless(repeated(2, byte(0x001234) == 1))) || (never(byte(0x002345) == 2) && always_false())")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an always false alt group
         [TestCase("once(byte(0x2222) == 2) && repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
                   "once(byte(0x002222) == 2) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))")] // ResetNextIf cannot be turned into a ResetIf
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 2))",
@@ -441,10 +449,11 @@ namespace RATools.Test.Parser
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 3))",
                   "repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2)) && repeated(3, byte(0x001234) == 3 && never(byte(0x002345) == 3))")] // dissimilar ResetNextIfs cannot be turned into a ResetIf
         [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2)",
-                  "unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+                  "unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // Pause lock that's not guarding anything should not be inverted
+        [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2) && never(byte(0x3456) == 3)",
+                  "unless(once(byte(0x001234) == 1)) && never(byte(0x003456) == 3) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
         [TestCase("disable_when(tally(2, byte(0x1234) == 1, byte(0x1234) == 2), until=byte(0x2345) == 2)",
                   "unless(tally(2, byte(0x001234) == 1, byte(0x001234) == 2)) && (never(byte(0x002345) == 2))")] // tally will generate similar ResetNextIfs which can be turned into a ResetIf, but has to be moved into an alt group
-        // ==== NormalizeNonHitCountResetAndPauseIfs ====
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
         [TestCase("never(byte(0x001234) >= 5)", "byte(0x001234) < 5")]
@@ -460,6 +469,7 @@ namespace RATools.Test.Parser
         [TestCase("unless(byte(0x001234) < 5)", "byte(0x001234) >= 5")]
         [TestCase("unless(byte(0x001234) != 1 && byte(0x002345) == 2)", "byte(0x001234) == 1 || byte(0x002345) != 2")] // AndNext becomes OrNext, both operators inverted
         [TestCase("unless(byte(0x001234) == 5) && byte(0x002345) == 1", "byte(0x001234) != 5 && byte(0x002345) == 1")] // unless without HitCount should be inverted to a requirement
+        [TestCase("unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))", "unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))")] // PauseLock is affected by Pause, so other Pause won't be inverted
         [TestCase("byte(0x001234) == 5 && never(byte(0x001234) != 5)", "byte(0x001234) == 5")] // common pattern in older achievements to fix HitCount at 0, the ResetIf is functionally redundant
         [TestCase("(byte(0x002345) == 5 && never(byte(0x001234) == 6)) || (byte(0x002345) == 6 && never(byte(0x001235) == 3))", 
                   "(byte(0x002345) == 5 && byte(0x001234) != 6) || (byte(0x002345) == 6 && byte(0x001235) != 3)")] // same logic applies to alt groups
@@ -467,7 +477,13 @@ namespace RATools.Test.Parser
         [TestCase("never(byte(0x001234) != 5) && (byte(0x002345) == 6 || once(byte(0x002345) == 7))", "never(byte(0x001234) != 5) && (byte(0x002345) == 6 || once(byte(0x002345) == 7))")] // if there's a HitCount anywhere, leave the ResetIf alone
         [TestCase("(measured(byte(0x1234) < 100) && unless(byte(0x1235) == 1)) || (measured(byte(0x1236) < 100) && unless(byte(0x1235) == 2))",
                   "(measured(byte(0x001234) < 100) && unless(byte(0x001235) == 1)) || (measured(byte(0x001236) < 100) && unless(byte(0x001235) == 2))")] // measured should prevent unless from being inverted
-        // ==== PromoteCommonAltsToCore ====
+        public void TestOptimizeNormalizeResetIfsAndPauseIfs(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("byte(0x001234) == 1 && ((byte(0x004567) == 1 && byte(0x004568) == 0) || (byte(0x004568) == 0 && byte(0x004569) == 1))", 
                   "byte(0x001234) == 1 && byte(0x004568) == 0 && (byte(0x004567) == 1 || byte(0x004569) == 1)")] // memory check in both alts is promoted to core
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && never(byte(0x004568) == 0)) || (never(byte(0x004568) == 0) && once(byte(0x004569) == 1)))",
@@ -475,9 +491,9 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))",
                   "byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004569) == 1)))")] // PauseIf is not promoted if any part of group differs from other alts
         [TestCase("byte(0x001234) == 1 && ((once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)) || (unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)))",
-                  "byte(0x001234) == 1 && unless(byte(0x004568) == 0) && once(byte(0x004567) == 1)")] // PauseIf is only promoted if entire group is duplicated in all alts
+                  "byte(0x001234) == 1 && once(byte(0x004567) == 1) && unless(byte(0x004568) == 0)")] // PauseIf is only promoted if entire group is duplicated in all alts
         [TestCase("byte(0x001234) == 1 && ((byte(0x004567) == 1 && byte(0x004568) == 0) || (byte(0x004568) == 0))",
-                  "byte(0x001234) == 1 && byte(0x004568) == 0")] // entire alt is subset of second alt, eliminate second alt. remaining alt promoted to core
+                  "byte(0x001234) == 1 && byte(0x004568) == 0")] // entire second alt is subset of first alt, eliminate first alt. remaining alt promoted to core
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) + byte(0x002346) == 2)) || (never(byte(0x002345) + byte(0x002347) == 2)))",
                   "once(byte(0x001234) == 1) && ((never((byte(0x002345) + byte(0x002346)) == 2)) || (never((byte(0x002345) + byte(0x002347)) == 2)))")] // partial AddSource cannot be promoted
         [TestCase("once(byte(0x001234) == 1) && ((never(byte(0x002345) == 1) && unless(byte(0x003456) == 3)) || (never(byte(0x002345) == 1) && unless(byte(0x003456) == 1)))",
@@ -490,7 +506,23 @@ namespace RATools.Test.Parser
                   "(measured(repeated(6, byte(0x001234) == 10), when=byte(0x002345) == 7)) || (measured(repeated(6, byte(0x002345) == 4), when=byte(0x002345) == 7))")] // measured_if must stay with measured
         [TestCase("measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345) == 7) || measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345) == 7)",
                   "measured(repeated(6, byte(0x001234) == 10), when=byte(0x002345) == 7)")] // measured_if must stay with measured
-        // ==== RemoveDuplicates ====
+        [TestCase("once(byte(0x001234) == 1) && (always_false() || never(byte(0x002345) == 1))", // always_false group is discarded, never is promoted
+                  "once(byte(0x001234) == 1) && never(byte(0x002345) == 1)")]
+        [TestCase("once(byte(0x001234) == 1) && (never(byte(0x002345) == 1) || never(byte(0x002345) == 1))", // duplicate alt is merge, never can be promoted to core
+                  "once(byte(0x001234) == 1) && never(byte(0x002345) == 1)")]
+        [TestCase("byte(0x001234) == 1 && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless can be promoted because core won't be affected
+                  "byte(0x001234) == 1 && once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)")]
+        [TestCase("once(byte(0x001234) == 1) && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless is not promoted because of hit target
+                  "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)))")]
+        [TestCase("once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (always_false() || never(byte(0x002345) == 1))", // never should not be promoted to core containing unless
+                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 1))")]
+        public void TestOptimizePromoteCommonAltsToCore(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("byte(0x001234) == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")]
         [TestCase("byte(0x001234) < 8 && 8 >= byte(0x001234)", "byte(0x001234) < 8")] // prefer value on the right
         [TestCase("prev(byte(0x001234)) == 1 && prev(byte(0x001234)) == 1", "prev(byte(0x001234)) == 1")]
@@ -504,25 +536,15 @@ namespace RATools.Test.Parser
                   "byte(0x001234) == 2 && (byte(0x004567) == 3 || byte(0x004567) == 4)")] // alts in core are redundant
         [TestCase("unless(byte(0x001234) == 1) && never(byte(0x002345) == 1) && ((unless(byte(0x001234) == 1) && once(byte(0x002345) == 2)) || (unless(byte(0x001234) == 1) && never(byte(0x002345) == 3)))", // PauseIf guarding once or never should not be promoted even if duplicated
                   "unless(byte(0x001234) == 1) && never(byte(0x002345) == 1) && ((unless(byte(0x001234) == 1) && once(byte(0x002345) == 2)) || (unless(byte(0x001234) == 1) && never(byte(0x002345) == 3)))")]
-        // ==== RemoveRedundancies ====
+        public void TestOptimizeRemoveDuplicates(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+        
         [TestCase("byte(0x001234) > 1 && byte(0x001234) > 2", "byte(0x001234) > 2")] // >1 && >2 is only >2
-        [TestCase("byte(0x001234) > 1 && byte(0x001235) > 2", "byte(0x001234) > 1 && byte(0x001235) > 2")] // different addresses
-        [TestCase("byte(0x001234) > 1 && byte(0x001234) >= 2", "byte(0x001234) >= 2")] // >1 && >=2 is only >=2
-        [TestCase("byte(0x001234) >= 1 && byte(0x001234) > 2", "byte(0x001234) > 2")] // >=1 && >2 is only >2
-        [TestCase("byte(0x001234) < 3 && byte(0x001234) < 2", "byte(0x001234) < 2")] // <3 && <2 is only >2
-        [TestCase("byte(0x001234) < 3 && byte(0x001235) < 2", "byte(0x001234) < 3 && byte(0x001235) < 2")] // different addresses
-        [TestCase("byte(0x001234) < 3 && byte(0x001234) <= 2", "byte(0x001234) <= 2")] // <3 && <=2 is only <=2
-        [TestCase("byte(0x001234) <= 3 && byte(0x001234) < 2", "byte(0x001234) < 2")] // <=3 && <2 is only <2
-        [TestCase("byte(0x001234) != 3 && byte(0x001234) == 2", "byte(0x001234) == 2")] // =2 is implicitly !=3
-        [TestCase("byte(0x001234) == 3 && byte(0x001234) != 2", "byte(0x001234) == 3")] // =3 is implicitly !=2
-        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 3", "byte(0x001234) == 3")] // redundant
         [TestCase("byte(0x001234) > 3 && byte(0x001234) < 2", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) > 2 && byte(0x001234) < 2", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 2", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) < 2 && byte(0x001234) > 3", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) >= 3 && byte(0x001234) <= 2", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 3", "always_false()")] // cannot both be true
-        [TestCase("byte(0x001234) == 3 && byte(0x001234) == 2", "always_false()")] // cannot both be true
         [TestCase("byte(0x001234) - prev(byte(0x001234)) == 1 && byte(0x001234) == 2", "(byte(0x001234) - prev(byte(0x001234))) == 1 && byte(0x001234) == 2")] // conflict with part of a SubSource clause should not be treated as wholly conflicting
         [TestCase("byte(0x001234) <= 2 && byte(0x001234) >= 2", "byte(0x001234) == 2")] // only overlap is the one value
         [TestCase("byte(0x001234) >= 2 && byte(0x001234) <= 2", "byte(0x001234) == 2")] // only overlap is the one value
@@ -538,7 +560,13 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234) == 6 && repeated(5, byte(0x1234) == 6)", "byte(0x001234) == 6 && repeated(5, byte(0x001234) == 6)")] // without hitcount, cannot be merged
         [TestCase("once(byte(0x1234) == byte(0x1234)) && repeated(5, byte(0x2345) == byte(0x2345))", "repeated(5, always_true())")] // different conditions evaluate to always true, only capture higher hitcount
         [TestCase("once(byte(0x1234) == 1) && never(byte(0x2345) != 12) && never(byte(0x2345) == 0)", "once(byte(0x001234) == 1) && never(byte(0x002345) != 12)")] // never should keep the less restrictive condition
-        // ==== MergeDuplicateAlts ====
+        public void TestOptimizeRemoveRedundancies(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("byte(0x001234) > 1 || byte(0x001234) > 2", "byte(0x001234) > 1")] // >1 || >2 is only >1
         [TestCase("byte(0x001234) > 1 || byte(0x001235) > 2", "byte(0x001234) > 1 || byte(0x001235) > 2")] // different addresses
         [TestCase("byte(0x001234) > 1 || byte(0x001234) >= 2", "byte(0x001234) > 1")] // >1 || >=2 is only >1
@@ -555,18 +583,24 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x001234) > 2 || byte(0x001234) < 2", "byte(0x001234) != 2")] // <2 or >2 is just != 2
         [TestCase("byte(0x001234) < 2 || byte(0x001234) > 2", "byte(0x001234) != 2")] // either can be true separately
         [TestCase("byte(0x001234) < 2 || byte(0x001234) > 3", "byte(0x001234) < 2 || byte(0x001234) > 3")] // either can be true separately
-        [TestCase("byte(0x001234) >= 3 || byte(0x001234) <= 2", "byte(0x001234) >= 3 || byte(0x001234) <= 2")] // always true, can't really collapse
-        [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 3", "byte(0x001234) <= 2 || byte(0x001234) >= 3")] // always true, can't really collapse
-        [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 2", "byte(0x001234) <= 2 || byte(0x001234) >= 2")] // always true, can't really collapse
-        [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "byte(0x001234) >= 2 || byte(0x001234) <= 2")] // always true, can't really collapse
+        [TestCase("byte(0x001234) >= 3 || byte(0x001234) <= 2", "byte(0x001234) >= 3 || byte(0x001234) <= 2")] // always true, can't collapse without overlap
+        [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 3", "byte(0x001234) <= 2 || byte(0x001234) >= 3")] // always true, can't collapse without overlap
+        [TestCase("byte(0x001234) <= 2 || byte(0x001234) >= 2", "always_true()")]
+        [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "always_true()")]
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
         [TestCase("always_false() || byte(0x001234) == 2", "byte(0x001234) == 2")] // always_false group can be removed
         [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
-            "always_true() || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true group causes group without pauseif or resetif to be removed
+            "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without pauseif or resetif to be removed
         [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0), once(byte(0x1111) == 2 && byte(0x2222) == 0))",
             "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0), always_false())")]
-        // ==== MergeBits ====
+        public void TestOptimizeMergeDuplicateAlts(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
         [TestCase("low4(0x001234) == 12 && high4(0x001234) == 8", "byte(0x001234) == 140")]
@@ -591,12 +625,39 @@ namespace RATools.Test.Parser
         [TestCase("prev(bit0(0x001234)) + prev(bit1(0x001234)) + prev(bit2(0x001234)) + prev(bit3(0x001234)) + " +
                   "prev(bit4(0x001234)) + prev(bit5(0x001234)) + prev(bit6(0x001234)) + prev(bit7(0x001234)) == 6",
                   "prev(bitcount(0x001234)) == 6")]
-        // ==== MergeAddSourceConstants ====
+        public void TestOptimizeMergeBits(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("word(word(0x001234) + 138) + 1 >= word(0x2345)",             // AddAddress compared to a non-AddAddress will generate an extra condition
                   "((word(word(0x001234) + 0x00008A)) + 1) >= word(0x002345)")] // to prevent the AddAddress from affecting the non-AddAddress. merge the +1 into that
         [TestCase("never(once(prev(byte(1)) - 1 == byte(1)) && repeated(10, always_true())",
                   "never(repeated(10, (once((prev(byte(0x000001)) - 1) == byte(0x000001))) && always_true()))")] // don't merge the -1 in the prev clause with the 1 in the always_true clause
-        // ==== Complex ====
+        public void TestOptimizeMergeAddSourceConstants(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
+        [TestCase("repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126)",
+                  "repeated(2, byte(0x001234) == 120 || byte(0x001234) == 126)")]
+        [TestCase("measured(repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126))",
+                  "measured(repeated(2, byte(0x001234) == 120 || byte(0x001234) == 126))")]
+        [TestCase("once(byte(0x2345) == 1) && never(!(byte(0x1234) <= 8 && byte(0x1234) >= 6))",
+                  "once(byte(0x002345) == 1) && never(byte(0x001234) > 8) && never(byte(0x001234) < 6)")]
+        [TestCase("never(!(byte(0x1234) <= 8 && byte(0x1234) >= 6) && byte(0x2345) >= 10)", 
+                  "never((byte(0x001234) > 8 || byte(0x001234) < 6) && byte(0x002345) >= 10)")]
+        public void TestOptimizeDenormalizeOrNexts(string input, string expected)
+        {
+            var achievement = CreateAchievement(input);
+            achievement.Optimize();
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
+        }
+
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
         [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
@@ -608,7 +669,7 @@ namespace RATools.Test.Parser
                   "repeated(2, once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3) || always_false())")] // always_false has to be added since every subclause has a hit target and should not be eliminated
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
                   "measured(byte(0x001234) == 120, when=(byte(0x002345) == 6 || byte(0x002346) == 7))")]
-        public void TestOptimize(string input, string expected)
+        public void TestOptimizeComplex(string input, string expected)
         {
             var achievement = CreateAchievement(input);
             achievement.Optimize();
@@ -750,16 +811,6 @@ namespace RATools.Test.Parser
         {
             var achievement = CreateAchievement("byte(word(0x1234)) == word(0x2345)");
             Assert.That(achievement.RequirementsDebugString, Is.EqualTo("((byte(word(0x001234) + 0x000000)) + 0) == word(0x002345)"));
-        }
-
-        [Test]
-        public void TestAlwaysFalseAltGroupIsUnnecessary()
-        {
-            // without the once, the never gets eliminated
-            // without the never, the pauseif get promoted to core
-            var achievement = CreateAchievement("once(byte(0x001234) == 1) && never(byte(0x001111) == 1) && (always_false() || unless(byte(0x002345) == 2))");
-            achievement.Optimize();
-            Assert.That(achievement.SerializeRequirements(), Is.EqualTo("0xH001234=1.1._R:0xH001111=1SP:0xH002345=2"));
         }
 
         [Test]
