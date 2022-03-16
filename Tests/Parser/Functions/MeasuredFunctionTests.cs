@@ -167,6 +167,74 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestComparisonWhenMultipleRepeated()
+        {
+            var requirements = Evaluate("measured(byte(0x1234) == 120, when = once(byte(0x2345) == 6 && byte(0x2346) == 7))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("6"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002346)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("7"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.MeasuredIf));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestComparisonWhenMultipleRepeatedSeparate()
+        {
+            // this _could_ be split into two separate MeasuredIf statements, but the logic to
+            // separate this from the TestComparisonWhenMultipleRepeatedNested case is complicated.
+            var requirements = Evaluate("measured(byte(0x1234) == 120, when = once(byte(0x2345) == 6) && once(byte(0x2346) == 7))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("6"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002346)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("7"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.MeasuredIf));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestComparisonWhenMultipleRepeatedNested()
+        {
+            var requirements = Evaluate("measured(byte(0x1234) == 120, when = repeated(3, once(byte(0x2345) == 6) && byte(0x2346) == 7))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("6"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002346)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("7"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.MeasuredIf));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(3));
+        }
+
+        [Test]
         public void TestComparisonWhenMultipleOr()
         {
             var requirements = Evaluate("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))");
