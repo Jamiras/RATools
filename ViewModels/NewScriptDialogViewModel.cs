@@ -375,7 +375,7 @@ namespace RATools.ViewModels
                 if (macro == null)
                     macro = displayRichPresence;
 
-                if (parameter[1] == ':')
+                if (!String.IsNullOrEmpty(parameter) && parameter[1] == ':')
                 {
                     var achievement = new AchievementBuilder();
                     achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
@@ -1174,7 +1174,13 @@ namespace RATools.ViewModels
                     stream.Write("    ");
 
                     var macro = _macros.FirstOrDefault(m => m.Name == kvp.Key);
-                    if (macro.LookupEntries != null)
+                    if (macro == null)
+                    {
+                        stream.Write("rich_presence_value(\"");
+                        stream.Write(kvp.Key);
+                        stream.Write("\", ");
+                    }
+                    else if (macro.LookupEntries != null)
                     {
                         stream.Write("rich_presence_lookup(\"");
                         stream.Write(macro.Name);
@@ -1188,7 +1194,11 @@ namespace RATools.ViewModels
                     }
 
                     var parameter = kvp.Value;
-                    if (parameter[1] == ':')
+                    if (String.IsNullOrEmpty(parameter))
+                    {
+                        stream.Write("0");
+                    }
+                    else if (parameter[1] == ':')
                     {
                         var achievement = new AchievementBuilder();
                         achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
@@ -1206,7 +1216,11 @@ namespace RATools.ViewModels
                         DumpLegacyExpression(stream, parameter, dumpRichPresence);
                     }
 
-                    if (macro.LookupEntries != null)
+                    if (macro == null)
+                    {
+                        stream.Write(')');
+                    }
+                    else if (macro.LookupEntries != null)
                     { 
                         stream.Write(", ");
                         stream.Write(macro.Name);
