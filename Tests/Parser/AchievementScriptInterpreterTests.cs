@@ -1156,5 +1156,30 @@ namespace RATools.Test.Parser
             var achievement = parser.Achievements.ElementAt(0);
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) != prev(byte(0x001234))"));
         }
+
+        [Test]
+        public void TestRuntimeConditional()
+        {
+            var parser = Parse(
+                "function f() {\n" +
+                "  if (byte(0x1234) == 2) return byte(0x1234) else return byte(0x4321)\n" +
+                "}\n" +
+                "achievement(\"a\", \"b\", 5, f() == 4)\n", false
+            );
+
+            bool seen = false;
+            for (var error = parser.Error; error != null; error = error.InnerError)
+            {
+                if (error.Message == "Comparison contains runtime logic.")
+                {
+                    Assert.That(error.Location.Start.Column, Is.EqualTo(7));
+                    Assert.That(error.Location.End.Column, Is.EqualTo(23));
+
+                    seen = true;
+                    break;
+                }
+            }
+            Assert.That(seen, Is.True);
+        }
     }
 }
