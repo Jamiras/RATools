@@ -150,9 +150,28 @@ namespace RATools.Data
                     break;
 
                 case RequirementType.PauseIf:
-                    builder.Append("unless(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(')');
+                    if (resetNextIf != null)
+                    {
+                        var comparison = new StringBuilder();
+                        AppendRepeatedCondition(comparison, numberFormat, addSources, subSources, addHits, andNext, addAddress, null);
+                        if (HitCount == 1)
+                        {
+                            comparison.Remove(0, 5); // "once("
+                            comparison.Length--;     // ")"
+                        }
+
+                        builder.Append("disable_when(");
+                        builder.Append(comparison.ToString());
+                        builder.Append(", until=");
+                        builder.Append(resetNextIf);
+                        builder.Append(')');
+                    }
+                    else
+                    {
+                        builder.Append("unless(");
+                        AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+                        builder.Append(')');
+                    }
                     break;
 
                 case RequirementType.Measured:
