@@ -195,9 +195,101 @@ namespace RATools.Data
             }
         }
 
+        private static void AppendTally(StringBuilder builder, IEnumerable<Requirement> requirements,
+            NumberFormat numberFormat, ref int width, int wrapWidth, int indent, string measuredIf)
+        {
+            // find the last subclause
+            var addHitsRequirements = new List<Requirement>();
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.AddHits)
+                    addHitsRequirements.Clear();
+                else
+                    addHitsRequirements.Add(requirement);
+            }
+
+            // the final clause will get generated as a "repeated" because we've ignored the AddHits subclauses
+            var repeated = new StringBuilder();
+            AppendString(repeated, addHitsRequirements, numberFormat, ref width, wrapWidth, indent, measuredIf);
+            var repeatedString = repeated.ToString();
+            var index = repeatedString.IndexOf("repeated(");
+
+            // replace the "repeated(" with "tally("
+            builder.Append(repeatedString, 0, index);
+            builder.Append("tally(");
+
+            index += 9;
+            while (Char.IsDigit(repeatedString[index]))
+                builder.Append(repeatedString[index++]);
+            builder.Append(", ");
+            index += 2;
+
+            // append the AddHits subclauses
+            addHitsRequirements.Clear();
+            indent += 4;
+
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.AddHits)
+                {
+                    // create a copy of the AddHits requirement without the Type
+                    addHitsRequirements.Add(new Requirement
+                    {
+                        Left = requirement.Left,
+                        Operator = requirement.Operator,
+                        Right = requirement.Right,
+                        HitCount = requirement.HitCount
+                    });
+
+                    if (wrapWidth != Int32.MaxValue)
+                    {
+                        builder.AppendLine();
+                        builder.Append(' ', indent);
+                    }
+
+                    int subclauseWidth = wrapWidth - indent - 4;
+                    AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                    builder.Append(", ");
+
+                    addHitsRequirements.Clear();
+                }
+                else
+                {
+                    addHitsRequirements.Add(requirement);
+                }
+            }
+
+            if (wrapWidth != Int32.MaxValue)
+            {
+                builder.AppendLine();
+                builder.Append(' ', indent);
+            }
+
+            // finish with the final subclause
+            var numParentheses = (requirements.Last().Type != RequirementType.None) ? 2 : 1;
+            builder.Append(repeatedString, index, repeatedString.Length - index - numParentheses);
+
+            if (wrapWidth != Int32.MaxValue)
+            {
+                indent -= 4;
+                builder.AppendLine();
+                builder.Append(' ', indent);
+            }
+
+            builder.Append(')', numParentheses);
+            width = wrapWidth - indent + numParentheses;
+        }
+
         private static void AppendString(StringBuilder builder, IEnumerable<Requirement> requirements, 
             NumberFormat numberFormat, ref int width, int wrapWidth, int indent, string measuredIf)
         {
+            // special handling for tally
+            if (requirements.Last().HitCount > 0 && requirements.Any(r => r.Type == RequirementType.AddHits))
+            {
+                AppendTally(builder, requirements, numberFormat, ref width, wrapWidth, indent, measuredIf);
+                return;
+            }
+
             var addSources = new StringBuilder();
             var subSources = new StringBuilder();
             var addHits = new StringBuilder();
