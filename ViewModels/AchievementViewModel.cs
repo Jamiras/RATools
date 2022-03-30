@@ -39,9 +39,9 @@ namespace RATools.ViewModels
             if (achievement != null)
             {
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
-                return new TriggerViewModel[] 
-                { 
-                    new TriggerViewModel("", achievement, numberFormat, _owner.Notes) 
+                return new TriggerViewModel[]
+                {
+                    new TriggerViewModel("", achievement, numberFormat, _owner != null ? _owner.Notes : new TinyDictionary<int, string>())
                 };
             }
 

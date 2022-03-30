@@ -89,6 +89,10 @@ namespace RATools.ViewModels
                     if (File.Exists(richPresenceFile))
                         LoadRichPresence(richPresenceFile);
 
+                    var userFile = Path.Combine(dataDirectory, gameId + "-User.txt");
+                    if (File.Exists(userFile))
+                        LoadUserFile(userFile);
+
                     return;
                 }
             }
@@ -126,9 +130,56 @@ namespace RATools.ViewModels
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
-        private void AddMemoryReferences(AssetViewModelBase asset, DumpAsset dumpAsset)
+        private void LoadUserFile(string userFile)
         {
-            foreach (var trigger in asset.Published.TriggerList)
+            var assets = new LocalAssets(userFile);
+
+            if (assets.Achievements.Any())
+            {
+                var achievementViewModel = new AchievementViewModel(null);
+                foreach (var achievement in assets.Achievements)
+                {
+                    var dumpAchievement = new DumpAsset(achievement.Id, achievement.Title)
+                    {
+                        Type = DumpAssetType.Achievement,
+                        ViewerImage = achievementViewModel.ViewerImage,
+                        ViewerType = "Local Achievement",
+                        IsUnofficial = true
+                    };
+
+                    achievementViewModel.Local.Asset = achievement;
+                    AddMemoryReferences(achievementViewModel.Local, dumpAchievement);
+
+                    dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
+                    _assets.Add(dumpAchievement);
+                }
+            }
+
+            if (assets.Leaderboards.Any())
+            {
+                var leaderboardViewModel = new LeaderboardViewModel(null);
+                foreach (var leaderboard in assets.Leaderboards)
+                {
+                    var dumpLeaderboard = new DumpAsset(leaderboard.Id, leaderboard.Title)
+                    {
+                        Type = DumpAssetType.Leaderboard,
+                        ViewerImage = leaderboardViewModel.ViewerImage,
+                        ViewerType = "Local Leaderboard",
+                        IsUnofficial = true
+                    };
+
+                    leaderboardViewModel.Local.Asset = leaderboard;
+                    AddMemoryReferences(leaderboardViewModel.Local, dumpLeaderboard);
+
+                    dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
+                    _assets.Add(dumpLeaderboard);
+                }
+            }
+        }
+
+        private void AddMemoryReferences(AssetSourceViewModel asset, DumpAsset dumpAsset)
+        {
+            foreach (var trigger in asset.TriggerList)
             {
                 foreach (var group in trigger.Groups)
                 {
@@ -182,7 +233,7 @@ namespace RATools.ViewModels
                     _assets.Add(dumpAchievement);
                 }
 
-                AddMemoryReferences(achievement, dumpAchievement);
+                AddMemoryReferences(achievement.Published, dumpAchievement);
 
                 dumpAchievement.IsSelected = true;
                 dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
@@ -209,7 +260,7 @@ namespace RATools.ViewModels
 
                 _assets.Add(dumpLeaderboard);
 
-                AddMemoryReferences(leaderboard, dumpLeaderboard);
+                AddMemoryReferences(leaderboard.Published, dumpLeaderboard);
 
                 dumpLeaderboard.IsSelected = true;
                 dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
@@ -992,7 +1043,8 @@ namespace RATools.ViewModels
 
                 stream.WriteLine("achievement(");
 
-                var achievementData = achievementViewModel.Published.Asset as Achievement;
+                var assetSource = (achievementViewModel.Published.Asset != null) ? achievementViewModel.Published : achievementViewModel.Local;
+                var achievementData = assetSource.Asset as Achievement;
 
                 stream.Write("    title = \"");
                 stream.Write(EscapeString(achievementData.Title));
@@ -1015,7 +1067,7 @@ namespace RATools.ViewModels
                 stream.Write("    trigger = ");
                 const int indent = 14; // "    trigger = ".length
 
-                DumpTrigger(stream, numberFormat, dumpAchievement, achievementViewModel.Published.TriggerList.First(), indent);
+                DumpTrigger(stream, numberFormat, dumpAchievement, assetSource.TriggerList.First(), indent);
                 stream.WriteLine();
 
                 stream.WriteLine(")");
@@ -1036,7 +1088,8 @@ namespace RATools.ViewModels
 
                 stream.WriteLine("leaderboard(");
 
-                var leaderboardData = leaderboardViewModel.Published.Asset as Leaderboard;
+                var assetSource = (leaderboardViewModel.Published.Asset != null) ? leaderboardViewModel.Published : leaderboardViewModel.Local;
+                var leaderboardData = assetSource.Asset as Leaderboard;
 
                 stream.Write("    id = ");
                 stream.Write(leaderboardData.Id);
@@ -1050,21 +1103,21 @@ namespace RATools.ViewModels
                 const int indent = 13; // "    start  = ".length
 
                 stream.Write("    start  = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.First(), indent);
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.First(), indent);
                 stream.WriteLine(",");
 
                 stream.Write("    cancel = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(1), indent);
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(1), indent);
                 stream.WriteLine(",");
 
                 stream.Write("    submit = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(2), indent);
+                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(2), indent);
                 stream.WriteLine(",");
 
                 stream.Write("    value = ");
-                var valueTrigger = leaderboardViewModel.Published.TriggerList.ElementAt(3);
+                var valueTrigger = assetSource.TriggerList.ElementAt(3);
                 if (valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
-                    DumpTrigger(stream, numberFormat, dumpLeaderboard, leaderboardViewModel.Published.TriggerList.ElementAt(3), indent);
+                    DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(3), indent);
                 else
                     DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard);
                 stream.WriteLine(",");
