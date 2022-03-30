@@ -578,7 +578,12 @@ namespace RATools.Parser
             bool? result = ifExpression.Condition.IsTrue(scope, out error);
             if (error != null)
             {
-                Error = error;
+                var innerError = error.InnermostError;
+                if (innerError != null && innerError.Message.EndsWith("has no meaning outside of a trigger clause"))
+                    Error = new ParseErrorExpression("Comparison contains runtime logic.", ifExpression.Condition) { InnerError = error };
+                else
+                    Error = error;
+
                 return false;
             }
 
