@@ -16,6 +16,34 @@ namespace RATools.Parser.Functions
             DefaultParameters["format"] = new StringConstantExpression("value");
         }
 
+        public static ValueFormat ParseFormat(string format)
+        {
+            var valueFormat = Leaderboard.ParseFormat(format);
+            if (valueFormat == ValueFormat.None)
+            {
+                if (format == "ASCIICHAR")
+                    valueFormat = ValueFormat.ASCIIChar;
+                else if (format == "UNICODECHAR")
+                    valueFormat = ValueFormat.UnicodeChar;
+            }
+            return valueFormat;
+        }
+
+        public static string GetFormatString(ValueFormat format)
+        {
+            switch (format)
+            {
+                case ValueFormat.ASCIIChar:
+                    return "ASCIICHAR";
+
+                case ValueFormat.UnicodeChar:
+                    return "UNICODECHAR";
+
+                default:
+                    return Leaderboard.GetFormatString(format);
+            }
+        }
+
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             var name = GetStringParameter(scope, "name", out result);
@@ -26,7 +54,7 @@ namespace RATools.Parser.Functions
             if (format == null)
                 return false;
 
-            var valueFormat = Leaderboard.ParseFormat(format.Value);
+            var valueFormat = ParseFormat(format.Value);
             if (valueFormat == ValueFormat.None)
             {
                 result = new ParseErrorExpression(format.Value + " is not a supported rich_presence_value format", format);
@@ -61,7 +89,7 @@ namespace RATools.Parser.Functions
                 return false;
 
             var functionCall = scope.GetContext<FunctionCallExpression>();
-            var valueFormat = Leaderboard.ParseFormat(format.Value);
+            var valueFormat = ParseFormat(format.Value);
             context.RichPresence.AddValueField(functionCall, name.Value, valueFormat);
 
             result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));

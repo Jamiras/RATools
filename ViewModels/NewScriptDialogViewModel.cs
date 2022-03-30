@@ -1239,6 +1239,14 @@ namespace RATools.ViewModels
 
                     if (macro == null)
                     {
+                        var macroFormat = Parser.Functions.RichPresenceMacroFunction.GetValueFormat(kvp.Key);
+                        if (macroFormat != ValueFormat.None && macroFormat != ValueFormat.Value)
+                        {
+                            stream.Write(", format=\"");
+                            stream.Write(Parser.Functions.RichPresenceValueFunction.GetFormatString(macroFormat));
+                            stream.Write('\"');
+                        }
+
                         stream.Write(')');
                     }
                     else if (macro.LookupEntries != null)
