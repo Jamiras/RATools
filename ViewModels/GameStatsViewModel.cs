@@ -718,10 +718,8 @@ namespace RATools.ViewModels
         {
             Progress.Label = "Analyzing data";
 
-            var sessions = new List<int>(userStats.Count);
-            var days = new List<int>(userStats.Count);
+            // estimate the time spent for each user
             var idleTime = TimeSpan.FromHours(4);
-            int masteredCount = 0;
             foreach (var user in userStats)
             {
                 if (user.Achievements.Count == 0)
@@ -761,20 +759,9 @@ namespace RATools.ViewModels
                 // after gettin the last achievement of the session.
                 double perSessionAdjustment = user.GameTime.TotalSeconds / user.Achievements.Count;
                 user.GameTime += TimeSpan.FromSeconds(user.Sessions * perSessionAdjustment);
-
-                // if the user mastered the set, capture data for median calculations
-                if (user.PointsEarned == TotalPoints)
-                {
-                    masteredCount++;
-
-                    if (user.IsEstimateReliable)
-                    {
-                        sessions.Add(user.Sessions);
-                        days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
-                    }
-                }
             }
 
+            // sort the results by the most points earned, then the quickest
             userStats.Sort((l, r) => 
             {
                 var diff = r.PointsEarned - l.PointsEarned;
@@ -784,6 +771,26 @@ namespace RATools.ViewModels
                 return diff;
             });
 
+            // determine how many players mastered the set and how many sessions/days it took them
+            var sessions = new List<int>(32);
+            var days = new List<int>(32);
+            var reliableEstimateIndices = new List<int>(32);
+            int masteredCount = 0;
+            foreach (var user in userStats)
+            {
+                if (user.PointsEarned != TotalPoints)
+                    break;
+
+                if (user.IsEstimateReliable)
+                {
+                    reliableEstimateIndices.Add(masteredCount);
+                    sessions.Add(user.Sessions);
+                    days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
+                }
+
+                masteredCount++;
+            }
+
             HardcoreUserCount = userStats.Count;
             MedianHardcoreUserScore = userStats.Count > 0 ? userStats[userStats.Count / 2].PointsEarned : 0;
             HardcoreMasteredUserCount = masteredCount;
@@ -791,7 +798,10 @@ namespace RATools.ViewModels
             int sessionCount = sessions.Count;
             if (sessionCount > 0)
             {
-                var timeToMaster = sessionCount > 0 ? userStats[sessionCount / 2].Summary : "n/a";
+                // sessionCount is only the number of reliable estimates. Find the median index of those, and use
+                // that record's time as the median time
+                var medianIndex = reliableEstimateIndices[sessionCount / 2];
+                var timeToMaster = userStats[medianIndex].Summary;
                 var space = timeToMaster.IndexOf(' ');
                 if (space > 0)
                     timeToMaster = timeToMaster.Substring(0, space);
