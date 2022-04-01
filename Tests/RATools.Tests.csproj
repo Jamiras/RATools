@@ -137,6 +137,7 @@
     <Compile Include="Parser\Functions\ArrayMapFunctionTests.cs" />
     <Compile Include="Parser\Functions\PrevPriorFunctionTests.cs" />
     <Compile Include="Parser\Functions\RichPresenceMacroFunctionTests.cs" />
+    <Compile Include="Parser\Functions\TallyOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\SumOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\NoneOfFunctionTests.cs" />
     <Compile Include="Parser\Functions\AllOfFunctionTests.cs" />

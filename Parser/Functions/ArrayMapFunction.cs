@@ -9,6 +9,11 @@ namespace RATools.Parser.Functions
         {
         }
 
+        protected ArrayMapFunction(string name)
+            : base(name)
+        {
+        }
+
         protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
         {
             var array = left as ArrayExpression;
