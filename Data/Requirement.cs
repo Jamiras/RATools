@@ -264,6 +264,11 @@ namespace RATools.Data
             string addSources = null, string subSources = null, string addHits = null, 
             string andNext = null, string addAddress = null)
         {
+            if (!string.IsNullOrEmpty(andNext))
+            {
+                builder.Append(andNext);
+            }
+
             if (!string.IsNullOrEmpty(addSources))
             {
                 builder.Append('(');
@@ -276,10 +281,6 @@ namespace RATools.Data
             else if (!string.IsNullOrEmpty(addHits))
             {
                 builder.Append(addHits);
-            }
-            else if (!string.IsNullOrEmpty(andNext))
-            {
-                builder.Append(andNext);
             }
 
             string suffix = null;
