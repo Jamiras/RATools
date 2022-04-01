@@ -156,6 +156,30 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestZeroCount()
+        {
+            // allow for infinite counting of some set of conditions - mostly for leaderboard values
+            var requirements = Evaluate("tally(0, byte(0x1234) == 56, byte(0x1234) == 67)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestNegativeCount()
+        {
+            Evaluate("tally(-1, byte(0x1234) == 56, byte(0x1234) == 67)", "count must be greater than or equal to zero");
+        }
+
+        [Test]
         public void TestManyConditions()
         {
             var requirements = Evaluate("tally(4, byte(0x1234) == 56, byte(0x1234) == 67, byte(0x1234) == 78, byte(0x1234) == 89)");
@@ -197,6 +221,13 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
             Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
             Assert.That(requirements[1].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestNoConditions()
+        {
+            var errorMessage = "tally requires at least one non-deducted item";
+            Evaluate("tally(4, [])", errorMessage);
         }
 
         [Test]
@@ -538,6 +569,55 @@ namespace RATools.Test.Parser.Functions
         {
             Evaluate("tally(4, deduct(byte(0x2345) == 99), deduct(byte(0x2345) == 99))",
                 "tally requires at least one non-deducted item");
+        }
+
+        [Test]
+        public void TestAlwaysFalse()
+        {
+            var requirements = Evaluate("tally(4, byte(0x1234) == 56, always_false(), deduct(always_false()), byte(0x1234) == 78)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("78"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void TestAlwaysTrue()
+        {
+            var requirements = Evaluate("tally(4, byte(0x1234) == 56, always_true(), deduct(always_true()), byte(0x1234) == 78)");
+            Assert.That(requirements.Count, Is.EqualTo(5));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.SubHits));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("78"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[4].Left.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[4].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[4].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[4].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[4].HitCount, Is.EqualTo(4));
         }
     }
 }

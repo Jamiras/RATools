@@ -72,6 +72,9 @@ namespace RATools.Parser.Functions
             for (int i = 1; i < functionCall.Parameters.Count; ++i)
             {
                 var condition = functionCall.Parameters.ElementAt(i);
+
+                // expression that can never be true cannot accumulate hits to be added or subtracted from the tally
+                ParseErrorExpression error;
                 var conditionRequirements = new List<Requirement>();
                 var nestedContext = new TriggerBuilderContext() { Trigger = conditionRequirements };
                 var modifier = RequirementType.AddHits;
@@ -84,15 +87,23 @@ namespace RATools.Parser.Functions
                         return (ParseErrorExpression)result;
 
                     condition = deductScope.GetVariable("comparison");
+
+                    if (condition.IsTrue(deductScope, out error) == false)
+                        continue;
+
                     modifier = RequirementType.SubHits;
                     ++subHitsClauses;
                 }
                 else
                 {
+                    if (condition.IsTrue(scope, out error) == false)
+                        continue;
+
                     ++addHitsClauses;
                 }
 
-                var error = BuildTriggerCondition(nestedContext, scope, condition);
+                if (error == null)
+                    error = BuildTriggerCondition(nestedContext, scope, condition);
                 if (error != null)
                     return error;
 
@@ -100,19 +111,14 @@ namespace RATools.Parser.Functions
                 requirements.Add(conditionRequirements);
             }
 
-            // if no requirements were generated, we're done
-            if (requirements.Count == 0)
-                return null;
+            // at least one condition has to be incrementing the tally
+            if (addHitsClauses == 0)
+                return new ParseErrorExpression("tally requires at least one non-deducted item", functionCall);
 
             // if there's any SubHits clauses, add a dummy clause for the final count, regardless of whether
             // the AddHits clauses have hit targets.
             if (subHitsClauses > 0)
-            {
-                if (addHitsClauses == 0)
-                    return new ParseErrorExpression("tally requires at least one non-deducted item");
-
                 requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
-            }
 
             // the last item cannot have its own HitCount as it will hold the HitCount for the group.
             // if necessary, find one without a HitCount and make it the last.
@@ -130,6 +136,8 @@ namespace RATools.Parser.Functions
 
             // set the target hitcount
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
+            if (count.Value < 0)
+                return new ParseErrorExpression("count must be greater than or equal to zero", functionCall.Parameters.First());
             context.LastRequirement.HitCount = (uint)count.Value;
 
             return null;

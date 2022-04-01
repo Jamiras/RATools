@@ -149,14 +149,6 @@ namespace RATools.Test.Parser
         }
 
         [Test]
-        public void TestEmptyTrigger()
-        {
-            // tally() of empty array will result in to conditions for the trigger
-            var parser = Parse("achievement(\"T\", \"D\", 5, tally(4, []))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Incomplete trigger condition"));
-        }
-
-        [Test]
         public void TestDictionaryLookup()
         {
             var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +

@@ -12,7 +12,7 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestDefinition()
         {
-            var def = new SumOfFunction();
+            var def = new TallyOfFunction();
             Assert.That(def.Name.Name, Is.EqualTo("tally_of"));
             Assert.That(def.Parameters.Count, Is.EqualTo(3));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("inputs"));
@@ -46,37 +46,37 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestSingleElement()
         {
-            Assert.That(Evaluate("sum_of([1], a => byte(a)) == 9"),
-                Is.EqualTo("byte(0x000001) == 9"));
+            Assert.That(Evaluate("tally_of([1], 99, a => byte(a) == 9)"),
+                Is.EqualTo("repeated(99, byte(0x000001) == 9)"));
         }
 
         [Test]
         public void TestNoElements()
         {
-            Assert.That(Evaluate("sum_of([], a => byte(a)) == byte(9)"),
-                Is.EqualTo("byte(0x000009) == 0"));
+            Assert.That(Evaluate("tally_of([], 4, a => byte(a) == 9) && byte(0x2345) == 6"),
+                Is.EqualTo("tally requires at least one non-deducted item"));
         }
 
         [Test]
         public void TestLogic()
         {
             // always_false() elements returned by predicate will be optimized out by the AchievementScriptInterpreter
-            Assert.That(Evaluate("sum_of([1, 2, 3], (a) { if (a % 2 == 0) { return byte(a) } else { return 0 }}) == 9"),
-                Is.EqualTo("byte(0x000002) == 9"));
+            Assert.That(Evaluate("tally_of([1, 2, 3], 7, (a) { if (a % 2 == 0) { return byte(a) == 9 } else { return always_false() }})"),
+                Is.EqualTo("repeated(7, byte(0x000002) == 9)"));
         }
 
         [Test]
         public void TestRange()
         {
-            Assert.That(Evaluate("sum_of(range(1,5,2), a => byte(a)) == 9"),
-                Is.EqualTo("(byte(0x000001) + byte(0x000003) + byte(0x000005)) == 9"));
+            Assert.That(Evaluate("tally_of(range(1,5,2), 11, a => byte(a) == 9)"),
+                Is.EqualTo("tally(11, byte(0x000001) == 9, byte(0x000003) == 9, byte(0x000005) == 9)"));
         }
 
         [Test]
         public void TestDictionary()
         {
-            Assert.That(Evaluate("sum_of({1:\"One\",2:\"Two\",3:\"Three\"}, a => byte(a)) == 9"),
-                Is.EqualTo("(byte(0x000001) + byte(0x000002) + byte(0x000003)) == 9"));
+            Assert.That(Evaluate("tally_of({1:\"One\",2:\"Two\",3:\"Three\"}, 11, a => byte(a) == 9)"),
+                Is.EqualTo("tally(11, byte(0x000001) == 9, byte(0x000002) == 9, byte(0x000003) == 9)"));
         }
     }
 }

@@ -267,7 +267,16 @@ namespace RATools.Data
 
             // finish with the final subclause
             var numParentheses = (requirements.Last().Type != RequirementType.None) ? 2 : 1;
-            builder.Append(repeatedString, index, repeatedString.Length - index - numParentheses);
+            var finalClause = repeatedString.Substring(index, repeatedString.Length - index - numParentheses);
+            if (finalClause == "always_false()")
+            {
+                // always_false() final clause separates tally target from individual condition targets
+                builder.Length -= 2; // remove ", "
+            }
+            else
+            {
+                builder.Append(finalClause);
+            }
 
             if (wrapWidth != Int32.MaxValue)
             {
