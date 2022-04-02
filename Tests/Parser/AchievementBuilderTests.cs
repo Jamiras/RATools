@@ -645,12 +645,18 @@ namespace RATools.Test.Parser
 
         [TestCase("repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126)",
                   "repeated(2, byte(0x001234) == 120 || byte(0x001234) == 126)")]
+        [TestCase("repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126)",
+                  "repeated(2, byte(0x001234) == 120 || byte(0x001234) == 126)")]
         [TestCase("measured(repeated(2, byte(0x1234) == 120 || byte(0x1234) == 126))",
                   "measured(repeated(2, byte(0x001234) == 120 || byte(0x001234) == 126))")]
         [TestCase("once(byte(0x2345) == 1) && never(!(byte(0x1234) <= 8 && byte(0x1234) >= 6))",
                   "once(byte(0x002345) == 1) && never(byte(0x001234) > 8) && never(byte(0x001234) < 6)")]
         [TestCase("never(!(byte(0x1234) <= 8 && byte(0x1234) >= 6) && byte(0x2345) >= 10)", 
                   "never((byte(0x001234) > 8 || byte(0x001234) < 6) && byte(0x002345) >= 10)")]
+        [TestCase("repeated(10, byte(0x2345) == 1 && byte(0x3456) == 2 && never(byte(0x1234) < 5 || byte(0x1234) > 8))", // never will be converted to a ResetNextIf (before repeated), which will be further converted to two ResetIfs
+                  "never(byte(0x001234) < 5) && never(byte(0x001234) > 8) && repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2)")]
+        [TestCase("repeated(10, byte(0x2345) == 1 && byte(0x3456) == 2 && never(byte(0x1234) < 5 || byte(0x1234) > 8)) && once(byte(0x5678) == 2)",
+                  "repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2 && never(byte(0x001234) < 5 || byte(0x001234) > 8)) && once(byte(0x005678) == 2)")]
         public void TestOptimizeDenormalizeOrNexts(string input, string expected)
         {
             var achievement = CreateAchievement(input);

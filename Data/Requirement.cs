@@ -252,12 +252,20 @@ namespace RATools.Data
                 if (resetNextIf != null)
                 {
                     builder.Append(" && never(");
-                    builder.Append(resetNextIf);
+                    builder.Append(RemoveOuterParentheses(resetNextIf));
                     builder.Append(")");
                 }
 
                 builder.Append(')');
             }
+        }
+
+        private static string RemoveOuterParentheses(string input)
+        {
+            while (input.Length > 2 && input[0] == '(' && input[input.Length - 1] == ')')
+                input = input.Substring(1, input.Length - 2);
+
+            return input;
         }
 
         internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 

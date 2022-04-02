@@ -461,5 +461,32 @@ namespace RATools.Test.Parser.Functions
             Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
             Assert.That(requirements[2].HitCount, Is.EqualTo(2));
         }
+
+        [Test]
+        public void TestNeverOr()
+        {
+            var requirements = Evaluate("repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2 && never(byte(0x001234) < 5 || byte(0x001234) > 8))");
+            Assert.That(requirements.Count, Is.EqualTo(4));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.LessThan));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("5"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.OrNext)); // optimizer was not called
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.GreaterThan));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("8"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.ResetNextIf)); // optimizer was not called
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x002345)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[3].Left.ToString(), Is.EqualTo("byte(0x003456)"));
+            Assert.That(requirements[3].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[3].Right.ToString(), Is.EqualTo("2"));
+            Assert.That(requirements[3].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[3].HitCount, Is.EqualTo(10));
+        }
     }
 }

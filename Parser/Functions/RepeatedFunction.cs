@@ -51,7 +51,7 @@ namespace RATools.Parser.Functions
             {
                 // extract never() conditions from And sequence and build a ResetNextIf clause
                 var nonNeverExpressions = new List<ExpressionBase>();
-                ExpressionBase neverExpression = null;
+                FunctionCallExpression neverExpression = null;
 
                 foreach (var clause in condition.Conditions)
                 {
@@ -59,9 +59,23 @@ namespace RATools.Parser.Functions
                     if (functionCall != null && functionCall.FunctionName.Name == "never")
                     {
                         if (neverExpression != null)
-                            return new ParseErrorExpression("Only one never() clause allowed inside " + Name.Name + "()", clause);
-
-                        neverExpression = clause;
+                        {
+                            var conditional = neverExpression.Parameters.First() as ConditionalExpression;
+                            if (conditional != null && conditional.Operation == ConditionalOperation.Or)
+                            {
+                                ((IList<ExpressionBase>)conditional.Conditions).Add(functionCall);
+                            }
+                            else
+                            {
+                                var conditions = new List<ExpressionBase>() { neverExpression.Parameters.First(), functionCall.Parameters.First() };
+                                conditional = new ConditionalExpression(ConditionalOperation.Or, conditions);
+                                neverExpression = new FunctionCallExpression("never", new[] { conditional });
+                            }
+                        }
+                        else
+                        {
+                            neverExpression = functionCall;
+                        }
                     }
                     else
                     {
@@ -84,7 +98,11 @@ namespace RATools.Parser.Functions
 
                     nestedContext.LastRequirement.Type = RequirementType.ResetNextIf;
                     foreach (var requirement in nestedContext.Trigger)
+                    {
+                        if (requirement.Type == RequirementType.ResetIf)
+                            requirement.Type = RequirementType.OrNext;
                         context.Trigger.Add(requirement);
+                    }
 
                     comparison = new ConditionalExpression(ConditionalOperation.And, nonNeverExpressions);
                 }
