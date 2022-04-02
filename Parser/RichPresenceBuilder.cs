@@ -108,9 +108,10 @@ namespace RATools.Parser
                 builder.AppendLine();
             }
 
+            bool disableBuiltInMacros = DisableBuiltInMacros && _valueFields.All(f => f.Value.Format != ValueFormat.ASCIIChar && f.Value.Format != ValueFormat.UnicodeChar);
             foreach (var value in _valueFields)
             {
-                if (!DisableBuiltInMacros)
+                if (!disableBuiltInMacros)
                 {
                     if (RichPresenceMacroFunction.GetValueFormat(value.Key) == value.Value.Format)
                         continue;

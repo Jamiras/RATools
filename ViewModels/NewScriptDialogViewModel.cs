@@ -1095,11 +1095,32 @@ namespace RATools.ViewModels
                 if (entry.Key == "*")
                     continue;
 
-                stream.Write("    ");
-                stream.Write(entry.Key);
-                stream.Write(": \"");
-                stream.Write(EscapeString(entry.Value));
-                stream.WriteLine("\",");
+                var value = EscapeString(entry.Value);
+                foreach (var part in entry.Key.Split(','))
+                {
+                    if (part.Contains('-'))
+                    {
+                        var range = part.Split('-');
+                        var start = Int32.Parse(range[0]);
+                        var end = Int32.Parse(range[1]);
+                        for (int i = start; i <= end; ++i)
+                        {
+                            stream.Write("    ");
+                            stream.Write(i);
+                            stream.Write(": \"");
+                            stream.Write(value);
+                            stream.WriteLine("\",");
+                        }
+                    }
+                    else
+                    {
+                        stream.Write("    ");
+                        stream.Write(part);
+                        stream.Write(": \"");
+                        stream.Write(value);
+                        stream.WriteLine("\",");
+                    }
+                }
             }
             stream.WriteLine("}");
         }
@@ -1218,6 +1239,14 @@ namespace RATools.ViewModels
 
                     if (macro == null)
                     {
+                        var macroFormat = Parser.Functions.RichPresenceMacroFunction.GetValueFormat(kvp.Key);
+                        if (macroFormat != ValueFormat.None && macroFormat != ValueFormat.Value)
+                        {
+                            stream.Write(", format=\"");
+                            stream.Write(Parser.Functions.RichPresenceValueFunction.GetFormatString(macroFormat));
+                            stream.Write('\"');
+                        }
+
                         stream.Write(')');
                     }
                     else if (macro.LookupEntries != null)
