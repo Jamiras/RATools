@@ -38,8 +38,9 @@ namespace RATools.Test.Data
         [TestCase("Z:0xH002345=2_0xH001234=1.2.", "repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))")]
         [TestCase("Z:0xH002345=2_P:0xH001234=1.1.", "disable_when(byte(0x001234) == 1, until=byte(0x002345) == 2)")]
         [TestCase("Z:0xH002345=2_P:0xH001234=1.2.", "disable_when(repeated(2, byte(0x001234) == 1), until=byte(0x002345) == 2)")]
-        [TestCase("A:10_T:d0xH001234<=0xH001234.70.", "trigger_when(repeated(70, (10 + prev(byte(0x001234))) <= byte(0x001234)))")]
+        [TestCase("C:0xH001234=1.10._C:0xH001234=2.10._0=1.15.", "tally(15, repeated(10, byte(0x001234) == 1), repeated(10, byte(0x001234) == 2))")]
         [TestCase("A:9=0_C:d0xH001234<=0xH001234_A:10=0_d0xH001234<=0xH001234.70.", "tally(70, (9 + prev(byte(0x001234))) <= byte(0x001234), (10 + prev(byte(0x001234))) <= byte(0x001234))")]
+        [TestCase("A:10_T:d0xH001234<=0xH001234.70.", "trigger_when(repeated(70, (10 + prev(byte(0x001234))) <= byte(0x001234)))")]
         [TestCase("A:9_C:d0xH001234<=0xH001234_A:10_T:d0xH001234<=0xH001234.70.", "trigger_when(tally(70, (9 + prev(byte(0x001234))) <= byte(0x001234), (10 + prev(byte(0x001234))) <= byte(0x001234)))")]
         [TestCase("N:0xU001234=d0xU001234_C:d0xL001234<=0xL001234_T:d0xH001234<=0xH001234.70.",
                   "trigger_when(tally(70, (high4(0x001234) == prev(high4(0x001234)) && prev(low4(0x001234)) <= low4(0x001234)), prev(byte(0x001234)) <= byte(0x001234)))")]

@@ -593,7 +593,7 @@ namespace RATools.Test.Parser
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
             "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without pauseif or resetif to be removed
         [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0), once(byte(0x1111) == 2 && byte(0x2222) == 0))",
-            "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0), always_false())")]
+            "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0))")]
         public void TestOptimizeMergeDuplicateAlts(string input, string expected)
         {
             var achievement = CreateAchievement(input);
@@ -664,7 +664,7 @@ namespace RATools.Test.Parser
         [TestCase("once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
                   "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
         [TestCase("tally(2, once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301))",
-                  "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301), always_false())")] // always_false() inside once() is optimized out, but a new one must be added for the tally since very subclause has a hit target
+                  "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301))")] // always_false() inside once() is optimized out
         [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))",
                   "repeated(2, once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3) || always_false())")] // always_false has to be added since every subclause has a hit target and should not be eliminated
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
