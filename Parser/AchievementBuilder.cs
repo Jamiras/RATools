@@ -1400,67 +1400,103 @@ namespace RATools.Parser
 
         private static void DenormalizeOrNexts(List<List<RequirementEx>> groups)
         {
-            RequirementEx orNextGroup = null;
+            bool canMoveToAlts = false;
             if (groups.Count == 1)
             {
-                foreach (var requirementEx in groups[0])
-                {
-                    // MeasuredIf only applies to the current group, don't split it up
-                    if (requirementEx.Type == RequirementType.MeasuredIf)
-                        continue;
+                // if a single group has multiple OrNext clauses, don't bother promoting either to alt groups
+                var orNextClauseCount = groups[0].Count(g => g.Requirements.Any(r => r.Type == RequirementType.OrNext));
+                if (orNextClauseCount == 0)
+                    return; // nothing to do
 
-                    int orNextIndex = requirementEx.Requirements.FindIndex(r => r.Type == RequirementType.OrNext);
-                    if (orNextIndex != -1)
-                    {
-                        // multiple OrNext groups, can't denormalize
-                        if (orNextGroup != null)
-                            return;
-
-                        // if there's a hit target, we can't split it up
-                        if (requirementEx.Requirements.Last().HitCount != 0)
-                            continue;
-
-                        // if there's an AndNext after the OrNext, we can't split it up.
-                        // ((A || B) && C)
-                        int andNextIndex = -1;
-                        for (int i = orNextIndex + 1; i < requirementEx.Requirements.Count; ++i)
-                        {
-                            if (requirementEx.Requirements[i].Type == RequirementType.AndNext)
-                            {
-                                andNextIndex = i;
-                                break;
-                            }
-                        }
-                        if (andNextIndex != -1)
-                            continue;
-
-                        orNextGroup = requirementEx;
-                    }
-                }
+                canMoveToAlts = orNextClauseCount < 2;
             }
 
-            // found a single OrNext and no alt groups. split it up
-            if (orNextGroup != null)
+            for (int j = groups.Count - 1; j >= 0; --j)
             {
-                groups[0].Remove(orNextGroup);
-
-                var alt = new RequirementEx();
-                var altGroup = new List<RequirementEx>();
-                altGroup.Add(alt);
-                groups.Add(altGroup);
-
-                foreach (var requirement in orNextGroup.Requirements)
+                var group = groups[j];
+                for (int i = 0; i < group.Count; ++i)
                 {
-                    alt.Requirements.Add(requirement);
+                    var requirementEx = group[i];
+                    if (requirementEx.Requirements.Count < 2)
+                        continue;
 
-                    if (requirement.Type == RequirementType.OrNext)
+                    var moveToAlts = false;
+                    var orNextGroupType = requirementEx.Type;
+                    switch (orNextGroupType)
                     {
-                        requirement.Type = orNextGroup.Type;
+                        case RequirementType.None:
+                        case RequirementType.Trigger:
+                            // logic conditions have to be moved into alts
+                            if (!canMoveToAlts)
+                                continue;
+                            moveToAlts = true;
+                            goto case RequirementType.ResetIf;
 
-                        alt = new RequirementEx();
-                        altGroup = new List<RequirementEx>();
-                        altGroup.Add(alt);
-                        groups.Add(altGroup);
+                        case RequirementType.ResetIf:
+                        case RequirementType.PauseIf:
+                            // if it's a ResetIf, PauseIf, or Trigger, it can be split into multiple clauses
+                            bool seenOrNext = false;
+                            bool canBeSplit = true;
+                            foreach (var requirement in requirementEx.Requirements)
+                            {
+                                if (requirement.Type == RequirementType.OrNext)
+                                {
+                                    seenOrNext = true;
+                                }
+                                else if (requirement.Type == RequirementType.AndNext)
+                                {
+                                    // if there's an AndNext after the OrNext, we can't split it up.
+                                    // ((A || B) && C)
+                                    canBeSplit &= !seenOrNext;
+                                }
+                                else if (requirement.Type == RequirementType.ResetNextIf)
+                                {
+                                    // if there's a ResetNextIf, we can't split it up.
+                                    canBeSplit = false;
+                                }
+                                else if (requirement.HitCount > 0)
+                                {
+                                    // if there's an hit target after the OrNext, we can't split it up.
+                                    // once(A || B)
+                                    canBeSplit &= !seenOrNext;
+                                }
+                            }
+
+                            if (seenOrNext && canBeSplit)
+                            {
+                                var subclause = new RequirementEx();
+
+                                if (moveToAlts)
+                                {
+                                    group.RemoveAt(i);
+                                    groups.Add(new List<RequirementEx>() { subclause });
+                                }
+                                else
+                                {
+                                    group[i] = subclause;
+                                }
+
+                                foreach (var requirement in requirementEx.Requirements)
+                                {
+                                    subclause.Requirements.Add(requirement);
+
+                                    if (requirement.Type == RequirementType.OrNext)
+                                    {
+                                        requirement.Type = orNextGroupType;
+
+                                        subclause = new RequirementEx();
+
+                                        if (moveToAlts)
+                                            groups.Add(new List<RequirementEx>() { subclause });
+                                        else
+                                            group.Insert(++i, subclause);
+                                    }
+                                }
+                            }
+                            break;
+
+                        default:
+                            break;
                     }
                 }
             }

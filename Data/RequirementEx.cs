@@ -350,6 +350,9 @@ namespace RATools.Data
                         // remove "resetnext_if(" and ")" - they'll get converted to "never()" when resetNextIf is used
                         resetNextIf.Length--;
                         resetNextIf.Remove(0, 13);
+
+                        andNext.Clear();
+                        lastAndNext = null;
                         break;
 
                     default:
