@@ -1,3 +1,19 @@
+v1.8.5 - 3 Apr 2022
+* many improvements to generating scripts from existing achievements
+  - support for generating from local achievements
+  - support for built-in macros
+  - support for compound code note sizes i.e. "[32-bit float]"
+  - convert PauseIf with hitcounts/ResetNextIf logic to disable_when()
+  - convert AddHits chain to tally()
+  - fix exception if macro has no parameter
+  - fix exception when no tickets are found
+* add array_map() function
+* add tally_of() function
+* add logic to convert "A<1||A>1" into "A!=1"
+* support for multiple conditions in a ResetNextIf using OrNext
+* make error more user-friendly when an if expression cannot be evaluated at compile time
+* fix multiple conditions in a repeated() in measured(when=) getting split into separate MeasuredIfs
+
 v1.8.4 - 15 Feb 2022
 * support for bitwise and (&)
 * add lower_is_better flag to leaderboard() function
