@@ -1054,15 +1054,18 @@ namespace RATools.ViewModels
                 stream.Write(achievementData.Points);
                 stream.WriteLine(",");
 
-                stream.Write("    id = ");
-                stream.Write(achievementData.Id);
-                stream.Write(", badge = \"");
-                stream.Write(achievementData.BadgeName);
-                stream.Write("\", published = \"");
-                stream.Write(achievementData.Published);
-                stream.Write("\", modified = \"");
-                stream.Write(achievementData.LastModified);
-                stream.WriteLine("\",");
+                if (dumpAchievement.ViewerType != "Local Achievement")
+                {
+                    stream.Write("    id = ");
+                    stream.Write(achievementData.Id);
+                    stream.Write(", badge = \"");
+                    stream.Write(achievementData.BadgeName);
+                    stream.Write("\", published = \"");
+                    stream.Write(achievementData.Published);
+                    stream.Write("\", modified = \"");
+                    stream.Write(achievementData.LastModified);
+                    stream.WriteLine("\",");
+                }
 
                 stream.Write("    trigger = ");
                 const int indent = 14; // "    trigger = ".length
