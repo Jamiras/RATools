@@ -202,7 +202,7 @@ namespace RATools.Data
             var addHitsRequirements = new List<Requirement>();
             foreach (var requirement in requirements)
             {
-                if (requirement.Type == RequirementType.AddHits)
+                if (requirement.Type == RequirementType.AddHits || requirement.Type == RequirementType.SubHits)
                     addHitsRequirements.Clear();
                 else
                     addHitsRequirements.Add(requirement);
@@ -211,18 +211,32 @@ namespace RATools.Data
             // the final clause will get generated as a "repeated" because we've ignored the AddHits subclauses
             var repeated = new StringBuilder();
             AppendString(repeated, addHitsRequirements, numberFormat, ref width, wrapWidth, indent, measuredIf);
+
             var repeatedString = repeated.ToString();
-            var index = repeatedString.IndexOf("repeated(");
+            var repeatedIndex = repeatedString.IndexOf("repeated(");
+            var onceIndex = repeatedString.IndexOf("once(");
+            var index = 0;
+            if (repeatedIndex >= 0 && (onceIndex == -1 || repeatedIndex < onceIndex))
+            {
+                // replace the "repeated(" with "tally("
+                builder.Append(repeatedString, 0, repeatedIndex);
+                builder.Append("tally(");
 
-            // replace the "repeated(" with "tally("
-            builder.Append(repeatedString, 0, index);
-            builder.Append("tally(");
+                repeatedIndex += 9;
+                while (Char.IsDigit(repeatedString[repeatedIndex]))
+                    builder.Append(repeatedString[repeatedIndex++]);
+                builder.Append(", ");
 
-            index += 9;
-            while (Char.IsDigit(repeatedString[index]))
-                builder.Append(repeatedString[index++]);
-            builder.Append(", ");
-            index += 2;
+                index = repeatedIndex + 2;
+            }
+            else if (onceIndex >= 0)
+            {
+                // replace the "once(" with "tally(1, "
+                builder.Append(repeatedString, 0, onceIndex);
+                builder.Append("tally(1, ");
+
+                index = onceIndex + 5;
+            }
 
             // append the AddHits subclauses
             addHitsRequirements.Clear();
@@ -230,7 +244,7 @@ namespace RATools.Data
 
             foreach (var requirement in requirements)
             {
-                if (requirement.Type == RequirementType.AddHits)
+                if (requirement.Type == RequirementType.AddHits || requirement.Type == RequirementType.SubHits)
                 {
                     // create a copy of the AddHits requirement without the Type
                     addHitsRequirements.Add(new Requirement
@@ -247,8 +261,18 @@ namespace RATools.Data
                         builder.Append(' ', indent);
                     }
 
-                    int subclauseWidth = wrapWidth - indent - 4;
-                    AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                    if (requirement.Type == RequirementType.AddHits)
+                    {
+                        int subclauseWidth = wrapWidth - indent - 4;
+                        AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                    }
+                    else
+                    {
+                        builder.Append("deduct(");
+                        int subclauseWidth = wrapWidth - indent - 4 - 8;
+                        AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                        builder.Append(')');
+                    }
                     builder.Append(", ");
 
                     addHitsRequirements.Clear();
