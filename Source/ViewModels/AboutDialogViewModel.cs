@@ -35,6 +35,14 @@ namespace RATools.ViewModels
             }
         }
 
+        public string CPUMode
+        {
+            get
+            {
+                return String.Format("Running in {0}-bit mode", (IntPtr.Size == 4) ? "32" : "64");
+            }
+        }
+
         public string CopyrightMessage
         {
             get
