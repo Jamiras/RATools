@@ -48,6 +48,10 @@ namespace RATools.Test.Data
                   "trigger_when(tally(70, (high4(0x001234) == prev(high4(0x001234)) && (2 + prev(low4(0x001234))) <= low4(0x001234)), prev(byte(0x001234)) <= byte(0x001234)))")]
         [TestCase("A:2_C:d0xL001234<=0xL001234_N:0xU001234=d0xU001234_T:d0xH001234<=0xH001234.70.",
                   "trigger_when(tally(70, (2 + prev(low4(0x001234))) <= low4(0x001234), high4(0x001234) == prev(high4(0x001234)) && prev(byte(0x001234)) <= byte(0x001234)))")]
+        [TestCase("C:0xH001234=1.1._P:1=1.1.",
+                  "unless(tally(1, once(byte(0x001234) == 1), always_true()))")]
+        [TestCase("C:0xH001234=1.1._D:0xH002345=1.1._R:0=1.1.",
+                  "never(tally(1, once(byte(0x001234) == 1), deduct(once(byte(0x002345) == 1))))")]
         [TestCase("R:0xH001234<5_R:0xH001234>8_N:0xH002345=1_0xH003456=2.10.",
                   "never(byte(0x001234) < 5)|never(byte(0x001234) > 8)|repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2)")]
         [TestCase("O:0xH001234<5_Z:0xH001234>8_N:0xH002345=1_0xH003456=2.10.",
