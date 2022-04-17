@@ -348,7 +348,7 @@ namespace RATools.ViewModels
 
         protected override void OnFormatLine(LineFormatEventArgs e)
         {
-            int line = e.Line.Line;
+            int line = e.LineNumber;
             var expressions = new List<ExpressionBase>();
             if (_parsedContent != null)
                 _parsedContent.GetExpressionsForLine(expressions, line);
@@ -377,7 +377,7 @@ namespace RATools.ViewModels
                 }
 
                 var expressionStart = (expression.Location.Start.Line == line) ? expression.Location.Start.Column : 1;
-                var expressionEnd = (expression.Location.End.Line == line) ? expression.Location.End.Column : e.Line.Text.Length + 1;
+                var expressionEnd = (expression.Location.End.Line == line) ? expression.Location.End.Column : e.Text.Length + 1;
 
                 var parseError = expression as ParseErrorExpression;
                 if (parseError != null)
