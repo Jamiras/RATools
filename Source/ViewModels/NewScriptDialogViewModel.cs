@@ -188,14 +188,14 @@ namespace RATools.ViewModels
                         if (requirement.Requirement == null)
                             continue;
 
-                        if (requirement.Requirement.Left != null && requirement.Requirement.Left.IsMemoryReference)
+                        if (requirement.Requirement.Left.IsMemoryReference)
                         {
                             var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
                             if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
                                 dumpAsset.MemoryAddresses.Add(memoryItem);
                         }
 
-                        if (requirement.Requirement.Right != null && requirement.Requirement.Right.IsMemoryReference)
+                        if (requirement.Requirement.Right.IsMemoryReference)
                         {
                             var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
                             if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
@@ -490,14 +490,14 @@ namespace RATools.ViewModels
 
         private void AddMemoryReferences(DumpAsset dumpAsset, Requirement requirement)
         {
-            if (requirement.Left != null && requirement.Left.IsMemoryReference)
+            if (requirement.Left.IsMemoryReference)
             {
                 var memoryItem = AddMemoryAddress(requirement.Left);
                 if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
                     dumpAsset.MemoryAddresses.Add(memoryItem);
             }
 
-            if (requirement.Right != null && requirement.Right.IsMemoryReference)
+            if (requirement.Right.IsMemoryReference)
             {
                 var memoryItem = AddMemoryAddress(requirement.Right);
                 if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))

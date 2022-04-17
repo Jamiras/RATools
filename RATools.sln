@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RATools", "RATools.csproj", "{965D9B5A-9070-40E5-9EAA-EDC581F0F000}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RATools", "Source\RATools.csproj", "{965D9B5A-9070-40E5-9EAA-EDC581F0F000}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RATools.Tests", "Tests\RATools.Tests.csproj", "{A29018E0-76BF-4873-A6F7-785FCEAC508F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jamiras.Core", "Core\Jamiras.Core.csproj", "{4141F2AE-9E32-4A93-9FEA-360A7DC7D97F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jamiras.Core", "Core\Source\Jamiras.Core.csproj", "{4141F2AE-9E32-4A93-9FEA-360A7DC7D97F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jamiras.Core.Tests", "Core\Tests\Jamiras.Core.Tests.csproj", "{8F415F4B-4184-429F-80A2-58DA15AFB26E}"
 EndProject

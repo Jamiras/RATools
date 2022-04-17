@@ -871,7 +871,7 @@ namespace RATools.ViewModels
         void ShowUserUnlocks(UserStats stats)
         {
             var url = "https://retroachievements.org/gamecompare.php?ID=" + GameId + "&f=" + stats.User;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         [DebuggerDisplay("{Title} ({UnlockTime})")]

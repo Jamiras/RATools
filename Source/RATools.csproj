@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <UseWPF>true</UseWPF>
+    <BaseOutputPath>..\bin\</BaseOutputPath>
+    <Authors>Jamiras</Authors>
+    <Company>retroachievements.org</Company>
+    <Description>Collection of tools for developers contributing to retroachievements.org</Description>
+    <Copyright>Copyright © 2022 Brian Weiss</Copyright>
+    <PackageProjectUrl>https://github.com/Jamiras/RATools/wiki</PackageProjectUrl>
+    <PackageIcon>Icon.png</PackageIcon>
+    <ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
+    <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
+    <VersionPrefix>1.9.0</VersionPrefix>
+    <InformationalVersion>16 Apr 2022</InformationalVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Source\Jamiras.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+    <_Parameter1>RATools.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Resources\Icon.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\achievement.png" />
+    <Resource Include="Resources\Icon.png" />
+    <Resource Include="Resources\leaderboard.png" />
+    <Resource Include="Resources\rich_presence.png" />
+    <Resource Include="Resources\script.png" />
+  </ItemGroup>
+
+</Project>
