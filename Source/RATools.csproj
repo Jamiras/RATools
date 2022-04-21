@@ -16,6 +16,7 @@
     <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
     <VersionPrefix>1.9.0</VersionPrefix>
     <InformationalVersion>16 Apr 2022</InformationalVersion>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
