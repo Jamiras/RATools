@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
+    <Platforms>AnyCPU;x86</Platforms>
     <TargetFramework>net6.0-windows</TargetFramework>
     <Nullable>disable</Nullable>
     <UseWPF>true</UseWPF>
@@ -15,7 +16,7 @@
     <ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
     <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
     <VersionPrefix>1.9.0</VersionPrefix>
-    <InformationalVersion>16 Apr 2022</InformationalVersion>
+    <InformationalVersion>1 May 2022</InformationalVersion>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
