@@ -20,6 +20,8 @@ namespace RATools.ViewModels
         // put a user name here for detailed analysis of a user's masteries in the Summarize output file.
         private static string UserMasteryDetails = null;
 
+        private const int CountPerSection = 20;
+
         public MasteryViewModel()
             : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>(), ServiceRepository.Instance.FindService<ISettings>())
         {
@@ -336,7 +338,7 @@ namespace RATools.ViewModels
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Export summary results";
             vm.Filters["TXT file"] = "*.txt";
-            vm.FileNames = new[] { "mastery.txt" };
+            vm.FileNames = new[] { String.IsNullOrEmpty(UserMasteryDetails) ? "mastery.txt" : UserMasteryDetails + ".txt" };
             vm.OverwritePrompt = true;
 
             if (vm.ShowSaveFileDialog() == DialogResult.Ok)
@@ -347,12 +349,9 @@ namespace RATools.ViewModels
 
         private void SaveSummary(string filename)
         {
-            const int CountPerSection = 20;
-
             var results = new List<MasteryStats>(Results);
             results.RemoveAll(r => r.GameName.Contains("[Bonus]") || r.GameName.Contains("[Multi]") || r.GameName.EndsWith(" (Events)"));
 
-            DateTime thirtyDaysAgo = DateTime.Today - TimeSpan.FromDays(30);
             DateTime now = DateTime.Now;
 
             var cheaters = new List<CheaterInfo>();
@@ -484,309 +483,29 @@ namespace RATools.ViewModels
 
             using (var file = File.CreateText(filename))
             {
-                file.WriteLine("Games:         {0,6:D}", Snapshot.GameCount);
-                file.WriteLine("Achievements:  {0,6:D} ({1} games with achievements)", Snapshot.AchievementCount, Snapshot.AchievementGameCount);
-                file.WriteLine("Leaderboards:  {0,6:D} ({1} games with leaderboards)", Snapshot.LeaderboardCount, Snapshot.LeaderboardGameCount);
-                file.WriteLine("RichPresences: {0,6:D} ({1} static)", Snapshot.RichPresenceCount, Snapshot.StaticRichPresenceCount);
-                file.WriteLine("Authors:       {0,6:D}", Snapshot.AuthorCount);
-                file.WriteLine("Systems:       {0,6:D}", Snapshot.SystemCount);
-                file.WriteLine();
-
-                file.WriteLine("Most played: MAX(Players)");
-                file.WriteLine("```");
-                results.Sort((l, r) => l.NumPlayers - r.NumPlayers);
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--, count++)
-                    file.WriteLine(String.Format("{0,5:D} {1}", results[i].NumPlayers, results[i].GameName));
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Least played: MIN(Players) [Players > 0, Age > 30 days]");
-                file.WriteLine("```");
-                for (int i = 0, count = 0; count < CountPerSection || results[i].NumPlayers == results[i - 1].NumPlayers; i++)
+                if (String.IsNullOrEmpty(UserMasteryDetails))
                 {
-                    if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
+                    WriteSummaryAndTopLists(file, results);
+                    WritePossibleCheaters(file, cheaters);
+
+                    file.WriteLine("Most cheated games: Count|ID|Name [most frequent games from previous list]");
+                    file.WriteLine("```");
+                    cheatedGames.Sort((l, r) =>
                     {
-                        file.WriteLine(String.Format("{0,5:D} {1}", results[i].NumPlayers, results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Most Popular: MAX(Players/Day) [Age > 30 days]");
-                file.WriteLine("```");
-                results.Sort((l, r) => (int)((l.PlayersPerDay - r.PlayersPerDay) * 100000));
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
-                {
-                    if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
+                        int diff = (r.Users.Count - l.Users.Count);
+                        if (diff == 0)
+                            diff = String.Compare(l.Game.GameName, r.Game.GameName);
+                        return diff;
+                    });
+                    for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || (i > 0 && cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count); i++)
                     {
-                        file.WriteLine(String.Format("{0:F3} {1}", results[i].PlayersPerDay, results[i].GameName));
-                        count++;
+                        file.WriteLine(String.Format("{0,2:D} {1,5:D} {2}", cheatedGames[i].Users.Count,
+                            cheatedGames[i].Game.GameId, cheatedGames[i].Game.GameName));
                     }
+                    file.WriteLine("```");
+                    file.WriteLine();
                 }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Least Popular: MIN(Players/Day) [Age > 30 days]");
-                file.WriteLine("```");
-                for (int i = 0, count = 0; count < CountPerSection; i++)
-                {
-                    if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
-                    {
-                        file.WriteLine(String.Format("{0:F4} {1}", results[i].PlayersPerDay, results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Slowest to Master: MAX(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3]");
-                file.WriteLine("```");
-                results.Sort((l, r) => (int)((l.MeanTimeToMaster - r.MeanTimeToMaster) * 100000));
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
-                {
-                    if (results[i].HardcoreMasteredUserCount >= 3)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
-                            results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
-                            results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Fastest to Master: MIN(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3, Points >= 50]");
-                file.WriteLine("```");
-                for (int i = 0, count = 0; count < CountPerSection; i++)
-                {
-                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 50 && results[i].MeanTimeToMaster > 0.0)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
-                            results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
-                            results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Fastest to Master: MIN(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3, Points >= 400]");
-                file.WriteLine("```");
-                for (int i = 0, count = 0; count < CountPerSection; i++)
-                {
-                    if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 400 && results[i].MeanTimeToMaster > 0.0)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
-                            results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
-                            results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Points requiring the least effort: MIN(MinutesPerPoint)|NintiethPercentilePoints|Players [>= 2 achievements earned by 90% of players, Players >= 3]");
-                file.WriteLine("```");
-                results.Sort((l, r) =>
-                {
-                    if (l == null)
-                        return -1;
-                    if (r == null)
-                        return 1;
-
-                    return (int)((l.MinutesPerPoint - r.MinutesPerPoint) * 100000);
-                });
-                for (int i = 0, count = 0; count < CountPerSection; i++)
-                {
-                    if (results[i].NintiethPercentileAchievements >= 3 && results[i].NumPlayers >= 3)
-                    {
-                        file.WriteLine(String.Format("{0,6:F3} {1,4:D} {2,4:D} {3}", results[i].MinutesPerPoint, results[i].NintiethPercentilePoints, results[i].NumPlayers, results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Points requiring the most effort: MAX(MinutesPerPoint)|NintiethPercentilePoints|Players [>= 10 points earned by 90% of players, Players >= 3]");
-                file.WriteLine("```");
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
-                {
-                    if (results[i].NintiethPercentilePoints >= 10 && results[i].NumPlayers >= 3)
-                    {
-                        file.WriteLine(String.Format("{0,6:F3} {1,4:D} {2,4:D} {3}", results[i].MinutesPerPoint, results[i].NintiethPercentilePoints, results[i].NumPlayers, results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Easiest sets: MAX(NintiethPercentilePoints/Points)|Players [Players >= 10, Points >= 50]");
-                file.WriteLine("```");
-                results.Sort((l, r) =>
-                {
-                    if (l == null || l.Points == 0)
-                        return -1;
-                    if (r == null || r.Points == 0)
-                        return 1;
-                    return ((l.NintiethPercentilePoints * 10000) / l.Points) - ((r.NintiethPercentilePoints * 10000) / r.Points);
-                });
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
-                {
-                    if (results[i].NumPlayers >= 10 && results[i].Points >= 50)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
-                            results[i].NintiethPercentilePoints, results[i].Points, results[i].NumPlayers,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Easiest sets: MAX(NintiethPercentilePoints/Points)|Players [Players >= 10, Points >= 400]");
-                file.WriteLine("```");
-                for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
-                {
-                    if (results[i].NumPlayers >= 10 && results[i].Points >= 400)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
-                            results[i].NintiethPercentilePoints, results[i].Points, results[i].NumPlayers,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Hardest sets: MIN(TwentyFifthPercentilePoints/Points)|Players [Players >= 10, TwentyFifthPercentilePoints > 0]");
-                file.WriteLine("```");
-                results.Sort((l, r) => 
-                {
-                    if (l == null || l.Points == 0)
-                        return -1;
-                    if (r == null || r.Points == 0)
-                        return 1;
-                    return (l.TwentyFifthPercentilePoints * 10000) / l.Points - (r.TwentyFifthPercentilePoints * 10000) / r.Points;
-                });
-                for (int i = 0, count = 0; count < CountPerSection; i++)
-                {
-                    if (results[i].NumPlayers >= 10 && results[i].TwentyFifthPercentilePoints > 0)
-                    {
-                        file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
-                            results[i].TwentyFifthPercentilePoints, results[i].Points, results[i].NumPlayers,
-                            results[i].GameName));
-                        count++;
-                    }
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                file.WriteLine("Most Earned Achievements: MAX(Players)|Achievement (Game)");
-                file.WriteLine("```");
-                foreach (var achievement in _mostAwardedAchievements)
-                {
-                    file.WriteLine(String.Format("{0,5:D} {1} ({2})",
-                        achievement.EarnedBy, achievement.Title, achievement.Description));
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                Progress.Label = "Identifying potential cheaters...";
-                Progress.Reset(cheaters.Count);
-
-                file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
-                file.WriteLine();
-                foreach (var cheater in cheaters)
-                {
-                    ++Progress.Current;
-
-                    foreach (var kvp in cheater.Results)
-                    {
-                        var result = kvp.Key;
-                        var user = kvp.Value;
-                        file.WriteLine("* {0} mastered {1} ({2})", user.User, result.GameName, result.GameId);
-                        file.WriteLine("  https://retroachievements.org/gamecompare.php?ID={0}&f={1}", result.GameId, user.User);
-
-                        bool dumpTimes = true;
-
-                        var notified = CheaterNotified(user.User, result.GameId);
-                        if (!String.IsNullOrEmpty(notified))
-                            file.WriteLine("  - notified {0}", notified);
-
-                        if (IsUntracked(user.User))
-                        {
-                            file.WriteLine("  - currently Untracked");
-                            dumpTimes = false;
-                        }
-
-                        var gameStats = new GameStatsViewModel() { GameId = result.GameId };
-                        gameStats.LoadGame();
-
-                        int userIndex = -1;
-                        int masteredCount = 0;
-                        foreach (var scan in gameStats.TopUsers)
-                        {
-                            if (scan.PointsEarned < gameStats.TotalPoints)
-                                break;
-
-                            masteredCount++;
-
-                            if (scan.User == user.User)
-                                userIndex = masteredCount;
-                        }
-
-                        var performance = 1.0 - (user.GameTime.TotalMinutes / result.MeanTimeToMaster);
-                        file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2}) (rank:{4}/{5})", 
-                            user.GameTime.TotalMinutes, performance * 100, result.MeanTimeToMaster, result.StdDevTimeToMaster,
-                            userIndex, masteredCount);
-
-                        if (dumpTimes)
-                        {
-                            var achievements = new List<AchievementTime>();
-
-                            foreach (var achievement in user.Achievements)
-                                achievements.Add(new AchievementTime { Id = achievement.Key, When = achievement.Value });
-                            achievements.Sort((l, r) => DateTime.Compare(l.When, r.When));
-
-                            foreach (var achievement in achievements)
-                            {
-                                file.Write("  {0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2} ", achievement.When.Year, achievement.When.Month, achievement.When.Day,
-                                    achievement.When.Hour, achievement.When.Minute, achievement.When.Second);
-
-                                var achDef = gameStats.Achievements.FirstOrDefault(a => a.Id == achievement.Id);
-                                if (achDef != null)
-                                    file.WriteLine("{0,6:D} {1}", achDef.Id, achDef.Title);
-                                else
-                                    file.WriteLine("{0,6:D} ??????", achievement.Id);
-                            }
-                        }
-                        file.WriteLine();
-                    }
-                }
-                file.WriteLine();
-
-                file.WriteLine("Most cheated games: Count|ID|Name [most frequent games from previous list]");
-                file.WriteLine("```");
-                cheatedGames.Sort((l, r) =>
-                {
-                    int diff = (r.Users.Count - l.Users.Count);
-                    if (diff == 0)
-                        diff = String.Compare(l.Game.GameName, r.Game.GameName);
-                    return diff;
-                });
-                for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || (i > 0 && cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count); i++)
-                {
-                    file.WriteLine(String.Format("{0,2:D} {1,5:D} {2}", cheatedGames[i].Users.Count, 
-                        cheatedGames[i].Game.GameId, cheatedGames[i].Game.GameName));
-                }
-                file.WriteLine("```");
-                file.WriteLine();
-
-                if (!String.IsNullOrEmpty(UserMasteryDetails))
+                else
                 {
                     file.Write("Details for ");
                     file.WriteLine(UserMasteryDetails);
@@ -796,10 +515,315 @@ namespace RATools.ViewModels
                     detailedUserMasteryInfo.Sort();
                     foreach (var line in detailedUserMasteryInfo)
                         file.WriteLine(line);
+
+                    file.WriteLine();
+                    file.WriteLine();
+                    WritePossibleCheaters(file, cheaters);
                 }
             }
 
             Progress.Label = String.Empty;
+        }
+
+        private void WriteSummaryAndTopLists(StreamWriter file, List<MasteryStats> results)
+        {
+            DateTime thirtyDaysAgo = DateTime.Today - TimeSpan.FromDays(30);
+
+            file.WriteLine("Games:         {0,6:D}", Snapshot.GameCount);
+            file.WriteLine("Achievements:  {0,6:D} ({1} games with achievements)", Snapshot.AchievementCount, Snapshot.AchievementGameCount);
+            file.WriteLine("Leaderboards:  {0,6:D} ({1} games with leaderboards)", Snapshot.LeaderboardCount, Snapshot.LeaderboardGameCount);
+            file.WriteLine("RichPresences: {0,6:D} ({1} static)", Snapshot.RichPresenceCount, Snapshot.StaticRichPresenceCount);
+            file.WriteLine("Authors:       {0,6:D}", Snapshot.AuthorCount);
+            file.WriteLine("Systems:       {0,6:D}", Snapshot.SystemCount);
+            file.WriteLine();
+
+            file.WriteLine("Most played: MAX(Players)");
+            file.WriteLine("```");
+            results.Sort((l, r) => l.NumPlayers - r.NumPlayers);
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--, count++)
+                file.WriteLine(String.Format("{0,5:D} {1}", results[i].NumPlayers, results[i].GameName));
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Least played: MIN(Players) [Players > 0, Age > 30 days]");
+            file.WriteLine("```");
+            for (int i = 0, count = 0; count < CountPerSection || results[i].NumPlayers == results[i - 1].NumPlayers; i++)
+            {
+                if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
+                {
+                    file.WriteLine(String.Format("{0,5:D} {1}", results[i].NumPlayers, results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Most Popular: MAX(Players/Day) [Age > 30 days]");
+            file.WriteLine("```");
+            results.Sort((l, r) => (int)((l.PlayersPerDay - r.PlayersPerDay) * 100000));
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
+            {
+                if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
+                {
+                    file.WriteLine(String.Format("{0:F3} {1}", results[i].PlayersPerDay, results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Least Popular: MIN(Players/Day) [Age > 30 days]");
+            file.WriteLine("```");
+            for (int i = 0, count = 0; count < CountPerSection; i++)
+            {
+                if (results[i].NumPlayers > 0 && results[i].Created < thirtyDaysAgo)
+                {
+                    file.WriteLine(String.Format("{0:F4} {1}", results[i].PlayersPerDay, results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Slowest to Master: MAX(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3]");
+            file.WriteLine("```");
+            results.Sort((l, r) => (int)((l.MeanTimeToMaster - r.MeanTimeToMaster) * 100000));
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
+            {
+                if (results[i].HardcoreMasteredUserCount >= 3)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
+                        results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
+                        results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Fastest to Master: MIN(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3, Points >= 50]");
+            file.WriteLine("```");
+            for (int i = 0, count = 0; count < CountPerSection; i++)
+            {
+                if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 50 && results[i].MeanTimeToMaster > 0.0)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
+                        results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
+                        results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Fastest to Master: MIN(MeanTimeToMaster) MasteryRate|MeanTimeToMaster|StdDev [Players Mastered >= 3, Points >= 400]");
+            file.WriteLine("```");
+            for (int i = 0, count = 0; count < CountPerSection; i++)
+            {
+                if (results[i].HardcoreMasteredUserCount >= 3 && results[i].Points >= 400 && results[i].MeanTimeToMaster > 0.0)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,8:F2} {3,8:F2} {4}",
+                        results[i].HardcoreMasteredUserCount, results[i].NumPlayers,
+                        results[i].MeanTimeToMaster, results[i].StdDevTimeToMaster,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Points requiring the least effort: MIN(MinutesPerPoint)|NintiethPercentilePoints|Players [>= 2 achievements earned by 90% of players, Players >= 3]");
+            file.WriteLine("```");
+            results.Sort((l, r) =>
+            {
+                if (l == null)
+                    return -1;
+                if (r == null)
+                    return 1;
+
+                return (int)((l.MinutesPerPoint - r.MinutesPerPoint) * 100000);
+            });
+            for (int i = 0, count = 0; count < CountPerSection; i++)
+            {
+                if (results[i].NintiethPercentileAchievements >= 3 && results[i].NumPlayers >= 3)
+                {
+                    file.WriteLine(String.Format("{0,6:F3} {1,4:D} {2,4:D} {3}", results[i].MinutesPerPoint, results[i].NintiethPercentilePoints, results[i].NumPlayers, results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Points requiring the most effort: MAX(MinutesPerPoint)|NintiethPercentilePoints|Players [>= 10 points earned by 90% of players, Players >= 3]");
+            file.WriteLine("```");
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
+            {
+                if (results[i].NintiethPercentilePoints >= 10 && results[i].NumPlayers >= 3)
+                {
+                    file.WriteLine(String.Format("{0,6:F3} {1,4:D} {2,4:D} {3}", results[i].MinutesPerPoint, results[i].NintiethPercentilePoints, results[i].NumPlayers, results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Easiest sets: MAX(NintiethPercentilePoints/Points)|Players [Players >= 10, Points >= 50]");
+            file.WriteLine("```");
+            results.Sort((l, r) =>
+            {
+                if (l == null || l.Points == 0)
+                    return -1;
+                if (r == null || r.Points == 0)
+                    return 1;
+                return ((l.NintiethPercentilePoints * 10000) / l.Points) - ((r.NintiethPercentilePoints * 10000) / r.Points);
+            });
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
+            {
+                if (results[i].NumPlayers >= 10 && results[i].Points >= 50)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
+                        results[i].NintiethPercentilePoints, results[i].Points, results[i].NumPlayers,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Easiest sets: MAX(NintiethPercentilePoints/Points)|Players [Players >= 10, Points >= 400]");
+            file.WriteLine("```");
+            for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
+            {
+                if (results[i].NumPlayers >= 10 && results[i].Points >= 400)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
+                        results[i].NintiethPercentilePoints, results[i].Points, results[i].NumPlayers,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Hardest sets: MIN(TwentyFifthPercentilePoints/Points)|Players [Players >= 10, TwentyFifthPercentilePoints > 0]");
+            file.WriteLine("```");
+            results.Sort((l, r) =>
+            {
+                if (l == null || l.Points == 0)
+                    return -1;
+                if (r == null || r.Points == 0)
+                    return 1;
+                return (l.TwentyFifthPercentilePoints * 10000) / l.Points - (r.TwentyFifthPercentilePoints * 10000) / r.Points;
+            });
+            for (int i = 0, count = 0; count < CountPerSection; i++)
+            {
+                if (results[i].NumPlayers >= 10 && results[i].TwentyFifthPercentilePoints > 0)
+                {
+                    file.WriteLine(String.Format("{0,4:D}/{1,4:D} {2,4:D} {3}",
+                        results[i].TwentyFifthPercentilePoints, results[i].Points, results[i].NumPlayers,
+                        results[i].GameName));
+                    count++;
+                }
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+
+            file.WriteLine("Most Earned Achievements: MAX(Players)|Achievement (Game)");
+            file.WriteLine("```");
+            foreach (var achievement in _mostAwardedAchievements)
+            {
+                file.WriteLine(String.Format("{0,5:D} {1} ({2})",
+                    achievement.EarnedBy, achievement.Title, achievement.Description));
+            }
+            file.WriteLine("```");
+            file.WriteLine();
+        }
+
+        private void WritePossibleCheaters(StreamWriter file, List<CheaterInfo> cheaters)
+        {
+            if (String.IsNullOrEmpty(UserMasteryDetails))
+            {
+                Progress.Label = "Identifying potential cheaters...";
+                Progress.Reset(cheaters.Count);
+
+                file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
+                file.WriteLine();
+            }
+
+            foreach (var cheater in cheaters)
+            {
+                ++Progress.Current;
+
+                if (!String.IsNullOrEmpty(UserMasteryDetails) && cheater.UserName != UserMasteryDetails)
+                    continue;
+
+                foreach (var kvp in cheater.Results)
+                {
+                    var result = kvp.Key;
+                    var user = kvp.Value;
+
+                    file.WriteLine("* {0} mastered {1} ({2})", user.User, result.GameName, result.GameId);
+                    file.WriteLine("  https://retroachievements.org/gamecompare.php?ID={0}&f={1}", result.GameId, user.User);
+
+                    bool dumpTimes = true;
+
+                    var notified = CheaterNotified(user.User, result.GameId);
+                    if (!String.IsNullOrEmpty(notified))
+                        file.WriteLine("  - notified {0}", notified);
+
+                    if (IsUntracked(user.User))
+                    {
+                        file.WriteLine("  - currently Untracked");
+                        dumpTimes = false;
+                    }
+
+                    var gameStats = new GameStatsViewModel() { GameId = result.GameId };
+                    gameStats.LoadGame();
+
+                    int userIndex = -1;
+                    int masteredCount = 0;
+                    foreach (var scan in gameStats.TopUsers)
+                    {
+                        if (scan.PointsEarned < gameStats.TotalPoints)
+                            break;
+
+                        masteredCount++;
+
+                        if (scan.User == user.User)
+                            userIndex = masteredCount;
+                    }
+
+                    var performance = 1.0 - (user.GameTime.TotalMinutes / result.MeanTimeToMaster);
+                    file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2}) (rank:{4}/{5})",
+                        user.GameTime.TotalMinutes, performance * 100, result.MeanTimeToMaster, result.StdDevTimeToMaster,
+                        userIndex, masteredCount);
+
+                    if (dumpTimes)
+                    {
+                        var achievements = new List<AchievementTime>();
+
+                        foreach (var achievement in user.Achievements)
+                            achievements.Add(new AchievementTime { Id = achievement.Key, When = achievement.Value });
+                        achievements.Sort((l, r) => DateTime.Compare(l.When, r.When));
+
+                        foreach (var achievement in achievements)
+                        {
+                            file.Write("  {0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2} ", achievement.When.Year, achievement.When.Month, achievement.When.Day,
+                                achievement.When.Hour, achievement.When.Minute, achievement.When.Second);
+
+                            var achDef = gameStats.Achievements.FirstOrDefault(a => a.Id == achievement.Id);
+                            if (achDef != null)
+                                file.WriteLine("{0,6:D} {1}", achDef.Id, achDef.Title);
+                            else
+                                file.WriteLine("{0,6:D} ??????", achievement.Id);
+                        }
+                    }
+                    file.WriteLine();
+                }
+            }
+            file.WriteLine();
         }
 
         private static string CheaterNotified(string user, int gameId)

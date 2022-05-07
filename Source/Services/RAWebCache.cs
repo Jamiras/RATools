@@ -30,7 +30,7 @@ namespace RATools.Services
         public string GetGamePage(int gameId)
         {
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.html", gameId));
-            var url = String.Format("https://retroachievements.org/game/{0}", gameId);
+            var url = String.Format("https://retroachievements.org/game/{0}?v=1", gameId);
             return GetPage(filename, url, false);
         }
 
@@ -53,7 +53,7 @@ namespace RATools.Services
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", pageIndex));
             var url = "https://retroachievements.org/ticketmanager.php";
             if (pageIndex > 0)
-                url += "?u=&t=16377&o=" + (pageIndex * 100);
+                url += "?o=" + (pageIndex * 100);
 
             return GetPage(filename, url, true);
         }
