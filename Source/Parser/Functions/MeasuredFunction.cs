@@ -16,29 +16,6 @@ namespace RATools.Parser.Functions
             DefaultParameters["format"] = new StringConstantExpression("raw");
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            if (!base.ReplaceVariables(scope, out result))
-                return false;
-
-            var func = result as FunctionCallExpression;
-            if (func == null)
-                return true;
-
-            var when = GetParameter(scope, "when", out result);
-            if (result != null)
-                return false;
-
-            var format = GetStringParameter(scope, "format", out result);
-            if (result != null)
-                return false;
-
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { func.Parameters.First(), when, format });
-            CopyLocation(result);
-
-            return true;
-        }
-
         public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var error = base.BuildTrigger(context, scope, functionCall);
