@@ -55,15 +55,21 @@ namespace RATools.Parser.Internal
 
             ExpressionBase.SkipWhitespace(tokenizer);
 
-            line = tokenizer.Line;
-            column = tokenizer.Column;
-            if (tokenizer.Match("else"))
+            if (tokenizer.MatchSubstring("else") == 4)
             {
-                ifExpression._elseKeyword = new KeywordExpression("else", line, column);
+                tokenizer.PushState();
+                bool isElse = tokenizer.ReadIdentifier() == "else";
+                tokenizer.PopState();
 
-                error = ExpressionBase.ParseStatementBlock(tokenizer, ifExpression.ElseExpressions);
-                if (error != null)
-                    return error;
+                if (isElse)
+                {
+                    ifExpression._elseKeyword = new KeywordExpression("else", tokenizer.Line, tokenizer.Column);
+                    tokenizer.Advance(4);
+
+                    error = ExpressionBase.ParseStatementBlock(tokenizer, ifExpression.ElseExpressions);
+                    if (error != null)
+                        return error;
+                }
             }
 
             return ifExpression;
