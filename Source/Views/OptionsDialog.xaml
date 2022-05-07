@@ -3,14 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:RATools"
              xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
              mc:Ignorable="d" 
-             Width="600" Height="312">
+             Width="600" Height="325">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/FieldStyles.xaml" />
+                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>
@@ -18,6 +18,7 @@
         <TabItem Header="General">
             <Grid Margin="4">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -29,7 +30,28 @@
                     </StackPanel>
                 </GroupBox>
 
-                <GroupBox Grid.Row="1" Header="Emulator Directories">
+                <GroupBox Grid.Row="1" Header="Web API Key">
+                    <StackPanel>
+                        <TextBlock Margin="2" FontSize="11">
+                            <Run>Only needed for some of the Analysis tools. Can be found on the</Run>
+                            <Hyperlink Command="{Binding SettingsLinkCommand}" Style="{StaticResource subtleHyperlink}">
+                                <TextBlock Text="Settings" />
+                            </Hyperlink>
+                            <Run>page of the website.</Run>
+                        </TextBlock>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding ApiKey.Text}" Margin="2" MaxLength="{Binding ApiKey.MaxLength}" />
+                            <ToggleButton Grid.Column="1" HorizontalAlignment="Right" Content="&#x1F441;" Margin="0,0,2,0"
+                                          Height="18" Padding="0,-4,0,-2" IsChecked="{Binding ApiKey.IsUnmasked}" />
+                        </Grid>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Grid.Row="2" Header="Emulator Directories">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto" />
@@ -68,7 +90,7 @@
                             </ListView.ItemTemplate>
                         </ListView>
 
-                        <Button Grid.Row="2" HorizontalAlignment="Left" Width="80" 
+                        <Button Grid.Row="3" HorizontalAlignment="Left" Width="80" 
                                 Content="Remove" Command="{Binding RemoveDirectoryCommand}">
                             <Button.Style>
                                 <Style TargetType="{x:Type Button}">
@@ -81,7 +103,7 @@
                             </Button.Style>
                         </Button>
 
-                        <Button Grid.Row="2" HorizontalAlignment="Right" Width="80" 
+                        <Button Grid.Row="3" HorizontalAlignment="Right" Width="80" 
                                 Content="Add" Command="{Binding AddDirectoryCommand}" />
                     </Grid>
                 </GroupBox>
