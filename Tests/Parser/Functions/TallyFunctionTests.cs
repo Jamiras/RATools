@@ -483,9 +483,8 @@ namespace RATools.Test.Parser.Functions
         [Test]
         public void TestUnsupportedFlags()
         {
-            var errorMessage = "Modifier not allowed in subclause";
-            Evaluate("tally(4, never(byte(0x1234) == 5) || once(byte(0x1234) == 34))", errorMessage);
-            Evaluate("tally(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", errorMessage);
+            Evaluate("tally(4, never(byte(0x1234) == 5) || once(byte(0x1234) == 34))", "ResetIf modifier not allowed in subclause");
+            Evaluate("tally(4, measured(repeated(6, byte(0x1234) == 5)) || byte(0x1234) == 34)", "Measured modifier not allowed in subclause");
         }
 
         [Test]

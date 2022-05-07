@@ -86,6 +86,20 @@ namespace RATools.Parser.Internal
 
         private bool _fullyExpanded = false;
 
+        public void AddCondition(ExpressionBase condition)
+        {
+            _conditions.Add(condition);
+            _fullyExpanded = false;
+
+            if (!condition.Location.IsEmpty)
+            {
+                if (condition.Location.Start < Location.Start)
+                    Location = new TextRange(condition.Location.Start, Location.End);
+                if (condition.Location.End > Location.End)
+                    Location = new TextRange(Location.Start, condition.Location.End);
+            }
+        }
+
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder" />.
         /// </summary>
