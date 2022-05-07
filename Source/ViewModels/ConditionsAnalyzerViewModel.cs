@@ -132,7 +132,7 @@ namespace RATools.ViewModels
         private void OpenGame(Result result)
         {
             var url = "http://retroachievements.org/Game/" + result.GameId;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         public CommandBase<Result> OpenItemCommand { get; private set; }
@@ -146,7 +146,7 @@ namespace RATools.ViewModels
             else
                 url = url + "Game/" + result.GameId;
 
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         private class RangeFilterFieldViewModel : TextFieldViewModel

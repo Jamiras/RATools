@@ -71,7 +71,7 @@ namespace RATools.ViewModels
         private void OpenGame(Result result)
         {
             var url = "https://retroachievements.org/game/" + result.GameId;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         private void Snapshot_DataRefreshed(object sender, EventArgs e)

@@ -1,7 +1,8 @@
 ﻿using Jamiras.Commands;
+using Jamiras.Components;
+using Jamiras.Services;
 using Jamiras.ViewModels;
 using System;
-using System.Diagnostics;
 using System.Reflection;
 
 namespace RATools.ViewModels
@@ -34,6 +35,14 @@ namespace RATools.ViewModels
             }
         }
 
+        public string CPUMode
+        {
+            get
+            {
+                return String.Format("Running in {0}-bit mode", (IntPtr.Size == 4) ? "32" : "64");
+            }
+        }
+
         public string CopyrightMessage
         {
             get
@@ -46,7 +55,13 @@ namespace RATools.ViewModels
         {
             get
             {
-                return GetAssemblyAttribute<AssemblyProductAttribute>().Product;
+                foreach (AssemblyMetadataAttribute metadata in Attribute.GetCustomAttributes(Assembly.GetExecutingAssembly(), typeof(AssemblyMetadataAttribute), false))
+                {
+                    if (metadata.Key == "RepositoryUrl")
+                        return metadata.Value;
+                }
+
+                return "";
             }
         }
 
@@ -60,7 +75,7 @@ namespace RATools.ViewModels
 
         private void OpenSourceLink()
         {
-            Process.Start(SourceLink);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(SourceLink);
         }
     }
 }

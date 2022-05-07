@@ -8,7 +8,7 @@ on:
 
 jobs:
   Build-and-Tests:
-    runs-on: windows-2019
+    runs-on: windows-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
     - name: Setup dotnet
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.x
+        dotnet-version: 6.x
 
     - name: Install MSBuild
       uses: microsoft/setup-msbuild@v1.0.2
@@ -30,4 +30,4 @@ jobs:
       run: msbuild.exe RATools.sln -p:Configuration=Release -p:Platform="Any CPU"
 
     - name: Run Tests
-      run: dotnet test Tests\bin\Release\RATools.Test.dll
+      run: dotnet test Tests\bin\Release\net6.0-windows\RATools.Tests.dll

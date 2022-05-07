@@ -70,21 +70,21 @@ namespace RATools.ViewModels
         private void OpenAchievement(AchievementTickets achievement)
         {
             var url = "https://retroachievements.org/achievement/" + achievement.AchievementId;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         public CommandBase<GameTickets> OpenGameCommand { get; private set; }
         private void OpenGame(GameTickets game)
         {
             var url = "https://retroachievements.org/game/" + game.GameId;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         public CommandBase<GameTickets> OpenGameTicketsCommand { get; private set; }
         private void OpenGameTickets(GameTickets game)
         {
             var url = "https://retroachievements.org/ticketmanager.php?ampt=1&g=" + game.GameId;
-            Process.Start(url);
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         public static readonly ModelProperty OpenTicketsProperty = ModelProperty.Register(typeof(OpenTicketsViewModel), "OpenTickets", typeof(int), 0);

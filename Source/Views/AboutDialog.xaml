@@ -16,6 +16,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -23,7 +24,7 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <Image Grid.RowSpan="2" Source="/RATools;component/Resources/Icon.png" 
+        <Image Grid.RowSpan="3" Source="/RATools;component/Resources/Icon.png" 
                Width="32" Height="32" VerticalAlignment="Top" Margin="2,2,4,2" />
         <TextBlock Grid.Column="1">
             <TextBlock  FontWeight="Bold" Text="{Binding ProductVersion}" />
@@ -35,5 +36,6 @@
                 <TextBlock Text="{Binding SourceLink}" />
             </Hyperlink>
         </TextBlock>
+        <TextBlock Grid.Column="1" Grid.Row="2" FontSize="10" Opacity="0.4" Text="{Binding CPUMode}" />
     </Grid>
 </UserControl>
