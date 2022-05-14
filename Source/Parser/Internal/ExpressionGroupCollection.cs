@@ -441,9 +441,8 @@ namespace RATools.Parser.Internal
                             scan.Location.Start.Line >= mostSignificantError.Location.Start.Line &&
                             scan.Location.End.Line < mostSignificantError.Location.End.Line)
                         {
-                            // scan is more significant than current error, but not part of line, ignore it
+                            // scan is more significant than current error, but not part of line, ignore it and the current error
                             mostSignificantError = null;
-                            break;
                         }
 
                         scan = scan.InnerError;

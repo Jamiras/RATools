@@ -137,24 +137,6 @@ namespace RATools.Parser.Internal
             {
                 // in assignment, just replace variables
                 functionDefinition.ReplaceVariables(functionParametersScope, out result);
-
-                if (result.Type == ExpressionType.FunctionCall)
-                {
-                    // if the result is a function call, check for any variable references. it can't be marked
-                    // as fully expanded if any variable references are present.
-                    var functionCall = (FunctionCallExpression)result;
-                    if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
-                        functionCall._fullyExpanded = true;
-
-                    // if there was no change, also mark the source as fully expanded.
-                    if (result == this)
-                        _fullyExpanded = true;
-
-                    // when expanding the parameters, a new functionCall object will be created without a name
-                    // location. if that has happened, replace the temporary name object with the real one.
-                    if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
-                        functionCall.FunctionName = FunctionName;
-                }
             }
             else
             {
@@ -169,6 +151,24 @@ namespace RATools.Parser.Internal
                     this.CopyLocation(error);
                 result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
+            }
+
+            var functionCall = result as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                // if the result is a function call, check for any variable references. it can't be marked
+                // as fully expanded if any variable references are present.
+                if (!functionCall.Parameters.Any(p => p is VariableReferenceExpression))
+                    functionCall._fullyExpanded = true;
+
+                // if there was no change, also mark the source as fully expanded.
+                if (result == this)
+                    _fullyExpanded = true;
+
+                // when expanding the parameters, a new functionCall object will be created without a name
+                // location. if that has happened, replace the temporary name object with the real one.
+                if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
+                    functionCall.FunctionName = FunctionName;
             }
 
             return true;
@@ -348,7 +348,9 @@ namespace RATools.Parser.Internal
                     if (error != null)
                         return null;
 
-                    parameterScope.DefineVariable(new VariableDefinitionExpression(assignedParameter.Variable), value);
+                    var variableDefinition = new VariableDefinitionExpression(assignedParameter.Variable);
+                    parameter.CopyLocation(variableDefinition);
+                    parameterScope.DefineVariable(variableDefinition, value);
                     namedParameters = true;
                 }
                 else
@@ -376,7 +378,9 @@ namespace RATools.Parser.Internal
                     if (index < parameterCount)
                     {
                         providedParameters.Remove(variableName);
-                        parameterScope.DefineVariable(new VariableDefinitionExpression(variableName), value);
+                        var variableDefinition = new VariableDefinitionExpression(variableName);
+                        parameter.CopyLocation(variableDefinition);
+                        parameterScope.DefineVariable(variableDefinition, value);
                     }
                     else
                     {

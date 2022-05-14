@@ -154,8 +154,24 @@ namespace RATools.Test.Parser.Functions
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234) * 10 + byte(0x2345), format=\"percent\"))",
                 "1:1 leaderboard call failed\r\n" +
-                "- 1:80 Function call failed.\r\n" +
+                "- 1:80 measured call failed\r\n" +
                 "- 1:130 Value fields only support raw measured values");
+        }
+
+        [Test]
+        public void TestValueMeasuredRawWithRepeatedWhen()
+        {
+            // never inside when
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(byte(0x1234), when=repeated(10, byte(0x2345) == 10) && never(byte(0x2345) == 20)))");
+            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Q:0xH002345=10.10._R:0xH002345=20"));
+
+            // never outside measured
+            leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "never(byte(0x2345) == 20) && measured(byte(0x1234), when=repeated(10, byte(0x2345) == 10)))");
+            Assert.That(leaderboard.Value, Is.EqualTo("R:0xH002345=20_M:0xH001234_Q:0xH002345=10.10."));
         }
 
         [Test]

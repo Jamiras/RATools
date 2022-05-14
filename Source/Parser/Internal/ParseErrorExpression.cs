@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using Jamiras.Components;
+using System.Text;
 
 namespace RATools.Parser.Internal
 {
@@ -11,15 +12,19 @@ namespace RATools.Parser.Internal
         }
 
         public ParseErrorExpression(string message, int line, int column, int endLine, int endColumn)
-            : this(message)
+            : this(message, new TextRange(line, column, endLine, endColumn))
         {
-            Location = new Jamiras.Components.TextRange(line, column, endLine, endColumn);
         }
 
         public ParseErrorExpression(string message, ExpressionBase expression)
+            : this(message, expression.Location)
+        {
+        }
+
+        public ParseErrorExpression(string message, TextRange location)
             : this(message)
         {
-            Location = expression.Location;
+            Location = location;
         }
 
         public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)

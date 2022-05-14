@@ -317,9 +317,11 @@ namespace RATools.Parser
             var conditionalExpression = expression as ConditionalExpression;
             if (conditionalExpression != null)
             {
+                var valueScope = new InterpreterScope(scope) { Context = new ValueBuilderContext() };
+
                 ParseErrorExpression parseError;
                 var achievement = new ScriptInterpreterAchievementBuilder();
-                if (!achievement.PopulateFromExpression(expression, scope, out parseError))
+                if (!achievement.PopulateFromExpression(expression, valueScope, out parseError))
                 {
                     result = parseError;
                     return false;
@@ -419,8 +421,8 @@ namespace RATools.Parser
                         break;
 
                     case RequirementType.ResetIf:
-                        // ResetIf are only allowed if the measured value has a target HitCount
-                        if (measured.HitCount == 0)
+                        // ResetIf are only allowed if something has a target HitCount
+                        if (requirements.All(r => r.HitCount == 0))
                         {
                             result = new ParseErrorExpression("value contains a never without a repeated", expression);
                             return false;
@@ -440,7 +442,6 @@ namespace RATools.Parser
                         break;
                 }
             }
-
 
             if (measured.HitCount == uint.MaxValue)
                 measured.HitCount = 0;
@@ -485,7 +486,7 @@ namespace RATools.Parser
 
             var error = triggerBuilderFunction.BuildTrigger(this, scope, functionCall);
             if (error != null)
-                return ParseErrorExpression.WrapError(error, "Function call failed.", functionCall);
+                return ParseErrorExpression.WrapError(error, functionCall.FunctionName.Name + " call failed", functionCall.FunctionName);
 
             return null;
         }

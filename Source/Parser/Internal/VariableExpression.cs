@@ -75,7 +75,7 @@ namespace RATools.Parser.Internal
                 {
                     // special wrapper for returning a function as a variable
                     result = new FunctionReferenceExpression(Name);
-                    result.CopyLocation(this);
+                    this.CopyLocation(result);
                     return true;
                 }
 
