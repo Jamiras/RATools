@@ -70,6 +70,58 @@ namespace RATools.Test.Parser.Internal
         }
 
         [Test]
+        public void TestParseElseIf()
+        {
+            var expr = Parse("if (j == 0) { j = i } else if (j == 2) { j = 10 }");
+
+            var builder = new StringBuilder();
+            expr.Condition.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j == 0"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(1));
+
+            var elseIfExpr = expr.ElseExpressions.First() as IfExpression;
+            Assert.That(elseIfExpr, Is.Not.Null);
+
+            builder = new StringBuilder();
+            elseIfExpr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = 10"));
+
+            Assert.That(elseIfExpr.ElseExpressions.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestParseElseIfNoSpace()
+        {
+            var input = "if (j == 0) { j = i } elseif (j == 2) { j = 10 }";
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            tokenizer.Match("if");
+            var expr = IfExpression.Parse(tokenizer) as IfExpression;
+            Assert.That(expr, Is.Not.Null);
+
+            var builder = new StringBuilder();
+            expr.Condition.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j == 0"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(0));
+
+            tokenizer.SkipWhitespace();
+            Assert.That(tokenizer.MatchSubstring("elseif"), Is.EqualTo(6));
+        }
+
+        [Test]
         public void TestNestedExpressions()
         {
             var expr = Parse("if (a == 3) { b = c + 4 } else { d = e }");
