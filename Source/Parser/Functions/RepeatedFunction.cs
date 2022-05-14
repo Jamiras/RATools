@@ -63,7 +63,7 @@ namespace RATools.Parser.Functions
                             var conditional = neverExpression.Parameters.First() as ConditionalExpression;
                             if (conditional != null && conditional.Operation == ConditionalOperation.Or)
                             {
-                                ((IList<ExpressionBase>)conditional.Conditions).Add(functionCall);
+                                conditional.AddCondition(functionCall.Parameters.First());
                             }
                             else
                             {
@@ -94,7 +94,10 @@ namespace RATools.Parser.Functions
 
                     error = BuildTriggerCondition(nestedContext, innerScope, neverExpression);
                     if (error != null)
+                    {
+                        neverExpression.Parameters.First().CopyLocation(error);
                         return error;
+                    }
 
                     nestedContext.LastRequirement.Type = RequirementType.ResetNextIf;
                     foreach (var requirement in nestedContext.Trigger)
