@@ -42,6 +42,7 @@ namespace RATools.ViewModels
 
             _publishedAchievements = new List<Achievement>();
             _publishedLeaderboards = new List<Leaderboard>();
+            _publishedRichPresence = null;
 
             _logger = logger;
             _fileSystemService = fileSystemService;
@@ -51,6 +52,7 @@ namespace RATools.ViewModels
         protected readonly IFileSystemService _fileSystemService;
         protected readonly List<Achievement> _publishedAchievements;
         protected readonly List<Leaderboard> _publishedLeaderboards;
+        protected RichPresence _publishedRichPresence;
         protected LocalAssets _localAssets;
 
         internal int GameId { get; private set; }
@@ -82,12 +84,13 @@ namespace RATools.ViewModels
 
                 if (!String.IsNullOrEmpty(interpreter.RichPresence))
                 {
-                    var richPresenceViewModel = new RichPresenceViewModel(this, interpreter.RichPresence);
-                    if (richPresenceViewModel.Lines.Any())
+                    var richPresenceViewModel = new RichPresenceViewModel(this);
+                    richPresenceViewModel.Generated.Asset = new RichPresence
                     {
-                        richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
-                        editors.Add(richPresenceViewModel);
-                    }
+                        Script = interpreter.RichPresence,
+                        SourceLine = interpreter.RichPresenceLine
+                    };
+                    editors.Add(richPresenceViewModel);
                 }
 
                 foreach (var achievement in interpreter.Achievements)
@@ -109,7 +112,7 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = 0;
             }
 
-            if (_publishedAchievements.Count > 0 || _publishedLeaderboards.Count > 0)
+            if (_publishedAchievements.Count > 0 || _publishedLeaderboards.Count > 0 || _publishedRichPresence != null)
                 MergePublished(editors);
 
             if (_localAssets != null)
@@ -233,6 +236,27 @@ namespace RATools.ViewModels
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { leaderboard });
         }
 
+        internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
+        {
+            if (richPresence == null)
+            {
+                _logger.WriteVerbose("Deleting local rich presence");
+                _localAssets.Replace(localRichPresence, null);
+            }
+            else
+            {
+                if (localRichPresence != null)
+                    _logger.WriteVerbose("Updating rich presence");
+                else
+                    _logger.WriteVerbose("Committing rich presence");
+
+                _localAssets.Replace(localRichPresence, richPresence);
+            }
+
+            if (_localAchievementCommitSuspendCount == 0)
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence });
+        }
+
         private int _localAchievementCommitSuspendCount = 0;
         internal void SuspendCommitLocalAchievements()
         {
@@ -346,6 +370,7 @@ namespace RATools.ViewModels
         {
             _publishedAchievements.Clear();
             _publishedLeaderboards.Clear();
+            _publishedRichPresence = null;
 
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
             using (var stream = _fileSystemService.OpenFile(fileName, OpenFileMode.Read))
@@ -424,6 +449,10 @@ namespace RATools.ViewModels
 
                         _publishedLeaderboards.Add(leaderboard);
                     }
+
+                    var publishedRichPresence = publishedData.GetField("RichPresencePatch");
+                    if (publishedRichPresence.Type == JsonFieldType.String)
+                        _publishedRichPresence = new RichPresence { Script = publishedRichPresence.StringValue };
                 }
 
                 CoreAchievementCount = coreCount;
@@ -525,12 +554,36 @@ namespace RATools.ViewModels
         {
             MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
             MergeAchievements(assets, _publishedLeaderboards, (vm, a) => vm.Published.Asset = a);
+
+            if (_publishedRichPresence != null)
+            {
+                var richPresenceViewModel = assets.OfType<RichPresenceViewModel>().FirstOrDefault();
+                if (richPresenceViewModel == null)
+                {
+                    richPresenceViewModel = new RichPresenceViewModel(this);
+                    assets.Insert(1, richPresenceViewModel);
+                }
+
+                richPresenceViewModel.Published.Asset = _publishedRichPresence;
+            }
         }
 
         private void MergeLocal(List<ViewerViewModelBase> assets)
         {
             MergeAchievements(assets, _localAssets.Achievements, (vm, a) => vm.Local.Asset = a);
             MergeAchievements(assets, _localAssets.Leaderboards, (vm, a) => vm.Local.Asset = a);
+
+            if (_localAssets.RichPresence != null)
+            {
+                var richPresenceViewModel = assets.OfType<RichPresenceViewModel>().FirstOrDefault();
+                if (richPresenceViewModel == null)
+                {
+                    richPresenceViewModel = new RichPresenceViewModel(this);
+                    assets.Insert(1, richPresenceViewModel);
+                }
+
+                richPresenceViewModel.Local.Asset = _localAssets.RichPresence;
+            }
 
             LocalAchievementCount = _localAssets.Achievements.Count();
             LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);

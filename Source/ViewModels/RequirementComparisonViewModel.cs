@@ -38,6 +38,13 @@ namespace RATools.ViewModels
             }
         }
 
+        public RequirementComparisonViewModel(string requirement, string compareRequirement)
+            : base(requirement, String.Empty)
+        {
+            IsModified = (requirement != compareRequirement);
+            OtherDefinition = compareRequirement;
+        }
+
         internal Requirement CompareRequirement { get; private set; }
 
         public static readonly ModelProperty IsModifiedProperty = ModelProperty.Register(typeof(RequirementComparisonViewModel), "IsModified", typeof(bool), false);

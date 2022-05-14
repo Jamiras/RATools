@@ -55,7 +55,20 @@ namespace RATools.ViewModels
         /// <remarks>
         /// References <see cref="Local"/>, <see cref="Published"/>, or null.
         /// </remarks>
-        public AssetSourceViewModel Other { get; private set; }
+        public AssetSourceViewModel Other 
+        { 
+            get { return _other; }
+            private set
+            {
+                if (_other != value)
+                {
+                    _other = value;
+                    OnPropertyChanged(() => Other);
+                }
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private AssetSourceViewModel _other;
 
         public CommandBase DeleteLocalCommand { get; protected set; }
 
@@ -176,9 +189,9 @@ namespace RATools.ViewModels
                     TriggerSource = "Local (Not Generated)";
                 }
             }
-            else if (IsModified(Local))
+            else if (IsModified(Local, true))
             {
-                if (coreAsset != null && !IsModified(Published))
+                if (coreAsset != null && !IsModified(Published, false))
                 {
                     if (coreAsset.IsUnofficial)
                         TriggerSource = "Generated (Same as Unofficial)";
@@ -195,7 +208,7 @@ namespace RATools.ViewModels
                 CompareState = GeneratedCompareState.LocalDiffers;
                 CanUpdate = true;
             }
-            else if (coreAsset != null && IsModified(Published))
+            else if (coreAsset != null && IsModified(Published, true))
             {
                 if (Local.Asset != null)
                 {
@@ -255,7 +268,7 @@ namespace RATools.ViewModels
             }
         }
 
-        protected bool IsModified(AssetSourceViewModel assetViewModel)
+        protected bool IsModified(AssetSourceViewModel assetViewModel, bool updateTriggers)
         {
             if (assetViewModel.Asset == null)
                 return false;
@@ -290,7 +303,8 @@ namespace RATools.ViewModels
             foreach (var compareTrigger in compareTriggers)
                 triggers.Add(new TriggerComparisonViewModel(emptyTrigger, compareTrigger, numberFormat, _owner.Notes));
 
-            Triggers = triggers;
+            if (updateTriggers)
+                Triggers = triggers;
 
             return isModified || 
                 triggers.Any(t => t.Groups.Any(g => g.Requirements.OfType<RequirementComparisonViewModel>().Any(r => r.IsModified)));

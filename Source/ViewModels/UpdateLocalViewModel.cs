@@ -61,6 +61,8 @@ namespace RATools.ViewModels
                 }
                 else if (assetViewModel.IsDeleted)
                 {
+                    assetsToValidate.Add(assetViewModel.Asset.Local.Asset);
+
                     assetViewModel.Asset.DeleteLocalCommand.Execute();
                 }
             }

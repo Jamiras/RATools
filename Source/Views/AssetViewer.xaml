@@ -112,11 +112,11 @@
                 <DataTemplate DataType="{x:Type vm:RequirementComparisonViewModel}">
                     <Grid Margin="0,2,0,2">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="definition" />
-                            <ColumnDefinition Width="Auto" MinWidth="200" SharedSizeGroup="otherDefinition" />
+                            <ColumnDefinition Width="Auto" MinWidth="200" MaxWidth="400" SharedSizeGroup="definition" />
+                            <ColumnDefinition Width="Auto" MinWidth="200" MaxWidth="400" SharedSizeGroup="otherDefinition" />
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="{Binding Definition}" Margin="0,0,8,0">
+                        <TextBlock Text="{Binding Definition}" TextWrapping="Wrap" Margin="0,0,8,0">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                     <Style.Triggers>
@@ -127,7 +127,7 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Grid.Column="1"  Text="{Binding OtherDefinition}" Margin="0,0,8,0">
+                        <TextBlock Grid.Column="1"  Text="{Binding OtherDefinition}" TextWrapping="Wrap" Margin="0,0,8,0">
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
                                     <Style.Triggers>

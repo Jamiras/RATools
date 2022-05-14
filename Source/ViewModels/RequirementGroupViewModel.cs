@@ -4,6 +4,7 @@ using RATools.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 
 namespace RATools.ViewModels
@@ -39,6 +40,12 @@ namespace RATools.ViewModels
             }
 
             Requirements = list;
+        }
+
+        public RequirementGroupViewModel(string label)
+        {
+            Label = label;
+            Requirements = new List<RequirementViewModel>();
         }
 
         private const int MinimumMatchingScore = 12;
@@ -433,6 +440,165 @@ namespace RATools.ViewModels
                     ((RequirementComparisonViewModel)list[rightIndex]).CompareRequirement, numberFormat, notes);
                 list.RemoveAt(rightIndex);
             }
+
+            Requirements = list;
+        }
+
+        public RequirementGroupViewModel(string label, IEnumerable<string> requirements, IEnumerable<string> compareRequirements, NumberFormat numberFormat, IDictionary<int, string> notes)
+        {
+            Label = label;
+
+            var unmatchedCompareRequirements = new List<string>(compareRequirements);
+            var matches = new Dictionary<string, string>();
+            var unmatchedRequirements = new List<string>();
+
+            // first pass: find exact matches
+            foreach (var requirement in requirements)
+            {
+                bool matched = false;
+                for (int i = 0; i < unmatchedCompareRequirements.Count; i++)
+                {
+                    if (unmatchedCompareRequirements[i] == requirement)
+                    {
+                        matches[requirement] = unmatchedCompareRequirements[i];
+                        unmatchedCompareRequirements.RemoveAt(i);
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched)
+                    unmatchedRequirements.Add(requirement);
+            }
+
+            // second pass: find close matches
+            while (unmatchedRequirements.Count > 0)
+            {
+                var bestScore = MinimumMatchingScore / 2 - 1;
+                var matchIndex = -1;
+                var compareIndex = -1;
+
+                for (var i = 0; i < unmatchedRequirements.Count; i++)
+                {
+                    var requirement = unmatchedRequirements[i];
+                    if (requirement[0] != '?')
+                    {
+                        var parts = requirement.Split('=');
+                        if (parts.Length == 2)
+                        {
+                            for (var j = 0; j < unmatchedCompareRequirements.Count; j++)
+                            {
+                                var parts2 = unmatchedCompareRequirements[j].Split('=');
+                                if (parts2.Length == 2)
+                                {
+                                    var score = (parts2[1] == parts[1]) ? parts[1].Length + 4 : 0;
+                                    if (parts2[0] == parts[0])
+                                    {
+                                        score += 8;
+                                    }
+                                    else
+                                    {
+                                        int int1, int2;
+
+                                        if (parts[0].StartsWith("0x") && !parts2[0].StartsWith("0x"))
+                                        {
+                                            if (Int32.TryParse(parts[0].Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int1) &&
+                                                Int32.TryParse(parts2[0], out int2) && int1 == int2)
+                                            {
+                                                score += 8;
+                                            }
+                                        }
+                                        else if (!parts[0].StartsWith("0x") && parts2[0].StartsWith("0x"))
+                                        {
+                                            if (Int32.TryParse(parts2[0].Substring(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int1) &&
+                                                Int32.TryParse(parts[0], out int2) && int1 == int2)
+                                            {
+                                                score += 8;
+                                            }
+                                        }
+
+                                    }
+                                    
+                                    if (score > bestScore)
+                                    {
+                                        bestScore = score;
+                                        matchIndex = i;
+                                        compareIndex = j;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (matchIndex == -1)
+                    break;
+
+                matches[unmatchedRequirements[matchIndex]] = unmatchedCompareRequirements[compareIndex];
+                unmatchedRequirements.RemoveAt(matchIndex);
+                unmatchedCompareRequirements.RemoveAt(compareIndex);
+            }
+
+            var pairs = new List<Tuple<string, string>>(matches.Count + unmatchedCompareRequirements.Count);
+            foreach (var requirement in requirements)
+            {
+                string match;
+                matches.TryGetValue(requirement, out match);
+                pairs.Add(new Tuple<string, string>(requirement, match));
+            }
+
+            // insert any unmatched comparison requirements
+            if (unmatchedCompareRequirements.Count > 0)
+            {
+                var compareRequirementsList = new List<string>(compareRequirements);
+                var requirementsList = new List<string>(requirements);
+                var indices = new int[compareRequirementsList.Count + 2];
+                for (int i = 1; i < indices.Length - 1; ++i)
+                    indices[i] = -2;
+                indices[0] = -1;
+                indices[compareRequirementsList.Count + 1] = compareRequirementsList.Count + 1;
+                for (int i = 0; i < requirementsList.Count; i++)
+                {
+                    string match;
+                    if (matches.TryGetValue(requirementsList[i], out match))
+                        indices[compareRequirementsList.IndexOf(match) + 1] = i;
+                }
+
+                foreach (var requirement in unmatchedCompareRequirements)
+                {
+                    var insertIndex = pairs.Count;
+
+                    var requirementIndex = compareRequirementsList.IndexOf(requirement);
+                    if (requirementIndex < compareRequirementsList.Count - 1)
+                    {
+                        for (int i = 1; i < indices.Length - 1; i++)
+                        {
+                            if (indices[i - 1] == requirementIndex - 1 || indices[i + 1] == requirementIndex + 1)
+                            {
+                                insertIndex = i - 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (insertIndex < pairs.Count)
+                    {
+                        for (int i = 0; i < indices.Length; i++)
+                        {
+                            if (indices[i] >= insertIndex)
+                                indices[i]++;
+                        }
+                    }
+
+                    if (insertIndex < indices.Length - 1)
+                        indices[insertIndex + 1] = requirementIndex;
+                    pairs.Insert(insertIndex, new Tuple<string, string>(null, requirement));
+                }
+            }
+
+            var list = new List<RequirementViewModel>();
+            foreach (var pair in pairs)
+                list.Add(new RequirementComparisonViewModel(pair.Item1, pair.Item2));
 
             Requirements = list;
         }

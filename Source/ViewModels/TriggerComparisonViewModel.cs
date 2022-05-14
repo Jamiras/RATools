@@ -62,19 +62,39 @@ namespace RATools.ViewModels
             // create the comparison view models.
             foreach (var triggerGroup in trigger.Groups)
             {
-                RequirementGroupViewModel compareTriggerGroup;
-                if (matches.TryGetValue(triggerGroup, out compareTriggerGroup))
+                if (triggerGroup.Requirements.Any(r => r.Requirement == null))
                 {
-                    groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
-                        triggerGroup.Requirements.Select(r => r.Requirement),
-                        compareTriggerGroup.Requirements.Select(r => r.Requirement),
-                        numberFormat, notes));
+                    RequirementGroupViewModel compareTriggerGroup;
+                    if (matches.TryGetValue(triggerGroup, out compareTriggerGroup))
+                    {
+                        groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
+                            triggerGroup.Requirements.Select(r => r.Definition),
+                            compareTriggerGroup.Requirements.Select(r => r.Definition),
+                            numberFormat, notes));
+                    }
+                    else
+                    {
+                        groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
+                            triggerGroup.Requirements.Select(r => r.Definition),
+                            new string[0], numberFormat, notes));
+                    }
                 }
                 else
                 {
-                    groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
-                        triggerGroup.Requirements.Select(r => r.Requirement),
-                        emptyRequirements, numberFormat, notes));
+                    RequirementGroupViewModel compareTriggerGroup;
+                    if (matches.TryGetValue(triggerGroup, out compareTriggerGroup))
+                    {
+                        groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
+                            triggerGroup.Requirements.Select(r => r.Requirement),
+                            compareTriggerGroup.Requirements.Select(r => r.Requirement),
+                            numberFormat, notes));
+                    }
+                    else
+                    {
+                        groups.Add(new RequirementGroupViewModel(triggerGroup.Label,
+                            triggerGroup.Requirements.Select(r => r.Requirement),
+                            emptyRequirements, numberFormat, notes));
+                    }
                 }
             }
 
@@ -91,6 +111,9 @@ namespace RATools.ViewModels
 
         private RequirementGroupViewModel FindBestMatch(RequirementGroupViewModel needle, IEnumerable<RequirementGroupViewModel> haystack)
         {
+            if (needle.Requirements.Any(r => r.Requirement == null))
+                return haystack.FirstOrDefault(g => g.Label == needle.Label);
+
             RequirementGroupViewModel bestMatch = null;
             int bestMatchCount = 0;
             var requirementExs = RequirementEx.Combine(needle.Requirements.Select(r => r.Requirement));
