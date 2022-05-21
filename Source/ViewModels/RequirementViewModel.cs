@@ -74,38 +74,6 @@ namespace RATools.ViewModels
             private set { SetValue(DefinitionProperty, value); }
         }
 
-
-        public static readonly ModelProperty WrappedDefinitionProperty = 
-            ModelProperty.RegisterDependant(typeof(RequirementViewModel), "WrappedDefinition", typeof(string), new[] { DefinitionProperty }, GetWrappedDefinition);
-
-        public string WrappedDefinition
-        {
-            get { return (string)GetValue(WrappedDefinitionProperty); }
-        }
-
-        private static string GetWrappedDefinition(ModelBase model)
-        {
-            var definition = ((RequirementViewModel)model).Definition;
-
-            if (definition.Length > 32)
-            {
-                var index = 32;
-                while (!Char.IsWhiteSpace(definition[index]))
-                    index--;
-
-                if (index < 20)
-                {
-                    index = 32;
-                    while (Char.IsLetterOrDigit(definition[index]))
-                        index--;
-                }
-
-                definition = definition.Substring(0, index) + "\n     " + definition.Substring(index);
-            }
-
-            return definition;
-        }        
-
         public string Notes { get; private set; }
 
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)

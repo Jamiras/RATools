@@ -53,6 +53,12 @@ namespace RATools.ViewModels
         {
         }
 
+        public TriggerViewModel(string label, IEnumerable<RequirementGroupViewModel> groups)
+        {
+            Label = label;
+            Groups = groups;
+        }
+
         private static Achievement CreateAchievement(string definition)
         {
             var achievementBuilder = new AchievementBuilder();

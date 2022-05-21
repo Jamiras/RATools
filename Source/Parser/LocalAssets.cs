@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser
@@ -32,6 +33,8 @@ namespace RATools.Parser
             _fileSystemService = fileSystemService;
             _achievements = new List<Achievement>();
             _leaderboards = new List<Leaderboard>();
+            RichPresence = null;
+
             _filename = filename;
             Version = "0.030";
 
@@ -68,33 +71,50 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Leaderboard> _leaderboards;
 
+        public RichPresence RichPresence { get; private set; }
+
         private static DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private void Read()
         {
-            if (!_fileSystemService.FileExists(_filename))
-                return;
-
-            using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
+            if (_fileSystemService.FileExists(_filename))
             {
-                Version = reader.ReadLine();
-                Title = reader.ReadLine();
-
-                while (!reader.EndOfStream)
+                using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
                 {
-                    var line = reader.ReadLine();
-                    var tokenizer = Tokenizer.CreateTokenizer(line);
+                    Version = reader.ReadLine();
+                    Title = reader.ReadLine();
 
-                    if (tokenizer.NextChar == 'L')
+                    while (!reader.EndOfStream)
                     {
-                        tokenizer.Advance();
-                        ReadLeaderboard(tokenizer);
-                    }
-                    else
-                    {
-                        ReadAchievement(tokenizer);
+                        var line = reader.ReadLine();
+                        var tokenizer = Tokenizer.CreateTokenizer(line);
+
+                        if (tokenizer.NextChar == 'L')
+                        {
+                            tokenizer.Advance();
+                            ReadLeaderboard(tokenizer);
+                        }
+                        else
+                        {
+                            ReadAchievement(tokenizer);
+                        }
                     }
                 }
+            }
+
+            var richPresenceFilename = _filename.Replace("-User.txt", "-Rich.txt");
+            if (_fileSystemService.FileExists(richPresenceFilename))
+            {
+                RichPresence = new RichPresence();
+
+                using (var reader = new StreamReader(_fileSystemService.OpenFile(richPresenceFilename, OpenFileMode.Read)))
+                {
+                    RichPresence.Script = reader.ReadToEnd();
+                }
+            }
+            else
+            {
+                RichPresence = null;
             }
         }
 
@@ -222,7 +242,7 @@ namespace RATools.Parser
         }
 
         /// <summary>
-        /// Replaces the an achievement in the list with a new version, or appends a new achievement to the list.
+        /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
         /// </summary>
         /// <param name="existingAchievement">The existing achievement.</param>
         /// <param name="newAchievement">The new achievement, <c>null</c> to remove.</param>
@@ -247,7 +267,7 @@ namespace RATools.Parser
         }
 
         /// <summary>
-        /// Replaces the a leaderboard in the list with a new version, or appends a new leaderboard to the list.
+        /// Replaces a leaderboard in the list with a new version, or appends a new leaderboard to the list.
         /// </summary>
         /// <param name="existingLeaderboard">The existing leaderboard.</param>
         /// <param name="newLeaderboard">The new leaderboard, <c>null</c> to remove.</param>
@@ -269,6 +289,23 @@ namespace RATools.Parser
                 _leaderboards[index] = newLeaderboard;
 
             return previousLeaderboard;
+        }
+
+        /// <summary>
+        /// Replaces the rich presence with a new version
+        /// </summary>
+        /// <param name="existingRichPresence">The existing rich presence.</param>
+        /// <param name="newRichPresence">The new rich presence, <c>null</c> to remove.</param>
+        /// <returns>The previous version if the item was replaced, <c>null</c> if the <paramref name="existingRichPresence"/> was not in the list.</returns>
+        public RichPresence Replace(RichPresence existingRichPresence, RichPresence newRichPresence)
+        {
+            var previousRichPresence = RichPresence;
+            RichPresence = newRichPresence;
+
+            if (previousRichPresence != null && ReferenceEquals(previousRichPresence, existingRichPresence))
+                return previousRichPresence;
+
+            return null;
         }
 
         private static void WriteEscaped(StreamWriter writer, string str)
@@ -324,6 +361,38 @@ namespace RATools.Parser
 
                 foreach (var leaderboard in _leaderboards)
                     WriteLeaderboard(writer, leaderboard, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
+            }
+
+            if (assetsToValidate == null || assetsToValidate.Any(a => a is RichPresence))
+            {
+                var richPresenceFilename = _filename.Replace("-User.txt", "-Rich.txt");
+
+                if (richPresenceFilename == _filename)
+                {
+                    // don't overwrite the achievements file with rich presence data.
+                    // this shouldn't happen outside of the regression tests.
+                }
+                else if (RichPresence != null && !String.IsNullOrEmpty(RichPresence.Script))
+                {
+                    if (warning != null)
+                    {
+                        if (RichPresence.Script.Length > RichPresence.ScriptMaxLength)
+                        {
+                            warning.AppendFormat("Rich Presence exceeds serialized limit ({1}/{2})", RichPresence.Script.Length, RichPresence.ScriptMaxLength);
+                            warning.AppendLine();
+                        }
+                    }
+
+                    using (var writer = new StreamWriter(_fileSystemService.CreateFile(richPresenceFilename)))
+                    {
+                        writer.Write(RichPresence.Script);
+                    }
+                }
+                else
+                {
+                    File.Delete(richPresenceFilename);
+                    // TODO: _fileSystemService.DeleteFile(richPresenceFilename);
+                }
             }
         }
 

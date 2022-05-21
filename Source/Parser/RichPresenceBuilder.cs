@@ -266,7 +266,10 @@ namespace RATools.Parser
         public ParseErrorExpression Merge(RichPresenceBuilder from)
         {
             if (!String.IsNullOrEmpty(from.DisplayString))
+            {
                 DisplayString = from.DisplayString;
+                Line = from.Line;
+            }
 
             _conditionalDisplayStrings.AddRange(from._conditionalDisplayStrings);
 
