@@ -27,25 +27,72 @@ namespace RATools.Services
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static RAWebCache _instance;
 
-        public string GetGamePage(int gameId)
+        public JsonObject GetGameJson(int gameId)
         {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.html", gameId));
-            var url = String.Format("https://retroachievements.org/game/{0}?v=1", gameId);
-            return GetPage(filename, url, false);
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.json", gameId));
+            var url = String.Format("https://retroachievements.org/API/API_GetGameExtended.php?z={0}&y={1}&i={2}", apiUser, apiKey, gameId);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
-        public string GetAchievementPage(int achievementId)
+        public const int AchievementUnlocksPerPage = 500;
+
+        public JsonObject GetAchievementUnlocksJson(int achievementId, int pageIndex)
         {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raAch{0}.html", achievementId));
-            var url = String.Format("https://retroachievements.org/achievement/{0}", achievementId);
-            return GetPage(filename, url, false);
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raAch{0}_{1}.json", achievementId, pageIndex));
+            var url = String.Format("https://retroachievements.org/API/API_GetAchievementUnlocks.php?z={0}&y={1}&a={2}&o={3}&c={4}",
+                apiUser, apiKey, achievementId, pageIndex * AchievementUnlocksPerPage, AchievementUnlocksPerPage);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
-        public string GetUserPage(string userName)
+        public JsonObject GetUserRankAndScore(string userName)
         {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}.html", userName));
-            var url = String.Format("https://retroachievements.org/user/{0}", userName);
-            return GetPage(filename, url, false);
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}.json", userName));
+            var url = String.Format("https://retroachievements.org/API/API_GetUserRankAndScore.php?z={0}&y={1}&u={2}", apiUser, apiKey, userName);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
+        }
+
+        public JsonObject GetGameTopScores(int gameId)
+        {
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTopScores{0}.json", gameId));
+            var url = String.Format("https://retroachievements.org/API/API_GetGameRankAndScore.php?z={0}&y={1}&g={2}", apiUser, apiKey, gameId);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
+        }
+
+        public JsonObject GetGameAchievementDistribution(int gameId)
+        {
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameAchDist{0}.json", gameId));
+            var url = String.Format("https://retroachievements.org/API/API_GetAchievementDistribution.php?z={0}&y={1}&i={2}&h=1", apiUser, apiKey, gameId);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
         public JsonObject GetOpenTicketsJson(int pageIndex)
