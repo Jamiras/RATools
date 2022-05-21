@@ -140,11 +140,12 @@ namespace RATools.Services
             return GetPage(filename, url, true);
         }
 
-        public string GetAllHashes()
+        public JsonObject GetAllHashes()
         {
             var filename = Path.Combine(Path.GetTempPath(), "raHashes.json");
             var url = "https://retroachievements.org/dorequest.php?r=hashlibrary";
-            return GetPage(filename, url, false);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
         /// <summary>

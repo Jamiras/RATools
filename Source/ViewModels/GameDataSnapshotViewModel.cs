@@ -93,8 +93,7 @@ namespace RATools.ViewModels
 
             // fetch all games that have hashes associated to them (can't earn achievements without a hash)
             {
-                var data = RAWebCache.Instance.GetAllHashes();
-                var json = new Jamiras.IO.Serialization.JsonObject(data);
+                var json = RAWebCache.Instance.GetAllHashes();
                 var hashes = json.GetField("MD5List").ObjectValue;
                 foreach (var pair in hashes)
                 {
