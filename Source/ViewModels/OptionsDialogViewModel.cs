@@ -5,6 +5,7 @@ using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
 using RATools.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -28,6 +29,11 @@ namespace RATools.ViewModels
 
             UserName = new TextFieldViewModel("UserName", 80);
             UserName.Text = settings.UserName;
+
+            ApiKey = new SecretTextFieldViewModel("ApiKey", 32);
+            ApiKey.SecretText = settings.ApiKey;
+
+            SettingsLinkCommand = new DelegateCommand(OpenSettingsLink);
 
             Directories = new ObservableCollection<DirectoryViewModel>();
             foreach (var path in settings.EmulatorDirectories)
@@ -74,6 +80,15 @@ namespace RATools.ViewModels
 
         public TextFieldViewModel UserName { get; private set; }
 
+        public SecretTextFieldViewModel ApiKey { get; private set; }
+
+        public CommandBase SettingsLinkCommand { get; private set; }
+
+        private void OpenSettingsLink()
+        {
+            ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl("https://retroachievements.org/controlpanel.php");
+        }
+
         public class DirectoryViewModel
         {
             public string Path { get; set; }
@@ -94,6 +109,7 @@ namespace RATools.ViewModels
         {
             var settings = (Settings)_settings;
             settings.UserName = UserName.Text;
+            settings.ApiKey = ApiKey.SecretText;
 
             settings.EmulatorDirectories.Clear();
             foreach (var directoryViewModel in Directories)
