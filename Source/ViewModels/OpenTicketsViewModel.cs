@@ -143,7 +143,7 @@ namespace RATools.ViewModels
                     }
 
                     totalTickets = openTickets.GetValueOrDefault();
-                    Progress.Reset((totalTickets + 99) / 100);
+                    Progress.Reset((totalTickets + RAWebCache.OpenTicketsPerPage - 1) / RAWebCache.OpenTicketsPerPage);
                 }
 
                 foreach (var ticket in ticketsJson.GetField("RecentTickets").ObjectArrayValue)
@@ -174,7 +174,7 @@ namespace RATools.ViewModels
 
                 ++page;
                 Progress.Current++;
-            } while (page * 100 < totalTickets);
+            } while (page * RAWebCache.OpenTicketsPerPage < totalTickets);
 
             Progress.Label = "Sorting data";
 

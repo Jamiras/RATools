@@ -4,6 +4,7 @@ using Jamiras.Services;
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 
 namespace RATools.Services
 {
@@ -14,18 +15,32 @@ namespace RATools.Services
             _fileSystemService = ServiceRepository.Instance.FindService<IFileSystemService>();
             _httpRequestService = ServiceRepository.Instance.FindService<IHttpRequestService>();
             _settings = ServiceRepository.Instance.FindService<ISettings>();
+
+            var version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            if (version.EndsWith(".0"))
+                version = version.Substring(0, version.Length - 2);
+            _userAgent = String.Format("{0}/{1} ({2})", GetAssemblyAttribute<AssemblyTitleAttribute>().Title,
+                version, System.Environment.OSVersion.VersionString);
         }
 
         private readonly IFileSystemService _fileSystemService;
         private readonly IHttpRequestService _httpRequestService;
         private readonly ISettings _settings;
- 
+
+        private static T GetAssemblyAttribute<T>()
+            where T : Attribute
+        {
+            return (T)Attribute.GetCustomAttribute(Assembly.GetExecutingAssembly(), typeof(T), false);
+        }
+
         public static RAWebCache Instance
         {
             get { return _instance ?? (_instance = new RAWebCache()); }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static RAWebCache _instance;
+
+        private string _userAgent;
 
         public JsonObject GetGameJson(int gameId)
         {
@@ -95,6 +110,8 @@ namespace RATools.Services
             return new JsonObject(page);
         }
 
+        public const int OpenTicketsPerPage = 100;
+
         public JsonObject GetOpenTicketsJson(int pageIndex)
         {
             var apiUser = _settings.UserName;
@@ -103,7 +120,8 @@ namespace RATools.Services
                 return null;
 
             var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.json", pageIndex));
-            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&o={2}&c=100", apiUser, apiKey, pageIndex * 100);
+            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&o={2}&c={3}", 
+                apiUser, apiKey, pageIndex * OpenTicketsPerPage, OpenTicketsPerPage);
             var page = GetPage(filename, url, false);
             return new JsonObject(page);
         }
@@ -157,6 +175,8 @@ namespace RATools.Services
                         return null;
                     request.Headers["Cookie"] = String.Format("RA_User={0}; RA_Cookie={1}", settings.UserName, settings.Cookie);
                 }
+
+                request.Headers["User-Agent"] = _userAgent;
 
                 var response = _httpRequestService.Request(request);
                 if (response.Status != System.Net.HttpStatusCode.OK)
