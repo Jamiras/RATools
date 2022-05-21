@@ -48,14 +48,17 @@ namespace RATools.Services
             return GetPage(filename, url, false);
         }
 
-        public string GetOpenTicketsPage(int pageIndex)
+        public JsonObject GetOpenTicketsJson(int pageIndex)
         {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", pageIndex));
-            var url = "https://retroachievements.org/ticketmanager.php";
-            if (pageIndex > 0)
-                url += "?o=" + (pageIndex * 100);
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
 
-            return GetPage(filename, url, true);
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.json", pageIndex));
+            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&o={2}&c=100", apiUser, apiKey, pageIndex * 100);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
         public string GetOpenTicketsForGame(int gameId)
@@ -137,7 +140,7 @@ namespace RATools.Services
             if (String.IsNullOrEmpty(apiKey))
                 return null;
 
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Game{1}.html", user, gameId));
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Game{1}.json", user, gameId));
             var url = String.Format("https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z={0}&y={1}&u={2}&g={3}", apiUser, apiKey, user, gameId);
             var page = GetPage(filename, url, false);
             return new JsonObject(page);
