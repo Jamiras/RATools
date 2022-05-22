@@ -107,6 +107,9 @@ namespace RATools.Parser
                 }
             }
 
+            if (builder.Length == 0)
+                return "v0";
+
             return builder.ToString();
         }
 

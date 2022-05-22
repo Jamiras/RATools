@@ -44,6 +44,7 @@ namespace RATools.Test.Parser
         }
 
         [Test]
+        [TestCase("0", "v0")]
         [TestCase("1", "v1")]
         [TestCase("1 + 7", "v8")]
         [TestCase("1 + 3 * 2", "v7")]
