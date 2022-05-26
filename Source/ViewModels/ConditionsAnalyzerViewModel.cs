@@ -131,20 +131,20 @@ namespace RATools.ViewModels
         public CommandBase<Result> OpenGameCommand { get; private set; }
         private void OpenGame(Result result)
         {
-            var url = "http://retroachievements.org/Game/" + result.GameId;
+            var url = "https://retroachievements.org/Game/" + result.GameId;
             ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
 
         public CommandBase<Result> OpenItemCommand { get; private set; }
         private void OpenItem(Result result)
         {
-            string url = "http://retroachievements.org/";
+            string url = "https://retroachievements.org/";
             if (result.AchievementId != 0)
-                url = url + "Achievement/" + result.AchievementId;
+                url = url + "achievement/" + result.AchievementId;
             else if (result.LeaderboardId != 0)
                 url = url + "leaderboardinfo.php?i=" + result.LeaderboardId;
             else
-                url = url + "Game/" + result.GameId;
+                url = url + "game/" + result.GameId;
 
             ServiceRepository.Instance.FindService<IBrowserService>().OpenUrl(url);
         }
