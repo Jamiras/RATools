@@ -40,10 +40,12 @@ namespace RATools.ViewModels
             {
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
-                triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, _owner.Notes));
-                triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, _owner.Notes));
-                triggers.Add(new TriggerViewModel("Submit Conditions", leaderboard.Submit, numberFormat, _owner.Notes));
-                triggers.Add(new ValueViewModel("Value", leaderboard.Value, numberFormat, _owner.Notes));
+                var notes = _owner != null ? _owner.Notes : new TinyDictionary<int, string>();
+
+                triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, notes));
+                triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, notes));
+                triggers.Add(new TriggerViewModel("Submit Conditions", leaderboard.Submit, numberFormat, notes));
+                triggers.Add(new ValueViewModel("Value", leaderboard.Value, numberFormat, notes));
 
                 if (assetViewModel.Source.StartsWith("Generated"))
                 {
