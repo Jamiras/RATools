@@ -44,7 +44,7 @@
 
         <TextBlock Grid.Row="3" Grid.Column="0" Text="Times Mastered (Hardcore):" />
         <TextBlock Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" Text="{Binding HardcoreMasteredUserCount}" Margin="12,0,4,0" />
-        <TextBlock Grid.Row="3" Grid.Column="2" Text="*" ToolTip="Possibly more - pages only display first 10 and last 50">
+        <TextBlock Grid.Row="3" Grid.Column="2" Text="*" ToolTip="Possibly more - only the last 500 users were examined">
             <TextBlock.Style>
                 <Style TargetType="{x:Type TextBlock}">
                     <Style.Triggers>

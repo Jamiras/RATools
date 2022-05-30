@@ -497,6 +497,19 @@ namespace RATools.ViewModels
         public CommandBase GameStatsCommand { get; private set; }
         private void GameStats()
         {
+            var settings = ServiceRepository.Instance.FindService<ISettings>();
+            if (String.IsNullOrEmpty(settings.ApiKey))
+            {
+                MessageBoxViewModel.ShowMessage("This feature requires the Web Api Key value to be set.");
+                return;
+            }
+
+            if (String.IsNullOrEmpty(settings.UserName))
+            {
+                MessageBoxViewModel.ShowMessage("This feature requires a User Name value to be set.");
+                return;
+            }
+
             var vm = new GameStatsViewModel();
             vm.ShowDialog();
         }
@@ -505,15 +518,15 @@ namespace RATools.ViewModels
         private void OpenTickets()
         {
             var settings = ServiceRepository.Instance.FindService<ISettings>();
-            if (String.IsNullOrEmpty(settings.Cookie))
+            if (String.IsNullOrEmpty(settings.ApiKey))
             {
-                MessageBoxViewModel.ShowMessage("This feature requires a Cookie value to be set in the ini file.");
+                MessageBoxViewModel.ShowMessage("This feature requires the Web Api Key value to be set.");
                 return;
             }
 
             if (String.IsNullOrEmpty(settings.UserName))
             {
-                MessageBoxViewModel.ShowMessage("This feature requires a User value to be set in the ini file.");
+                MessageBoxViewModel.ShowMessage("This feature requires a User Name value to be set.");
                 return;
             }
 

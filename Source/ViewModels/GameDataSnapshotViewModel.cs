@@ -93,8 +93,7 @@ namespace RATools.ViewModels
 
             // fetch all games that have hashes associated to them (can't earn achievements without a hash)
             {
-                var data = RAWebCache.Instance.GetAllHashes();
-                var json = new Jamiras.IO.Serialization.JsonObject(data);
+                var json = RAWebCache.Instance.GetAllHashes();
                 var hashes = json.GetField("MD5List").ObjectValue;
                 foreach (var pair in hashes)
                 {
@@ -151,7 +150,7 @@ namespace RATools.ViewModels
             }
 
             Debug.WriteLine(String.Format("{0} fetching patch data {1}", DateTime.Now, gameId));
-            var url = String.Format("http://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
+            var url = String.Format("https://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
                 _settings.UserName, _settings.DoRequestToken, gameId);
             var request = new HttpRequest(url);
             var response = httpRequestService.Request(request);

@@ -120,32 +120,61 @@ namespace RATools.ViewModels
             Progress.Reset(25);
             Progress.Label = "Fetching Open Tickets";
 
-            int pageTickets;
             int page = 0;
             do
             {
-                var ticketsPage = RAWebCache.Instance.GetOpenTicketsPage(page);
-                if (ticketsPage == null)
+                var ticketsJson = RAWebCache.Instance.GetOpenTicketsJson(page);
+                if (ticketsJson == null)
                     return;
 
-                if (page == 0 && !ticketsPage.Contains("<title>Ticket"))
+                if (page == 0)
                 {
-                    _backgroundWorkerService.InvokeOnUiThread(() =>
+                    var openTickets = ticketsJson.GetField("OpenTickets").IntegerValue;
+                    if (openTickets == null)
                     {
-                        MessageBoxViewModel.ShowMessage("Could not retrieve open tickets. Please make sure the Cookie value is up to date in your ini file.");
-                        Progress.Label = String.Empty;
-                    });
-                    var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.html", page));
-                    File.Delete(filename);
-                    return;
+                        _backgroundWorkerService.InvokeOnUiThread(() =>
+                        {
+                            MessageBoxViewModel.ShowMessage("Could not retrieve open tickets. Please make sure the Cookie value is up to date in your ini file.");
+                            Progress.Label = String.Empty;
+                        });
+                        var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.json", page));
+                        File.Delete(filename);
+                        return;
+                    }
+
+                    totalTickets = openTickets.GetValueOrDefault();
+                    Progress.Reset((totalTickets + RAWebCache.OpenTicketsPerPage - 1) / RAWebCache.OpenTicketsPerPage);
                 }
 
-                pageTickets = GetPageTickets(games, tickets, ticketsPage);
+                foreach (var ticket in ticketsJson.GetField("RecentTickets").ObjectArrayValue)
+                {
+                    var ticketId = ticket.GetField("ID").IntegerValue.GetValueOrDefault();
+                    if (ticketId == 0)
+                        continue;
+
+                    GameTickets gameTickets;
+                    var gameId = ticket.GetField("GameID").IntegerValue.GetValueOrDefault();
+                    if (!games.TryGetValue(gameId, out gameTickets))
+                    {
+                        gameTickets = new GameTickets { GameId = gameId, GameName = ticket.GetField("GameTitle").StringValue };
+                        games[gameId] = gameTickets;
+                    }
+
+                    AchievementTickets achievementTickets;
+                    var achievementId = ticket.GetField("AchievementID").IntegerValue.GetValueOrDefault();
+                    if (!tickets.TryGetValue(achievementId, out achievementTickets))
+                    {
+                        achievementTickets = new AchievementTickets { AchievementId = achievementId, Game = gameTickets, AchievementName = ticket.GetField("AchievementTitle").StringValue };
+                        tickets[achievementId] = achievementTickets;
+                    }
+
+                    achievementTickets.OpenTickets.Add(ticketId);
+                    gameTickets.OpenTickets++;
+                }
 
                 ++page;
-                totalTickets += pageTickets;
                 Progress.Current++;
-            } while (pageTickets == 100);
+            } while (page * RAWebCache.OpenTicketsPerPage < totalTickets);
 
             Progress.Label = "Sorting data";
 

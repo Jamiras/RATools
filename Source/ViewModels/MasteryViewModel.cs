@@ -978,12 +978,8 @@ namespace RATools.ViewModels
 
         private static bool IsUntracked(string user)
         {
-            var userPage = RAWebCache.Instance.GetUserPage(user);
-            var tokenizer = Tokenizer.CreateTokenizer(userPage);
-            tokenizer.ReadTo("Site Rank:");
-
-            var rank = tokenizer.ReadTo("<br>");
-            return rank.Contains("Untracked");
+            var userJson = RAWebCache.Instance.GetUserRankAndScore(user);
+            return userJson.GetField("Rank").IntegerValue == null;
         }
 
         private class CheaterInfo
