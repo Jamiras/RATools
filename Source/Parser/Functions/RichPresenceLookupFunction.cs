@@ -34,6 +34,21 @@ namespace RATools.Parser.Functions
             if (fallback == null)
                 return false;
 
+            var integer = expression as IntegerConstantExpression;
+            if (integer != null)
+            {
+                var entry = dictionary.GetEntry(integer);
+                if (entry == null)
+                    entry = fallback;
+
+                var stringValue = entry as StringConstantExpression;
+                if (stringValue != null)
+                {
+                    result = stringValue;
+                    return true;
+                }
+            }
+
             var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
                 return false;

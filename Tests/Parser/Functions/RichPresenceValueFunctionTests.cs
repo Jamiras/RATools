@@ -108,6 +108,13 @@ namespace RATools.Test.Parser.Functions
         }
 
         [Test]
+        public void TestValueConstant()
+        {
+            var rp = Evaluate("rich_presence_value(\"Name\", 1)");
+            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(v1)\r\n"));
+        }
+
+        [Test]
         public void TestFormat()
         {
             var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234), format=\"FRAMES\")");
