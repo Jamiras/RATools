@@ -93,7 +93,20 @@
         <UniformGrid Grid.Row="3" Columns="3" IsEnabled="{Binding IsGameLoaded}">
             <Button Content="_All" Margin="2" Command="{Binding CheckAllCommand}" ToolTip="Select All Achievements"/>
             <Button Content="_None" Margin="2" Command="{Binding UncheckAllCommand}" ToolTip="Deselect All Achievements" />
-            <Button Content="With _Tickets" Margin="2" Command="{Binding CheckWithTicketsCommand}" ToolTip="Select only achievements with open tickets" />
+            <Button Content="With _Tickets" Margin="2" Command="{Binding CheckWithTicketsCommand}">
+                <Button.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Setter Property="ToolTip" Value="Select only achievements with open tickets" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CanCheckWithTickets}" Value="False">
+                                <Setter Property="ToolTip" Value="UserName and Web API Key must be provided to view ticket information" />
+                                <Setter Property="ToolTipService.ShowOnDisabled" Value="True" />
+                                <Setter Property="IsEnabled" Value="False" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
         </UniformGrid>
 
         <Grid Grid.Column="1" Grid.RowSpan="3">

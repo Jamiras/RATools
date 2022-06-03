@@ -33,6 +33,9 @@ namespace RATools.ViewModels
             UncheckAllCommand = new DelegateCommand(UncheckAll);
             CheckWithTicketsCommand = new DelegateCommand(CheckWithTickets);
 
+            var settings = ServiceRepository.Instance.FindService<ISettings>();
+            CanCheckWithTickets = (!String.IsNullOrEmpty(settings.ApiKey) && !String.IsNullOrEmpty(settings.UserName));
+
             GameId = new IntegerFieldViewModel("Game _ID", 1, 999999);
 
             _assets = new ObservableCollection<DumpAsset>();
@@ -461,30 +464,20 @@ namespace RATools.ViewModels
 
         private void MergeOpenTickets()
         {
-            var openTickets = new List<int>();
+            var ticketsJson = RAWebCache.Instance.GetOpenTicketsForGame(_game.GameId);
 
-            var tickets = OpenTicketsViewModel.GetGameTickets(_game.GameId);
-            foreach (var kvp in tickets)
+            foreach (var ticket in ticketsJson.GetField("Tickets").ObjectArrayValue)
             {
-                var achievement = _assets.FirstOrDefault(a => a.Id == kvp.Key && a.Type == DumpAssetType.Achievement);
+                var ticketId = ticket.GetField("ID").IntegerValue.GetValueOrDefault();
+                _ticketNotes[ticketId] = ticket.GetField("ReportNotes").StringValue;
+
+                var achievementId = ticket.GetField("AchievementID").IntegerValue.GetValueOrDefault();
+                var achievement = _assets.FirstOrDefault(a => a.Id == achievementId && a.Type == DumpAssetType.Achievement);
                 if (achievement != null)
                 {
-                    openTickets.AddRange(kvp.Value.OpenTickets);
-                    achievement.OpenTickets.AddRange(kvp.Value.OpenTickets);
+                    achievement.OpenTickets.Add(ticketId);
                     achievement.RaiseOpenTicketCountChanged();
                 }
-            }
-
-            foreach (var ticket in openTickets)
-            {
-                var ticketPage = RAWebCache.Instance.GetTicketPage(ticket);
-                var tokenizer = Tokenizer.CreateTokenizer(ticketPage);
-                tokenizer.ReadTo("<td>Notes: </td>");
-                tokenizer.ReadTo("<code>");
-                tokenizer.Advance(6);
-
-                var notes = tokenizer.ReadTo("</code>").ToString();
-                _ticketNotes[ticket] = notes.ToString();
             }
         }
 
@@ -625,6 +618,7 @@ namespace RATools.ViewModels
         }
 
         public CommandBase CheckWithTicketsCommand { get; private set; }
+        public bool CanCheckWithTickets { get; private set; }
         private void CheckWithTickets()
         {
             foreach (var asset in _assets)
