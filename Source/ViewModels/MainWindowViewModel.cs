@@ -33,6 +33,7 @@ namespace RATools.ViewModels
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
             ConditionsAnalyzerCommand = new DelegateCommand(ConditionsAnalyzer);
             MasteryCommand = new DelegateCommand(MasteryStats);
+            UserMasteriesCommand = new DelegateCommand(UserMasteries);
 
             AboutCommand = new DelegateCommand(About);
 
@@ -494,21 +495,29 @@ namespace RATools.ViewModels
             }
         }
 
-        public CommandBase GameStatsCommand { get; private set; }
-        private void GameStats()
+        private bool ValidateForApi()
         {
             var settings = ServiceRepository.Instance.FindService<ISettings>();
             if (String.IsNullOrEmpty(settings.ApiKey))
             {
                 MessageBoxViewModel.ShowMessage("This feature requires the Web Api Key value to be set.");
-                return;
+                return false;
             }
 
             if (String.IsNullOrEmpty(settings.UserName))
             {
                 MessageBoxViewModel.ShowMessage("This feature requires a User Name value to be set.");
-                return;
+                return false;
             }
+
+            return true;
+        }
+
+        public CommandBase GameStatsCommand { get; private set; }
+        private void GameStats()
+        {
+            if (!ValidateForApi())
+                return;
 
             var vm = new GameStatsViewModel();
             vm.ShowDialog();
@@ -517,18 +526,8 @@ namespace RATools.ViewModels
         public CommandBase OpenTicketsCommand { get; private set; }
         private void OpenTickets()
         {
-            var settings = ServiceRepository.Instance.FindService<ISettings>();
-            if (String.IsNullOrEmpty(settings.ApiKey))
-            {
-                MessageBoxViewModel.ShowMessage("This feature requires the Web Api Key value to be set.");
+            if (!ValidateForApi())
                 return;
-            }
-
-            if (String.IsNullOrEmpty(settings.UserName))
-            {
-                MessageBoxViewModel.ShowMessage("This feature requires a User Name value to be set.");
-                return;
-            }
 
             var vm = new OpenTicketsViewModel();
             vm.ShowDialog();
@@ -544,7 +543,20 @@ namespace RATools.ViewModels
         public CommandBase MasteryCommand { get; private set; }
         private void MasteryStats()
         {
+            if (!ValidateForApi())
+                return;
+
             var vm = new MasteryViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase UserMasteriesCommand { get; private set; }
+        private void UserMasteries()
+        {
+            if (!ValidateForApi())
+                return;
+
+            var vm = new UserMasteriesViewModel();
             vm.ShowDialog();
         }
 

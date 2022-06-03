@@ -98,6 +98,8 @@ namespace RATools.ViewModels
             public int Sessions { get; set; }
             public Dictionary<int, DateTime> Achievements { get; private set; }
 
+            public int MasteryRank { get; set; }
+
             public bool IsEstimateReliable
             {
                 get
@@ -126,6 +128,46 @@ namespace RATools.ViewModels
             int IComparer<UserStats>.Compare(UserStats x, UserStats y)
             {
                 return String.Compare(x.User, y.User);
+            }
+
+            public void UpdateGameTime(Func<int, int> getAchievementPointsFunc)
+            {
+                PointsEarned = 0;
+
+                if (Achievements.Count == 0)
+                    return;
+
+                var times = new List<DateTime>(Achievements.Count);
+                foreach (var achievement in Achievements)
+                {
+                    PointsEarned += getAchievementPointsFunc(achievement.Key);
+                    times.Add(achievement.Value);
+                }
+
+                times.Sort((l, r) => (int)((l - r).TotalSeconds));
+
+                RealTime = times[times.Count - 1] - times[0];
+
+                var idleTime = TimeSpan.FromHours(4);
+                int start = 0, end = 0;
+                while (end < times.Count)
+                {
+                    if (end + 1 == times.Count || (times[end + 1] - times[end]) >= idleTime)
+                    {
+                        Sessions++;
+                        GameTime += times[end] - times[start];
+                        start = end + 1;
+                    }
+
+                    end++;
+                }
+
+                // assume every achievement took roughly the same amount of time to earn. divide the user's total known playtime
+                // by the number of achievements they've earned to get the approximate time per achievement earned. add this value
+                // to each session to account for time played before getting the first achievement of the session and time played
+                // after gettin the last achievement of the session.
+                double perSessionAdjustment = GameTime.TotalSeconds / Achievements.Count;
+                GameTime += TimeSpan.FromSeconds(Sessions * perSessionAdjustment);
             }
         }
 
@@ -493,7 +535,8 @@ namespace RATools.ViewModels
                     if (dateField.Type != JsonFieldType.String)
                         dateField = achievement.ObjectValue.GetField("DateEarned");
 
-                    stats.Achievements[id] = dateField.DateTimeValue.GetValueOrDefault();
+                    if (dateField.Type == JsonFieldType.String)
+                        stats.Achievements[id] = dateField.DateTimeValue.GetValueOrDefault();
                 }
             }
 
@@ -505,46 +548,13 @@ namespace RATools.ViewModels
             Progress.Label = "Analyzing data";
 
             // estimate the time spent for each user
-            var idleTime = TimeSpan.FromHours(4);
             foreach (var user in userStats)
             {
-                if (user.Achievements.Count == 0)
-                    continue;
-
-                user.PointsEarned = 0;
-                var times = new List<DateTime>(user.Achievements.Count);
-                foreach (var achievement in user.Achievements)
+                user.UpdateGameTime(id =>
                 {
-                    var achievementData = achievementStats.FirstOrDefault(a => a.Id == achievement.Key);
-                    if (achievementData != null)
-                        user.PointsEarned += achievementData.Points;
-
-                    times.Add(achievement.Value);
-                }
-
-                times.Sort((l, r) => (int)((l - r).TotalSeconds));
-
-                user.RealTime = times[times.Count - 1] - times[0];
-
-                int start = 0, end = 0;
-                while (end < times.Count)
-                {
-                    if (end + 1 == times.Count || (times[end + 1] - times[end]) >= idleTime)
-                    {
-                        user.Sessions++;
-                        user.GameTime += times[end] - times[start];
-                        start = end + 1;
-                    }
-
-                    end++;
-                }
-
-                // assume every achievement took roughly the same amount of time to earn. divide the user's total known playtime
-                // by the number of achievements they've earned to get the approximate time per achievement earned. add this value
-                // to each session to account for time played before getting the first achievement of the session and time played
-                // after gettin the last achievement of the session.
-                double perSessionAdjustment = user.GameTime.TotalSeconds / user.Achievements.Count;
-                user.GameTime += TimeSpan.FromSeconds(user.Sessions * perSessionAdjustment);
+                    var achievement = achievementStats.FirstOrDefault(a => a.Id == id);
+                    return (achievement != null) ? achievement.Points : 0;
+                });
             }
 
             // sort the results by the most points earned, then the quickest
@@ -574,7 +584,7 @@ namespace RATools.ViewModels
                     days.Add((int)Math.Ceiling(user.RealTime.TotalDays));
                 }
 
-                masteredCount++;
+                user.MasteryRank = ++masteredCount;
             }
 
             HardcoreUserCount = userStats.Count;

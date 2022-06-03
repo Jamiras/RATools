@@ -17,9 +17,6 @@ namespace RATools.ViewModels
 {
     public class MasteryViewModel : DialogViewModelBase
     {
-        // put a user name here for detailed analysis of a user's masteries in the Summarize output file.
-        private static string UserMasteryDetails = null;
-
         private const int CountPerSection = 20;
 
         public MasteryViewModel()
@@ -136,6 +133,9 @@ namespace RATools.ViewModels
                     gameName = patchData.GetField("Title").StringValue;
                     consoleId = patchData.GetField("ConsoleID").IntegerValue.GetValueOrDefault();
                 }
+
+                if (consoleId >= 100) // ignore Hubs and Events
+                    continue;
 
                 var gameStats = new GameStatsViewModel() { GameId = gameId };
                 Debug.WriteLine(String.Format("{0} processing {1}", DateTime.Now, gameId));
@@ -338,7 +338,7 @@ namespace RATools.ViewModels
             var vm = new FileDialogViewModel();
             vm.DialogTitle = "Export summary results";
             vm.Filters["TXT file"] = "*.txt";
-            vm.FileNames = new[] { String.IsNullOrEmpty(UserMasteryDetails) ? "mastery.txt" : UserMasteryDetails + ".txt" };
+            vm.FileNames = new[] { "mastery.txt" };
             vm.OverwritePrompt = true;
 
             if (vm.ShowSaveFileDialog() == DialogResult.Ok)
@@ -350,7 +350,7 @@ namespace RATools.ViewModels
         private void SaveSummary(string filename)
         {
             var results = new List<MasteryStats>(Results);
-            results.RemoveAll(r => r.GameName.Contains("[Bonus]") || r.GameName.Contains("[Multi]") || r.GameName.EndsWith(" (Events)"));
+            results.RemoveAll(r => r.GameName.Contains("[Subset - Bonus]") || r.GameName.Contains("[Subset - Multi]") || r.ConsoleId >= 100);
 
             DateTime now = DateTime.Now;
 
@@ -375,37 +375,6 @@ namespace RATools.ViewModels
                 ++Progress.Current;
 
                 GameStatsViewModel gameStats = null;
-
-                if (!String.IsNullOrEmpty(UserMasteryDetails))
-                {
-                    gameStats = new GameStatsViewModel() { GameId = result.GameId };
-                    gameStats.LoadGame();
-
-                    GameStatsViewModel.UserStats userStats = null;
-                    int userIndex = -1;
-                    int masteredCount = 0;
-                    foreach (var user in gameStats.TopUsers)
-                    {
-                        if (user.PointsEarned < gameStats.TotalPoints)
-                            break;
-
-                        if (user.User == UserMasteryDetails)
-                        {
-                            userIndex = masteredCount;
-                            userStats = user;
-                        }
-
-                        masteredCount++;
-                    }
-
-                    if (userStats != null)
-                    {
-                        detailedUserMasteryInfo.Add(String.Format("{2,3}/{3,3} | {0,4}m/{1,4}m | {4,3}x {5,6}:{6}",
-                            (int)userStats.GameTime.TotalMinutes, (int)result.MeanTimeToMaster,
-                            userIndex + 1, masteredCount,
-                            gameStats.Achievements.Count(), result.GameId, result.GameName));
-                    }
-                }
 
                 // if the set has less than 8 masteries, we can't assume the median and standard deviation are
                 // a viable gauge of cheating
@@ -483,43 +452,25 @@ namespace RATools.ViewModels
 
             using (var file = File.CreateText(filename))
             {
-                if (String.IsNullOrEmpty(UserMasteryDetails))
+                WriteSummaryAndTopLists(file, results);
+                WritePossibleCheaters(file, cheaters);
+
+                file.WriteLine("Most cheated games: Count|ID|Name [most frequent games from previous list]");
+                file.WriteLine("```");
+                cheatedGames.Sort((l, r) =>
                 {
-                    WriteSummaryAndTopLists(file, results);
-                    WritePossibleCheaters(file, cheaters);
-
-                    file.WriteLine("Most cheated games: Count|ID|Name [most frequent games from previous list]");
-                    file.WriteLine("```");
-                    cheatedGames.Sort((l, r) =>
-                    {
-                        int diff = (r.Users.Count - l.Users.Count);
-                        if (diff == 0)
-                            diff = String.Compare(l.Game.GameName, r.Game.GameName);
-                        return diff;
-                    });
-                    for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || (i > 0 && cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count); i++)
-                    {
-                        file.WriteLine(String.Format("{0,2:D} {1,5:D} {2}", cheatedGames[i].Users.Count,
-                            cheatedGames[i].Game.GameId, cheatedGames[i].Game.GameName));
-                    }
-                    file.WriteLine("```");
-                    file.WriteLine();
-                }
-                else
+                    int diff = (r.Users.Count - l.Users.Count);
+                    if (diff == 0)
+                        diff = String.Compare(l.Game.GameName, r.Game.GameName);
+                    return diff;
+                });
+                for (int i = 0, count = 0; (count < CountPerSection && cheatedGames[i].Users.Count > 1) || (i > 0 && cheatedGames[i].Users.Count == cheatedGames[i - 1].Users.Count); i++)
                 {
-                    file.Write("Details for ");
-                    file.WriteLine(UserMasteryDetails);
-                    file.WriteLine("  rank  |   mastery   | achs gameid:name");
-                    file.WriteLine(" ------ | ----------- | -----------------------------------------------------------------------");
-
-                    detailedUserMasteryInfo.Sort();
-                    foreach (var line in detailedUserMasteryInfo)
-                        file.WriteLine(line);
-
-                    file.WriteLine();
-                    file.WriteLine();
-                    WritePossibleCheaters(file, cheaters);
+                    file.WriteLine(String.Format("{0,2:D} {1,5:D} {2}", cheatedGames[i].Users.Count,
+                        cheatedGames[i].Game.GameId, cheatedGames[i].Game.GameName));
                 }
+                file.WriteLine("```");
+                file.WriteLine();
             }
 
             Progress.Label = String.Empty;
@@ -673,10 +624,12 @@ namespace RATools.ViewModels
             file.WriteLine("```");
             results.Sort((l, r) =>
             {
-                if (l == null || l.Points == 0)
+                if (l == null)
                     return -1;
-                if (r == null || r.Points == 0)
+                if (r == null)
                     return 1;
+                if (l.Points == 0 || r.Points == 0)
+                    return l.Points - r.Points;
                 return ((l.NintiethPercentilePoints * 10000) / l.Points) - ((r.NintiethPercentilePoints * 10000) / r.Points);
             });
             for (int i = results.Count - 1, count = 0; count < CountPerSection; i--)
@@ -711,10 +664,12 @@ namespace RATools.ViewModels
             file.WriteLine("```");
             results.Sort((l, r) =>
             {
-                if (l == null || l.Points == 0)
+                if (l == null)
                     return -1;
-                if (r == null || r.Points == 0)
+                if (r == null)
                     return 1;
+                if (l.Points == 0 || r.Points == 0)
+                    return l.Points - r.Points;
                 return (l.TwentyFifthPercentilePoints * 10000) / l.Points - (r.TwentyFifthPercentilePoints * 10000) / r.Points;
             });
             for (int i = 0, count = 0; count < CountPerSection; i++)
@@ -743,84 +698,84 @@ namespace RATools.ViewModels
 
         private void WritePossibleCheaters(StreamWriter file, List<CheaterInfo> cheaters)
         {
-            if (String.IsNullOrEmpty(UserMasteryDetails))
-            {
-                Progress.Label = "Identifying potential cheaters...";
-                Progress.Reset(cheaters.Count);
+            Progress.Label = "Identifying potential cheaters...";
+            Progress.Reset(cheaters.Count);
 
-                file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
-                file.WriteLine();
-            }
+            file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
+            file.WriteLine();
 
             foreach (var cheater in cheaters)
             {
                 ++Progress.Current;
 
-                if (!String.IsNullOrEmpty(UserMasteryDetails) && cheater.UserName != UserMasteryDetails)
-                    continue;
-
                 foreach (var kvp in cheater.Results)
                 {
                     var result = kvp.Key;
-                    var user = kvp.Value;
-
-                    file.WriteLine("* {0} mastered {1} ({2})", user.User, result.GameName, result.GameId);
-                    file.WriteLine("  https://retroachievements.org/gamecompare.php?ID={0}&f={1}", result.GameId, user.User);
-
-                    bool dumpTimes = true;
-
-                    var notified = CheaterNotified(user.User, result.GameId);
-                    if (!String.IsNullOrEmpty(notified))
-                        file.WriteLine("  - notified {0}", notified);
-
-                    if (IsUntracked(user.User))
+                    var userMastery = new UserMasteriesViewModel.Result
                     {
-                        file.WriteLine("  - currently Untracked");
-                        dumpTimes = false;
-                    }
+                        GameId = result.GameId,
+                        GameName = result.GameName,
+                        NumMasters = result.HardcoreMasteredUserCount,
+                        MasteryRank = kvp.Value.MasteryRank,
+                        MasteryMinutes = (int)kvp.Value.GameTime.TotalMinutes,
+                        TimeToMasterMean = (int)result.MeanTimeToMaster,
+                        TimeToMasterStdDev = (int)result.StdDevTimeToMaster,
+                        Unlocks = kvp.Value,
+                    };
 
-                    var gameStats = new GameStatsViewModel() { GameId = result.GameId };
-                    gameStats.LoadGame();
+                    WritePotentialCheaterInformation(file, userMastery);
+                }
+            }
+            file.WriteLine();
+        }
 
-                    int userIndex = -1;
-                    int masteredCount = 0;
-                    foreach (var scan in gameStats.TopUsers)
-                    {
-                        if (scan.PointsEarned < gameStats.TotalPoints)
-                            break;
+        internal static void WritePotentialCheaterInformation(StreamWriter file, UserMasteriesViewModel.Result masteryInfo)
+        {
+            var user = masteryInfo.Unlocks.User;
 
-                        masteredCount++;
+            file.WriteLine("* {0} mastered {1} ({2})", user, masteryInfo.GameName, masteryInfo.GameId);
+            file.WriteLine("  https://retroachievements.org/gamecompare.php?ID={0}&f={1}", masteryInfo.GameId, user);
 
-                        if (scan.User == user.User)
-                            userIndex = masteredCount;
-                    }
+            bool dumpTimes = true;
 
-                    var performance = 1.0 - (user.GameTime.TotalMinutes / result.MeanTimeToMaster);
-                    file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2}) (rank:{4}/{5})",
-                        user.GameTime.TotalMinutes, performance * 100, result.MeanTimeToMaster, result.StdDevTimeToMaster,
-                        userIndex, masteredCount);
+            var notified = CheaterNotified(user, masteryInfo.GameId);
+            if (!String.IsNullOrEmpty(notified))
+                file.WriteLine("  - notified {0}", notified);
 
-                    if (dumpTimes)
-                    {
-                        var achievements = new List<AchievementTime>();
+            if (IsUntracked(user))
+            {
+                file.WriteLine("  - currently Untracked");
+                dumpTimes = false;
+            }
 
-                        foreach (var achievement in user.Achievements)
-                            achievements.Add(new AchievementTime { Id = achievement.Key, When = achievement.Value });
-                        achievements.Sort((l, r) => DateTime.Compare(l.When, r.When));
+            var performance = 1.0 - (masteryInfo.Unlocks.GameTime.TotalMinutes / masteryInfo.TimeToMasterMean);
+            file.WriteLine("  Time to Master: {0:F2} ({1:F2}% faster than median {2:F2}, std dev={3:F2}) (rank:{4}/{5})",
+                masteryInfo.Unlocks.GameTime.TotalMinutes, performance * 100,
+                masteryInfo.TimeToMasterMean, masteryInfo.TimeToMasterStdDev,
+                masteryInfo.MasteryRank, masteryInfo.NumMasters);
 
-                        foreach (var achievement in achievements)
-                        {
-                            file.Write("  {0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2} ", achievement.When.Year, achievement.When.Month, achievement.When.Day,
-                                achievement.When.Hour, achievement.When.Minute, achievement.When.Second);
+            if (dumpTimes)
+            {
+                var achievements = new List<AchievementTime>();
 
-                            var achDef = gameStats.Achievements.FirstOrDefault(a => a.Id == achievement.Id);
-                            if (achDef != null)
-                                file.WriteLine("{0,6:D} {1}", achDef.Id, achDef.Title);
-                            else
-                                file.WriteLine("{0,6:D} ??????", achievement.Id);
-                        }
-                    }
-                    file.WriteLine();
+                foreach (var achievement in masteryInfo.Unlocks.Achievements)
+                    achievements.Add(new AchievementTime { Id = achievement.Key, When = achievement.Value });
+                achievements.Sort((l, r) => DateTime.Compare(l.When, r.When));
+
+                // TODO: better way to get achievement names?
+                var gameStats = new GameStatsViewModel() { GameId = masteryInfo.GameId };
+                gameStats.LoadGame();
+
+                foreach (var achievement in achievements)
+                {
+                    file.Write("  {0:D4}-{1:D2}-{2:D2} {3:D2}:{4:D2}:{5:D2} ", achievement.When.Year, achievement.When.Month, achievement.When.Day,
+                        achievement.When.Hour, achievement.When.Minute, achievement.When.Second);
+
+                    var achDef = gameStats.Achievements.FirstOrDefault(a => a.Id == achievement.Id);
+                    if (achDef != null)
+                        file.WriteLine("{0,6:D} {1}", achDef.Id, achDef.Title);
+                    else
+                        file.WriteLine("{0,6:D} ??????", achievement.Id);
                 }
             }
             file.WriteLine();
