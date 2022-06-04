@@ -283,23 +283,13 @@ namespace RATools.Data
                 }
             }
 
-            if (wrapWidth != Int32.MaxValue)
+            // always_false() final clause separates tally target from individual condition targets
+            // it can be safely removed. any other final clause must be preserved
+            var remaining = repeatedString.Substring(index);
+            if (remaining.StartsWith("always_false()"))
             {
-                builder.AppendLine();
-                builder.Append(' ', indent);
-            }
-
-            // finish with the final subclause
-            var numParentheses = (requirements.Last().Type != RequirementType.None) ? 2 : 1;
-            var finalClause = repeatedString.Substring(index, repeatedString.Length - index - numParentheses);
-            if (finalClause == "always_false()")
-            {
-                // always_false() final clause separates tally target from individual condition targets
                 builder.Length -= 2; // remove ", "
-            }
-            else
-            {
-                builder.Append(finalClause);
+                remaining = remaining.Substring(14);
             }
 
             if (wrapWidth != Int32.MaxValue)
@@ -309,8 +299,8 @@ namespace RATools.Data
                 builder.Append(' ', indent);
             }
 
-            builder.Append(')', numParentheses);
-            width = wrapWidth - indent + numParentheses;
+            builder.Append(remaining);
+            width = wrapWidth - indent - remaining.Length;
         }
 
         private static void AppendString(StringBuilder builder, IEnumerable<Requirement> requirements, 
