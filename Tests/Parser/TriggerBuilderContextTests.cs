@@ -78,6 +78,8 @@ namespace RATools.Test.Parser
         [TestCase("byte(0x1234 + byte(0x2345)) - 1", "B:1_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) - byte(0x1235 + byte(0x2345))", "I:0xH002345_B:0xH001235_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) * 2", "I:0xH002345_M:0xH001234*2")]
+        [TestCase("byte(0x1234 + byte(0x2345)) / 2", "I:0xH002345_M:0xH001234*f0.5")] // implicitly measured value will multiply by a fraction
+        [TestCase("measured(byte(0x1234 + byte(0x2345)) / 2)", "I:0xH002345_M:0xH001234/2")] // explicitly measured value will keep the division
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234)))", "M:0xH001234!=d0xH001234")]
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
         [TestCase("tally(0, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]

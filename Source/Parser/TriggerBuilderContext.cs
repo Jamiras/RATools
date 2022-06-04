@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -179,6 +180,9 @@ namespace RATools.Parser
                 if (term.multiplier != 1.0)
                 {
                     builder.Append('*');
+                    if (term.multiplier != Math.Floor(term.multiplier))
+                        builder.Append('f');
+
                     builder.Append(term.multiplier);
                 }
             }
