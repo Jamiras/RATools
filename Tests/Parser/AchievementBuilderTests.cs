@@ -188,6 +188,8 @@ namespace RATools.Test.Parser
         [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "tally(4, bit1(0x20770F) == 0, bit2(0x20770F) == 0)")]
         [TestCase("O:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]
         [TestCase("N:0xN20770f=0_0xO20770f=0.1.", "once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)")]
+        [TestCase("C:0xH464a70>d0xH464a70.1._M:0=1.8._I:0xW5b9624_Q:0xM000612=0",
+                  "measured(tally(8, once(byte(0x464A70) > prev(byte(0x464A70)))), when=bit0(tbyte(0x5B9624) + 0x000612) == 0)")]
         public void TestParseRequirements(string input, string expected)
         {
             var builder = new AchievementBuilder();
