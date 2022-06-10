@@ -126,18 +126,17 @@ namespace RATools.Services
             return new JsonObject(page);
         }
 
-        public string GetOpenTicketsForGame(int gameId)
+        public JsonObject GetOpenTicketsForGame(int gameId)
         {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTickets{0}.html", gameId));
-            var url = "https://retroachievements.org/ticketmanager.php?ampt=1&g=" + gameId;
-            return GetPage(filename, url, true);
-        }
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
 
-        public string GetTicketPage(int ticketId)
-        {
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTicket{0}.html", ticketId));
-            var url = "https://retroachievements.org/ticketmanager.php?i=" + ticketId;
-            return GetPage(filename, url, true);
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTickets{0}.json", gameId));
+            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&g={2}&d=1", apiUser, apiKey, gameId);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
         }
 
         public JsonObject GetAllHashes()
