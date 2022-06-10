@@ -44,106 +44,59 @@ namespace RATools.Services
 
         public JsonObject GetGameJson(int gameId)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGame{0}.json", gameId));
-            var url = String.Format("https://retroachievements.org/API/API_GetGameExtended.php?z={0}&y={1}&i={2}", apiUser, apiKey, gameId);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetGameExtended", "i=" + gameId,
+                String.Format("raGame{0}.json", gameId));
         }
 
         public const int AchievementUnlocksPerPage = 500;
 
         public JsonObject GetAchievementUnlocksJson(int achievementId, int pageIndex)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raAch{0}_{1}.json", achievementId, pageIndex));
-            var url = String.Format("https://retroachievements.org/API/API_GetAchievementUnlocks.php?z={0}&y={1}&a={2}&o={3}&c={4}",
-                apiUser, apiKey, achievementId, pageIndex * AchievementUnlocksPerPage, AchievementUnlocksPerPage);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetAchievementUnlocks",
+                String.Format("a={0}&o={1}&c={2}", achievementId, pageIndex * AchievementUnlocksPerPage, AchievementUnlocksPerPage),
+                String.Format("raAch{0}_{1}.json", achievementId, pageIndex));
         }
 
         public JsonObject GetUserRankAndScore(string userName)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}.json", userName));
-            var url = String.Format("https://retroachievements.org/API/API_GetUserRankAndScore.php?z={0}&y={1}&u={2}", apiUser, apiKey, userName);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetUserRankAndScore", "u=" + userName,
+                String.Format("raUser{0}.json", userName));
         }
 
         public JsonObject GetGameTopScores(int gameId)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTopScores{0}.json", gameId));
-            var url = String.Format("https://retroachievements.org/API/API_GetGameRankAndScore.php?z={0}&y={1}&g={2}", apiUser, apiKey, gameId);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetGameRankAndScore", "g=" + gameId,
+                String.Format("raGameTopScores{0}.json", gameId));
         }
 
         public JsonObject GetGameAchievementDistribution(int gameId)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameAchDist{0}.json", gameId));
-            var url = String.Format("https://retroachievements.org/API/API_GetAchievementDistribution.php?z={0}&y={1}&i={2}&h=1", apiUser, apiKey, gameId);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetAchievementDistribution",
+                String.Format("i={0}&h=1", gameId),
+                String.Format("raGameAchDist{0}.json", gameId));
         }
 
         public const int OpenTicketsPerPage = 100;
 
         public JsonObject GetOpenTicketsJson(int pageIndex)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raTickets{0}.json", pageIndex));
-            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&o={2}&c={3}", 
-                apiUser, apiKey, pageIndex * OpenTicketsPerPage, OpenTicketsPerPage);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetTicketData",
+                String.Format("o={0}&c={1}", pageIndex * OpenTicketsPerPage, OpenTicketsPerPage),
+                String.Format("raTickets{0}.json", pageIndex));
         }
 
         public JsonObject GetOpenTicketsForGame(int gameId)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raGameTickets{0}.json", gameId));
-            var url = String.Format("https://retroachievements.org/API/API_GetTicketData.php?z={0}&y={1}&g={2}&d=1", apiUser, apiKey, gameId);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetTicketData",
+                String.Format("g={0}&d=1", gameId),
+                String.Format("raTickets_Game{0}.json", gameId));
         }
 
         public JsonObject GetAllHashes()
         {
             var filename = Path.Combine(Path.GetTempPath(), "raHashes.json");
             var url = "https://retroachievements.org/dorequest.php?r=hashlibrary";
-            var page = GetPage(filename, url, false);
+            var page = GetPage(filename, url);
             return new JsonObject(page);
         }
 
@@ -153,7 +106,79 @@ namespace RATools.Services
         /// <remarks>Set to 0 for default behavior (16 hours).</remarks>
         public static int ExpireHours { get; set; }
 
-        private string GetPage(string filename, string url, bool requiresCookie)
+        private JsonObject CallJsonAPI(string api, string parameters, string tempFilename)
+        {
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            bool fileValid = false;
+            var filename = Path.Combine(Path.GetTempPath(), tempFilename);
+            if (_fileSystemService.FileExists(filename))
+            {
+                var expireHours = ExpireHours;
+                if (expireHours == 0)
+                    expireHours = 16;
+
+                fileValid = (DateTime.Now - _fileSystemService.GetFileLastModified(filename)) < TimeSpan.FromHours(expireHours);
+            }
+
+            if (!fileValid)
+            {
+                var logUrl = String.Format("https://retroachievements.org/API/{0}.php?z={1}", api, apiUser, apiKey);
+                var url = logUrl + "&y=" + apiKey;
+                if (!String.IsNullOrEmpty(parameters))
+                {
+                    logUrl += "&" + parameters;
+                    url += "&" + parameters;
+                }
+
+                var request = new HttpRequest(url);
+                request.Headers["User-Agent"] = _userAgent;
+                IHttpResponse response;
+
+                var logService = ServiceRepository.Instance.FindService<ILogService>();
+                var logger = logService.GetLogger("Jamiras.Core");
+                if (logger.IsEnabled(LogLevel.General))
+                {
+                    logger.Write("Requesting " + logUrl);
+
+                    // disable General logging to prevent capturing the user's API key
+                    var oldLevel = logService.Level;
+                    logService.Level = LogLevel.Warning;
+
+                    response = _httpRequestService.Request(request);
+
+                    logService.Level = oldLevel;
+                }
+                else
+                {
+                    response = _httpRequestService.Request(request);
+                }
+
+                if (response.Status != System.Net.HttpStatusCode.OK)
+                    return null;
+
+                using (var outputStream = _fileSystemService.CreateFile(filename))
+                {
+                    byte[] buffer = new byte[4096];
+                    using (var stream = response.GetResponseStream())
+                    {
+                        int bytesRead;
+                        while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                            outputStream.Write(buffer, 0, bytesRead);
+                    }
+                }
+            }
+
+            using (var stream = _fileSystemService.OpenFile(filename, OpenFileMode.Read))
+            {
+                return new JsonObject(stream);
+            }
+        }
+
+        private string GetPage(string filename, string url)
         {
             bool fileValid = false;
             if (_fileSystemService.FileExists(filename))
@@ -168,14 +193,6 @@ namespace RATools.Services
             if (!fileValid)
             {
                 var request = new HttpRequest(url);
-                if (requiresCookie)
-                {
-                    var settings = ServiceRepository.Instance.FindService<ISettings>();
-                    if (String.IsNullOrEmpty(settings.Cookie) || String.IsNullOrEmpty(settings.UserName))
-                        return null;
-                    request.Headers["Cookie"] = String.Format("RA_User={0}; RA_Cookie={1}", settings.UserName, settings.Cookie);
-                }
-
                 request.Headers["User-Agent"] = _userAgent;
 
                 var response = _httpRequestService.Request(request);
@@ -202,28 +219,15 @@ namespace RATools.Services
 
         public JsonObject GetUserGameMasteryJson(string user, int gameId)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Game{1}.json", user, gameId));
-            var url = String.Format("https://retroachievements.org/API/API_GetGameInfoAndUserProgress.php?z={0}&y={1}&u={2}&g={3}", apiUser, apiKey, user, gameId);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetGameInfoAndUserProgress",
+                String.Format("u={0}&g={1}", user, gameId),
+                String.Format("raUser{0}_Game{1}.json", user, gameId));
         }
 
         public JsonObject GetUserMasteriesJson(string user)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
-            if (String.IsNullOrEmpty(apiKey))
-                return null;
-
-            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Masteries.json", user));
-            var url = String.Format("https://retroachievements.org/API/API_GetUserCompletedGames.php?z={0}&y={1}&u={2}", apiUser, apiKey, user);
-            var page = GetPage(filename, url, false);
-            return new JsonObject(page);
+            return CallJsonAPI("API_GetUserCompletedGames", "u=" + user,
+                String.Format("raUser{0}_Masteries.json", user));
         }
     }
 }

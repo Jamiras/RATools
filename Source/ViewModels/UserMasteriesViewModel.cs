@@ -30,8 +30,6 @@ namespace RATools.ViewModels
             _fileSystem = fileSystem;
             _settings = settings;
 
-            UserName = "Z3r0Pl4ys";
-
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             DialogTitle = "User Mastery Analyzer";
             CanClose = true;
