@@ -61,6 +61,7 @@
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />
                 <MenuItem Header="Game _Stats" Command="{Binding GameStatsCommand}" />
+                <MenuItem Header="_User Masteries" Command="{Binding UserMasteriesCommand}" />
                 <MenuItem Header="_Conditions" Command="{Binding ConditionsAnalyzerCommand}"
                           Visibility="{Binding HasDumpDirectory, Converter={StaticResource boolToVisConverter}}"/>
                 <MenuItem Header="_Mastery" Command="{Binding MasteryCommand}"

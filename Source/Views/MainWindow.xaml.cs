@@ -38,6 +38,7 @@ namespace RATools.Views
             dialogService.RegisterDialogHandler(typeof(AboutDialogViewModel), vm => new OkCancelView(new AboutDialog()));
             dialogService.RegisterDialogHandler(typeof(ConditionsAnalyzerViewModel), vm => new ConditionsAnalyzerDialog());
             dialogService.RegisterDialogHandler(typeof(MasteryViewModel), vm => new MasteryDialog());
+            dialogService.RegisterDialogHandler(typeof(UserMasteriesViewModel), vm => new UserMasteriesDialog());
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();

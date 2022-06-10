@@ -212,5 +212,18 @@ namespace RATools.Services
             var page = GetPage(filename, url, false);
             return new JsonObject(page);
         }
+
+        public JsonObject GetUserMasteriesJson(string user)
+        {
+            var apiUser = _settings.UserName;
+            var apiKey = _settings.ApiKey;
+            if (String.IsNullOrEmpty(apiKey))
+                return null;
+
+            var filename = Path.Combine(Path.GetTempPath(), String.Format("raUser{0}_Masteries.json", user));
+            var url = String.Format("https://retroachievements.org/API/API_GetUserCompletedGames.php?z={0}&y={1}&u={2}", apiUser, apiKey, user);
+            var page = GetPage(filename, url, false);
+            return new JsonObject(page);
+        }
     }
 }
