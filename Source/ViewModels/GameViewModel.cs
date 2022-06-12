@@ -46,6 +46,9 @@ namespace RATools.ViewModels
 
             _logger = logger;
             _fileSystemService = fileSystemService;
+
+            _backNavigationStack = new FixedSizeStack<NavigationItem>(128);
+            _forwardNavigationStack = new Stack<NavigationItem>(32);
         }
 
         private readonly ILogger _logger;
@@ -54,6 +57,16 @@ namespace RATools.ViewModels
         protected readonly List<Leaderboard> _publishedLeaderboards;
         protected RichPresence _publishedRichPresence;
         protected LocalAssets _localAssets;
+
+        private class NavigationItem
+        {
+            public ViewerViewModelBase Editor { get; set; }
+            public TextLocation CursorPosition { get; set; }
+        }
+
+        private readonly FixedSizeStack<NavigationItem> _backNavigationStack;
+        private readonly Stack<NavigationItem> _forwardNavigationStack;
+        private bool _disableNavigationCapture = false;
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
@@ -64,9 +77,109 @@ namespace RATools.ViewModels
         public CommandBase<int> GoToSourceCommand { get; private set; }
         private void GoToSource(int line)
         {
-            SelectedEditor = Script;
-            Script.Editor.GotoLine(line);
+            if (SelectedEditor == Script)
+            {
+                // script editor already selected, just go to the specified line
+                // allow the default navigation logic to capture the old location
+                Script.Editor.GotoLine(line);
+            }
+            else
+            {
+                // changing to the script editor. allow OnSelectedEditorChanged to
+                // capture the old location, then disable capture while moving the cursor
+                SelectedEditor = Script;
+
+                _disableNavigationCapture = true;
+                try
+                {
+                    Script.Editor.GotoLine(line);
+                }
+                finally
+                {
+                    _disableNavigationCapture = false;
+                }
+            }
+
             Script.Editor.IsFocusRequested = true;
+        }
+
+        public void NavigateForward()
+        {
+            if (_forwardNavigationStack.Count > 0)
+            {
+                _backNavigationStack.Push(CaptureNavigationItem(SelectedEditor));
+                var item = _forwardNavigationStack.Pop();
+                NavigateTo(item);
+            }
+        }
+
+        public void NavigateBack()
+        {
+            if (_backNavigationStack.Count > 0)
+            {
+                _forwardNavigationStack.Push(CaptureNavigationItem(SelectedEditor));
+                var item = _backNavigationStack.Pop();
+                NavigateTo(item);
+            }
+        }
+
+        private void NavigateTo(NavigationItem item)
+        {
+            _disableNavigationCapture = true;
+            try
+            {
+                SelectedEditor = item.Editor;
+
+                var scriptEditor = item.Editor as ScriptViewModel;
+                if (scriptEditor != null)
+                {
+                    // scroll the line into view
+                    scriptEditor.Editor.GotoLine(item.CursorPosition.Line);
+
+                    // then go to the correct column
+                    if (item.CursorPosition.Column != scriptEditor.Editor.CursorColumn)
+                        scriptEditor.Editor.MoveCursorTo(item.CursorPosition.Line, item.CursorPosition.Column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
+
+                    scriptEditor.Editor.IsFocusRequested = true;
+                }
+            }
+            finally
+            {
+                _disableNavigationCapture = false;
+            }
+        }
+
+        public void CaptureNavigationLocation()
+        {
+            if (_disableNavigationCapture)
+                return;
+
+            var editor = SelectedEditor;
+            if (editor == null)
+                return;
+
+            var item = CaptureNavigationItem(editor);
+            if (_backNavigationStack.Count > 0)
+            {
+                // cursor didn't move. don't duplicate the capture
+                var last = _backNavigationStack.Peek();
+                if (ReferenceEquals(last.Editor, item.Editor) && last.CursorPosition == item.CursorPosition)
+                    return;
+            }
+
+            _backNavigationStack.Push(item);
+            _forwardNavigationStack.Clear();
+        }
+
+        private static NavigationItem CaptureNavigationItem(ViewerViewModelBase editor)
+        {
+            var item = new NavigationItem { Editor = editor };
+
+            var scriptEditor = editor as ScriptViewModel;
+            if (scriptEditor != null)
+                item.CursorPosition = new TextLocation(scriptEditor.Editor.CursorLine, scriptEditor.Editor.CursorColumn);
+
+            return item;
         }
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
@@ -171,11 +284,25 @@ namespace RATools.ViewModels
             private set { SetValue(EditorsProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(ViewerViewModelBase), null);
+        public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(ViewerViewModelBase), null, OnSelectedEditorChanged);
         public ViewerViewModelBase SelectedEditor
         {
             get { return (ViewerViewModelBase)GetValue(SelectedEditorProperty); }
             set { SetValue(SelectedEditorProperty, value); }
+        }
+
+        private static void OnSelectedEditorChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            if (e.OldValue != null)
+            {
+                var gameViewModel = ((GameViewModel)sender);
+                if (!gameViewModel._disableNavigationCapture)
+                {
+                    var item = CaptureNavigationItem((ViewerViewModelBase)e.OldValue);
+                    gameViewModel._backNavigationStack.Push(item);
+                    gameViewModel._forwardNavigationStack.Clear();
+                }
+            }
         }
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)

@@ -415,6 +415,17 @@ namespace RATools.ViewModels
             base.OnKeyPressed(e);
         }
 
+        public override void MoveCursorTo(int line, int column, MoveCursorFlags flags)
+        {
+            if (flags == MoveCursorFlags.None && Math.Abs(line - CursorLine) > 1)
+            {
+                // if the cursor is being moved more than one line away, capture the current location so the user can return to it.
+                _owner.CaptureNavigationLocation();
+            }
+
+            base.MoveCursorTo(line, column, flags);
+        }
+
         private void GotoDefinitionAtCursor()
         {
             if (_parsedContent.Scope == null)

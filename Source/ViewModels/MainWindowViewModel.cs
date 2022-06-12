@@ -93,7 +93,7 @@ namespace RATools.ViewModels
             return true;
         }
 
-        private RecencyBuffer<string> _recentFiles;
+        private readonly RecencyBuffer<string> _recentFiles;
 
         public bool HasDumpDirectory { get; private set; }
 
