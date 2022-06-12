@@ -1151,8 +1151,8 @@ namespace RATools.ViewModels
                     if (part.Contains('-'))
                     {
                         var range = part.Split('-');
-                        var start = Int32.Parse(range[0]);
-                        var end = Int32.Parse(range[1]);
+                        var start = range[0].StartsWith("0x") ? Int32.Parse(range[0].Substring(2), System.Globalization.NumberStyles.HexNumber) : Int32.Parse(range[0]);
+                        var end = range[1].StartsWith("0x") ? Int32.Parse(range[1].Substring(2), System.Globalization.NumberStyles.HexNumber) : Int32.Parse(range[1]);
                         for (int i = start; i <= end; ++i)
                         {
                             stream.Write("    ");
