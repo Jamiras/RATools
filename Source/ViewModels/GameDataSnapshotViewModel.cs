@@ -152,7 +152,7 @@ namespace RATools.ViewModels
             Debug.WriteLine(String.Format("{0} fetching patch data {1}", DateTime.Now, gameId));
             var url = String.Format("https://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
                 _settings.UserName, _settings.DoRequestToken, gameId);
-            var request = new HttpRequest(url);
+            var request = httpRequestService.CreateRequest(url);
             var response = httpRequestService.Request(request);
             if (response.Status == System.Net.HttpStatusCode.OK)
             {
