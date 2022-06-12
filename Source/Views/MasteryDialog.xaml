@@ -3,15 +3,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
+             xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.UI.WPF"
              mc:Ignorable="d" 
              Width="800" Height="600">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
-                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/FieldStyles.xaml" />
-                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+                <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/ProgressOverlay.xaml" />
+                <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/FieldStyles.xaml" />
+                <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/SubtleHyperlink.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>

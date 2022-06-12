@@ -1,11 +1,11 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.Core"
-                    xmlns:toolwindows="clr-namespace:Jamiras.ViewModels.CodeEditor.ToolWindows;assembly=Jamiras.Core"
+                    xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.UI.WPF"
+                    xmlns:toolwindows="clr-namespace:Jamiras.ViewModels.CodeEditor.ToolWindows;assembly=Jamiras.UI.WPF"
                     xmlns:vm="clr-namespace:RATools.ViewModels">
 
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/NoBorderButtonStyle.xaml" />
+        <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/NoBorderButtonStyle.xaml" />
         <ResourceDictionary Source="Common.xaml" />
     </ResourceDictionary.MergedDictionaries>
 

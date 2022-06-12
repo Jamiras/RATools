@@ -1,7 +1,6 @@
 ﻿using Jamiras.Components;
 using Jamiras.Controls;
 using Jamiras.Services;
-using Jamiras.ViewModels;
 using RATools.ViewModels;
 using System;
 using System.ComponentModel;
@@ -22,6 +21,8 @@ namespace RATools.Views
         protected override void OnInitialized(EventArgs e)
         {
             CoreServices.RegisterServices();
+            UIServices.RegisterServices();
+
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
             dialogService.DefaultWindowTitle = "RA Tools";

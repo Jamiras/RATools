@@ -167,7 +167,7 @@ namespace RATools.Services
 
             if (!fileValid)
             {
-                var request = new HttpRequest(url);
+                var request = _httpRequestService.CreateRequest(url);
                 if (requiresCookie)
                 {
                     var settings = ServiceRepository.Instance.FindService<ISettings>();
