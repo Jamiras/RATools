@@ -40,6 +40,7 @@ namespace RATools.Views
             dialogService.RegisterDialogHandler(typeof(ConditionsAnalyzerViewModel), vm => new ConditionsAnalyzerDialog());
             dialogService.RegisterDialogHandler(typeof(MasteryViewModel), vm => new MasteryDialog());
             dialogService.RegisterDialogHandler(typeof(UserMasteriesViewModel), vm => new UserMasteriesDialog());
+            dialogService.RegisterDialogHandler(typeof(UnlockDistanceViewModel), vm => new UnlockDistanceDialog());
 
             var viewModel = new MainWindowViewModel();
             viewModel.Initialize();
