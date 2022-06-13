@@ -134,7 +134,7 @@ namespace RATools.Services
                     url += "&" + parameters;
                 }
 
-                var request = new HttpRequest(url);
+                var request = _httpRequestService.CreateRequest(url);
                 request.Headers["User-Agent"] = _userAgent;
                 IHttpResponse response;
 
@@ -192,7 +192,7 @@ namespace RATools.Services
 
             if (!fileValid)
             {
-                var request = new HttpRequest(url);
+                var request = _httpRequestService.CreateRequest(url);
                 request.Headers["User-Agent"] = _userAgent;
 
                 var response = _httpRequestService.Request(request);

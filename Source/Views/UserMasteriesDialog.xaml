@@ -8,8 +8,8 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/ProgressOverlay.xaml" />
-                <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+                <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/ProgressOverlay.xaml" />
+                <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/SubtleHyperlink.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </UserControl.Resources>

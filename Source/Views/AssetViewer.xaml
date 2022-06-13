@@ -3,7 +3,7 @@
                     xmlns:vm="clr-namespace:RATools.ViewModels"
                     xmlns:views="clr-namespace:RATools.Views">
     <ResourceDictionary.MergedDictionaries>
-        <ResourceDictionary Source="/Jamiras.Core;component/Controls/Styles/SubtleHyperlink.xaml" />
+        <ResourceDictionary Source="/Jamiras.UI.WPF;component/Controls/Styles/SubtleHyperlink.xaml" />
         <ResourceDictionary Source="Common.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
