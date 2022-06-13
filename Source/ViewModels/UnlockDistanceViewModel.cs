@@ -211,9 +211,9 @@ namespace RATools.ViewModels
                     };
                     firstUnlocks.Add(unlockInfo);
                 }
-            } while (count == 500);
+            } while (count == RAWebCache.AchievementUnlocksPerPage);
 
-            Progress.Label = "Fetching Achievement " + FirstAchievementId.Value.GetValueOrDefault();
+            Progress.Label = "Fetching Achievement " + SecondAchievementId.Value.GetValueOrDefault();
             Progress.Current++;
 
             var compareType = (Comparison)ComparisonType.SelectedId;
@@ -270,7 +270,7 @@ namespace RATools.ViewModels
                             break;
                     }
                 }
-            } while (count == 500);
+            } while (count == RAWebCache.AchievementUnlocksPerPage);
 
             Progress.Current++;
 
