@@ -25,29 +25,20 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <StackPanel>
-            <TextBlock Text="First Achievement ID" />
-            <TextBox Text="{Binding FirstAchievementId}" />
-        </StackPanel>
+        <ContentPresenter Content="{Binding FirstAchievementId}" Width="120" />
+        <ContentPresenter Grid.Column="1" Content="{Binding SecondAchievementId}" Width="120" />
+        <ContentPresenter Grid.Column="2" Content="{Binding ComparisonType}" Width="160" />
 
-        <StackPanel Grid.Column="1" Margin="6,0,6,0">
-            <TextBlock Text="Second Achievement ID" />
-            <TextBox Text="{Binding SecondAchievementId}" />
-        </StackPanel>
-
-        <Button Grid.Column="2" HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+        <Button Grid.Column="3" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,0,0,3"
                 Content="Analyze" Command="{Binding SearchCommand}" />
 
-        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Margin="0,2,0,2">
-            <TextBlock Text="{Binding UnlockCount}" />
-            <Run Text="users unlocked both achievements. Median unlock distance: " />
-            <TextBlock Text="{Binding MedianUnlockDistance}" />
-        </TextBlock>
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="4" Margin="0,2,0,2" Text="{Binding SummaryText}" />
 
-        <ListView Grid.Row="2" Grid.ColumnSpan="3" ItemsSource="{Binding Unlocks}" jamiras:GridViewSort.IsEnabled="True">
+        <ListView Grid.Row="2" Grid.ColumnSpan="4" ItemsSource="{Binding Unlocks}" jamiras:GridViewSort.IsEnabled="True">
             <ListView.Resources>
                 <Style TargetType="ListViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -74,17 +65,17 @@
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Unlock 1" Width="140">
+                    <GridViewColumn Header="{Binding FirstAchievementName}" Width="140">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding FirstUnlock}" TextAlignment="Right" />
+                                <TextBlock Text="{Binding FormattedFirstUnlock}" TextAlignment="Right" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
-                    <GridViewColumn Header="Unlock 2" Width="140">
+                    <GridViewColumn Header="{Binding SecondAchievementName}" Width="140">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding SecondUnlock}" TextAlignment="Right" />
+                                <TextBlock Text="{Binding FormattedSecondUnlock}" TextAlignment="Right" />
                             </DataTemplate>
                         </GridViewColumn.CellTemplate>
                     </GridViewColumn>
@@ -92,6 +83,6 @@
             </ListView.View>
         </ListView>
 
-        <ContentPresenter Grid.RowSpan="3" Grid.ColumnSpan="3" Margin="-4" Content="{Binding Progress}" />
+        <ContentPresenter Grid.RowSpan="3" Grid.ColumnSpan="4" Margin="-4" Content="{Binding Progress}" />
     </Grid>
 </UserControl>
