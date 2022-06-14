@@ -129,9 +129,17 @@ namespace RATools.ViewModels
                     _progress.Current++;
                 }
 
-                RefreshFromServer(gameId, fileSystemService, httpRequestService);
+                var fileValid = false;
+                var file = Path.Combine(_settings.DumpDirectory, String.Format("{0}.json", gameId));
+                if (fileSystemService.FileExists(file))
+                    fileValid = (DateTime.Now - fileSystemService.GetFileLastModified(file)) < TimeSpan.FromHours(16);
 
-                System.Threading.Thread.Sleep(rand.Next(300) + 100);
+                if (!fileValid)
+                {
+                    RefreshFromServer(gameId, file, fileSystemService, httpRequestService);
+
+                    System.Threading.Thread.Sleep(rand.Next(300) + 100);
+                }
             }
 
             // download completed, refresh the stats
@@ -139,16 +147,8 @@ namespace RATools.ViewModels
                 LoadFromDisk();
         }
 
-        private void RefreshFromServer(int gameId, IFileSystemService fileSystemService, IHttpRequestService httpRequestService)
+        private void RefreshFromServer(int gameId, string file, IFileSystemService fileSystemService, IHttpRequestService httpRequestService)
         {
-            var file = Path.Combine(_settings.DumpDirectory, String.Format("{0}.json", gameId));
-            if (fileSystemService.FileExists(file))
-            {
-                bool fileValid = (DateTime.Now - fileSystemService.GetFileLastModified(file)) < TimeSpan.FromHours(16);
-                if (fileValid)
-                    return;
-            }
-
             Debug.WriteLine(String.Format("{0} fetching patch data {1}", DateTime.Now, gameId));
             var url = String.Format("https://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
                 _settings.UserName, _settings.DoRequestToken, gameId);
