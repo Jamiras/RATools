@@ -1,10 +1,12 @@
 ﻿using Jamiras.Components;
 using Jamiras.IO.Serialization;
 using Jamiras.Services;
+using Jamiras.ViewModels;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Text;
 
 namespace RATools.Services
 {
@@ -108,14 +110,14 @@ namespace RATools.Services
 
         private JsonObject CallJsonAPI(string api, string parameters, string tempFilename)
         {
-            var apiUser = _settings.UserName;
-            var apiKey = _settings.ApiKey;
+            var apiUser = _settings.UserName.Trim();
+            var apiKey = _settings.ApiKey.Trim();
             if (String.IsNullOrEmpty(apiKey))
                 return null;
 
             bool fileValid = false;
             var filename = Path.Combine(Path.GetTempPath(), tempFilename);
-            if (_fileSystemService.FileExists(filename))
+            if (_fileSystemService.FileExists(filename) && _fileSystemService.GetFileSize(filename) > 0)
             {
                 var expireHours = ExpireHours;
                 if (expireHours == 0)
@@ -163,11 +165,31 @@ namespace RATools.Services
                 using (var outputStream = _fileSystemService.CreateFile(filename))
                 {
                     byte[] buffer = new byte[4096];
+                    bool firstByte = true;
                     using (var stream = response.GetResponseStream())
                     {
                         int bytesRead;
                         while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            if (firstByte)
+                            {
+                                if (buffer[0] != '{' && buffer[0] != '[')
+                                {
+                                    var error = Encoding.UTF8.GetString(buffer, 0, buffer.Length);
+                                    var index = error.IndexOf('\0');
+                                    if (index >= 0)
+                                        error = error.Substring(0, index);
+                                    ServiceRepository.Instance.FindService<IBackgroundWorkerService>().InvokeOnUiThread(() =>
+                                    {
+                                        MessageBoxViewModel.ShowMessage("Invalid response: " + error);
+                                    });
+                                    return null;
+                                }
+
+                                firstByte = false;
+                            }
                             outputStream.Write(buffer, 0, bytesRead);
+                        }
                     }
                 }
             }
