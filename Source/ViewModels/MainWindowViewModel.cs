@@ -34,6 +34,7 @@ namespace RATools.ViewModels
             ConditionsAnalyzerCommand = new DelegateCommand(ConditionsAnalyzer);
             MasteryCommand = new DelegateCommand(MasteryStats);
             UserMasteriesCommand = new DelegateCommand(UserMasteries);
+            UnlockDistanceCommand = new DelegateCommand(UnlockDistance);
 
             AboutCommand = new DelegateCommand(About);
 
@@ -557,6 +558,16 @@ namespace RATools.ViewModels
                 return;
 
             var vm = new UserMasteriesViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase UnlockDistanceCommand { get; private set; }
+        private void UnlockDistance()
+        {
+            if (!ValidateForApi())
+                return;
+
+            var vm = new UnlockDistanceViewModel();
             vm.ShowDialog();
         }
 
