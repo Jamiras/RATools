@@ -5,6 +5,7 @@ using RATools.ViewModels;
 using System;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
 
 namespace RATools.Views
 {
@@ -16,6 +17,26 @@ namespace RATools.Views
         public MainWindow()
         {
             InitializeComponent();
+
+            MouseDown += MainWindow_MouseDown;
+        }
+
+        private void MainWindow_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            GameViewModel game;
+            switch (e.ChangedButton)
+            {
+                case MouseButton.XButton1:
+                    game = ((MainWindowViewModel)DataContext).Game;
+                    if (game != null)
+                        game.NavigateBack();
+                    break;
+                case MouseButton.XButton2:
+                    game = ((MainWindowViewModel)DataContext).Game;
+                    if (game != null)
+                        game.NavigateForward();
+                    break;
+            }
         }
 
         protected override void OnInitialized(EventArgs e)
