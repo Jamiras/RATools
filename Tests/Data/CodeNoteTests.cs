@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Data;
 
-namespace RATools.Test.Data
+namespace RATools.Tests.Data
 {
     [TestFixture]
     class CodeNoteTests

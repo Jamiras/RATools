@@ -6,7 +6,7 @@ using RATools.ViewModels;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Test.ViewModels
+namespace RATools.Tests.ViewModels
 {
     [TestFixture]
     class RequirementViewModelTests

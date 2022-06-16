@@ -1,9 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 
-namespace RATools.Test.Parser
+namespace RATools.Tests.Parser
 {
     [TestFixture]
     class RequirementMergerTests

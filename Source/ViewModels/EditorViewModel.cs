@@ -6,6 +6,7 @@ using Jamiras.ViewModels;
 using Jamiras.ViewModels.CodeEditor;
 using Jamiras.ViewModels.CodeEditor.ToolWindows;
 using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using RATools.Services;
 using System;

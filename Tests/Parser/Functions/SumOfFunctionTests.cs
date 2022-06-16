@@ -4,7 +4,7 @@ using RATools.Parser;
 using RATools.Parser.Functions;
 using System.Linq;
 
-namespace RATools.Test.Parser.Functions
+namespace RATools.Tests.Parser.Functions
 {
     [TestFixture]
     class SumOfFunctionTests

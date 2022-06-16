@@ -6,7 +6,7 @@ using RATools.Parser.Functions;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Test.Parser.Functions
+namespace RATools.Tests.Parser.Functions
 {
     [TestFixture]
     class PrevPriorFunctionTests

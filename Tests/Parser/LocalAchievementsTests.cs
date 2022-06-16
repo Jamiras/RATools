@@ -3,12 +3,12 @@ using Moq;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Test.Data;
+using RATools.Tests.Data;
 using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Test.Parser
+namespace RATools.Tests.Parser
 {
     [TestFixture]
     class LocalAchievementsTests

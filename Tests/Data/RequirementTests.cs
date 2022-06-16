@@ -2,7 +2,7 @@
 using RATools.Data;
 using System.Text;
 
-namespace RATools.Test.Data
+namespace RATools.Tests.Data
 {
     [TestFixture]
     class RequirementTests

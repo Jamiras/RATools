@@ -5,7 +5,7 @@ using System;
 using System.Globalization;
 using System.Text;
 
-namespace RATools.Test.Data
+namespace RATools.Tests.Data
 {
     [TestFixture]
     class FieldTests

@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 
 namespace RATools.Parser.Functions

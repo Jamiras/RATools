@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace RATools.Test.Parser.Regression
+namespace RATools.Tests.Parser.Regression
 {
     [TestFixture]
     class RegressionTests

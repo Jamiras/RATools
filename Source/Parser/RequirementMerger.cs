@@ -1,6 +1,6 @@
 ﻿using RATools.Data;
+using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

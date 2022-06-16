@@ -4,7 +4,7 @@ using RATools.Data;
 using RATools.Parser;
 using System.Text;
 
-namespace RATools.Test.Data
+namespace RATools.Tests.Data
 {
     [TestFixture]
     class RequirementExTests

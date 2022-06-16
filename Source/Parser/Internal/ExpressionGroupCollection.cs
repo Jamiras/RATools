@@ -1,6 +1,7 @@
 ﻿//#define DEBUG_UPDATE
 
 using Jamiras.Components;
+using RATools.Parser.Expressions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

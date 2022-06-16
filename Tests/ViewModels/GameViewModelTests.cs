@@ -12,7 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Test.ViewModels
+namespace RATools.Tests.ViewModels
 {
     [TestFixture]
     class GameViewModelTests

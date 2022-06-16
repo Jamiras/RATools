@@ -2,10 +2,11 @@
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Linq;
 
-namespace RATools.Test.Parser
+namespace RATools.Tests.Parser
 {
     [TestFixture]
     class AchievementScriptInterpreterTests
