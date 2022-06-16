@@ -505,7 +505,7 @@ namespace RATools.ViewModels
                 return false;
             }
 
-            if (String.IsNullOrEmpty(settings.UserName))
+            if (String.IsNullOrEmpty(settings.UserName) || settings.UserName == "RATools")
             {
                 MessageBoxViewModel.ShowMessage("This feature requires a User Name value to be set.");
                 return false;
