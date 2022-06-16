@@ -64,6 +64,7 @@ namespace RATools.ViewModels
             {
                 if (triggerGroup.Requirements.Any(r => r.Requirement == null))
                 {
+                    // rich presence lookup comparison
                     RequirementGroupViewModel compareTriggerGroup;
                     if (matches.TryGetValue(triggerGroup, out compareTriggerGroup))
                     {
@@ -81,6 +82,7 @@ namespace RATools.ViewModels
                 }
                 else
                 {
+                    // standard comparison
                     RequirementGroupViewModel compareTriggerGroup;
                     if (matches.TryGetValue(triggerGroup, out compareTriggerGroup))
                     {
@@ -101,9 +103,20 @@ namespace RATools.ViewModels
             // append any compared view models that weren't used
             foreach (var compareTriggerGroup in compareTriggerGroups)
             {
-                groups.Add(new RequirementGroupViewModel(compareTriggerGroup.Label, emptyRequirements,
-                    compareTriggerGroup.Requirements.Select(r => r.Requirement),
-                    numberFormat, notes));
+                if (compareTriggerGroup.Requirements.Any(r => r.Requirement == null))
+                {
+                    // rich presence lookup comparison
+                    groups.Add(new RequirementGroupViewModel(compareTriggerGroup.Label, new string[0],
+                        compareTriggerGroup.Requirements.Select(r => r.Definition),
+                        numberFormat, notes));
+                }
+                else
+                {
+                    // standard comparison
+                    groups.Add(new RequirementGroupViewModel(compareTriggerGroup.Label, emptyRequirements,
+                        compareTriggerGroup.Requirements.Select(r => r.Requirement),
+                        numberFormat, notes));
+                }
             }
 
             Groups = groups.ToArray();

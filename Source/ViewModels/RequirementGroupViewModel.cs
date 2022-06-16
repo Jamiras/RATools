@@ -551,48 +551,33 @@ namespace RATools.ViewModels
             if (unmatchedCompareRequirements.Count > 0)
             {
                 var compareRequirementsList = new List<string>(compareRequirements);
-                var requirementsList = new List<string>(requirements);
-                var indices = new int[compareRequirementsList.Count + 2];
-                for (int i = 1; i < indices.Length - 1; ++i)
-                    indices[i] = -2;
-                indices[0] = -1;
-                indices[compareRequirementsList.Count + 1] = compareRequirementsList.Count + 1;
-                for (int i = 0; i < requirementsList.Count; i++)
-                {
-                    string match;
-                    if (matches.TryGetValue(requirementsList[i], out match))
-                        indices[compareRequirementsList.IndexOf(match) + 1] = i;
-                }
 
                 foreach (var requirement in unmatchedCompareRequirements)
                 {
-                    var insertIndex = pairs.Count;
-
                     var requirementIndex = compareRequirementsList.IndexOf(requirement);
-                    if (requirementIndex < compareRequirementsList.Count - 1)
+                    var prevRequirement = (requirementIndex > 0) ? compareRequirementsList[requirementIndex - 1] : null;
+                    var nextRequirement = (requirementIndex < compareRequirementsList.Count - 1) ? compareRequirementsList[requirementIndex + 1] : null;
+
+                    bool inserted = false;
+                    for (int i = 0; i < pairs.Count; i++)
                     {
-                        for (int i = 1; i < indices.Length - 1; i++)
+                        if (prevRequirement != null && pairs[i].Item2 == prevRequirement)
                         {
-                            if (indices[i - 1] == requirementIndex - 1 || indices[i + 1] == requirementIndex + 1)
-                            {
-                                insertIndex = i - 1;
-                                break;
-                            }
+                            pairs.Insert(i + 1, new Tuple<string, string>(null, requirement));
+                            inserted = true;
+                            break;
+                        }
+
+                        if (nextRequirement != null && pairs[i].Item2 == nextRequirement)
+                        {
+                            pairs.Insert(i, new Tuple<string, string>(null, requirement));
+                            inserted = true;
+                            break;
                         }
                     }
 
-                    if (insertIndex < pairs.Count)
-                    {
-                        for (int i = 0; i < indices.Length; i++)
-                        {
-                            if (indices[i] >= insertIndex)
-                                indices[i]++;
-                        }
-                    }
-
-                    if (insertIndex < indices.Length - 1)
-                        indices[insertIndex + 1] = requirementIndex;
-                    pairs.Insert(insertIndex, new Tuple<string, string>(null, requirement));
+                    if (!inserted)
+                        pairs.Add(new Tuple<string, string>(null, requirement));
                 }
             }
 
