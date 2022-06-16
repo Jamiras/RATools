@@ -60,7 +60,8 @@ namespace RATools.ViewModels
 
         private class NavigationItem
         {
-            public ViewerViewModelBase Editor { get; set; }
+            public string EditorType { get; set; }
+            public int EditorId { get; set; }
             public TextLocation CursorPosition { get; set; }
         }
 
@@ -125,12 +126,29 @@ namespace RATools.ViewModels
 
         private void NavigateTo(NavigationItem item)
         {
+            ViewerViewModelBase editor = null;
+            foreach (var scan in Editors)
+            {
+                if (scan.ViewerType != item.EditorType)
+                    continue;
+
+                var assetEditor = scan as AssetViewModelBase;
+                if (assetEditor != null && assetEditor.Id != item.EditorId)
+                    continue;
+
+                editor = scan;
+                break;
+            }
+
+            if (editor == null)
+                return;
+
             _disableNavigationCapture = true;
             try
             {
-                SelectedEditor = item.Editor;
+                SelectedEditor = editor;
 
-                var scriptEditor = item.Editor as ScriptViewModel;
+                var scriptEditor = editor as ScriptViewModel;
                 if (scriptEditor != null)
                 {
                     // scroll the line into view
@@ -163,7 +181,7 @@ namespace RATools.ViewModels
             {
                 // cursor didn't move. don't duplicate the capture
                 var last = _backNavigationStack.Peek();
-                if (ReferenceEquals(last.Editor, item.Editor) && last.CursorPosition == item.CursorPosition)
+                if (last.EditorId == item.EditorId && last.EditorType == item.EditorType && last.CursorPosition == item.CursorPosition)
                     return;
             }
 
@@ -173,7 +191,10 @@ namespace RATools.ViewModels
 
         private static NavigationItem CaptureNavigationItem(ViewerViewModelBase editor)
         {
-            var item = new NavigationItem { Editor = editor };
+            var item = new NavigationItem { EditorType = editor.ViewerType };
+            var assetEditor = editor as AssetViewModelBase;
+            if (assetEditor != null)
+                item.EditorId = assetEditor.Id;
 
             var scriptEditor = editor as ScriptViewModel;
             if (scriptEditor != null)
