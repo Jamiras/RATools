@@ -120,9 +120,9 @@ namespace RATools.Parser.Internal
             }
         }
 
-        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
         {
-            var error = new ParseErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
+            var error = new ErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
 
             var expressionTokenizer = tokenizer as ExpressionTokenizer;
             if (expressionTokenizer != null)
@@ -131,15 +131,15 @@ namespace RATools.Parser.Internal
             return error;
         }
 
-        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message)
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message)
         {
             return ParseError(tokenizer, message, tokenizer.Line, tokenizer.Column);
         }
 
-        internal static ParseErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
         {
             var error = ParseError(tokenizer, message);
-            error.InnerError = expression as ParseErrorExpression;
+            error.InnerError = expression as ErrorExpression;
             expression.CopyLocation(error);
             return error;
         }
@@ -185,11 +185,11 @@ namespace RATools.Parser.Internal
                 return ParseError(tokenizer, "Unexpected end of script");
 
             var clause = ParseClause(tokenizer);
-            if (clause.Type == ExpressionType.ParseError || clause.Type == ExpressionType.Comment)
+            if (clause.Type == ExpressionType.Error || clause.Type == ExpressionType.Comment)
                 return clause;
 
             clause = ParseClauseExtension(clause, tokenizer, priority);
-            if (clause.Type == ExpressionType.ParseError)
+            if (clause.Type == ExpressionType.Error)
                 return clause;
 
             Debug.Assert(clause.Location.Start.Line != 0);
@@ -374,7 +374,7 @@ namespace RATools.Parser.Internal
                         return clause;
                 }
 
-                if (clause.Type == ExpressionType.ParseError)
+                if (clause.Type == ExpressionType.Error)
                     return clause;
 
             } while (true);
@@ -427,7 +427,7 @@ namespace RATools.Parser.Internal
                 }
 
                 if (!UInt32.TryParse(number, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out value))
-                    return new ParseErrorExpression("Number too large");
+                    return new ErrorExpression("Number too large");
             }
             else
             {
@@ -456,7 +456,7 @@ namespace RATools.Parser.Internal
 
                     float floatValue;
                     if (!float.TryParse(number, System.Globalization.NumberStyles.AllowDecimalPoint, System.Globalization.CultureInfo.InvariantCulture, out floatValue))
-                        return new ParseErrorExpression("Number too large");
+                        return new ErrorExpression("Number too large");
 
                     var floatExpression = new FloatConstantExpression(floatValue);
                     floatExpression.Location = new TextRange(line, column, endLine, endColumn);
@@ -464,11 +464,11 @@ namespace RATools.Parser.Internal
                 }
 
                 if (!UInt32.TryParse(number, out value))
-                    return new ParseErrorExpression("Number too large");
+                    return new ErrorExpression("Number too large");
             }
 
             if (value > Int32.MaxValue && !isUnsigned)
-                return new ParseErrorExpression("Number too large");
+                return new ErrorExpression("Number too large");
 
             var integerExpression = new IntegerConstantExpression((int)value);
             integerExpression.Location = new TextRange(line, column, endLine, endColumn);
@@ -484,7 +484,7 @@ namespace RATools.Parser.Internal
                 case '!':
                     tokenizer.Advance();
                     clause = ParseClause(tokenizer);
-                    if (clause.Type == ExpressionType.ParseError)
+                    if (clause.Type == ExpressionType.Error)
                         return clause;
 
                     return new ConditionalExpression(null, ConditionalOperation.Not, clause);
@@ -495,7 +495,7 @@ namespace RATools.Parser.Internal
 
                     tokenizer.Advance();
                     clause = ExpressionBase.Parse(tokenizer);
-                    if (clause.Type == ExpressionType.ParseError)
+                    if (clause.Type == ExpressionType.Error)
                         return clause;
 
                     if (tokenizer.NextChar != ')')
@@ -584,7 +584,7 @@ namespace RATools.Parser.Internal
                     if (identifier == "return")
                     {
                         clause = ExpressionBase.Parse(tokenizer);
-                        if (clause.Type == ExpressionType.ParseError)
+                        if (clause.Type == ExpressionType.Error)
                             return clause;
 
                         return new ReturnExpression(new KeywordExpression(identifier.ToString(), line, column), clause);
@@ -623,7 +623,7 @@ namespace RATools.Parser.Internal
                             tokenizer.Advance();
 
                             var index = ExpressionBase.Parse(tokenizer);
-                            if (index.Type == ExpressionType.ParseError)
+                            if (index.Type == ExpressionType.Error)
                                 return index;
 
                             SkipWhitespace(tokenizer);
@@ -658,7 +658,7 @@ namespace RATools.Parser.Internal
                 do
                 {
                     var parameter = ExpressionBase.Parse(tokenizer);
-                    if (parameter.Type == ExpressionType.ParseError)
+                    if (parameter.Type == ExpressionType.Error)
                         return ParseError(tokenizer, "Invalid expression", parameter);
 
                     parameters.Add(parameter);
@@ -714,13 +714,13 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    return new ParseErrorExpression("Unknown operator: " + operation);
+                    return new ErrorExpression("Unknown operator: " + operation);
             }
 
             var right = ParseExpression(tokenizer, priority);
             switch (right.Type)
             {
-                case ExpressionType.ParseError:
+                case ExpressionType.Error:
                     return right;
 
                 case ExpressionType.Comparison: // will be rebalanced
@@ -756,7 +756,7 @@ namespace RATools.Parser.Internal
             var right = ParseExpression(tokenizer, OperationPriority.Compare);
             switch (right.Type)
             {
-                case ExpressionType.ParseError:
+                case ExpressionType.Error:
                     return right;
 
                 case ExpressionType.BooleanConstant:
@@ -796,14 +796,14 @@ namespace RATools.Parser.Internal
                     priority = OperationPriority.Not;
                     break;
                 default:
-                    return new ParseErrorExpression("Unknown operation: " + operation);
+                    return new ErrorExpression("Unknown operation: " + operation);
             }
 
             var right = ParseExpression(tokenizer, priority);
 
             switch (right.Type)
             {
-                case ExpressionType.ParseError:
+                case ExpressionType.Error:
                     return right;
 
                 case ExpressionType.BooleanConstant:
@@ -833,7 +833,7 @@ namespace RATools.Parser.Internal
             var value = ParseExpression(tokenizer, OperationPriority.Assign);
             switch (value.Type)
             {
-                case ExpressionType.ParseError:
+                case ExpressionType.Error:
                     value = new KeywordExpression("=", joinerLine, joinerColumn);
                     break;
 
@@ -871,7 +871,7 @@ namespace RATools.Parser.Internal
             while (tokenizer.NextChar != ']')
             {
                 var value = Parse(tokenizer);
-                if (value.Type == ExpressionType.ParseError)
+                if (value.Type == ExpressionType.Error)
                     return value;
 
                 array.Entries.Add(value);
@@ -897,7 +897,7 @@ namespace RATools.Parser.Internal
             if (tokenizer.NextChar != '{')
             {
                 var statement = ExpressionBase.Parse(tokenizer);
-                if (statement.Type == ExpressionType.ParseError)
+                if (statement.Type == ExpressionType.Error)
                     return statement;
 
                 expressions.Add(statement);
@@ -918,11 +918,11 @@ namespace RATools.Parser.Internal
                         return ParseError(tokenizer, "No matching closing brace found", line, column);
 
                     var statement = ExpressionBase.Parse(tokenizer);
-                    if (statement.Type == ExpressionType.ParseError)
+                    if (statement.Type == ExpressionType.Error)
                         return statement;
 
                     if (statement.Type == ExpressionType.Variable)
-                        return new ParseErrorExpression("standalone variable has no meaning", statement);
+                        return new ErrorExpression("standalone variable has no meaning", statement);
 
                     expressions.Add(statement);
                 } while (true);
@@ -1041,7 +1041,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
-        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
+        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
         public virtual bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             result = this;
@@ -1054,7 +1054,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="error">[out] The error that prevented evaluation (or null if successful).</param>
         /// <returns>The result of evaluating the expression</returns>
-        public virtual bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public virtual bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             error = null;
             return null;
@@ -1162,9 +1162,9 @@ namespace RATools.Parser.Internal
         Keyword,
 
         /// <summary>
-        /// A parse error.
+        /// An error.
         /// </summary>
-        ParseError,
+        Error,
 
         /// <summary>
         /// A reference to a variable.

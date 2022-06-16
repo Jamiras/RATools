@@ -23,7 +23,7 @@ namespace RATools.Parser.Internal
             _expressionGroup.AddExpression(comment);
         }
 
-        public void AddError(ParseErrorExpression error)
+        public void AddError(ErrorExpression error)
         {
             _expressionGroup.AddParseError(error);
         }

@@ -25,7 +25,7 @@ namespace RATools.Parser.Functions
             var inputs = result as IIterableExpression;
             if (inputs == null)
             {
-                result = new ParseErrorExpression("Cannot iterate over " + result.ToString(), result);
+                result = new ErrorExpression("Cannot iterate over " + result.ToString(), result);
                 return false;
             }
 
@@ -35,7 +35,7 @@ namespace RATools.Parser.Functions
 
             if ((predicate.Parameters.Count - predicate.DefaultParameters.Count) != 1)
             {
-                result = new ParseErrorExpression("predicate function must accept a single parameter");
+                result = new ErrorExpression("predicate function must accept a single parameter");
                 return false;
             }
 
@@ -57,7 +57,7 @@ namespace RATools.Parser.Functions
                     return false;
 
                 expression = Combine(expression, result);
-                if (expression.Type == ExpressionType.ParseError)
+                if (expression.Type == ExpressionType.Error)
                 {
                     result = expression;
                     return false;

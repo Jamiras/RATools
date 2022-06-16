@@ -49,14 +49,14 @@ namespace RATools.Test.Parser.Internal
             Assert.That(group.ParseErrors, Is.Empty);
             Assert.That(group.IsEmpty);
 
-            var parseError = new ParseErrorExpression("oops");
+            var parseError = new ErrorExpression("oops");
             group.AddParseError(parseError);
             Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
             Assert.That(group.ParseErrors.Contains(parseError));
             Assert.That(group.Expressions, Is.Empty);
             Assert.That(!group.IsEmpty);
 
-            var parseError2 = new ParseErrorExpression("bad");
+            var parseError2 = new ErrorExpression("bad");
             group.AddParseError(parseError2);
             Assert.That(group.ParseErrors.Count(), Is.EqualTo(2));
             Assert.That(group.ParseErrors.Contains(parseError));
@@ -186,13 +186,13 @@ namespace RATools.Test.Parser.Internal
         public void GetExpressionsForLineParseError()
         {
             var group = Parse("function a()\n{\n  func2()\n}\n").Groups.First();
-            group.AddParseError(new ParseErrorExpression("Oops", 3, 8, 3, 9));
+            group.AddParseError(new ErrorExpression("Oops", 3, 8, 3, 9));
             var lines = new List<ExpressionBase>();
 
             Assert.That(group.GetExpressionsForLine(lines, 3), Is.True);
             Assert.That(lines.Count, Is.EqualTo(2));
             Assert.That(lines[0], Is.InstanceOf<FunctionNameExpression>());
-            Assert.That(lines[1], Is.InstanceOf<ParseErrorExpression>());
+            Assert.That(lines[1], Is.InstanceOf<ErrorExpression>());
 
             lines.Clear();
             Assert.That(group.GetExpressionsForLine(lines, 1), Is.True);

@@ -218,7 +218,7 @@ namespace RATools.ViewModels
                 {
                     var errors = new Stack<CodeReferenceViewModel>();
 
-                    ParseErrorExpression innerError = error;
+                    ErrorExpression innerError = error;
                     while (innerError != null)
                     {
                         errors.Push(new CodeReferenceViewModel
@@ -379,7 +379,7 @@ namespace RATools.ViewModels
                 var expressionStart = (expression.Location.Start.Line == line) ? expression.Location.Start.Column : 1;
                 var expressionEnd = (expression.Location.End.Line == line) ? expression.Location.End.Column : e.Text.Length + 1;
 
-                var parseError = expression as ParseErrorExpression;
+                var parseError = expression as ErrorExpression;
                 if (parseError != null)
                     e.SetError(expressionStart, expressionEnd - expressionStart + 1, parseError.Message);
                 else

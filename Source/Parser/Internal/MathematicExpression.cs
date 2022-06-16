@@ -107,7 +107,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -146,7 +146,7 @@ namespace RATools.Parser.Internal
             if (mathematicLeft != null)
             {
                 left = mathematicLeft.MergeOperands();
-                if (left.Type == ExpressionType.ParseError)
+                if (left.Type == ExpressionType.Error)
                     return left;
             }
 
@@ -154,7 +154,7 @@ namespace RATools.Parser.Internal
             if (mathematicRight != null)
             {
                 right = mathematicRight.MergeOperands();
-                if (right.Type == ExpressionType.ParseError)
+                if (right.Type == ExpressionType.Error)
                     return right;
             }
 
@@ -181,7 +181,7 @@ namespace RATools.Parser.Internal
                     if (MergeIdentity(left, operation, right, out result))
                         return true;
 
-                    if (result is ParseErrorExpression)
+                    if (result is ErrorExpression)
                         return false;
                 }
             }
@@ -195,7 +195,7 @@ namespace RATools.Parser.Internal
                         if (MergeIdentity(right, operation, left, out result))
                             return true;
 
-                        if (result is ParseErrorExpression)
+                        if (result is ErrorExpression)
                             return false;
 
                         var temp = left;
@@ -265,7 +265,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot add expressions");
+            result = new ErrorExpression("Cannot add expressions");
             return false;
         }
 
@@ -287,7 +287,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot subtract expressions");
+            result = new ErrorExpression("Cannot subtract expressions");
             return false;
         }
 
@@ -309,7 +309,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot multiply expressions");
+            result = new ErrorExpression("Cannot multiply expressions");
             return false;
         }
 
@@ -323,7 +323,7 @@ namespace RATools.Parser.Internal
 
                 if (((FloatConstantExpression)right).Value == 0.0)
                 {
-                    result = new ParseErrorExpression("Division by zero");
+                    result = new ErrorExpression("Division by zero");
                     return false;
                 }
 
@@ -335,7 +335,7 @@ namespace RATools.Parser.Internal
             {
                 if (((IntegerConstantExpression)right).Value == 0.0)
                 {
-                    result = new ParseErrorExpression("Division by zero");
+                    result = new ErrorExpression("Division by zero");
                     return false;
                 }
 
@@ -343,7 +343,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot divide expressions");
+            result = new ErrorExpression("Cannot divide expressions");
             return false;
         }
 
@@ -357,7 +357,7 @@ namespace RATools.Parser.Internal
 
                 if (((FloatConstantExpression)right).Value == 0.0)
                 {
-                    result = new ParseErrorExpression("Division by zero");
+                    result = new ErrorExpression("Division by zero");
                     return false;
                 }
 
@@ -369,7 +369,7 @@ namespace RATools.Parser.Internal
             {
                 if (((IntegerConstantExpression)right).Value == 0)
                 {
-                    result = new ParseErrorExpression("Division by zero");
+                    result = new ErrorExpression("Division by zero");
                     return false;
                 }
 
@@ -377,7 +377,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot modulus expressions");
+            result = new ErrorExpression("Cannot modulus expressions");
             return false;
         }
 
@@ -389,7 +389,7 @@ namespace RATools.Parser.Internal
                 return true;
             }
 
-            result = new ParseErrorExpression("Cannot bitwise and expressions");
+            result = new ErrorExpression("Cannot bitwise and expressions");
             return false;
         }
 
@@ -498,13 +498,13 @@ namespace RATools.Parser.Internal
                             if (left.Type == ExpressionType.FloatConstant)
                             {
                                 right = FloatConstantExpression.ConvertFrom(right);
-                                if (right.Type == ExpressionType.ParseError)
+                                if (right.Type == ExpressionType.Error)
                                     return false;
                             }
                             else if (right.Type == ExpressionType.FloatConstant)
                             {
                                 left = FloatConstantExpression.ConvertFrom(left);
-                                if (left.Type == ExpressionType.ParseError)
+                                if (left.Type == ExpressionType.Error)
                                     return false;
                             }
                             else
@@ -665,7 +665,7 @@ namespace RATools.Parser.Internal
 
                     case MathematicOperation.Divide:
                     case MathematicOperation.Modulus:
-                        result = new ParseErrorExpression("Division by zero");
+                        result = new ErrorExpression("Division by zero");
                         return false;
                 }
             }

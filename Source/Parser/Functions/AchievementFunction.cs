@@ -66,8 +66,8 @@ namespace RATools.Parser.Functions
             {
                 if (result.Location.Start != trigger.Location.Start || result.Location.End != trigger.Location.End)
                 {
-                    var error = (ParseErrorExpression)result;
-                    result = new ParseErrorExpression(error.Message, trigger) { InnerError = error };
+                    var error = (ErrorExpression)result;
+                    result = new ErrorExpression(error.Message, trigger) { InnerError = error };
                 }
 
                 return false;

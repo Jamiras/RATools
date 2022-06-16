@@ -37,7 +37,7 @@ namespace RATools.Test.Parser.Functions
             if (expectedError != null)
             {
                 Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
-                var parseError = evaluated as ParseErrorExpression;
+                var parseError = evaluated as ErrorExpression;
                 Assert.That(parseError, Is.Not.Null);
                 Assert.That(parseError.Message, Is.EqualTo(expectedError));
                 return context.RichPresence;

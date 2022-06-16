@@ -239,12 +239,12 @@ namespace RATools.Parser.Internal
             {
                 case ComparisonOperation.Equal:
                     // a * 10 == 9999 can never be true
-                    result = new ParseErrorExpression("Result can never be true using integer math", comparison);
+                    result = new ErrorExpression("Result can never be true using integer math", comparison);
                     return false;
 
                 case ComparisonOperation.NotEqual:
                     // a * 10 != 9999 is always true
-                    result = new ParseErrorExpression("Result is always true using integer math", comparison);
+                    result = new ErrorExpression("Result is always true using integer math", comparison);
                     return false;
 
                 case ComparisonOperation.LessThan:
@@ -851,7 +851,7 @@ namespace RATools.Parser.Internal
                 else
                 {
                     // no 32-bit reads, and no subtraction - the comparison will never be true
-                    result = new ParseErrorExpression("Expression can never be true");
+                    result = new ErrorExpression("Expression can never be true");
                     return false;
                 }
             }
@@ -1018,7 +1018,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -1090,7 +1090,7 @@ namespace RATools.Parser.Internal
             }
 
             // if the expression can be fully evaluated, do so
-            ParseErrorExpression error;
+            ErrorExpression error;
             var comparisonResult = comparison.IsTrue(scope, out error);
             if (error != null)
             {
@@ -1122,18 +1122,18 @@ namespace RATools.Parser.Internal
         /// <returns>
         /// The result of evaluating the expression
         /// </returns>
-        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             ExpressionBase left, right;
             if (!Left.ReplaceVariables(scope, out left))
             {
-                error = left as ParseErrorExpression;
+                error = left as ErrorExpression;
                 return null;
             }
 
             if (!Right.ReplaceVariables(scope, out right))
             {
-                error = right as ParseErrorExpression;
+                error = right as ErrorExpression;
                 return null;
             }
 
@@ -1207,7 +1207,7 @@ namespace RATools.Parser.Internal
                     case ComparisonOperation.NotEqual:
                         return booleanLeft.Value != booleanRight.Value;
                     default:
-                        error = new ParseErrorExpression("Cannot perform relative comparison on boolean values", this);
+                        error = new ErrorExpression("Cannot perform relative comparison on boolean values", this);
                         return null;
                 }
             }

@@ -11,13 +11,13 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var comparison = functionCall.Parameters.First();
             return BuildTriggerCondition(context, scope, comparison);
         }
 
-        protected ParseErrorExpression BuildTriggerCondition(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase condition)
+        protected ErrorExpression BuildTriggerCondition(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase condition)
         { 
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
@@ -28,21 +28,21 @@ namespace RATools.Parser.Functions
                     case ExpressionType.Conditional:
                     case ExpressionType.Comparison:
                         // allowed constructs should only report the inner error
-                        return (ParseErrorExpression)result;
+                        return (ErrorExpression)result;
 
                     default:
                         // non-allowed construct
-                        return new ParseErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ParseErrorExpression)result };
+                        return new ErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ErrorExpression)result };
                 }
             }
 
             var error = builder.CollapseForSubClause();
             if (error != null)
-                return new ParseErrorExpression(error.Message, condition);
+                return new ErrorExpression(error.Message, condition);
 
             error = ModifyRequirements(builder);
             if (error != null)
-                return new ParseErrorExpression(error.Message, condition);
+                return new ErrorExpression(error.Message, condition);
 
             foreach (var requirement in builder.CoreRequirements)
                 context.Trigger.Add(requirement);
@@ -50,6 +50,6 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        protected abstract ParseErrorExpression ModifyRequirements(AchievementBuilder builder);
+        protected abstract ErrorExpression ModifyRequirements(AchievementBuilder builder);
     }
 }

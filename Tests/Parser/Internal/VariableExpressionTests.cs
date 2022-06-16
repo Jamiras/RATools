@@ -56,8 +56,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(variable.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown variable: unknown"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Unknown variable: unknown"));
         }
 
         [Test]

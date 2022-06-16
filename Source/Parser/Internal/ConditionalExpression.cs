@@ -155,7 +155,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -221,7 +221,7 @@ namespace RATools.Parser.Internal
                     else
                     {
                         result = InvertExpression(updatedConditions[0]);
-                        if (result.Type == ExpressionType.ParseError)
+                        if (result.Type == ExpressionType.Error)
                             return false;
 
                         CopyLocation(result);
@@ -355,7 +355,7 @@ namespace RATools.Parser.Internal
             }
 
             // unsupported inversion
-            return new ParseErrorExpression("! operator cannot be applied to " + expression.Type, expression);
+            return new ErrorExpression("! operator cannot be applied to " + expression.Type, expression);
         }
 
         /// <summary>
@@ -366,7 +366,7 @@ namespace RATools.Parser.Internal
         /// <returns>
         /// The result of evaluating the expression
         /// </returns>
-        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             bool? isTrue;
 

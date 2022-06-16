@@ -16,7 +16,7 @@ namespace RATools.Parser.Functions
             DefaultParameters["format"] = new StringConstantExpression("raw");
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var error = base.BuildTrigger(context, scope, functionCall);
             if (error != null)
@@ -25,28 +25,28 @@ namespace RATools.Parser.Functions
             ExpressionBase result;
             var format = functionCall.Parameters.ElementAt(2);
             if (!format.ReplaceVariables(scope, out result))
-                return (ParseErrorExpression)result;
+                return (ErrorExpression)result;
 
             StringConstantExpression formatStr = result as StringConstantExpression;
             if (formatStr == null)
-                return new ParseErrorExpression("format is not a string", format);
+                return new ErrorExpression("format is not a string", format);
 
             if (formatStr.Value != "raw")
             {
                 if (scope.GetContext<ValueBuilderContext>() != null)
-                    return new ParseErrorExpression("Value fields only support raw measured values", format);
+                    return new ErrorExpression("Value fields only support raw measured values", format);
 
                 if (formatStr.Value == "percent")
                     context.LastRequirement.Type = RequirementType.MeasuredPercent;
                 else
-                    return new ParseErrorExpression("Unknown format: " + formatStr.Value, format);
+                    return new ErrorExpression("Unknown format: " + formatStr.Value, format);
             }
 
             var when = functionCall.Parameters.ElementAt(1);
 
             var builder = new ScriptInterpreterAchievementBuilder();
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, when, scope, out result))
-                return new ParseErrorExpression("when did not evaluate to a valid comparison", when) { InnerError = (ParseErrorExpression)result };
+                return new ErrorExpression("when did not evaluate to a valid comparison", when) { InnerError = (ErrorExpression)result };
 
             error = builder.CollapseForSubClause();
             if (error != null)

@@ -105,11 +105,11 @@ namespace RATools.Parser.Internal
             return (entry != null) ? entry.Value : null;
         }
 
-        internal ParseErrorExpression Assign(ExpressionBase key, ExpressionBase value)
+        internal ErrorExpression Assign(ExpressionBase key, ExpressionBase value)
         {
             var entry = GetEntry(key, true);
 
-            var error = entry.Value as ParseErrorExpression;
+            var error = entry.Value as ErrorExpression;
             if (error != null)
                 return error;
 
@@ -171,7 +171,7 @@ namespace RATools.Parser.Internal
             while (tokenizer.NextChar != '}')
             {
                 var key = ExpressionBase.ParseClause(tokenizer);
-                if (key.Type == ExpressionType.ParseError)
+                if (key.Type == ExpressionType.Error)
                     return key;
 
                 SkipWhitespace(tokenizer);
@@ -184,7 +184,7 @@ namespace RATools.Parser.Internal
                 SkipWhitespace(tokenizer);
 
                 var value = ExpressionBase.ParseClause(tokenizer);
-                if (value.Type == ExpressionType.ParseError)
+                if (value.Type == ExpressionType.Error)
                     break;
 
                 dict.Add(key, value);
@@ -216,7 +216,7 @@ namespace RATools.Parser.Internal
             _state = DictionaryState.Unprocessed;
         }
 
-        private ParseErrorExpression UpdateState()
+        private ErrorExpression UpdateState()
         {
             if (_entries.Count == 0)
             {
@@ -237,7 +237,7 @@ namespace RATools.Parser.Internal
                         StringBuilder builder = new StringBuilder();
                         entry.Key.AppendString(builder);
                         builder.Append(" already exists in dictionary");
-                        return new ParseErrorExpression(builder.ToString(), entry.Key);
+                        return new ErrorExpression(builder.ToString(), entry.Key);
                     }
                 }
 
@@ -261,7 +261,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -303,7 +303,7 @@ namespace RATools.Parser.Internal
 
                     if (!value.IsConstant)
                     {
-                        result = new ParseErrorExpression("Dictionary key must evaluate to a constant", key);
+                        result = new ErrorExpression("Dictionary key must evaluate to a constant", key);
                         return false;
                     }
 
@@ -343,7 +343,7 @@ namespace RATools.Parser.Internal
                         StringBuilder builder = new StringBuilder();
                         key.AppendString(builder);
                         builder.Append(" already exists in dictionary");
-                        result = new ParseErrorExpression(builder.ToString(), entry.Key);
+                        result = new ErrorExpression(builder.ToString(), entry.Key);
                         return false;
                     }
 

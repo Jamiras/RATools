@@ -3,36 +3,36 @@ using System.Text;
 
 namespace RATools.Parser.Internal
 {
-    internal class ParseErrorExpression : ExpressionBase
+    internal class ErrorExpression : ExpressionBase
     {
-        public ParseErrorExpression(string message)
-            : base(ExpressionType.ParseError)
+        public ErrorExpression(string message)
+            : base(ExpressionType.Error)
         {
             Message = message;
         }
 
-        public ParseErrorExpression(string message, int line, int column, int endLine, int endColumn)
+        public ErrorExpression(string message, int line, int column, int endLine, int endColumn)
             : this(message, new TextRange(line, column, endLine, endColumn))
         {
         }
 
-        public ParseErrorExpression(string message, ExpressionBase expression)
+        public ErrorExpression(string message, ExpressionBase expression)
             : this(message, expression.Location)
         {
         }
 
-        public ParseErrorExpression(string message, TextRange location)
+        public ErrorExpression(string message, TextRange location)
             : this(message)
         {
             Location = location;
         }
 
-        public ParseErrorExpression(ExpressionBase error, ExpressionBase expression)
-            : base(ExpressionType.ParseError)
+        public ErrorExpression(ExpressionBase error, ExpressionBase expression)
+            : base(ExpressionType.Error)
         {
             Location = expression.Location;
 
-            var parseError = error as ParseErrorExpression;
+            var parseError = error as ErrorExpression;
             if (parseError != null)
             {
                 Message = parseError.Message;
@@ -49,14 +49,14 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public static ParseErrorExpression WrapError(ParseErrorExpression error, string message, ExpressionBase expression)
+        public static ErrorExpression WrapError(ErrorExpression error, string message, ExpressionBase expression)
         {
             if (error.Location.End == expression.Location.End && error.Location.Start == expression.Location.Start)
             {
                 return error;
             }
 
-            return new ParseErrorExpression(message, expression) { InnerError = error };
+            return new ErrorExpression(message, expression) { InnerError = error };
         }
 
         /// <summary>
@@ -67,12 +67,12 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets a secondary error that caused this error.
         /// </summary>
-        public ParseErrorExpression InnerError { get; internal set; }
+        public ErrorExpression InnerError { get; internal set; }
 
         /// <summary>
         /// Gets the root error that caused this error.
         /// </summary>
-        public ParseErrorExpression InnermostError
+        public ErrorExpression InnermostError
         {
             get
             {
@@ -96,20 +96,20 @@ namespace RATools.Parser.Internal
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="ParseErrorExpression" /> is equal to this instance.
+        /// Determines whether the specified <see cref="ErrorExpression" /> is equal to this instance.
         /// </summary>
-        /// <param name="obj">The <see cref="ParseErrorExpression" /> to compare with this instance.</param>
+        /// <param name="obj">The <see cref="ErrorExpression" /> to compare with this instance.</param>
         /// <returns>
-        ///   <c>true</c> if the specified <see cref="ParseErrorExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        ///   <c>true</c> if the specified <see cref="ErrorExpression" /> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as ParseErrorExpression;
+            var that = obj as ErrorExpression;
             return that != null && Message == that.Message;
         }
     }
 
-    internal class UnknownVariableParseErrorExpression : ParseErrorExpression
+    internal class UnknownVariableParseErrorExpression : ErrorExpression
     {
         public UnknownVariableParseErrorExpression(string message, ExpressionBase expression)
             : base(message, expression)

@@ -57,7 +57,7 @@ namespace RATools.Parser.Functions
             var valueFormat = ParseFormat(format.Value);
             if (valueFormat == ValueFormat.None)
             {
-                result = new ParseErrorExpression(format.Value + " is not a supported rich_presence_value format", format);
+                result = new ErrorExpression(format.Value + " is not a supported rich_presence_value format", format);
                 return false;
             }
 

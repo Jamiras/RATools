@@ -60,13 +60,13 @@ namespace RATools.Parser.Functions
             return 0;
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var address = functionCall.Parameters.First();
             return BuildTrigger(context, scope, functionCall, address);
         }
 
-        protected ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall, ExpressionBase address)
+        protected ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall, ExpressionBase address)
         {
             var requirement = new Requirement();
             var integerConstant = address as IntegerConstantExpression;
@@ -90,7 +90,7 @@ namespace RATools.Parser.Functions
                     (mathematic.Operation == MathematicOperation.Add || mathematic.Operation == MathematicOperation.Subtract))
                 {
                     if (CountMathematicMemoryAccessors(mathematic, 2) >= 2)
-                        return new ParseErrorExpression("Cannot construct single address lookup from multiple memory references", address);
+                        return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
 
                     offsetConstant = mathematic.Right as IntegerConstantExpression;
                     if (offsetConstant != null)
@@ -192,7 +192,7 @@ namespace RATools.Parser.Functions
             builder.Append("Cannot convert to an address: ");
             originalAddress.AppendString(builder);
 
-            return new ParseErrorExpression(builder.ToString(), address);
+            return new ErrorExpression(builder.ToString(), address);
         }
     }
 }

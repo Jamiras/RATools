@@ -150,8 +150,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Dictionary key must evaluate to a constant"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Dictionary key must evaluate to a constant"));
         }
 
         [Test]
@@ -169,8 +169,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             while (parseError.InnerError != null)
                 parseError = parseError.InnerError;
             Assert.That(parseError.Message, Is.EqualTo("func did not return a value"));
@@ -190,8 +190,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("1 already exists in dictionary"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("1 already exists in dictionary"));
         }
 
         [Test]
@@ -212,8 +212,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("1 already exists in dictionary"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("1 already exists in dictionary"));
         }
 
         [Test]

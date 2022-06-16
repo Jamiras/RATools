@@ -67,7 +67,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -76,7 +76,7 @@ namespace RATools.Parser.Internal
 
             if (result == null)
             {
-                result = new ParseErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
+                result = new ErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
                 return false;
             }
 
@@ -90,7 +90,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the function result.</param>
         /// <returns>
-        ///   <c>true</c> if invocation was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if invocation was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
@@ -123,12 +123,12 @@ namespace RATools.Parser.Internal
             }
 
             var functionParametersScope = GetParameters(functionDefinition, scope, out result);
-            if (functionParametersScope == null || result is ParseErrorExpression)
+            if (functionParametersScope == null || result is ErrorExpression)
                 return false;
 
             if (functionParametersScope.Depth >= 100)
             {
-                result = new ParseErrorExpression("Maximum recursion depth exceeded", this);
+                result = new ErrorExpression("Maximum recursion depth exceeded", this);
                 return false;
             }
 
@@ -144,12 +144,12 @@ namespace RATools.Parser.Internal
                 functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
-            var error = result as ParseErrorExpression;
+            var error = result as ErrorExpression;
             if (error != null)
             {
                 if (error.Location.Start.Line == 0)
                     this.CopyLocation(error);
-                result = ParseErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
+                result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }
 
@@ -180,7 +180,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the function result.</param>
         /// <returns>
-        ///   <c>true</c> if invocation was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if invocation was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public bool Invoke(InterpreterScope scope, out ExpressionBase result)
         {
@@ -188,7 +188,7 @@ namespace RATools.Parser.Internal
                 return true;
 
             if (result.Location.Start.Line == 0)
-                result = new ParseErrorExpression(result, FunctionName);
+                result = new ErrorExpression(result, FunctionName);
 
             return false;
         }
@@ -239,8 +239,8 @@ namespace RATools.Parser.Internal
                 var assignmentScope = new InterpreterScope(scope) { Context = assignment };
                 if (!value.ReplaceVariables(assignmentScope, out value))
                 {
-                    var error = (ParseErrorExpression)value;
-                    return new ParseErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+                    var error = (ErrorExpression)value;
+                    return new ErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
                 }
 
                 value.IsLogicalUnit = isLogicalUnit;
@@ -269,12 +269,12 @@ namespace RATools.Parser.Internal
                 }
                 else if (funcParameter.Name != assignedParameter.Variable.Name)
                 {
-                    error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), value);
+                    error = new ErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), value);
                     return true;
                 }
 
                 value = GetParameter(parameterScope, parameterScope, assignedParameter);
-                error = value as ParseErrorExpression;
+                error = value as ErrorExpression;
                 if (error != null)
                     return true;
             }
@@ -288,7 +288,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="function">The function defining the parameters to populate.</param>
         /// <param name="scope">The outer scope containing the function call.</param>
-        /// <param name="error">[out] A <see cref="ParseErrorExpression"/> indicating why constructing the new scope failed.</param>
+        /// <param name="error">[out] A <see cref="ErrorExpression"/> indicating why constructing the new scope failed.</param>
         /// <returns>The new scope, <c>null</c> if an error occurred - see <paramref name="error"/> for error details.</returns>
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
@@ -335,16 +335,16 @@ namespace RATools.Parser.Internal
                     {
                         if (!function.Parameters.Any(p => p.Name == assignedParameter.Variable.Name))
                         {
-                            error = new ParseErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), parameter);
+                            error = new ErrorExpression(String.Format("'{0}' does not have a '{1}' parameter", function.Name.Name, assignedParameter.Variable.Name), parameter);
                             return null;
                         }
 
-                        error = new ParseErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name), assignedParameter.Variable);
+                        error = new ErrorExpression(String.Format("'{0}' already has a value", assignedParameter.Variable.Name), assignedParameter.Variable);
                         return null;
                     }
 
                     var value = GetParameter(parameterScope, scope, assignedParameter);
-                    error = value as ParseErrorExpression;
+                    error = value as ErrorExpression;
                     if (error != null)
                         return null;
 
@@ -357,13 +357,13 @@ namespace RATools.Parser.Internal
                 {
                     if (namedParameters)
                     {
-                        error = new ParseErrorExpression("Non-named parameter following named parameter", parameter);
+                        error = new ErrorExpression("Non-named parameter following named parameter", parameter);
                         return null;
                     }
 
                     if (index >= parameterCount && varargs == null)
                     {
-                        error = new ParseErrorExpression("Too many parameters passed to function", parameter);
+                        error = new ErrorExpression("Too many parameters passed to function", parameter);
                         return null;
                     }
 
@@ -371,7 +371,7 @@ namespace RATools.Parser.Internal
 
                     assignedParameter = new AssignmentExpression(new VariableExpression(variableName), parameter);
                     var value = GetParameter(parameterScope, scope, assignedParameter);
-                    error = value as ParseErrorExpression;
+                    error = value as ErrorExpression;
                     if (error != null)
                         return null;
 
@@ -396,14 +396,14 @@ namespace RATools.Parser.Internal
                 ExpressionBase value;
                 if (!function.DefaultParameters.TryGetValue(parameter, out value))
                 {
-                    error = new ParseErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), FunctionName);
+                    error = new ErrorExpression(String.Format("Required parameter '{0}' not provided", parameter), FunctionName);
                     return null;
                 }
 
                 var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(parameter), value) };
                 if (!value.ReplaceVariables(assignmentScope, out value))
                 {
-                    error = new ParseErrorExpression(value, this);
+                    error = new ErrorExpression(value, this);
                     return null;
                 }
 
@@ -454,12 +454,12 @@ namespace RATools.Parser.Internal
         {
         }
 
-        public override bool? IsTrue(InterpreterScope scope, out ParseErrorExpression error)
+        public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             ExpressionBase result;
             if (!Evaluate(scope, true, out result))
             {
-                error = result as ParseErrorExpression;
+                error = result as ErrorExpression;
                 return null;
             }
 

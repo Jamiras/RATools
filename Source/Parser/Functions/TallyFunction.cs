@@ -24,8 +24,8 @@ namespace RATools.Parser.Functions
             var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
             if (varargs == null)
             {
-                if (!(result is ParseErrorExpression))
-                    result = new ParseErrorExpression("unexpected varargs", count);
+                if (!(result is ErrorExpression))
+                    result = new ErrorExpression("unexpected varargs", count);
                 return false;
             }
 
@@ -62,7 +62,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             ExpressionBase result;
             int addHitsClauses = 0;
@@ -74,7 +74,7 @@ namespace RATools.Parser.Functions
                 var condition = functionCall.Parameters.ElementAt(i);
 
                 // expression that can never be true cannot accumulate hits to be added or subtracted from the tally
-                ParseErrorExpression error;
+                ErrorExpression error;
                 var conditionRequirements = new List<Requirement>();
                 var nestedContext = new TriggerBuilderContext() { Trigger = conditionRequirements };
                 var modifier = RequirementType.AddHits;
@@ -84,7 +84,7 @@ namespace RATools.Parser.Functions
                 {
                     var deductScope = funcCall.GetParameters(scope.GetFunction(funcCall.FunctionName.Name), scope, out result);
                     if (deductScope == null)
-                        return (ParseErrorExpression)result;
+                        return (ErrorExpression)result;
 
                     condition = deductScope.GetVariable("comparison");
 
@@ -113,7 +113,7 @@ namespace RATools.Parser.Functions
 
             // at least one condition has to be incrementing the tally
             if (addHitsClauses == 0)
-                return new ParseErrorExpression("tally requires at least one non-deducted item", functionCall);
+                return new ErrorExpression("tally requires at least one non-deducted item", functionCall);
 
             // if there's any SubHits clauses, add a dummy clause for the final count, regardless of whether
             // the AddHits clauses have hit targets.
@@ -137,7 +137,7 @@ namespace RATools.Parser.Functions
             // set the target hitcount
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
             if (count.Value < 0)
-                return new ParseErrorExpression("count must be greater than or equal to zero", functionCall.Parameters.First());
+                return new ErrorExpression("count must be greater than or equal to zero", functionCall.Parameters.First());
             context.LastRequirement.HitCount = (uint)count.Value;
 
             return null;
@@ -159,7 +159,7 @@ namespace RATools.Parser.Functions
                 var assignment = scope.GetInterpreterContext<AssignmentExpression>(); // in generic assignment clause - may be used byte rich_presence_display - will determine later
                 if (assignment == null)
                 {
-                    result = new ParseErrorExpression(Name.Name + " has no meaning outside of a tally call");
+                    result = new ErrorExpression(Name.Name + " has no meaning outside of a tally call");
                     return false;
                 }
             }
@@ -167,14 +167,14 @@ namespace RATools.Parser.Functions
             return base.ReplaceVariables(scope, out result);
         }
 
-        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
+        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
             var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
             foreach (var requirementEx in requirementsEx)
             {
                 var lastCondition = requirementEx.Requirements.Last();
                 if (lastCondition.Type != RequirementType.None)
-                    return new ParseErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
+                    return new ErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
 
                 lastCondition.Type = RequirementType.SubHits;
             }

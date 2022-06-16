@@ -33,8 +33,8 @@ namespace RATools.Parser.Functions
             var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
             if (varargs == null)
             {
-                if (!(result is ParseErrorExpression))
-                    result = new ParseErrorExpression("unexpected varargs", stringExpression);
+                if (!(result is ErrorExpression))
+                    result = new ErrorExpression("unexpected varargs", stringExpression);
                 return false;
             }
 
@@ -53,7 +53,7 @@ namespace RATools.Parser.Functions
                 tokenizer.Advance();
                 if (tokenizer.NextChar == '}')
                 {
-                    result = new ParseErrorExpression("Empty parameter index",
+                    result = new ErrorExpression("Empty parameter index",
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
@@ -61,7 +61,7 @@ namespace RATools.Parser.Functions
                 var index = tokenizer.ReadNumber();
                 if (tokenizer.NextChar != '}')
                 {
-                    result = new ParseErrorExpression("Invalid positional token",
+                    result = new ErrorExpression("Invalid positional token",
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
@@ -72,7 +72,7 @@ namespace RATools.Parser.Functions
                 if (!Int32.TryParse(index.ToString(), out parameterIndex)
                     || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
                 {
-                    result = new ParseErrorExpression("Invalid parameter index: " + index.ToString(),
+                    result = new ErrorExpression("Invalid parameter index: " + index.ToString(),
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
                     return false;
@@ -92,7 +92,7 @@ namespace RATools.Parser.Functions
                 }
                 else
                 {
-                    result = new ParseErrorExpression("Cannot convert expression to string", result);
+                    result = new ErrorExpression("Cannot convert expression to string", result);
                     return false;
                 }
             }

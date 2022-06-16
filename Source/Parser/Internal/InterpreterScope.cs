@@ -204,7 +204,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="variable">The variable.</param>
         /// <param name="value">The value.</param>
-        public ParseErrorExpression AssignVariable(VariableExpression variable, ExpressionBase value)
+        public ErrorExpression AssignVariable(VariableExpression variable, ExpressionBase value)
         {
             var indexedVariable = variable as IndexedVariableExpression;
             if (indexedVariable != null)

@@ -43,7 +43,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -59,7 +59,7 @@ namespace RATools.Parser.Internal
                         var builder = new StringBuilder();
                         builder.Append("No entry in dictionary for key: ");
                         index.AppendString(builder);
-                        result = new ParseErrorExpression(builder.ToString(), Index);
+                        result = new ErrorExpression(builder.ToString(), Index);
                         return false;
                     }
                     break;
@@ -68,7 +68,7 @@ namespace RATools.Parser.Internal
                     result = ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
                     break;
 
-                case ExpressionType.ParseError:
+                case ExpressionType.Error:
                     result = container;
                     return false;
 
@@ -80,7 +80,7 @@ namespace RATools.Parser.Internal
                         builder.Append(" (");
                         builder.Append(container.Type);
                         builder.Append(')');
-                        result = new ParseErrorExpression(builder.ToString(), Variable);
+                        result = new ErrorExpression(builder.ToString(), Variable);
                     }
                     return false;
             }
@@ -91,7 +91,7 @@ namespace RATools.Parser.Internal
             return result.ReplaceVariables(scope, out result);
         }
 
-        public ParseErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
+        public ErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
         {
             ExpressionBase container, index;
             GetContainerIndex(scope, out container, out index);
@@ -106,8 +106,8 @@ namespace RATools.Parser.Internal
                     ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value] = newValue;
                     break;
 
-                case ExpressionType.ParseError:
-                    return (ParseErrorExpression)container;
+                case ExpressionType.Error:
+                    return (ErrorExpression)container;
 
                 default:
                     var builder = new StringBuilder();
@@ -116,7 +116,7 @@ namespace RATools.Parser.Internal
                     builder.Append(" (");
                     builder.Append(container.Type);
                     builder.Append(')');
-                    return new ParseErrorExpression(builder.ToString(), Variable);
+                    return new ErrorExpression(builder.ToString(), Variable);
             }
 
             return null;
@@ -162,9 +162,9 @@ namespace RATools.Parser.Internal
             {
                 var intIndex = index as IntegerConstantExpression;
                 if (intIndex == null)
-                    container = new ParseErrorExpression("Index does not evaluate to an integer constant", index);
+                    container = new ErrorExpression("Index does not evaluate to an integer constant", index);
                 else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
-                    container = new ParseErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
+                    container = new ErrorExpression(String.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
             }
         }
 

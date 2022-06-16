@@ -12,7 +12,7 @@ namespace RATools.Parser.Internal
         {
         }
 
-        private List<ParseErrorExpression> _parseErrors;
+        private List<ErrorExpression> _parseErrors;
         private List<ExpressionBase> _expressions;
         private ExpressionBase _expression;
         private HashSet<string> _dependencies;
@@ -43,21 +43,21 @@ namespace RATools.Parser.Internal
             NeedsEvaluated = false;
         }
 
-        public IEnumerable<ParseErrorExpression> ParseErrors
+        public IEnumerable<ErrorExpression> ParseErrors
         {
             get
             {
                 if (_parseErrors != null)
                     return _parseErrors;
 
-                return Enumerable.Empty<ParseErrorExpression>();
+                return Enumerable.Empty<ErrorExpression>();
             }
         }
 
-        public void AddParseError(ParseErrorExpression error)
+        public void AddParseError(ErrorExpression error)
         {
             if (_parseErrors == null)
-                _parseErrors = new List<ParseErrorExpression>();
+                _parseErrors = new List<ErrorExpression>();
 
             _parseErrors.Add(error);
         }

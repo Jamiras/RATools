@@ -122,7 +122,7 @@ namespace RATools.Test.Parser.Internal
             var expression = ExpressionBase.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<ConditionalExpression>());
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             var scope = AchievementScriptInterpreter.GetGlobalScope();
             var result = expression.IsTrue(scope, out error);
             Assert.That(error, Is.Null);

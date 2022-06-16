@@ -36,7 +36,7 @@ namespace RATools.Parser.Functions
                     return true;
 
                 default:
-                    result = new ParseErrorExpression("Cannot calculate length of " + obj.Type);
+                    result = new ErrorExpression("Cannot calculate length of " + obj.Type);
                     return false;
             }
         }

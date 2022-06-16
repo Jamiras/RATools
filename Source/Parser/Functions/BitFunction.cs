@@ -14,7 +14,7 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("address"));
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var address = functionCall.Parameters.ElementAt(1);
             var result = BuildTrigger(context, scope, functionCall, address);
@@ -23,7 +23,7 @@ namespace RATools.Parser.Functions
 
             var index = ((IntegerConstantExpression)functionCall.Parameters.First()).Value;
             if (index < 0 || index > 31)
-                return new ParseErrorExpression("index must be between 0 and 31", functionCall.Parameters.First());
+                return new ErrorExpression("index must be between 0 and 31", functionCall.Parameters.First());
 
             var offset = (uint)index / 8;
             index %= 8;

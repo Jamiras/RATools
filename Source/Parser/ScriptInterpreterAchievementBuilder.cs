@@ -95,7 +95,7 @@ namespace RATools.Parser
 
             const int MAX_EXPANSION_SIZE = 10000;
             if (expansionSize > MAX_EXPANSION_SIZE)
-                return new ParseErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
+                return new ErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
             var numFlattenedClauses = flattenedClauses.Count();
@@ -237,7 +237,7 @@ namespace RATools.Parser
             return condition;
         }
 
-        private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ParseErrorExpression error)
+        private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ErrorExpression error)
         {
             var condition = expression as ConditionalExpression;
             if (condition == null)
@@ -263,7 +263,7 @@ namespace RATools.Parser
                     break;
 
                 default:
-                    error = new ParseErrorExpression("Unexpected condition: " + condition.Operation, condition);
+                    error = new ErrorExpression("Unexpected condition: " + condition.Operation, condition);
                     return false;
             }
 
@@ -271,7 +271,7 @@ namespace RATools.Parser
             return true;
         }
 
-        internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ParseErrorExpression error)
+        internal bool PopulateFromExpression(ExpressionBase expression, InterpreterScope scope, out ErrorExpression error)
         {
             var andedConditions = new List<ExpressionBase>();
             var orConditions = new List<ExpressionBase>();
@@ -281,10 +281,10 @@ namespace RATools.Parser
             if (orConditions.Count() > 1)
             {
                 var altPart = CrossMultiplyOrConditions(orConditions);
-                if (altPart.Type == ExpressionType.ParseError)
+                if (altPart.Type == ExpressionType.Error)
                 {
                     expression.CopyLocation(altPart);
-                    error = (ParseErrorExpression)altPart;
+                    error = (ErrorExpression)altPart;
                     return false;
                 }
 
@@ -310,7 +310,7 @@ namespace RATools.Parser
                             break;
 
                         default:
-                            error = ParseErrorExpression.WrapError(error, "Invalid condition", condition);
+                            error = ErrorExpression.WrapError(error, "Invalid condition", condition);
                             break;
                     }
                     return false;
@@ -332,16 +332,16 @@ namespace RATools.Parser
 
             ExpressionBase result;
             if (!expression.ReplaceVariables(scope, out result))
-                return ((ParseErrorExpression)result).Message;
+                return ((ErrorExpression)result).Message;
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             if (!PopulateFromExpression(result, scope, out error))
                 return error.Message;
 
             return null;
         }
 
-        private ParseErrorExpression ExecuteAchievementExpression(ExpressionBase expression, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementExpression(ExpressionBase expression, InterpreterScope scope)
         {
             ExpressionBase operand;
 
@@ -361,10 +361,10 @@ namespace RATools.Parser
 
                 case ExpressionType.Variable:
                     if (!expression.ReplaceVariables(scope, out operand))
-                        return new ParseErrorExpression(operand, expression);
+                        return new ErrorExpression(operand, expression);
 
                     if (expression is FunctionReferenceExpression)
-                        return new ParseErrorExpression("Function used like a variable", expression);
+                        return new ErrorExpression("Function used like a variable", expression);
 
                     return ExecuteAchievementExpression(operand, scope);
 
@@ -379,10 +379,10 @@ namespace RATools.Parser
                 }
             }
 
-            return new ParseErrorExpression("Cannot generate trigger from " + expression.Type, expression);
+            return new ErrorExpression("Cannot generate trigger from " + expression.Type, expression);
         }
 
-        private ParseErrorExpression ExecuteAchievementClause(ExpressionBase expression, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementClause(ExpressionBase expression, InterpreterScope scope)
         {
             var error = ExecuteAchievementExpression(expression, scope);
             if (error != null)
@@ -392,21 +392,21 @@ namespace RATools.Parser
             if (context.LastRequirement == null)
             {
                 // no requirements generated
-                return new ParseErrorExpression("Incomplete trigger condition", expression);
+                return new ErrorExpression("Incomplete trigger condition", expression);
             }
 
             if (context.LastRequirement.Operator == RequirementOperator.None && scope.GetContext<ValueBuilderContext>() == null)
             {
                 // final condition is a combining condition or an incomplete comparison
-                return new ParseErrorExpression("Incomplete trigger condition", expression);
+                return new ErrorExpression("Incomplete trigger condition", expression);
             }
 
             return null;
         }
 
-        private ParseErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementMathematic(MathematicExpression mathematic, InterpreterScope scope)
         {
-            ParseErrorExpression error;
+            ErrorExpression error;
             var context = scope.GetContext<TriggerBuilderContext>();
 
             var operation = mathematic.Operation;
@@ -431,7 +431,7 @@ namespace RATools.Parser
                         if (error != null)
                             return error;
                         if (requirements.Count > 1)
-                            return new ParseErrorExpression("Multiplication by complex value not supported", mathematic);
+                            return new ErrorExpression("Multiplication by complex value not supported", mathematic);
 
                         operand = requirements[0].Left;
                     }
@@ -442,7 +442,7 @@ namespace RATools.Parser
                         return error;
 
                     if (context.LastRequirement.Operator != RequirementOperator.None)
-                        return new ParseErrorExpression("Cannot generate condition using both " + context.LastRequirement.Operator + " and " + operation);
+                        return new ErrorExpression("Cannot generate condition using both " + context.LastRequirement.Operator + " and " + operation);
 
                     switch (operation)
                     {
@@ -461,14 +461,14 @@ namespace RATools.Parser
                     return null;
 
                 default:
-                    return new ParseErrorExpression("Cannot normalize expression to eliminate " + MathematicExpression.GetOperatorType(operation), mathematic);
+                    return new ErrorExpression("Cannot normalize expression to eliminate " + MathematicExpression.GetOperatorType(operation), mathematic);
             }
 
             var left = mathematic.Left;
 
             ExpressionBase right;
             if (!mathematic.Right.ReplaceVariables(scope, out right))
-                return (ParseErrorExpression)right;
+                return (ErrorExpression)right;
 
             Field field = CreateFieldFromExpression(right);
             if (field.Type != FieldType.None)
@@ -508,10 +508,10 @@ namespace RATools.Parser
                         case RequirementType.AddAddress:
                             // AddAddress is allowed as long as it's not the last requirement
                             if (ReferenceEquals(requirement, requirements.Last()))
-                                return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
+                                return new ErrorExpression("Cannot normalize expression for negation", mathematic);
                             break;
                         default:
-                            return new ParseErrorExpression("Cannot normalize expression for negation", mathematic);
+                            return new ErrorExpression("Cannot normalize expression for negation", mathematic);
                     }
 
                     context.Trigger.Add(requirement);
@@ -547,7 +547,7 @@ namespace RATools.Parser
             }
             else
             {
-                return new ParseErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
+                return new ErrorExpression(String.Format("Cannot normalize expression to eliminate {0}", MathematicExpression.GetOperatorType(mathematic.Operation)), mathematic);
             }
 
             field = CreateFieldFromExpression(right);
@@ -566,7 +566,7 @@ namespace RATools.Parser
             // generate the condition for the second expression
             error = ExecuteAchievementExpression(right, scope);
             if (error != null)
-                error = new ParseErrorExpression(error.Message, mathematic);
+                error = new ErrorExpression(error.Message, mathematic);
 
             // make sure the mathematic expression doesn't result in a comparison
             {
@@ -581,15 +581,15 @@ namespace RATools.Parser
             return error;
         }
 
-        private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope)
         {
             return ExecuteAchievementConditional(condition, scope, scope.GetContext<TriggerBuilderContext>());
         }
 
-        private ParseErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope, TriggerBuilderContext context)
+        private ErrorExpression ExecuteAchievementConditional(ConditionalExpression condition, InterpreterScope scope, TriggerBuilderContext context)
         {
             if (condition.Operation == ConditionalOperation.Not)
-                return new ParseErrorExpression("! operator should have been normalized out", condition);
+                return new ErrorExpression("! operator should have been normalized out", condition);
 
             foreach (var clause in condition.Conditions)
             {
@@ -606,7 +606,7 @@ namespace RATools.Parser
             return null;
         }
 
-        private static ParseErrorExpression HandleAddAddressComparison(ExpressionBase comparison,
+        private static ErrorExpression HandleAddAddressComparison(ExpressionBase comparison,
             IList<Requirement> requirements, RequirementOperator op, Requirement extraRequirement)
         {
             // determine how long the AddAddress chain is
@@ -665,7 +665,7 @@ namespace RATools.Parser
             {
                 maxValue = Math.Max(Field.GetMaxValue(requirement.Left.Size), Field.GetMaxValue(extraRequirement.Left.Size));
                 if (maxValue == 0xFFFFFFFF)
-                    return new ParseErrorExpression("Indirect memory addresses must match on both sides of a comparison for 32-bit values", comparison);
+                    return new ErrorExpression("Indirect memory addresses must match on both sides of a comparison for 32-bit values", comparison);
             }
 
             // if A is preceded by an AddSource or SubSource, we can't change it to a SubSource
@@ -761,12 +761,12 @@ namespace RATools.Parser
             return null;
         }
 
-        private ParseErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementComparison(ComparisonExpression comparison, InterpreterScope scope)
         {
             var left = comparison.Left;
             var right = comparison.Right;
             if (left.Type == ExpressionType.Comparison || right.Type == ExpressionType.Comparison)
-                return new ParseErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                return new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
 
             var context = scope.GetContext<TriggerBuilderContext>();
             var op = GetRequirementOperator(comparison.Operation);
@@ -803,7 +803,7 @@ namespace RATools.Parser
 
             var error = ExecuteAchievementExpression(left, scope);
             if (error != null)
-                return ParseErrorExpression.WrapError(error, "Invalid value", left);
+                return ErrorExpression.WrapError(error, "Invalid value", left);
 
             if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
             {
@@ -849,7 +849,7 @@ namespace RATools.Parser
             {
                 error = ExecuteAchievementExpression(right, scope);
                 if (error != null)
-                    return ParseErrorExpression.WrapError(error, "Invalid value", right);
+                    return ErrorExpression.WrapError(error, "Invalid value", right);
 
                 var extraRequirement = context.LastRequirement;
                 ((IList<Requirement>)context.Trigger).RemoveAt(context.Trigger.Count - 1);
@@ -907,11 +907,11 @@ namespace RATools.Parser
             }
         }
 
-        private ParseErrorExpression ExecuteAchievementFunction(FunctionCallExpression functionCall, InterpreterScope scope)
+        private ErrorExpression ExecuteAchievementFunction(FunctionCallExpression functionCall, InterpreterScope scope)
         {
             ExpressionBase evaluated;
             if (!functionCall.ReplaceVariables(scope, out evaluated))
-                return (ParseErrorExpression)evaluated;
+                return (ErrorExpression)evaluated;
 
             functionCall = evaluated as FunctionCallExpression;
             if (functionCall != null)

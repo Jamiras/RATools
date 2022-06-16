@@ -34,7 +34,7 @@ namespace RATools.Test.Parser
             var result = TriggerBuilderContext.GetConditionString(processed, scope, out error);
             if (error != null)
             {
-                Assert.That(((ParseErrorExpression)error).InnermostError.Message, Is.EqualTo(expected));
+                Assert.That(((ErrorExpression)error).InnermostError.Message, Is.EqualTo(expected));
             }
             else
             {

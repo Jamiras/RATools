@@ -110,7 +110,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             if (!expr.ReplaceVariables(scope, out result))
-                Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(result, Is.InstanceOf<ErrorExpression>());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
@@ -186,7 +186,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             if (!expr.ReplaceVariables(scope, out result))
-                Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(result, Is.InstanceOf<ErrorExpression>());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
@@ -378,7 +378,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             if (!expr.ReplaceVariables(scope, out result))
-                Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(result, Is.InstanceOf<ErrorExpression>());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
@@ -403,8 +403,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Expression can never be true"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Expression can never be true"));
         }
 
         [Test]
@@ -502,7 +502,7 @@ namespace RATools.Test.Parser.Internal
 
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.Context = new RATools.Parser.TriggerBuilderContext();
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.EqualTo(expected));
             Assert.That(error, Is.Null);
         }

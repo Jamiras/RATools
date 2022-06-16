@@ -65,7 +65,7 @@ namespace RATools.Parser.Functions
             leaderboard.Format = Leaderboard.ParseFormat(format.Value);
             if (leaderboard.Format == ValueFormat.None)
             {
-                result = new ParseErrorExpression(format.Value + " is not a supported leaderboard format", format);
+                result = new ErrorExpression(format.Value + " is not a supported leaderboard format", format);
                 return false;
             }
 
@@ -139,8 +139,8 @@ namespace RATools.Parser.Functions
             var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
             if (varargs == null)
             {
-                if (!(result is ParseErrorExpression))
-                    result = new ParseErrorExpression("unexpected varargs");
+                if (!(result is ErrorExpression))
+                    result = new ErrorExpression("unexpected varargs");
                 return false;
             }
 

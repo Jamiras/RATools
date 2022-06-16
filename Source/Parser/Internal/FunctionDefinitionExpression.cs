@@ -79,7 +79,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
-        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
+        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             // FunctionDefinition.ReplaceVariables is called when evaluating a function for an assignment.
@@ -99,7 +99,7 @@ namespace RATools.Parser.Internal
                 var parameter = scope.GetVariable(parameterName.Name);
                 if (parameter == null)
                 {
-                    result = new ParseErrorExpression("No value provided for " + parameterName.Name + " parameter", parameterName);
+                    result = new ErrorExpression("No value provided for " + parameterName.Name + " parameter", parameterName);
                     return false;
                 }
 
@@ -117,7 +117,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values and function parameters.</param>
         /// <param name="result">[out] The new expression containing the function result.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public virtual bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
@@ -146,7 +146,7 @@ namespace RATools.Parser.Internal
             var parameter = scope.GetVariable(name);
             if (parameter == null)
             {
-                parseError = new ParseErrorExpression("No value provided for " + name + " parameter");
+                parseError = new ErrorExpression("No value provided for " + name + " parameter");
                 return null;
             }
 
@@ -197,7 +197,7 @@ namespace RATools.Parser.Internal
                 if (originalParameter != null)
                     parameter = originalParameter;
 
-                parseError = new ParseErrorExpression(name + " is not an integer", parameter);
+                parseError = new ErrorExpression(name + " is not an integer", parameter);
                 return null;
             }
 
@@ -225,7 +225,7 @@ namespace RATools.Parser.Internal
                 if (originalParameter != null)
                     parameter = originalParameter;
 
-                parseError = new ParseErrorExpression(name + " is not a string", parameter);
+                parseError = new ErrorExpression(name + " is not a string", parameter);
                 return null;
             }
 
@@ -253,7 +253,7 @@ namespace RATools.Parser.Internal
                 if (originalParameter != null)
                     parameter = originalParameter;
 
-                parseError = new ParseErrorExpression(name + " is not a boolean", parameter);
+                parseError = new ErrorExpression(name + " is not a boolean", parameter);
                 return null;
             }
 
@@ -281,7 +281,7 @@ namespace RATools.Parser.Internal
                 if (originalParameter != null)
                     parameter = originalParameter;
 
-                parseError = new ParseErrorExpression(name + " is not a dictionary", parameter);
+                parseError = new ErrorExpression(name + " is not a dictionary", parameter);
                 return null;
             }
 
@@ -301,7 +301,7 @@ namespace RATools.Parser.Internal
             var parameter = scope.GetVariable(name);
             if (parameter == null)
             {
-                parseError = new ParseErrorExpression("No value provided for " + name + " parameter");
+                parseError = new ErrorExpression("No value provided for " + name + " parameter");
                 return null;
             }
 
@@ -312,7 +312,7 @@ namespace RATools.Parser.Internal
                 if (originalParameter != null)
                     parameter = originalParameter;
 
-                parseError = new ParseErrorExpression(name + " is not a reference", parameter);
+                parseError = new ErrorExpression(name + " is not a reference", parameter);
                 return null;
             }
 
@@ -325,7 +325,7 @@ namespace RATools.Parser.Internal
             var parameter = scope.GetVariable(name);
             if (parameter == null)
             {
-                parseError = new ParseErrorExpression("No value provided for " + name + " parameter");
+                parseError = new ErrorExpression("No value provided for " + name + " parameter");
                 return null;
             }
 
@@ -335,14 +335,14 @@ namespace RATools.Parser.Internal
                 var functionReference = parameter as FunctionReferenceExpression;
                 if (functionReference == null)
                 {
-                    parseError = new ParseErrorExpression(name + " must be a function reference");
+                    parseError = new ErrorExpression(name + " must be a function reference");
                     return null;
                 }
 
                 functionDefinition = scope.GetFunction(functionReference.Name);
                 if (functionDefinition == null)
                 {
-                    parseError = new ParseErrorExpression("Undefined function: " + functionReference.Name);
+                    parseError = new ErrorExpression("Undefined function: " + functionReference.Name);
                     return null;
                 }
             }
@@ -503,7 +503,7 @@ namespace RATools.Parser.Internal
                         ExpressionBase.SkipWhitespace(tokenizer);
 
                         var value = ExpressionBase.Parse(tokenizer);
-                        if (value.Type == ExpressionType.ParseError)
+                        if (value.Type == ExpressionType.Error)
                             return ExpressionBase.ParseError(tokenizer, "Invalid default value for " + parameter.ToString(), value);
 
                         var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
@@ -550,7 +550,7 @@ namespace RATools.Parser.Internal
             while (tokenizer.NextChar != '}')
             {
                 expression = ExpressionBase.Parse(tokenizer);
-                if (expression.Type == ExpressionType.ParseError)
+                if (expression.Type == ExpressionType.Error)
                 {
                     // the ExpressionTokenizer will capture the error, we should still return the incomplete FunctionDefinition
                     if (tokenizer is ExpressionTokenizer)
@@ -580,7 +580,7 @@ namespace RATools.Parser.Internal
             ExpressionBase.SkipWhitespace(tokenizer);
 
             var expression = ExpressionBase.Parse(tokenizer);
-            if (expression.Type == ExpressionType.ParseError)
+            if (expression.Type == ExpressionType.Error)
                 return expression;
 
             switch (expression.Type)
@@ -607,7 +607,7 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
-        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ParseErrorExpression"/>.</returns>
+        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             // user-defined functions should be evaluated (expanded) immediately.
@@ -618,9 +618,9 @@ namespace RATools.Parser.Internal
             {
                 var functionCall = scope.GetContext<FunctionCallExpression>();
                 if (functionCall != null)
-                    result = new ParseErrorExpression(Name.Name + " did not return a value", functionCall.FunctionName);
+                    result = new ErrorExpression(Name.Name + " did not return a value", functionCall.FunctionName);
                 else
-                    result = new ParseErrorExpression(Name.Name + " did not return a value");
+                    result = new ErrorExpression(Name.Name + " did not return a value");
 
                 return false;
             }
@@ -703,7 +703,7 @@ namespace RATools.Parser.Internal
         {
             var variable = parameter as VariableExpression;
             if (variable == null)
-                return new ParseErrorExpression("Cannot create anonymous function from " + parameter.Type);
+                return new ErrorExpression("Cannot create anonymous function from " + parameter.Type);
 
             var name = CreateAnonymousFunctionName(parameter.Location.Start.Line, parameter.Location.Start.Column);
             var function = new AnonymousUserFunctionDefinitionExpression(name);
