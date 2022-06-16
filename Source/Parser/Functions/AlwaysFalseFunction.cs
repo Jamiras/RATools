@@ -10,7 +10,7 @@ namespace RATools.Parser.Functions
         {
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             context.Trigger.Add(CreateAlwaysFalseRequirement());
             return null;

@@ -93,8 +93,8 @@ namespace RATools.Test.Parser.Internal
 
             tokenizer = CreateTokenizer("4294967296");
             expression = ExpressionBase.Parse(tokenizer);
-            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+            Assert.That(expression, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)expression).Message, Is.EqualTo("Number too large"));
         }
 
         [Test]
@@ -107,8 +107,8 @@ namespace RATools.Test.Parser.Internal
 
             tokenizer = CreateTokenizer("0x100000000");
             expression = ExpressionBase.Parse(tokenizer);
-            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+            Assert.That(expression, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)expression).Message, Is.EqualTo("Number too large"));
         }
 
         [Test]
@@ -121,8 +121,8 @@ namespace RATools.Test.Parser.Internal
 
             tokenizer = CreateTokenizer("-2147483648");
             expression = ExpressionBase.Parse(tokenizer);
-            Assert.That(expression, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)expression).Message, Is.EqualTo("Number too large"));
+            Assert.That(expression, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)expression).Message, Is.EqualTo("Number too large"));
         }
 
         [Test]

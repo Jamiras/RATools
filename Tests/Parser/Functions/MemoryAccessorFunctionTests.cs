@@ -86,8 +86,8 @@ namespace RATools.Test.Parser.Functions
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
             Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-            Assert.That(error, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)error).Message, Is.EqualTo("byte has no meaning outside of a trigger clause"));
+            Assert.That(error, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)error).Message, Is.EqualTo("byte has no meaning outside of a trigger clause"));
         }
 
         [Test]

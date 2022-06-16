@@ -56,7 +56,7 @@ namespace RATools.Parser.Internal
         /// Attempts to convert an expression to a <see cref="FloatConstantExpression"/>.
         /// </summary>
         /// <param name="expression">The expression to convert.</param>
-        /// <returns>The converted expression, or a <see cref="ParseErrorExpression"/> if the expression could not be converted.</returns>
+        /// <returns>The converted expression, or a <see cref="ErrorExpression"/> if the expression could not be converted.</returns>
         public static ExpressionBase ConvertFrom(ExpressionBase expression)
         {
             FloatConstantExpression floatExpression;
@@ -71,7 +71,7 @@ namespace RATools.Parser.Internal
                     break;
 
                 default:
-                    return new ParseErrorExpression("Cannot convert to float", expression);
+                    return new ErrorExpression("Cannot convert to float", expression);
             }
 
             expression.CopyLocation(floatExpression);

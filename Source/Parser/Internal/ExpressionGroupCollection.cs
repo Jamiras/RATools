@@ -13,13 +13,13 @@ namespace RATools.Parser.Internal
         public ExpressionGroupCollection()
         {
             Groups = new List<ExpressionGroup>();
-            _evaluationErrors = new List<ParseErrorExpression>();
+            _evaluationErrors = new List<ErrorExpression>();
         }
 
         public List<ExpressionGroup> Groups { get; private set; }
         public InterpreterScope Scope { get; set; }
 
-        private readonly List<ParseErrorExpression> _evaluationErrors;
+        private readonly List<ErrorExpression> _evaluationErrors;
 
         public void Parse(Tokenizer tokenizer)
         {
@@ -64,7 +64,7 @@ namespace RATools.Parser.Internal
                 if (commentGroup != null)
                     groups.Add(commentGroup);
 
-                if (expression.Type != ExpressionType.ParseError)
+                if (expression.Type != ExpressionType.Error)
                     newGroup.AddExpression(expression);
             }
 
@@ -376,7 +376,7 @@ namespace RATools.Parser.Internal
             get {  return _evaluationErrors.Count > 0; }
         }
 
-        public void AddEvaluationError(ParseErrorExpression error)
+        public void AddEvaluationError(ErrorExpression error)
         {
             lock (_evaluationErrors)
             {
@@ -392,7 +392,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public IEnumerable<ParseErrorExpression> Errors
+        public IEnumerable<ErrorExpression> Errors
         {
             get
             {
@@ -428,7 +428,7 @@ namespace RATools.Parser.Internal
                         result = true;
                     }
 
-                    ParseErrorExpression mostSignificantError = null;
+                    ErrorExpression mostSignificantError = null;
                     var scan = error;
                     do
                     {

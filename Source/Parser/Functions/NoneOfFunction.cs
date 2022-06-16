@@ -12,7 +12,7 @@ namespace RATools.Parser.Functions
         protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
         {
             right = ConditionalExpression.InvertExpression(right);
-            if (right.Type == ExpressionType.ParseError)
+            if (right.Type == ExpressionType.Error)
                 return right;
 
             right.IsLogicalUnit = true;

@@ -31,7 +31,7 @@ namespace RATools.Test.Parser.Internal
         public void TestIsTrueTrue()
         {
             var expr = new BooleanConstantExpression(true);
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(new InterpreterScope(), out error), Is.True);
             Assert.That(error, Is.Null);
         }
@@ -40,7 +40,7 @@ namespace RATools.Test.Parser.Internal
         public void TestIsTrueFalse()
         {
             var expr = new BooleanConstantExpression(false);
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(new InterpreterScope(), out error), Is.False);
             Assert.That(error, Is.Null);
         }

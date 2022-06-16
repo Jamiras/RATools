@@ -10,7 +10,7 @@ namespace RATools.Parser.Functions
         {
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             // add another TriggerBuilderContext scope to prevent optimizing the expression at this time
             var nestedScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext() };

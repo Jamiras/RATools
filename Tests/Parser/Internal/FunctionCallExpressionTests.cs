@@ -111,7 +111,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Required parameter 'j' not provided"));
         }
 
@@ -127,7 +127,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Too many parameters passed to function"));
         }
 
@@ -143,7 +143,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Not.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Invalid value for parameter: i"));
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
@@ -161,7 +161,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Not.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Invalid value for parameter: i"));
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
@@ -199,7 +199,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Required parameter 'i' not provided"));
         }
 
@@ -216,7 +216,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("'func' does not have a 'k' parameter"));
         }
 
@@ -233,7 +233,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("'i' already has a value"));
         }
 
@@ -270,7 +270,7 @@ namespace RATools.Test.Parser.Internal
             var innerScope = functionCall.GetParameters(functionDefinition, scope, out error);
             Assert.That(innerScope, Is.Null);
             Assert.That(error, Is.Not.Null);
-            var parseError = (ParseErrorExpression)error;
+            var parseError = (ErrorExpression)error;
             Assert.That(parseError.Message, Is.EqualTo("Non-named parameter following named parameter"));
         }
 
@@ -313,8 +313,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
 
@@ -329,8 +329,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
         [Test]
@@ -344,8 +344,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
 
@@ -361,8 +361,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
 
@@ -411,8 +411,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            var parseError = (ParseErrorExpression)result;
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            var parseError = (ErrorExpression)result;
             while (parseError.InnerError != null)
                 parseError = parseError.InnerError;
             Assert.That(parseError.Message, Is.EqualTo("func did not return a value"));
@@ -427,8 +427,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
         }
 
         [Test]
@@ -516,8 +516,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(functionCall.Evaluate(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Unknown function: func"));
         }
 
         [Test]
@@ -613,7 +613,7 @@ namespace RATools.Test.Parser.Internal
             var expr = AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.True);
             Assert.That(error, Is.Null);
         }
@@ -624,7 +624,7 @@ namespace RATools.Test.Parser.Internal
             var expr = AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.False);
             Assert.That(error, Is.Null);
         }
@@ -635,7 +635,7 @@ namespace RATools.Test.Parser.Internal
             var expr = new FunctionCallExpression("byte", new ExpressionBase[] { new IntegerConstantExpression(0x1234) });
             var scope = AchievementScriptInterpreter.GetGlobalScope();
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.Null);
             Assert.That(error, Is.Null);
         }
@@ -648,7 +648,7 @@ namespace RATools.Test.Parser.Internal
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.AddFunction(userFunc);
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.Null);
             Assert.That(error, Is.Null);
         }
@@ -661,7 +661,7 @@ namespace RATools.Test.Parser.Internal
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.AddFunction(userFunc);
 
-            ParseErrorExpression error;
+            ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.True);
             Assert.That(error, Is.Null);
         }

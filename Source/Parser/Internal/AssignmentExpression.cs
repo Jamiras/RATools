@@ -46,7 +46,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
@@ -68,9 +68,9 @@ namespace RATools.Parser.Internal
         /// </summary>
         /// <param name="scope">The scope object containing variable values and function parameters.</param>
         /// <returns>
-        ///   <c>null</c> if successful, or a <see cref="ParseErrorExpression" /> if not.
+        ///   <c>null</c> if successful, or a <see cref="ErrorExpression" /> if not.
         /// </returns>
-        public ParseErrorExpression Evaluate(InterpreterScope scope)
+        public ErrorExpression Evaluate(InterpreterScope scope)
         {
             var assignmentScope = new InterpreterScope(scope) { Context = this };
             ExpressionBase result;
@@ -84,7 +84,7 @@ namespace RATools.Parser.Internal
             else
             {
                 if (!Value.ReplaceVariables(assignmentScope, out result))
-                    return (ParseErrorExpression)result;
+                    return (ErrorExpression)result;
             }
 
             return scope.AssignVariable(Variable, result);

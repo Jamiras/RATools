@@ -249,7 +249,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Division by zero"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Division by zero"));
         }
 
         [Test]
@@ -293,7 +293,7 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Division by zero"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Division by zero"));
         }
 
         [Test]

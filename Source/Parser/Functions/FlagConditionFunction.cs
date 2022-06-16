@@ -74,14 +74,14 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
+        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
             var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
             foreach (var requirementEx in requirementsEx)
             {
                 var lastCondition = requirementEx.Requirements.Last();
                 if (lastCondition.Type != RequirementType.None)
-                    return new ParseErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
+                    return new ErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
 
                 lastCondition.Type = _type;
             }

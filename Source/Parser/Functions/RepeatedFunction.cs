@@ -20,21 +20,21 @@ namespace RATools.Parser.Functions
         {
         }
 
-        protected override ParseErrorExpression ModifyRequirements(AchievementBuilder builder)
+        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
         {
             // not actually modifying requirements, but allows us to do some validation
             foreach (var requirement in builder.CoreRequirements)
             {
                 if (requirement.Type == RequirementType.AddHits)
-                    return new ParseErrorExpression("tally not allowed in subclause");
+                    return new ErrorExpression("tally not allowed in subclause");
                 if (requirement.Type == RequirementType.SubHits)
-                    return new ParseErrorExpression("tally not allowed in subclause");
+                    return new ErrorExpression("tally not allowed in subclause");
             }
 
             return null;
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
             var comparison = functionCall.Parameters.ElementAt(1);
@@ -42,9 +42,9 @@ namespace RATools.Parser.Functions
             return BuildTriggerConditions(context, scope, comparison, count.Value);
         }
 
-        protected ParseErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
+        protected ErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
         {
-            ParseErrorExpression error;
+            ErrorExpression error;
 
             var condition = comparison as ConditionalExpression;
             if (condition != null && condition.Operation == ConditionalOperation.And)
@@ -119,7 +119,7 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        private static ParseErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
+        private static ErrorExpression ProcessOrNextSubClause(ICollection<Requirement> requirements)
         {
             if (requirements.Count == 0)
                 return null;
@@ -127,7 +127,7 @@ namespace RATools.Parser.Functions
             int i = requirements.Count - 1;
             var requirement = requirements.ElementAt(i);
             if (requirement.Type != RequirementType.None)
-                return new ParseErrorExpression("Modifier not allowed in multi-condition repeated clause");
+                return new ErrorExpression("Modifier not allowed in multi-condition repeated clause");
 
             while (i > 0)
             {
@@ -143,7 +143,7 @@ namespace RATools.Parser.Functions
                     default:
                         // non-constructing conditions are not allowed within the AddHits clause
                         if (!requirement.IsCombining)
-                            return new ParseErrorExpression("Modifier not allowed in multi-condition repeated clause");
+                            return new ErrorExpression("Modifier not allowed in multi-condition repeated clause");
                         break;
                 }
             }
@@ -151,13 +151,13 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        protected ParseErrorExpression EvaluateCondition(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
+        protected ErrorExpression EvaluateCondition(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
         {
             ExpressionBase result;
 
             var builder = new ScriptInterpreterAchievementBuilder();
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, condition, scope, out result))
-                return (ParseErrorExpression)result;
+                return (ErrorExpression)result;
 
             if (builder.CoreRequirements.Any())
             {
@@ -245,7 +245,7 @@ namespace RATools.Parser.Functions
                 for (int i = 1; i < requirements.Count; ++i)
                 {
                     if (requirements[i].Any(r => r.Type == RequirementType.AndNext))
-                        return new ParseErrorExpression("Cannot join multiple AndNext chains with OrNext");
+                        return new ErrorExpression("Cannot join multiple AndNext chains with OrNext");
                 }
             }
 

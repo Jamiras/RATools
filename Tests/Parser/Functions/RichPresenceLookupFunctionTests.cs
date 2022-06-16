@@ -36,7 +36,7 @@ namespace RATools.Test.Parser.Functions
                 if (expectedError != null && expectedError.EndsWith(" format"))
                 {
                     Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
-                    var parseError = evaluated as ParseErrorExpression;
+                    var parseError = evaluated as ErrorExpression;
                     Assert.That(parseError, Is.Not.Null);
                     Assert.That(parseError.Message, Is.EqualTo(expectedError));
                     return context.RichPresence;
@@ -52,8 +52,8 @@ namespace RATools.Test.Parser.Functions
                 else
                 {
                     Assert.That(funcDef.BuildMacro(context, scope, out result), Is.False);
-                    Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-                    Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo(expectedError));
+                    Assert.That(result, Is.InstanceOf<ErrorExpression>());
+                    Assert.That(((ErrorExpression)result).Message, Is.EqualTo(expectedError));
                 }
 
                 return context.RichPresence;
@@ -111,8 +111,8 @@ namespace RATools.Test.Parser.Functions
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, parentScope, out error);
             Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-            Assert.That(error, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)error).Message, Is.EqualTo("rich_presence_lookup has no meaning outside of a rich_presence_display call"));
+            Assert.That(error, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)error).Message, Is.EqualTo("rich_presence_lookup has no meaning outside of a rich_presence_display call"));
         }
 
         [Test]

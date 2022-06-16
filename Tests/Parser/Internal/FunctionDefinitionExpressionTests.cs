@@ -42,9 +42,9 @@ namespace RATools.Test.Parser.Internal
 
             if (expectedError != null)
             {
-                Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(expr, Is.InstanceOf<ErrorExpression>());
 
-                var error = (ParseErrorExpression)expr;
+                var error = (ErrorExpression)expr;
                 var formattedErrorMessage = string.Format("{0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
                 Assert.That(formattedErrorMessage, Is.EqualTo(expectedError));
                 return null;
@@ -178,8 +178,8 @@ namespace RATools.Test.Parser.Internal
             tokenizer.Match("function");
             var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
-            Assert.That(expr, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)expr).Message, Is.EqualTo("Unexpected end of script"));
+            Assert.That(expr, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)expr).Message, Is.EqualTo("Unexpected end of script"));
         }
 
         [Test]

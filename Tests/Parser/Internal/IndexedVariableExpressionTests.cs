@@ -106,8 +106,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("No entry in dictionary for key: \"key\""));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("No entry in dictionary for key: \"key\""));
         }
 
         [Test]
@@ -123,8 +123,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Cannot index: variable (IntegerConstant)"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot index: variable (IntegerConstant)"));
         }
 
         [Test]
@@ -207,8 +207,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index 1 not in range 0-0"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Index 1 not in range 0-0"));
         }
 
         [Test]
@@ -226,8 +226,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index -1 not in range 0-0"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Index -1 not in range 0-0"));
         }
 
         [Test]
@@ -245,8 +245,8 @@ namespace RATools.Test.Parser.Internal
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Index does not evaluate to an integer constant"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Index does not evaluate to an integer constant"));
         }
 
         [Test]

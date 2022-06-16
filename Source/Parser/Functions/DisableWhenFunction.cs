@@ -31,7 +31,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var until = functionCall.Parameters.ElementAt(1);
 
@@ -39,11 +39,11 @@ namespace RATools.Parser.Functions
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
             if (!TriggerBuilderContext.ProcessAchievementConditions(builder, until, scope, out result))
-                return new ParseErrorExpression("until did not evaluate to a valid comparison", until) { InnerError = (ParseErrorExpression)result };
+                return new ErrorExpression("until did not evaluate to a valid comparison", until) { InnerError = (ErrorExpression)result };
 
             var error = builder.CollapseForSubClause();
             if (error != null)
-                return new ParseErrorExpression(error.Message, until);
+                return new ErrorExpression(error.Message, until);
 
             var resetNextClause = new List<Requirement>();
             if (builder.CoreRequirements.Count > 0 && builder.CoreRequirements.First().Evaluate() != false)

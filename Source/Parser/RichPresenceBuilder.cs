@@ -58,18 +58,18 @@ namespace RATools.Parser
             };
         }
 
-        public ParseErrorExpression AddLookupField(ExpressionBase func, string name, DictionaryExpression dict, StringConstantExpression fallback)
+        public ErrorExpression AddLookupField(ExpressionBase func, string name, DictionaryExpression dict, StringConstantExpression fallback)
         {
             var tinyDict = new TinyDictionary<int, string>();
             foreach (var entry in dict.Entries)
             {
                 var key = entry.Key as IntegerConstantExpression;
                 if (key == null)
-                    return new ParseErrorExpression("key is not an integer", entry.Key);
+                    return new ErrorExpression("key is not an integer", entry.Key);
 
                 var value = entry.Value as StringConstantExpression;
                 if (value == null)
-                    return new ParseErrorExpression("value is not a string", entry.Value);
+                    return new ErrorExpression("value is not a string", entry.Value);
 
                 tinyDict[key.Value] = value.Value;
             }
@@ -263,7 +263,7 @@ namespace RATools.Parser
             DisplayString = null;
         }
 
-        public ParseErrorExpression Merge(RichPresenceBuilder from)
+        public ErrorExpression Merge(RichPresenceBuilder from)
         {
             if (!String.IsNullOrEmpty(from.DisplayString))
             {
@@ -279,7 +279,7 @@ namespace RATools.Parser
                 if (!_valueFields.TryGetValue(kvp.Key, out field))
                     _valueFields.Add(kvp);
                 else if (field.Format != kvp.Value.Format)
-                    return new ParseErrorExpression("Multiple rich_presence_value calls with the same name must have the same format", field.Func);
+                    return new ErrorExpression("Multiple rich_presence_value calls with the same name must have the same format", field.Func);
             }
 
             foreach (var kvp in from._lookupFields)
@@ -294,16 +294,16 @@ namespace RATools.Parser
                     var toMerge = kvp.Value;
 
                     if (existing.Fallback != toMerge.Fallback)
-                        return new ParseErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same fallback", toMerge.Fallback ?? existing.Fallback);
+                        return new ErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same fallback", toMerge.Fallback ?? existing.Fallback);
 
                     if (existing.Entries.Count != toMerge.Entries.Count)
-                        return new ParseErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same dictionary", toMerge.Func ?? existing.Func);
+                        return new ErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same dictionary", toMerge.Func ?? existing.Func);
 
                     foreach (var kvp2 in existing.Entries)
                     {
                         string value;
                         if (!toMerge.Entries.TryGetValue(kvp2.Key, out value) || kvp2.Value != value)
-                            return new ParseErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same dictionary", toMerge.Func ?? existing.Func);
+                            return new ErrorExpression("Multiple rich_presence_lookup calls with the same name must have the same dictionary", toMerge.Func ?? existing.Func);
                     }
                 }
             }

@@ -43,7 +43,7 @@ namespace RATools.Parser.Internal
             ExpressionBase.SkipWhitespace(tokenizer);
 
             var condition = ExpressionBase.Parse(tokenizer);
-            if (condition.Type == ExpressionType.ParseError)
+            if (condition.Type == ExpressionType.Error)
                 return condition;
 
             var ifExpression = new IfExpression(condition);

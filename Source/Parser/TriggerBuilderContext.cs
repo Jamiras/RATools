@@ -326,7 +326,7 @@ namespace RATools.Parser
             {
                 var valueScope = new InterpreterScope(scope) { Context = new ValueBuilderContext() };
 
-                ParseErrorExpression parseError;
+                ErrorExpression parseError;
                 var achievement = new ScriptInterpreterAchievementBuilder();
                 if (!achievement.PopulateFromExpression(expression, valueScope, out parseError))
                 {
@@ -341,20 +341,20 @@ namespace RATools.Parser
                 var message = achievement.Optimize();
                 if (message != null)
                 {
-                    result = new ParseErrorExpression(message, expression);
+                    result = new ErrorExpression(message, expression);
                     return false;
                 }
 
                 if (achievement.AlternateRequirements.Any())
                 {
-                    result = new ParseErrorExpression("Alt groups not supported in value expression", expression);
+                    result = new ErrorExpression("Alt groups not supported in value expression", expression);
                     return false;
                 }
 
                 return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
             }
 
-            result = new ParseErrorExpression("Value must be a constant or a memory accessor", expression);
+            result = new ErrorExpression("Value must be a constant or a memory accessor", expression);
             return false;
         }
 
@@ -396,7 +396,7 @@ namespace RATools.Parser
             var count = requirements.Count;
             if (count == 0)
             {
-                result = new ParseErrorExpression("value did not evaluate to a memory accessor", expression);
+                result = new ErrorExpression("value did not evaluate to a memory accessor", expression);
                 return false;
             }
 
@@ -411,7 +411,7 @@ namespace RATools.Parser
             var measured = requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
             if (measured == null)
             {
-                result = new ParseErrorExpression("value could not be converted into a measured statement", expression);
+                result = new ErrorExpression("value could not be converted into a measured statement", expression);
                 return false;
             }
 
@@ -422,7 +422,7 @@ namespace RATools.Parser
                     case RequirementType.Measured:
                         if (requirement != measured)
                         {
-                            result = new ParseErrorExpression("value contains multiple measured elements", expression);
+                            result = new ErrorExpression("value contains multiple measured elements", expression);
                             return false;
                         }
                         break;
@@ -431,7 +431,7 @@ namespace RATools.Parser
                         // ResetIf are only allowed if something has a target HitCount
                         if (requirements.All(r => r.HitCount == 0))
                         {
-                            result = new ParseErrorExpression("value contains a never without a repeated", expression);
+                            result = new ErrorExpression("value contains a never without a repeated", expression);
                             return false;
                         }
                         break;
@@ -440,7 +440,7 @@ namespace RATools.Parser
                         // PauseIf only allowed if the measured value has a target HitCount
                         if (measured.HitCount == 0)
                         {
-                            result = new ParseErrorExpression("value contains an unless without a repeated", expression);
+                            result = new ErrorExpression("value contains an unless without a repeated", expression);
                             return false;
                         }
                         break;
@@ -471,17 +471,17 @@ namespace RATools.Parser
                 var context = scope.GetInterpreterContext<TriggerBuilderContext>();
                 if (context == null)
                 {
-                    result = new ParseErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
+                    result = new ErrorExpression(Name.Name + " has no meaning outside of a trigger clause");
                     return false;
                 }
 
                 return ReplaceVariables(scope, out result);
             }
 
-            public abstract ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);
+            public abstract ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);
         }
 
-        public ParseErrorExpression CallFunction(FunctionCallExpression functionCall, InterpreterScope scope)
+        public ErrorExpression CallFunction(FunctionCallExpression functionCall, InterpreterScope scope)
         {
             var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
             if (functionDefinition == null)
@@ -489,11 +489,11 @@ namespace RATools.Parser
 
             var triggerBuilderFunction = functionDefinition as FunctionDefinition;
             if (triggerBuilderFunction == null)
-                return new ParseErrorExpression(functionCall.FunctionName.Name + " cannot be called from within a trigger clause", functionCall);
+                return new ErrorExpression(functionCall.FunctionName.Name + " cannot be called from within a trigger clause", functionCall);
 
             var error = triggerBuilderFunction.BuildTrigger(this, scope, functionCall);
             if (error != null)
-                return ParseErrorExpression.WrapError(error, functionCall.FunctionName.Name + " call failed", functionCall.FunctionName);
+                return ErrorExpression.WrapError(error, functionCall.FunctionName.Name + " call failed", functionCall.FunctionName);
 
             return null;
         }
@@ -508,7 +508,7 @@ namespace RATools.Parser
         /// <returns><c>true</c> if successful, <c>false</c> if not.</returns>
         public static bool ProcessAchievementConditions(ScriptInterpreterAchievementBuilder achievement, ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
-            ParseErrorExpression parseError;
+            ErrorExpression parseError;
             if (!achievement.PopulateFromExpression(expression, scope, out parseError))
             {
                 result = parseError;
@@ -521,7 +521,7 @@ namespace RATools.Parser
                 var message = achievement.Optimize();
                 if (message != null)
                 {
-                    result = new ParseErrorExpression(message, expression);
+                    result = new ErrorExpression(message, expression);
                     return false;
                 }
             }

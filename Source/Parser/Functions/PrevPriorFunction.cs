@@ -81,7 +81,7 @@ namespace RATools.Parser.Functions
             var functionCall = expression as FunctionCallExpression;
             if (functionCall == null)
             {
-                result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                result = new ErrorExpression("accessor did not evaluate to a memory accessor", expression);
                 return false;
             }
 
@@ -91,7 +91,7 @@ namespace RATools.Parser.Functions
             {
                 if (!(functionDefinition is PrevPriorFunction))
                 {
-                    result = new ParseErrorExpression("accessor did not evaluate to a memory accessor", expression);
+                    result = new ErrorExpression("accessor did not evaluate to a memory accessor", expression);
                     return false;
                 }
 
@@ -111,7 +111,7 @@ namespace RATools.Parser.Functions
                 }
                 else
                 {
-                    result = new ParseErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
+                    result = new ErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
                     return false;
                 }
             }
@@ -121,7 +121,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override ParseErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var accessor = (FunctionCallExpression)functionCall.Parameters.First();
             var error = context.CallFunction(accessor, scope);
@@ -130,7 +130,7 @@ namespace RATools.Parser.Functions
 
             var left = context.LastRequirement.Left;
             if (left.Type != FieldType.MemoryAddress)
-                return new ParseErrorExpression("cannot apply multiple modifiers to memory accessor", functionCall);
+                return new ErrorExpression("cannot apply multiple modifiers to memory accessor", functionCall);
 
             context.LastRequirement.Left = new Field { Size = left.Size, Type = _fieldType, Value = left.Value };
             return null;

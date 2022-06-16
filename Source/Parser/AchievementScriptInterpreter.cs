@@ -163,7 +163,7 @@ namespace RATools.Parser
             }
         }
 
-        internal ParseErrorExpression Error { get; private set; }
+        internal ErrorExpression Error { get; private set; }
 
         public string GetFormattedErrorMessage(Tokenizer tokenizer)
         {
@@ -474,8 +474,8 @@ namespace RATools.Parser
                 case ExpressionType.Return:
                     return EvaluateReturn((ReturnExpression)expression, scope);
 
-                case ExpressionType.ParseError:
-                    Error = expression as ParseErrorExpression;
+                case ExpressionType.Error:
+                    Error = expression as ErrorExpression;
                     return false;
 
                 case ExpressionType.FunctionDefinition:
@@ -485,7 +485,7 @@ namespace RATools.Parser
                     return true;
 
                 default:
-                    Error = new ParseErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
+                    Error = new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
                     return false;
             }
         }
@@ -502,7 +502,7 @@ namespace RATools.Parser
             var returnScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression("@return"), expression.Value) };
             if (!expression.Value.ReplaceVariables(returnScope, out result))
             {
-                Error = result as ParseErrorExpression;
+                Error = result as ErrorExpression;
                 return false;
             }
 
@@ -528,7 +528,7 @@ namespace RATools.Parser
             ExpressionBase range;
             if (!forExpression.Range.ReplaceVariables(scope, out range))
             {
-                Error = range as ParseErrorExpression;
+                Error = range as ErrorExpression;
                 return false;
             }
 
@@ -546,7 +546,7 @@ namespace RATools.Parser
                     ExpressionBase key;
                     if (!entry.ReplaceVariables(iteratorScope, out key))
                     {
-                        Error = key as ParseErrorExpression;
+                        Error = key as ErrorExpression;
                         return false;
                     }
 
@@ -570,19 +570,19 @@ namespace RATools.Parser
                 return true;
             }
 
-            Error = new ParseErrorExpression("Cannot iterate over " + forExpression.Range.ToString(), forExpression.Range);
+            Error = new ErrorExpression("Cannot iterate over " + forExpression.Range.ToString(), forExpression.Range);
             return false;
         }
 
         private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
         {
-            ParseErrorExpression error;
+            ErrorExpression error;
             bool? result = ifExpression.Condition.IsTrue(scope, out error);
             if (error != null)
             {
                 var innerError = error.InnermostError;
                 if (innerError != null && innerError.Message.EndsWith("has no meaning outside of a trigger clause"))
-                    Error = new ParseErrorExpression("Comparison contains runtime logic.", ifExpression.Condition) { InnerError = error };
+                    Error = new ErrorExpression("Comparison contains runtime logic.", ifExpression.Condition) { InnerError = error };
                 else
                     Error = error;
 
@@ -591,7 +591,7 @@ namespace RATools.Parser
 
             if (result == null)
             {
-                Error = new ParseErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition);
+                Error = new ErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition);
                 return false;
             }
 
@@ -606,11 +606,11 @@ namespace RATools.Parser
             {
                 if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
                 {
-                    var error = result as ParseErrorExpression;
-                    result = new ParseErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };
+                    var error = result as ErrorExpression;
+                    result = new ErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };
                 }
 
-                Error = result as ParseErrorExpression;
+                Error = result as ErrorExpression;
                 return false;
             }
 

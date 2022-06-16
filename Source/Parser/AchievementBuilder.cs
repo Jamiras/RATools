@@ -2262,7 +2262,7 @@ namespace RATools.Parser
         /// <summary>
         /// Squashes alt groups into the core group using AndNexts and OrNexts.
         /// </summary>
-        internal ParseErrorExpression CollapseForSubClause()
+        internal ErrorExpression CollapseForSubClause()
         {
             var newCore = new List<Requirement>();
 
@@ -2277,7 +2277,7 @@ namespace RATools.Parser
             foreach (var alt in _alts)
             {
                 if (alt.Last().Type != RequirementType.None)
-                    return new ParseErrorExpression(alt.Last().Type + " modifier not allowed in subclause");
+                    return new ErrorExpression(alt.Last().Type + " modifier not allowed in subclause");
 
                 alt.Last().Type = RequirementType.OrNext;
 
@@ -2304,7 +2304,7 @@ namespace RATools.Parser
                 {
                     // only one AndNext group allowed
                     if (andNextAlt != null)
-                        return new ParseErrorExpression("Combination of &&s and ||s is too complex for subclause");
+                        return new ErrorExpression("Combination of &&s and ||s is too complex for subclause");
 
                     andNextAlt = alt;
 

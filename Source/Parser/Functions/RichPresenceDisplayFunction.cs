@@ -21,7 +21,7 @@ namespace RATools.Parser.Functions
             var context = scope.GetContext<AchievementScriptContext>();
             if (context == null)
             {
-                result = new ParseErrorExpression(Name.Name + " has no meaning outside of an achievement script");
+                result = new ErrorExpression(Name.Name + " has no meaning outside of an achievement script");
                 return false;
             }
 
@@ -70,7 +70,7 @@ namespace RATools.Parser.Functions
                 var context = scope.GetContext<RichPresenceDisplayContext>();
                 if (context == null)
                 {
-                    result = new ParseErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
+                    result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
                     return false;
                 }
 

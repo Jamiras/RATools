@@ -42,9 +42,9 @@ namespace RATools.Test.Parser.Functions
                 if (error == null)
                     Assert.That(funcDef.Evaluate(parameterScope, out error), Is.False);
 
-                Assert.That(error, Is.InstanceOf<ParseErrorExpression>());
+                Assert.That(error, Is.InstanceOf<ErrorExpression>());
 
-                var parseError = (ParseErrorExpression)error;
+                var parseError = (ErrorExpression)error;
                 while (parseError.InnerError != null)
                     parseError = parseError.InnerError;
                 Assert.That(parseError.Message, Is.EqualTo(expectedError));

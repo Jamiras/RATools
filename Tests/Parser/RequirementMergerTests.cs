@@ -15,8 +15,8 @@ namespace RATools.Test.Parser
             // inputs /output makes reading the tests and validating the behavior easier for humans.
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);
-            if (expression is ParseErrorExpression)
-                Assert.Fail(((ParseErrorExpression)expression).Message);
+            if (expression is ErrorExpression)
+                Assert.Fail(((ErrorExpression)expression).Message);
 
             var achievement = new ScriptInterpreterAchievementBuilder();
             var error = achievement.PopulateFromExpression(expression);

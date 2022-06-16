@@ -45,7 +45,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ParseErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {

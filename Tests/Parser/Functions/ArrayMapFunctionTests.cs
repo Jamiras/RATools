@@ -37,7 +37,7 @@ namespace RATools.Test.Parser.Functions
                 }
             }
 
-            var error = expr as ParseErrorExpression;
+            var error = expr as ErrorExpression;
             if (error != null)
                 return error.InnermostError.Message;
 

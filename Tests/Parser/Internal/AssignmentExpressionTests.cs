@@ -52,8 +52,8 @@ namespace RATools.Test.Parser.Internal
             // variable doesn't have a current value, logical comparison not supported
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown variable: variable"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Unknown variable: variable"));
         }
 
         [Test]
@@ -69,8 +69,8 @@ namespace RATools.Test.Parser.Internal
             // variable doesn't have a current value, addition not supported
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ParseErrorExpression>());
-            Assert.That(((ParseErrorExpression)result).Message, Is.EqualTo("Unknown variable: variable"));
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Unknown variable: variable"));
         }
 
         [Test]

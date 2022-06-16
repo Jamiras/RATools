@@ -69,7 +69,7 @@ namespace RATools.Parser.Internal
             var keywordIn = new KeywordExpression("in", line, column);
 
             var range = ExpressionBase.Parse(tokenizer);
-            if (range.Type == ExpressionType.ParseError)
+            if (range.Type == ExpressionType.Error)
                 return range;
 
             var loop = new ForExpression(iterator, range);

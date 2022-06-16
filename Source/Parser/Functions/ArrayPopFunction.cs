@@ -19,7 +19,7 @@ namespace RATools.Parser.Functions
             var array = arrayExpression.Expression as ArrayExpression;
             if (array == null)
             {
-                result = new ParseErrorExpression("array did not evaluate to an array", arrayExpression);
+                result = new ErrorExpression("array did not evaluate to an array", arrayExpression);
                 return false;
             }
 

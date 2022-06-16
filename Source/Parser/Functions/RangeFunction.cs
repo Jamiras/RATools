@@ -37,7 +37,7 @@ namespace RATools.Parser.Functions
 
             if (step.Value == 0)
             {
-                result = new ParseErrorExpression("step must not be 0", step);
+                result = new ErrorExpression("step must not be 0", step);
                 return false;
             }
 
@@ -47,7 +47,7 @@ namespace RATools.Parser.Functions
             {
                 if (step.Value > 0)
                 {
-                    result = new ParseErrorExpression("step must be negative if start is after stop", step.Location.Start.Line > 0 ? step : stop);
+                    result = new ErrorExpression("step must be negative if start is after stop", step.Location.Start.Line > 0 ? step : stop);
                     return false;
                 }
 
@@ -58,7 +58,7 @@ namespace RATools.Parser.Functions
             {
                 if (step.Value < 0)
                 {
-                    result = new ParseErrorExpression("step must be positive if stop is after start", step);
+                    result = new ErrorExpression("step must be positive if stop is after start", step);
                     return false;
                 }
 

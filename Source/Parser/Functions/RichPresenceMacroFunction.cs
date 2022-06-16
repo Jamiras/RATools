@@ -69,7 +69,7 @@ namespace RATools.Parser.Functions
 
             if (GetValueFormat(macro.Value) == ValueFormat.None)
             {
-                result = new ParseErrorExpression("Unknown rich presence macro: " + macro.Value);
+                result = new ErrorExpression("Unknown rich presence macro: " + macro.Value);
                 return false;
             }
 
