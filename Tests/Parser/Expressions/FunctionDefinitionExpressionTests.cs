@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -138,7 +139,7 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
             Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
             Assert.That(expr.DefaultParameters.ContainsKey("j"));
-            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<FunctionCallExpression>());
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<MemoryAccessorExpression>());
 
             var builder = new StringBuilder();
             expr.DefaultParameters["j"].AppendString(builder);

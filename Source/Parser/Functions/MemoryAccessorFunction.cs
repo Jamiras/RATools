@@ -1,12 +1,13 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Functions
 {
-    internal class MemoryAccessorFunction : TriggerBuilderContext.FunctionDefinition
+    internal class MemoryAccessorFunction : FunctionDefinitionExpression
     {
         public MemoryAccessorFunction(string name, FieldSize size)
             : base(name)
@@ -18,180 +19,133 @@ namespace RATools.Parser.Functions
 
         public FieldSize Size { get; private set; }
 
-        public static bool ContainsMemoryAccessor(ExpressionBase expression)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var funcCall = expression as FunctionCallExpression;
-            if (funcCall != null)
-            {
-                var func = AchievementScriptInterpreter.GetGlobalScope().GetFunction(funcCall.FunctionName.Name);
-                if (func is MemoryAccessorFunction)
-                    return true;
+            // we want to create a MemoryAccessorExpression for assignments too
+            return Evaluate(scope, out result);
+        }
 
-                foreach (var parameter in funcCall.Parameters)
-                {
-                    if (ContainsMemoryAccessor(parameter))
-                        return true;
-                }
-
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            var address = GetParameter(scope, "address", out result);
+            if (address == null)
                 return false;
-            }
 
-            var leftRightExpression = expression as LeftRightExpressionBase;
-            if (leftRightExpression != null)
-                return ContainsMemoryAccessor(leftRightExpression.Left) || ContainsMemoryAccessor(leftRightExpression.Right);
+            result = CreateMemoryAccessorExpression(address);
+            if (result.Type == ExpressionType.Error)
+                return false;
 
-            return false;
+            CopyLocation(result);
+            return true;
         }
 
-        private static int CountMathematicMemoryAccessors(ExpressionBase expression, int limit)
+        protected ExpressionBase CreateMemoryAccessorExpression(ExpressionBase address)
         {
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-            {
-                var count = CountMathematicMemoryAccessors(mathematic.Left, limit);
-                if (count < limit)
-                    count += CountMathematicMemoryAccessors(mathematic.Right, limit);
-
-                return count;
-            }
-
-            if (ContainsMemoryAccessor(expression))
-                return 1;
-
-            return 0;
-        }
-
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
-        {
-            var address = functionCall.Parameters.First();
-            return BuildTrigger(context, scope, functionCall, address);
-        }
-
-        protected ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall, ExpressionBase address)
-        {
-            var requirement = new Requirement();
             var integerConstant = address as IntegerConstantExpression;
             if (integerConstant != null)
+                return new MemoryAccessorExpression(FieldType.MemoryAddress, Size, (uint)integerConstant.Value);
+
+            var accessor = address as MemoryAccessorExpression;
+            if (accessor != null)
             {
-                requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = (uint)integerConstant.Value };
-                context.Trigger.Add(requirement);
-                return null;
+                var result = new MemoryAccessorExpression();
+                foreach (var pointer in accessor.PointerChain)
+                    result.AddPointer(pointer);
+
+                result.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = accessor.Field });
+                result.Field = new Field { Type = FieldType.MemoryAddress, Size = Size, Value = 0 };
+                return result;
             }
 
-            IntegerConstantExpression offsetConstant = null;
-            IntegerConstantExpression scalarConstant = null;
-            RequirementOperator scalarOperation = RequirementOperator.None;
-            var originalAddress = address;
-
-            var funcCall = address as FunctionCallExpression;
-            if (funcCall == null)
+            var mathematic = address as MathematicExpression;
+            if (mathematic != null)
             {
-                var mathematic = address as MathematicExpression;
-                if (mathematic != null &&
-                    (mathematic.Operation == MathematicOperation.Add || mathematic.Operation == MathematicOperation.Subtract))
+                var result = CreateMemoryAccessorExpression(mathematic.Left);
+                if (result.Type == ExpressionType.Error)
+                    return result;
+
+                accessor = result as MemoryAccessorExpression;
+                if (accessor == null)
+                    return new ErrorExpression("Cannot create pointer", mathematic.Left);
+
+                if (accessor.Field.Value != 0) // pointer chain already has an offset
+                    return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
+
+                integerConstant = mathematic.Right as IntegerConstantExpression;
+
+                switch (mathematic.Operation)
                 {
-                    if (CountMathematicMemoryAccessors(mathematic, 2) >= 2)
-                        return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
+                    case MathematicOperation.Add:
+                        if (integerConstant == null) // offset cannot be a memory read because we need the size field for the final read
+                            return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
 
-                    offsetConstant = mathematic.Right as IntegerConstantExpression;
-                    if (offsetConstant != null)
-                    {
-                        address = mathematic.Left;
-                    }
-                    else
-                    {
-                        offsetConstant = mathematic.Left as IntegerConstantExpression;
-                        if (offsetConstant != null)
-                            address = mathematic.Right;
-                    }
-
-                    if (offsetConstant != null)
-                    {
-                        if (mathematic.Operation == MathematicOperation.Subtract)
-                            offsetConstant = new IntegerConstantExpression(-offsetConstant.Value);
-                    }
-
-                    mathematic = address as MathematicExpression;
-                }
-
-                if (mathematic != null)
-                {
-                    switch (mathematic.Operation)
-                    {
-                        case MathematicOperation.Multiply:
-                            scalarConstant = mathematic.Right as IntegerConstantExpression;
-                            if (scalarConstant != null)
-                            {
-                                address = mathematic.Left;
-                                scalarOperation = RequirementOperator.Multiply;
-                            }
-                            else
-                            {
-                                scalarConstant = mathematic.Left as IntegerConstantExpression;
-                                if (scalarConstant != null)
-                                {
-                                    scalarOperation = RequirementOperator.Multiply;
-                                    address = mathematic.Right;
-                                }
-                            }
-                            break;
-
-                        case MathematicOperation.Divide:
-                            scalarConstant = mathematic.Right as IntegerConstantExpression;
-                            if (scalarConstant != null)
-                            {
-                                address = mathematic.Left;
-                                scalarOperation = RequirementOperator.Divide;
-                            }
-                            break;
-
-                        case MathematicOperation.BitwiseAnd:
-                            scalarConstant = mathematic.Right as IntegerConstantExpression;
-                            if (scalarConstant != null)
-                            {
-                                address = mathematic.Left;
-                                scalarOperation = RequirementOperator.BitwiseAnd;
-                            }
-                            break;
-                    }
-                }
-
-                funcCall = address as FunctionCallExpression;
-            }
-
-            if (funcCall != null)
-            {
-                var funcDef = scope.GetFunction(funcCall.FunctionName.Name) as TriggerBuilderContext.FunctionDefinition;
-                if (funcDef != null)
-                {
-                    if (funcDef is MemoryAccessorFunction || funcDef is PrevPriorFunction)
-                    {
-                        var error = funcDef.BuildTrigger(context, scope, funcCall);
-                        if (error != null)
-                            return error;
-
-                        var lastRequirement = context.LastRequirement;
-                        lastRequirement.Type = RequirementType.AddAddress;
-
-                        if (scalarConstant != null && scalarConstant.Value != 1)
+                        accessor.Field = new Field
                         {
-                            lastRequirement.Operator = scalarOperation;
-                            lastRequirement.Right = new Field { Size = FieldSize.DWord, Type = FieldType.Value, Value = (uint)scalarConstant.Value };
-                        }
+                            Type = accessor.Field.Type,
+                            Size = accessor.Field.Size,
+                            Value = (uint)integerConstant.Value
+                        };
+                        return accessor;
 
-                        // a memory reference without an offset has to be generated with a 0 offset.
-                        uint offset = (offsetConstant != null) ? (uint)offsetConstant.Value : 0;
+                    case MathematicOperation.Subtract:
+                        if (integerConstant == null) // offset cannot be a memory read because we need the size field for the final read
+                            return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
 
-                        requirement.Left = new Field { Size = this.Size, Type = FieldType.MemoryAddress, Value = offset };
-                        context.Trigger.Add(requirement);
-                        return null;
-                    }
+                        accessor.Field = new Field
+                        {
+                            Type = accessor.Field.Type,
+                            Size = accessor.Field.Size,
+                            Value = (uint)(-integerConstant.Value)
+                        };
+                        break;
                 }
+
+                Field field;
+                if (integerConstant != null)
+                {
+                    field = new Field
+                    {
+                        Type = FieldType.Value,
+                        Size = FieldSize.DWord,
+                        Value = (uint)integerConstant.Value
+                    };
+                }
+                else
+                {
+                    var accessorOperand = mathematic.Right as MemoryAccessorExpression;
+                    if (accessorOperand == null)
+                        return new ErrorExpression("Cannot create pointer", mathematic);
+
+                    if (!accessor.PointerChainMatches(accessorOperand))
+                        return new ErrorExpression("Cannot create pointer", mathematic);
+
+                    field = accessorOperand.Field;
+                }
+
+                Requirement requirement = accessor.PointerChain.Last();
+                requirement.Right = field;
+
+                switch (mathematic.Operation)
+                {
+                    case MathematicOperation.Multiply:
+                        requirement.Operator = RequirementOperator.Multiply;
+                        break;
+
+                    case MathematicOperation.Divide:
+                        requirement.Operator = RequirementOperator.Divide;
+                        break;
+
+                    case MathematicOperation.BitwiseAnd:
+                        requirement.Operator = RequirementOperator.BitwiseAnd;
+                        break;
+                }
+
+                return accessor;
             }
 
             var builder = new StringBuilder();
             builder.Append("Cannot convert to an address: ");
-            originalAddress.AppendString(builder);
+            address.AppendString(builder);
 
             return new ErrorExpression(builder.ToString(), address);
         }

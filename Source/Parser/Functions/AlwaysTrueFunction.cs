@@ -1,20 +1,27 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
 {
-    internal class AlwaysTrueFunction : TriggerBuilderContext.FunctionDefinition
+    internal class AlwaysTrueFunction : FunctionDefinitionExpression
     {
         public AlwaysTrueFunction()
             : base("always_true")
         {
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            context.Trigger.Add(CreateAlwaysTrueRequirement());
-            return null;
+            return Evaluate(scope, out result);
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            result = new AlwaysTrueExpression();
+            CopyLocation(result);
+            return true;
         }
 
         public static FunctionCallExpression CreateAlwaysTrueFunctionCall()

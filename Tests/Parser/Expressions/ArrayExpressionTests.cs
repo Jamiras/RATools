@@ -75,7 +75,12 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(result, Is.InstanceOf<ArrayExpression>());
             var arrayResult = (ArrayExpression)result;
             Assert.That(arrayResult.Entries.Count, Is.EqualTo(1));
-            Assert.That(arrayResult.Entries[0].ToString(), Is.EqualTo(value.ToString()));
+
+            var builder1 = new StringBuilder();
+            arrayResult.Entries[0].AppendString(builder1);
+            var builder2 = new StringBuilder();
+            value.AppendString(builder2);
+            Assert.That(builder1.ToString(), Is.EqualTo(builder2.ToString()));
         }
 
         [Test]

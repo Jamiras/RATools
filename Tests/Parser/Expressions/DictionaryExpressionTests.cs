@@ -233,7 +233,12 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(result, Is.InstanceOf<DictionaryExpression>());
             var arrayResult = (DictionaryExpression)result;
             Assert.That(arrayResult.Count, Is.EqualTo(1));
-            Assert.That(arrayResult[0].Value.ToString(), Is.EqualTo(value.ToString()));
+
+            var builder1 = new StringBuilder();
+            arrayResult[0].Value.AppendString(builder1);
+            var builder2 = new StringBuilder();
+            value.AppendString(builder2);
+            Assert.That(builder1.ToString(), Is.EqualTo(builder2.ToString()));
         }
 
         [Test]

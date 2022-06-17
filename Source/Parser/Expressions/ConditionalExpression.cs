@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -345,15 +346,10 @@ namespace RATools.Parser.Expressions
                 return new BooleanConstantExpression(!boolean.Value);
 
             // special handling for built-in functions
-            var function = expression as FunctionCallExpression;
-            if (function != null && function.Parameters.Count() == 0)
-            {
-                if (function.FunctionName.Name == "always_true")
-                    return AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
-
-                if (function.FunctionName.Name == "always_false")
-                    return AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
-            }
+            if (expression is AlwaysTrueExpression)
+                return new AlwaysFalseExpression();
+            if (expression is AlwaysFalseExpression)
+                return new AlwaysTrueExpression();
 
             // unsupported inversion
             return new ErrorExpression("! operator cannot be applied to " + expression.Type, expression);

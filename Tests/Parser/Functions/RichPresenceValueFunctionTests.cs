@@ -24,7 +24,7 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(def.DefaultParameters["format"], Is.EqualTo(new StringConstantExpression("value")));
         }
 
-        private RichPresenceBuilder Evaluate(string input, string expectedError = null)
+        private static RichPresenceBuilder Evaluate(string input, string expectedError = null)
         {
             var funcDef = new RichPresenceValueFunction();
 

@@ -486,6 +486,19 @@ namespace RATools.Parser
                     return true;
 
                 default:
+                    var executable = expression as IExecutableExpression;
+                    if (executable != null)
+                    {
+                        var error = executable.Execute(scope);
+                        if (error != null)
+                        {
+                            Error = error;
+                            return false;
+                        }
+
+                        return true;
+                    }
+
                     Error = new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
                     return false;
             }
@@ -578,25 +591,53 @@ namespace RATools.Parser
         private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
         {
             ErrorExpression error;
+            ExpressionBase value;
             bool? result = ifExpression.Condition.IsTrue(scope, out error);
-            if (error != null)
-            {
-                var innerError = error.InnermostError;
-                if (innerError != null && innerError.Message.EndsWith("has no meaning outside of a trigger clause"))
-                    Error = new ErrorExpression("Comparison contains runtime logic.", ifExpression.Condition) { InnerError = error };
-                else
-                    Error = error;
-
-                return false;
-            }
-
             if (result == null)
             {
-                Error = new ErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition);
-                return false;
+                if (!ifExpression.Condition.ReplaceVariables(scope, out value))
+                {
+                    Error = value as ErrorExpression;
+                    return false;
+                }
+
+                result = ifExpression.Condition.IsTrue(scope, out error);
+                if (result == null)
+                {
+                    if (ContainsRuntimeLogic(value))
+                        Error = new ErrorExpression("Comparison contains runtime logic.", ifExpression.Condition);
+                    else
+                        Error = new ErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition) { InnerError = error };
+
+                    return false;
+                }
             }
 
             return Evaluate(result.GetValueOrDefault() ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
+        }
+
+        private static bool ContainsRuntimeLogic(ExpressionBase expression)
+        {
+            switch (expression.Type)
+            {
+                case ExpressionType.MemoryAccessor:
+                case ExpressionType.Requirement:
+                case ExpressionType.RequirementClause:
+                case ExpressionType.RequirementGroup:
+                    return true;
+
+                default:
+                    var nested = expression as INestedExpressions;
+                    if (nested != null)
+                    {
+                        foreach (var nestedExpression in nested.NestedExpressions)
+                        {
+                            if (ContainsRuntimeLogic(nestedExpression))
+                                return true;
+                        }
+                    }
+                    return false;
+            }
         }
 
         private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
