@@ -1,7 +1,5 @@
 ﻿using Jamiras.Commands;
-using Jamiras.Components;
 using RATools.Data;
-using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -37,7 +35,7 @@ namespace RATools.ViewModels
             {
                 RequirementGroupViewModel currentGroup = null;
 
-                foreach (var line in richPresence.Script.Replace("\r\n", "\n").Split("\n"))
+                foreach (var line in richPresence.Script.Split("\r\n"))
                 {
                     if (String.IsNullOrWhiteSpace(line))
                         continue;
