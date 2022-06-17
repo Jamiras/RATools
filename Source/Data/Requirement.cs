@@ -424,6 +424,11 @@ namespace RATools.Data
                         result = true;
                         break;
 
+                    case RequirementOperator.Multiply:
+                    case RequirementOperator.Divide:
+                    case RequirementOperator.BitwiseAnd:
+                        return null;
+
                     default:
                         result = false;
                         break;
