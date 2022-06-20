@@ -405,6 +405,9 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) < byte(0x001234)", "always_false()")] // never true
         [TestCase("byte(0x001234) >= byte(0x001234)", "always_true()")] // always true
         [TestCase("byte(0x001234) > byte(0x001234)", "always_false()")] // never true
+        [TestCase("byte(0x001234) / byte(0x001234)", "byte(0x001234) / byte(0x001234)")] // indeterminant - 0 or 1
+        [TestCase("byte(0x001234) * byte(0x001234)", "byte(0x001234) * byte(0x001234)")] // cannot be simplified
+        [TestCase("byte(0x001234) & byte(0x001234)", "byte(0x001234) & byte(0x001234)")] // could be simplified to just byte(0x001234)
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
         [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
