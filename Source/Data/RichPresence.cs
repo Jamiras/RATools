@@ -20,6 +20,12 @@ namespace RATools.Data
             get { return _script; }
             set
             {
+                // normalize to Windows line endings as they take more space and that's what's
+                // probably going to be uploaded on the server when the user pastes into the
+                // web site.
+                if (!value.Contains('\r'))
+                    value = value.Replace("\n", "\r\n");
+
                 _script = value;
                 Description = string.Format("{0}/{1} characters", _script.Length, ScriptMaxLength);
             }
