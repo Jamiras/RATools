@@ -426,6 +426,8 @@ namespace RATools.ViewModels
 
             if (Generated.Id != 0)
                 Id = Generated.Id;
+            else if (Local.Id > 111000000 && Published.Id != 0)
+                Id = Published.Id;
             else if (Local.Id != 0)
                 Id = Local.Id;
             else
