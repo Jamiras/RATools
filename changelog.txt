@@ -1,3 +1,10 @@
+v1.9.1 - 22 Jun 2022
+* show error when server returns non-JSON authentication error
+* improve diff logic for rich presence lookups
+* fix optimization of division by self in leaderboard value
+* fix line endings causing rich presence to appear modified
+* fix back navigation when an asset has changed
+
 v1.9.0 - 14 Jun 2022
 * upgrade from .NET Framework 4.6 to .NET Core 6.0
 * add forward/backward navigation via mouse4/mouse5 buttons
