@@ -110,9 +110,9 @@ namespace RATools.Services
 
         private JsonObject CallJsonAPI(string api, string parameters, string tempFilename)
         {
-            var apiUser = _settings.UserName.Trim();
-            var apiKey = _settings.ApiKey.Trim();
-            if (String.IsNullOrEmpty(apiKey))
+            var apiUser = _settings.UserName?.Trim();
+            var apiKey = _settings.ApiKey?.Trim();
+            if (String.IsNullOrEmpty(apiKey) || String.IsNullOrEmpty(apiUser))
                 return null;
 
             bool fileValid = false;

@@ -465,6 +465,8 @@ namespace RATools.ViewModels
         private void MergeOpenTickets()
         {
             var ticketsJson = RAWebCache.Instance.GetOpenTicketsForGame(_game.GameId);
+            if (ticketsJson == null)
+                return;
 
             foreach (var ticket in ticketsJson.GetField("Tickets").ObjectArrayValue)
             {
