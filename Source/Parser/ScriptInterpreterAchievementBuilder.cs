@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -158,6 +159,15 @@ namespace RATools.Parser
                         return true;
 
                     if (funcDef is AlwaysTrueFunction)
+                        return true;
+
+                    return false;
+
+                case ExpressionType.MemoryAccessor:
+                    return true;
+
+                case ExpressionType.Requirement:
+                    if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
                         return true;
 
                     return false;
@@ -380,6 +390,13 @@ namespace RATools.Parser
                 }
             }
 
+            var triggerExpression = expression as ITriggerExpression;
+            if (triggerExpression != null)
+            {
+                var context = scope.GetContext<TriggerBuilderContext>();
+                return triggerExpression.BuildTrigger(context);
+            }
+
             return new ErrorExpression("Cannot generate trigger from " + expression.Type, expression);
         }
 
@@ -483,7 +500,7 @@ namespace RATools.Parser
                 });
             }
 
-            if (operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression))
+            if (operation == MathematicOperation.Subtract && (right is FunctionCallExpression || right is MathematicExpression || right is ITriggerExpression))
             {
                 // if subtracting a non-integer, swap the order to perform a SubSource
                 var requirements = new List<Requirement>();

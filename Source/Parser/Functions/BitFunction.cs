@@ -1,7 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Linq;
 
 namespace RATools.Parser.Functions
 {
@@ -15,22 +15,25 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("address"));
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var address = functionCall.Parameters.ElementAt(1);
-            var result = BuildTrigger(context, scope, functionCall, address);
-            if (result != null)
-                return result;
+            var index = GetIntegerParameter(scope, "index", out result);
+            if (index == null)
+                return false;
 
-            var index = ((IntegerConstantExpression)functionCall.Parameters.First()).Value;
-            if (index < 0 || index > 31)
-                return new ErrorExpression("index must be between 0 and 31", functionCall.Parameters.First());
+            if (index.Value < 0 || index.Value > 31)
+            {
+                result = new ErrorExpression("index must be between 0 and 31", index);
+                return false;
+            }
 
-            var offset = (uint)index / 8;
-            index %= 8;
+            var address = GetParameter(scope, "address", out result);
+            if (address == null)
+                return false;
 
+            var offset = (uint)index.Value / 8;
             FieldSize size;
-            switch (index)
+            switch (index.Value % 8)
             {
                 default:
                 case 0: size = FieldSize.Bit0; break;
@@ -43,12 +46,16 @@ namespace RATools.Parser.Functions
                 case 7: size = FieldSize.Bit7; break;
             }
 
-            var lastRequirement = context.LastRequirement;
-            if (lastRequirement.Left.IsMemoryReference)
-                lastRequirement.Left = new Field { Size = size, Type = lastRequirement.Left.Type, Value = lastRequirement.Left.Value + offset };
-            if (lastRequirement.Right.IsMemoryReference)
-                lastRequirement.Right = new Field { Size = size, Type = lastRequirement.Right.Type, Value = lastRequirement.Right.Value + offset };
-            return null;
+            result = CreateMemoryAccessorExpression(address);
+            if (result.Type == ExpressionType.Error)
+                return false;
+
+            var accessor = result as MemoryAccessorExpression;
+            if (accessor != null)
+                accessor.Field = new Field { Type = accessor.Field.Type, Size = size, Value = accessor.Field.Value + offset };
+
+            CopyLocation(result);
+            return true;
         }
     }
 }

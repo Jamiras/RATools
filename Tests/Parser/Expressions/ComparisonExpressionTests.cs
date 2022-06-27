@@ -302,19 +302,19 @@ namespace RATools.Tests.Parser.Expressions
         // invalid syntax (indirect memory references are not allowed on the right side), so go
         // one step farther to see the final optimized logic.
         [TestCase("byte(byte(2) + 1) - byte(byte(2) + 2) > 100",
-                  "byte(byte(2) + 2) + 100 < byte(byte(2) + 1)", // A - B > 100  ~>  B + 100 < A
+                  "byte(byte(0x000002) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
                   "A:100_I:0xH000002_0xH000002<0xH000001")]      // both A and B have the same base pointer
         [TestCase("byte(byte(2) + 1) - byte(byte(2) + 2) > -100",
-                  "byte(byte(2) + 1) + 100 > byte(byte(2) + 2)", // A - B > -100  ~>  A + 100 > B
+                  "byte(byte(0x000002) + 1) + 100 > byte(byte(0x000002) + 2)", // A - B > -100  ~>  A + 100 > B
                   "A:100_I:0xH000002_0xH000001>0xH000002")]      // both A and B have the same base pointer
         [TestCase("byte(byte(2) + 1) - byte(byte(3) + 2) > 100",
-                  "byte(byte(3) + 2) + 100 < byte(byte(2) + 1)", // A - B > 100  ~>  B + 100 < A
+                  "byte(byte(0x000003) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
                   "I:0xH000003_A:0xH000002_I:0xH000002_B:0xH000001_100>255")] // different base pointer causes secondary AddSource
         [TestCase("word(54) - word(word(43102) + 54) > 37",
-                  "word(word(43102) + 54) + 37 < word(54)", // A - B > 37  ~>  B + 37 < A
+                  "word(word(0x00A85E) + 54) + 37 < word(54)", // A - B > 37  ~>  B + 37 < A
                   "A:37_I:0x 00a85e_A:0x 000036_0<0x 000036")] // underflow with combination of direct/indirect, word size
         [TestCase("word(54) + 37 >= word(word(43102) + 54)",
-                  "word(54) + 37 >= word(word(43102) + 54)", // A + N >= B  ~>  A + N >= B
+                  "word(54) + 37 >= word(word(0x00A85E) + 54)", // A + N >= B  ~>  A + N >= B
                   "A:0x 000036_I:0x 00a85e_B:0x 000036_65572>=65535")] // combination of direct/indirect, word size
         [TestCase("word(1) - word(2) + word(3) < 100",
                   "word(1) - word(2) + word(3) + 65535 < 65635", // possible underflow of 65535
@@ -323,7 +323,7 @@ namespace RATools.Tests.Parser.Expressions
                   "dword(1) - dword(2) + dword(3) < 100", // possible underflow of 2^32-1, ignore
                   "B:0xX000002=0_A:0xX000001=0_0xX000003<100")]
         [TestCase("byte(dword(1)) - byte(dword(2)) + byte(dword(3)) < 100",
-                  "byte(dword(1)) - byte(dword(2)) + byte(dword(3)) + 255 < 355", // reads are only bytes, underflow is 255
+                  "byte(dword(0x000001) + 0) - byte(dword(0x000002) + 0) + byte(dword(0x000003) + 0) + 255 < 355", // reads are only bytes, underflow is 255
                   "A:255_I:0xX000002_B:0xH000000_I:0xX000001_A:0xH000000_I:0xX000003_0xH000000<355")]
         [TestCase("word(1) - word(2) - byte(3) < 100",
                   "word(1) - word(2) - byte(3) + 65790 < 65890", // combination of byte and word

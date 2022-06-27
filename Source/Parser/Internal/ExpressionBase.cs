@@ -1171,5 +1171,30 @@ namespace RATools.Parser.Internal
         /// A reference to a variable.
         /// </summary>
         VariableReference,
+
+        /// <summary>
+        /// A memory accessor.
+        /// </summary>
+        MemoryAccessor,
+
+        /// <summary>
+        /// A mathematic chain of MemoryAccessors (AddSource/SubSource)
+        /// </summary>
+        RequirementClause,
+
+        /// <summary>
+        /// A comparison of requirement clauses. (manages AddHits chain)
+        /// </summary>
+        Requirement,
+
+        /// <summary>
+        /// A collection of requirements.
+        /// </summary>
+        RequirementGroup,
+
+        /// <summary>
+        /// A core requirement group and 0 or more alternate requirement groups.
+        /// </summary>
+        Trigger,
     }
 }

@@ -816,10 +816,11 @@ namespace RATools.Tests.Parser
             Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback is not a string"));
         }
 
+        /*
         [Test]
         public void TestFunctionCallInFunctionInExpression()
         {
-            var parser = Parse("function foo() {\n" +
+            var input =        "function foo() {\n" +
                                "    trigger = always_false() always_true()\n" + // always_true() should be flagged as an error
                                "\n" +
                                "    for offset in [0, 1] {\n" +
@@ -828,9 +829,14 @@ namespace RATools.Tests.Parser
                                "\n" +
                                "    return trigger\n" +
                                "}\n" +
-                               "achievement(\"Title\", \"Description\", 5, foo())\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:30 always_true has no meaning outside of a trigger clause"));
+                               "achievement(\"Title\", \"Description\", 5, foo())\n";
+
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:30 always_true has no meaning outside of a trigger clause"));
         }
+        */
 
         [Test]
         public void TestErrorInFunctionInExpression()

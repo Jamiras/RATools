@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
@@ -33,33 +34,40 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("address"));
         }
 
-        private List<Requirement> Evaluate(string input, string expectedError = null)
+        private static List<Requirement> Evaluate(string input, string expectedError = null)
         {
             var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext { Trigger = requirements };
 
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var funcCall = (FunctionCallExpression)expression;
 
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            var funcDef = scope.GetFunction(funcCall.FunctionName.Name) as MemoryAccessorFunction;
-            Assert.That(funcDef, Is.Not.Null);
-
-            var context = new TriggerBuilderContext { Trigger = requirements };
             scope.Context = context;
 
             ExpressionBase evaluated;
-            Assert.That(funcCall.ReplaceVariables(scope, out evaluated), Is.True);
+            funcCall.ReplaceVariables(scope, out evaluated);
+            var error = evaluated as ErrorExpression;
+            if (error == null)
+            {
+                var accessor = evaluated as MemoryAccessorExpression;
+                Assert.That(accessor, Is.Not.Null);
+                error = accessor.BuildTrigger(context);
+            }
 
             if (expectedError == null)
             {
-                Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+                Assert.That(error, Is.Null);
             }
             else
             {
-                var parseError = funcDef.BuildTrigger(context, scope, funcCall);
-                Assert.That(parseError, Is.Not.Null);
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
+                Assert.That(error, Is.Not.Null);
+
+                if (error.InnerError != null)
+                    Assert.That(error.InnermostError.Message, Is.EqualTo(expectedError));
+                else
+                    Assert.That(error.Message, Is.EqualTo(expectedError));
             }
 
             return requirements;
@@ -76,19 +84,25 @@ namespace RATools.Tests.Parser.Functions
         [Test]
         public void TestExplicitCall()
         {
-            // not providing a TriggerBuilderContext simulates calling the function at a global scope
-            var funcDef = new MemoryAccessorFunction("byte", FieldSize.Byte);
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
 
             var input = "byte(0x1234)";
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var funcCall = (FunctionCallExpression)expression;
 
-            ExpressionBase error;
-            var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
-            Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-            Assert.That(error, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)error).Message, Is.EqualTo("byte has no meaning outside of a trigger clause"));
+            ExpressionBase evaluated;
+            Assert.That(funcCall.ReplaceVariables(scope, out evaluated), Is.True);
+            var error = evaluated as ErrorExpression;
+            if (error == null)
+            {
+                var accessor = evaluated as MemoryAccessorExpression;
+                Assert.That(accessor, Is.Not.Null);
+                error = accessor.Execute(scope);
+            }
+
+            Assert.That(error, Is.Not.Null);
+            Assert.That(error.Message, Is.EqualTo("byte has no meaning outside of a trigger clause"));
         }
 
         [Test]

@@ -12,6 +12,19 @@ namespace RATools.Tests.Parser.Expressions
     [TestFixture]
     class MathematicExpressionTests
     {
+        private static void AssertEquivalent(ExpressionBase value, ExpressionBase expected)
+        {
+            // helper function for comparing a FunctionCallExpression for a memory accessor
+            // to the resulting MemoryAccessorExpression.
+            var leftBuilder = new StringBuilder();
+            value.AppendString(leftBuilder);
+
+            var rightBuilder = new StringBuilder();
+            expected.AppendString(rightBuilder);
+
+            Assert.That(leftBuilder.ToString(), Is.EqualTo(rightBuilder.ToString()));
+        }
+
         [Test]
         [TestCase(MathematicOperation.Add, "variable + 99")]
         [TestCase(MathematicOperation.Subtract, "variable - 99")]
@@ -56,7 +69,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+            AssertEquivalent(result, left);
         }
 
         [Test]
@@ -177,7 +190,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+            AssertEquivalent(result, left);
         }
 
         [Test]
@@ -221,7 +234,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+            AssertEquivalent(result, left);
         }
 
         [Test]
@@ -265,7 +278,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            Assert.That(result.ToString(), Is.EqualTo(left.ToString()));
+            AssertEquivalent(result, left);
         }
 
         [Test]

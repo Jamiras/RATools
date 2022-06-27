@@ -1,7 +1,9 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Linq;
@@ -140,8 +142,9 @@ namespace RATools.Tests.Parser.Functions
             Evaluate("array_push(arr, byte(1) == 2)", scope);
 
             var comparison = (ComparisonExpression)array.Entries[0];
-            Assert.That(comparison.Left, Is.InstanceOf<FunctionCallExpression>());
-            Assert.That(((FunctionCallExpression)comparison.Left).FunctionName.Name, Is.EqualTo("byte"));
+            Assert.That(comparison.Left, Is.InstanceOf<MemoryAccessorExpression>());
+            Assert.That(((MemoryAccessorExpression)comparison.Left).Field.Size, Is.EqualTo(FieldSize.Byte));
+            Assert.That(((MemoryAccessorExpression)comparison.Left).Field.Value, Is.EqualTo(1));
             Assert.That(comparison.Right, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)comparison.Right).Value, Is.EqualTo(2));
         }

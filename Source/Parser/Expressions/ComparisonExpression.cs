@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -363,24 +364,6 @@ namespace RATools.Parser.Expressions
             return EnsureSingleExpressionOnRightHandSide(newRoot, scope);
         }
 
-        private static MemoryAccessorFunction GetMemoryAccessor(ExpressionBase expression, InterpreterScope scope)
-        {
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall != null && functionCall.Parameters.Count > 0)
-            {
-                var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
-                var memoryAccesor = functionDefinition as MemoryAccessorFunction;
-                if (memoryAccesor != null)
-                    return memoryAccesor;
-
-                var prevPriorFunction = functionDefinition as PrevPriorFunction;
-                if (prevPriorFunction != null)
-                    return GetMemoryAccessor(functionCall.Parameters.First(), scope);
-            }
-
-            return null;
-        }
-
         private static void GetMinMax(ExpressionBase expression, InterpreterScope scope, out long min, out long max)
         {
             switch (expression.Type)
@@ -447,11 +430,12 @@ namespace RATools.Parser.Expressions
 
                 case ExpressionType.FunctionCall:
                     min = 0;
-                    var memoryAccessor = GetMemoryAccessor(expression, scope);
-                    if (memoryAccessor != null)
-                        max = Field.GetMaxValue(memoryAccessor.Size);
-                    else
-                        max = 0xFFFFFFFF; // unknown function, assume it can return the full range of values
+                    max = 0xFFFFFFFF; // unknown function, assume it can return the full range of values
+                    break;
+                
+                case ExpressionType.MemoryAccessor:
+                    min = 0;
+                    max = Field.GetMaxValue(((MemoryAccessorExpression)expression).Field.Size);
                     break;
 
                 default:
@@ -470,23 +454,18 @@ namespace RATools.Parser.Expressions
                     return true;
             }
 
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+                return (memoryAccessor.Field.Size == FieldSize.DWord);
+
             var functionCall = expression as FunctionCallExpression;
             if (functionCall != null)
             {
-                var memoryAccessor = GetMemoryAccessor(functionCall, scope);
-                if (memoryAccessor != null)
+                // assume the parameters might become reads. check them too
+                foreach (var parameter in functionCall.Parameters)
                 {
-                    if (memoryAccessor.Size == FieldSize.DWord)
+                    if (HasDword(parameter, scope))
                         return true;
-                }
-                else
-                {
-                    // not a memory accessor function, assume the parameters might become reads. check them too
-                    foreach (var parameter in functionCall.Parameters)
-                    {
-                        if (HasDword(parameter, scope))
-                            return true;
-                    }
                 }
             }
 
@@ -517,27 +496,22 @@ namespace RATools.Parser.Expressions
             if (mathematic != null)
                 return HasFloat(mathematic.Left) || HasFloat(mathematic.Right);
 
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall != null)
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor != null)
             {
-                var functionDef = AchievementScriptInterpreter.GetGlobalScope().GetFunction(functionCall.FunctionName.Name);
-                var memoryAccessorFunction = functionDef as MemoryAccessorFunction;
-                if (memoryAccessorFunction != null)
+                switch (memoryAccessor.Field.Size)
                 {
-                    switch (memoryAccessorFunction.Size)
-                    {
-                        case FieldSize.Float:
-                        case FieldSize.MBF32:
-                            return true;
+                    case FieldSize.Float:
+                    case FieldSize.MBF32:
+                        return true;
 
-                        default:
-                            return false;
-                    }
+                    default:
+                        return false;
                 }
+            }
 
-                if (functionDef is PrevPriorFunction)
-                    return HasFloat(functionCall.Parameters.First());
-
+            if (expression.Type == ExpressionType.FunctionCall)
+            {
                 // unknown function - assume it can return a float
                 return true;
             }
@@ -626,8 +600,7 @@ namespace RATools.Parser.Expressions
             }
             else
             {
-                var functionCall = expression as FunctionCallExpression;
-                if (functionCall != null)
+                if (expression.Type == ExpressionType.MemoryAccessor)
                 {
                     if (invert)
                         hasSubtractedFunction = true;
@@ -903,16 +876,11 @@ namespace RATools.Parser.Expressions
 
         private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
         {
-            var funcCall = expression as FunctionCallExpression;
-            if (funcCall != null)
+            var bcdWrapper = expression as BinaryCodedDecimalExpression;
+            if (bcdWrapper != null)
             {
-                // ASSERT: bcd() has been bubbled up by PrevPriorFunction.ReplaceVariables
-                if (funcCall.FunctionName.Name == "bcd")
-                {
-                    newExpression = funcCall.Parameters.FirstOrDefault();
-                    if (newExpression != null)
-                        return true;
-                }
+                newExpression = new MemoryAccessorExpression(bcdWrapper);
+                return true;
             }
 
             newExpression = expression;

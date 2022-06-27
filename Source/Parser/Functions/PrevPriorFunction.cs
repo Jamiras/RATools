@@ -1,11 +1,12 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class PrevPriorFunction : TriggerBuilderContext.FunctionDefinition
+    internal class PrevPriorFunction : FunctionDefinitionExpression
     {
         public PrevPriorFunction(string name, FieldType fieldType)
             : base(name)
@@ -18,6 +19,11 @@ namespace RATools.Parser.Functions
         private readonly FieldType _fieldType;
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var parameter = GetParameter(scope, "accessor", out result);
             if (parameter == null)
@@ -79,62 +85,41 @@ namespace RATools.Parser.Functions
 
         private bool WrapMemoryAccessor(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall == null)
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor == null)
             {
                 result = new ErrorExpression("accessor did not evaluate to a memory accessor", expression);
                 return false;
             }
 
-            var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
-            var memoryAccessor = functionDefinition as MemoryAccessorFunction;
-            if (memoryAccessor == null)
+            if (_fieldType == FieldType.BinaryCodedDecimal)
             {
-                if (!(functionDefinition is PrevPriorFunction))
-                {
-                    result = new ErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                    return false;
-                }
-
-                if (this.Name.Name == "bcd" && functionDefinition.Name.Name != "bcd")
-                {
-                    // bcd(prev(X)) => no change
-                }
-                else if (functionDefinition.Name.Name == "bcd" && this.Name.Name != "bcd")
-                {
-                    // prev(bcd(X)) => bcd(prev(X))
-                    var nestedFunctionCall = new FunctionCallExpression(this.Name.Name, functionCall.Parameters);
-                    functionCall.CopyLocation(nestedFunctionCall);
-
-                    result = new FunctionCallExpression(functionDefinition.Name.Name, new[] { nestedFunctionCall });
-                    CopyLocation(result);
-                    return true;
-                }
-                else
-                {
-                    result = new ErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
-                    return false;
-                }
+                result = new BinaryCodedDecimalExpression(memoryAccessor);
+                CopyLocation(result);
+                return true;
             }
 
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { functionCall });
+            memoryAccessor = memoryAccessor.Clone();
+
+            switch (memoryAccessor.Field.Type)
+            {
+                case FieldType.MemoryAddress:
+                    memoryAccessor.Field = memoryAccessor.Field.ChangeType(_fieldType);
+                    break;
+
+                case FieldType.Value:
+                case FieldType.Float:
+                    result = new ErrorExpression("cannot apply modifier to constant", expression);
+                    return false;
+
+                default:
+                    result = new ErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
+                    return false;
+            }
+
+            result = memoryAccessor;
             CopyLocation(result);
             return true;
-        }
-
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
-        {
-            var accessor = (FunctionCallExpression)functionCall.Parameters.First();
-            var error = context.CallFunction(accessor, scope);
-            if (error != null)
-                return error;
-
-            var left = context.LastRequirement.Left;
-            if (left.Type != FieldType.MemoryAddress)
-                return new ErrorExpression("cannot apply multiple modifiers to memory accessor", functionCall);
-
-            context.LastRequirement.Left = new Field { Size = left.Size, Type = _fieldType, Value = left.Value };
-            return null;
         }
     }
 }

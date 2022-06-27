@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -260,6 +261,22 @@ namespace RATools.Parser
 
         private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, List<Term> terms, out ExpressionBase result)
         {
+            var triggerExpression = expression as ITriggerExpression;
+            if (triggerExpression != null)
+            {
+                var requirements = new List<Requirement>();
+                var context = new TriggerBuilderContext() { Trigger = requirements };
+                var error = triggerExpression.BuildTrigger(context);
+                if (error != null)
+                {
+                    result = error;
+                    return false;
+                }
+
+                SetImpliedMeasuredTarget(requirements);
+                return ProcessMeasuredValue(requirements, expression, terms, out result);
+            }
+
             var functionCall = expression as FunctionCallExpression;
             if (functionCall != null)
             {
