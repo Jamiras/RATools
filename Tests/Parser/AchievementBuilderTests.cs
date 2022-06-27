@@ -381,6 +381,7 @@ namespace RATools.Tests.Parser
         [TestCase("bitcount(0x1234) == 9", "always_false()")] // bitcount can never return more than 8
         [TestCase("bitcount(0x1234) + bitcount(0x1235) == 9", "(bitcount(0x001234) + bitcount(0x001235)) == 9")] // multiple bitcounts can be more than 8
         [TestCase("bitcount(0x1234) >= 8", "byte(0x001234) == 255")] // bitcount == 8 is all bits set
+        [TestCase("measured(bitcount(0x1234) >= 8)", "measured(bitcount(0x001234) == 8)")] // don't convert bitcount to byte checks when wrapped in measured
         [TestCase("bitcount(0x1234) == 0", "byte(0x001234) == 0")] // bitcount == 0 is no bits set
         [TestCase("once(bit1(0x001234) == 255) && byte(0x002345) == 4", "always_false()")] // bit can never be 255, entire group is false
         // ==== NormalizeBCD ===
