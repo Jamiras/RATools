@@ -112,6 +112,7 @@ namespace RATools.ViewModels
                 string gameName = "";
                 int created = Int32.MaxValue;
                 int consoleId = 0;
+                string consoleName = "Unknown";
                 using (var stream = File.OpenRead(Path.Combine(_settings.DumpDirectory, gameId + ".json")))
                 {
                     var json = new JsonObject(stream);
@@ -132,6 +133,7 @@ namespace RATools.ViewModels
 
                     gameName = patchData.GetField("Title").StringValue;
                     consoleId = patchData.GetField("ConsoleID").IntegerValue.GetValueOrDefault();
+                    consoleName = patchData.GetField("ConsoleName").StringValue;
                 }
 
                 if (consoleId >= 100) // ignore Hubs and Events
@@ -225,6 +227,7 @@ namespace RATools.ViewModels
                     GameId = gameStats.GameId,
                     GameName = gameStats.DialogTitle.Substring(12).Trim(),
                     ConsoleId = consoleId,
+                    ConsoleName = consoleName,
                     Created = unixEpoch + TimeSpan.FromSeconds(created),
                     Points = gameStats.TotalPoints,
                     NumPlayers = gameStats.NumberOfPlayers,
@@ -279,6 +282,7 @@ namespace RATools.ViewModels
             public int GameId { get; set; }
             public string GameName { get; set; }
             public int ConsoleId { get; set; }
+            public string ConsoleName { get; set; }
             public DateTime Created { get; set; }
             public int Points { get; set; }
             public int NumPlayers { get; set; }
@@ -704,6 +708,8 @@ namespace RATools.ViewModels
             file.WriteLine("Possible cheaters: TimeToMaster < 10% of median Time/Median/StdDev|LinkToComparePage [Masters >= 8, Points >= 50, TimeToMaster more than 90% from median or more than 2 stddevs from median]");
             file.WriteLine();
 
+            cheaters.Sort((l, r) => String.Compare(l.UserName, r.UserName));
+
             foreach (var cheater in cheaters)
             {
                 ++Progress.Current;
@@ -715,6 +721,7 @@ namespace RATools.ViewModels
                     {
                         GameId = result.GameId,
                         GameName = result.GameName,
+                        ConsoleName = result.ConsoleName,
                         NumMasters = result.HardcoreMasteredUserCount,
                         MasteryRank = kvp.Value.MasteryRank,
                         MasteryMinutes = (int)kvp.Value.GameTime.TotalMinutes,
@@ -733,7 +740,7 @@ namespace RATools.ViewModels
         {
             var user = masteryInfo.Unlocks.User;
 
-            file.WriteLine("* {0} mastered {1} ({2})", user, masteryInfo.GameName, masteryInfo.GameId);
+            file.WriteLine("* {0} mastered {1} ({2}) ({3})", user, masteryInfo.GameName, masteryInfo.ConsoleName, masteryInfo.GameId);
             file.WriteLine("  https://retroachievements.org/gamecompare.php?ID={0}&f={1}", masteryInfo.GameId, user);
 
             bool dumpTimes = true;

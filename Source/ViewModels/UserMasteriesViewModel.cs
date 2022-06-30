@@ -68,6 +68,7 @@ namespace RATools.ViewModels
         {
             public int GameId { get; set; }
             public string GameName { get; set; }
+            public string ConsoleName { get; set; }
             public int NumAchievements { get; set; }
             public int NumMasters { get; set; }
             public int MasteryRank { get; set; }
@@ -123,6 +124,7 @@ namespace RATools.ViewModels
                 {
                     GameId = gameInfo.GetField("GameID").IntegerValue.GetValueOrDefault(),
                     GameName = gameInfo.GetField("Title").StringValue,
+                    ConsoleName = gameInfo.GetField("ConsoleName").StringValue,
                     NumAchievements = gameInfo.GetField("MaxPossible").IntegerValue.GetValueOrDefault(),
                 };
 
