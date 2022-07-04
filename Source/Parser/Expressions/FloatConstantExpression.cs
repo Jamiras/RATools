@@ -3,7 +3,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FloatConstantExpression : ExpressionBase
+    internal class FloatConstantExpression : ExpressionBase, IMathematicCombineOperation
     {
         public FloatConstantExpression(float value)
             : base(ExpressionType.FloatConstant)
@@ -77,6 +77,60 @@ namespace RATools.Parser.Expressions
 
             expression.CopyLocation(floatExpression);
             return floatExpression;
+        }
+
+        /// <summary>
+        /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to combine with the current expression.</param>
+        /// <param name="operation">How to combine the expressions.</param>
+        /// <returns>
+        /// An expression representing the combined values on success, or <c>null</c> if the expressions could not be combined.
+        /// </returns>
+        public ExpressionBase Combine(ExpressionBase right, MathematicOperation operation)
+        {
+            var integerExpression = right as IntegerConstantExpression;
+            if (integerExpression != null)
+                right = new FloatConstantExpression((float)integerExpression.Value);
+
+            var floatExpression = right as FloatConstantExpression;
+            if (floatExpression != null)
+            {
+                switch (operation)
+                {
+                    case MathematicOperation.Add:
+                        return new FloatConstantExpression(Value + floatExpression.Value);
+
+                    case MathematicOperation.Subtract:
+                        return new FloatConstantExpression(Value - floatExpression.Value);
+
+                    case MathematicOperation.Multiply:
+                        return new FloatConstantExpression(Value * floatExpression.Value);
+
+                    case MathematicOperation.Divide:
+                        if (floatExpression.Value == 0)
+                            return new ErrorExpression("Division by zero");
+                        return new FloatConstantExpression(Value / floatExpression.Value);
+
+                    case MathematicOperation.Modulus:
+                        if (floatExpression.Value == 0)
+                            return new ErrorExpression("Division by zero");
+                        return new FloatConstantExpression(Value % floatExpression.Value);
+
+                    default:
+                        break;
+                }
+            }
+
+            if (right is StringConstantExpression)
+            {
+                var builder = new StringBuilder();
+                AppendString(builder);
+                var stringLeft = new StringConstantExpression(builder.ToString()) { Location = this.Location };
+                return stringLeft.Combine(right, operation);
+            }
+
+            return null;
         }
     }
 }

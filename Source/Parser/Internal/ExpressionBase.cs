@@ -25,7 +25,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the location of the expression within the document
         /// </summary>
-        public TextRange Location { get; protected set; }
+        public TextRange Location { get; set; }
 
         /// <summary>
         /// Gets whether or not an expression has been marked as immutable.
@@ -1176,6 +1176,11 @@ namespace RATools.Parser.Internal
         /// A memory accessor.
         /// </summary>
         MemoryAccessor,
+
+        /// <summary>
+        /// A memory accessor that has been scaled or masked.
+        /// </summary>
+        ModifiedMemoryAccessor,
 
         /// <summary>
         /// A mathematic chain of MemoryAccessors (AddSource/SubSource)

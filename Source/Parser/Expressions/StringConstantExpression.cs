@@ -3,7 +3,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class StringConstantExpression : ExpressionBase
+    internal class StringConstantExpression : ExpressionBase, IMathematicCombineOperation
     {
         public StringConstantExpression(string value)
             : base(ExpressionType.StringConstant)
@@ -69,6 +69,35 @@ namespace RATools.Parser.Expressions
         {
             var that = obj as StringConstantExpression;
             return that != null && Value == that.Value;
+        }
+
+        /// <summary>
+        /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to combine with the current expression.</param>
+        /// <param name="operation">How to combine the expressions.</param>
+        /// <returns>
+        /// An expression representing the combined values on success, or <c>null</c> if the expressions could not be combined.
+        /// </returns>
+        public ExpressionBase Combine(ExpressionBase right, MathematicOperation operation)
+        {
+            switch (right.Type)
+            {
+                case ExpressionType.StringConstant:
+                    if (operation == MathematicOperation.Add)
+                        return new StringConstantExpression(Value + ((StringConstantExpression)right).Value);
+                    break;
+
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.FloatConstant:
+                case ExpressionType.BooleanConstant:
+                    var builder = new StringBuilder();
+                    builder.Append(Value);
+                    right.AppendString(builder);
+                    return new StringConstantExpression(builder.ToString());
+            }
+
+            return null;
         }
     }
 }

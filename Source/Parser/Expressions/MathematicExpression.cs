@@ -69,6 +69,20 @@ namespace RATools.Parser.Expressions
             }
         }
 
+        internal static string GetOperatorVerb(MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add: return "add";
+                case MathematicOperation.Subtract: return "subtract";
+                case MathematicOperation.Multiply: return "multiply";
+                case MathematicOperation.Divide: return "divide";
+                case MathematicOperation.Modulus: return "modulus";
+                case MathematicOperation.BitwiseAnd: return "bitwise and";
+                default: return "mathematic";
+            }
+        }
+
         internal static MathematicPriority GetPriority(MathematicOperation operation)
         {
             switch (operation)
@@ -164,6 +178,11 @@ namespace RATools.Parser.Expressions
             return result;
         }
 
+        private static ErrorExpression CreateCannotCombineError(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
+        {
+            return new ErrorExpression(string.Format("Cannot {0} {1} and {2}", GetOperatorVerb(operation), left.Type, right.Type));
+        }
+
         private static bool MergeOperands(ExpressionBase left, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
         {
             // ASSERT: expression tree has already been rebalanced and variables have been replaced
@@ -211,192 +230,39 @@ namespace RATools.Parser.Expressions
             }
             else
             {
-                switch (operation)
-                {
-                    case MathematicOperation.Add:
-                        return MergeAddition(left, right, out result);
+                result = null;
+                var combinable = left as IMathematicCombineOperation;
+                if (combinable != null)
+                    result = combinable.Combine(right, operation);
 
-                    case MathematicOperation.Subtract:
-                        return MergeSubtraction(left, right, out result);
+                if (result == null)
+                    result = CreateCannotCombineError(left, operation, right);
 
-                    case MathematicOperation.Multiply:
-                        return MergeMultiplication(left, right, out result);
-
-                    case MathematicOperation.Divide:
-                        return MergeDivision(left, right, out result);
-
-                    case MathematicOperation.Modulus:
-                        return MergeModulus(left, right, out result);
-
-                    case MathematicOperation.BitwiseAnd:
-                        return MergeBitwiseAnd(left, right, out result);
-                }
+                result.Location = left.Location.Union(right.Location);
+                return (result is not ErrorExpression);
             }
 
             result = new MathematicExpression(left, operation, right);
             return true;
         }
 
-        private static bool MergeAddition(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            // if either side is a string, combine to a larger string
-            if (left.Type == ExpressionType.StringConstant || right.Type == ExpressionType.StringConstant)
-            {
-                var builder = new StringBuilder();
-                left.AppendStringLiteral(builder);
-                right.AppendStringLiteral(builder);
-
-                result = new StringConstantExpression(builder.ToString());
-                return true;
-            }
-
-            // if either side is a float, convert both to float
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
-            {
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return false;
-
-                result = new FloatConstantExpression(((FloatConstantExpression)left).Value + ((FloatConstantExpression)right).Value);
-                return true;
-            }
-
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value + ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot add expressions");
-            return false;
-        }
-
-        private static bool MergeSubtraction(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            // if either side is a float, convert both to float
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
-            {
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return false;
-
-                result = new FloatConstantExpression(((FloatConstantExpression)left).Value - ((FloatConstantExpression)right).Value);
-                return true;
-            }
-
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value - ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot subtract expressions");
-            return false;
-        }
-
-        private static bool MergeMultiplication(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            // if either side is a float, convert both to float
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
-            {
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return false;
-
-                result = new FloatConstantExpression(((FloatConstantExpression)left).Value * ((FloatConstantExpression)right).Value);
-                return true;
-            }
-
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value * ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot multiply expressions");
-            return false;
-        }
-
-        private static bool MergeDivision(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            // if either side is a float, convert both to float
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
-            {
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return false;
-
-                if (((FloatConstantExpression)right).Value == 0.0)
-                {
-                    result = new ErrorExpression("Division by zero");
-                    return false;
-                }
-
-                result = new FloatConstantExpression(((FloatConstantExpression)left).Value / ((FloatConstantExpression)right).Value);
-                return true;
-            }
-
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                if (((IntegerConstantExpression)right).Value == 0.0)
-                {
-                    result = new ErrorExpression("Division by zero");
-                    return false;
-                }
-
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value / ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot divide expressions");
-            return false;
-        }
-
-        private static bool MergeModulus(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            // if either side is a float, convert both to float
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
-            {
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return false;
-
-                if (((FloatConstantExpression)right).Value == 0.0)
-                {
-                    result = new ErrorExpression("Division by zero");
-                    return false;
-                }
-
-                result = new FloatConstantExpression(((FloatConstantExpression)left).Value % ((FloatConstantExpression)right).Value);
-                return true;
-            }
-
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                if (((IntegerConstantExpression)right).Value == 0)
-                {
-                    result = new ErrorExpression("Division by zero");
-                    return false;
-                }
-
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value % ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot modulus expressions");
-            return false;
-        }
-
-        private static bool MergeBitwiseAnd(ExpressionBase left, ExpressionBase right, out ExpressionBase result)
-        {
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-            {
-                result = new IntegerConstantExpression(((IntegerConstantExpression)left).Value & ((IntegerConstantExpression)right).Value);
-                return true;
-            }
-
-            result = new ErrorExpression("Cannot bitwise and expressions");
-            return false;
-        }
-
         private static bool MergeNonConstantMathematic(MathematicExpression mathematicLeft, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
         {
             var left = mathematicLeft.Right;
+            var leftCombine = left as IMathematicCombineOperation;
+            if (leftCombine == null)
+            {
+                result = CreateCannotCombineError(mathematicLeft.Right, operation, right);
+                return false;
+            }
+
+            var rightCombine = right as IMathematicCombineOperation;
+            if (rightCombine == null)
+            {
+                result = CreateCannotCombineError(mathematicLeft.Right, operation, right);
+                return false;
+            }
+
             result = null;
 
             var newLeft = mathematicLeft.Left;
@@ -409,32 +275,19 @@ namespace RATools.Parser.Expressions
                     if (operation == MathematicOperation.Add)
                     {
                         // (a + 3) + 2 => a + (3 + 2)
-                        if (!MergeAddition(left, right, out newRight))
-                        {
-                            result = newRight;
-                            return false;
-                        }
+                        newRight = leftCombine.Combine(right, MathematicOperation.Add);
                     }
                     else if (operation == MathematicOperation.Subtract)
                     {
                         if (IsGreater(left, right))
                         {
                             // (a + 3) - 2 => a + (3 - 2)
-                            if (!MergeSubtraction(left, right, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
+                            newRight = leftCombine.Combine(right, MathematicOperation.Subtract);
                         }
                         else
                         {
                             // (a + 2) - 3 => a - (3 - 2)
-                            if (!MergeSubtraction(right, left, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
-
+                            newRight = rightCombine.Combine(left, MathematicOperation.Subtract);
                             newOperation = MathematicOperation.Subtract;
                         }
                     }
@@ -450,32 +303,19 @@ namespace RATools.Parser.Expressions
                         if (IsGreater(left, right))
                         {
                             // (a - 3) + 2 => a - (3 - 2)
-                            if (!MergeSubtraction(left, right, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
+                            newRight = leftCombine.Combine(right, MathematicOperation.Subtract);
                         }
                         else
                         {
                             // (a - 2) + 3 => a + (3 - 2)
-                            if (!MergeSubtraction(right, left, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
-
+                            newRight = rightCombine.Combine(left, MathematicOperation.Subtract);
                             newOperation = MathematicOperation.Add;
                         }
                     }
                     else if (operation == MathematicOperation.Subtract)
                     {
                         // (a - 3) - 2 => a - (3 + 2)
-                        if (!MergeAddition(left, right, out newRight))
-                        {
-                            result = newRight;
-                            return false;
-                        }
+                        newRight = leftCombine.Combine(right, MathematicOperation.Add);
                     }
                     else
                     {
@@ -488,11 +328,7 @@ namespace RATools.Parser.Expressions
                     {
                         case MathematicOperation.Multiply:
                             // (a * 3) * 2 => a * (3 * 2)
-                            if (!MergeMultiplication(left, right, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
+                            newRight = leftCombine.Combine(right, MathematicOperation.Multiply);
                             break;
 
                         case MathematicOperation.Divide:
@@ -501,12 +337,14 @@ namespace RATools.Parser.Expressions
                                 right = FloatConstantExpression.ConvertFrom(right);
                                 if (right.Type == ExpressionType.Error)
                                     return false;
+                                rightCombine = right as IMathematicCombineOperation;
                             }
                             else if (right.Type == ExpressionType.FloatConstant)
                             {
                                 left = FloatConstantExpression.ConvertFrom(left);
                                 if (left.Type == ExpressionType.Error)
                                     return false;
+                                leftCombine = left as IMathematicCombineOperation;
                             }
                             else
                             {
@@ -517,11 +355,7 @@ namespace RATools.Parser.Expressions
                                     return false;
                             }
 
-                            if (!MergeDivision(left, right, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
+                            newRight = leftCombine.Combine(right, MathematicOperation.Divide);
                             break;
 
                         case MathematicOperation.Modulus:
@@ -543,24 +377,14 @@ namespace RATools.Parser.Expressions
                     if (operation == MathematicOperation.Divide)
                     {
                         // (a / 3) / 2 => a / (3 * 2)
-                        var multiplication = new MathematicExpression(left, MathematicOperation.Multiply, right);
-                        if (!MergeMultiplication(left, right, out newRight))
-                        {
-                            result = newRight;
-                            return false;
-                        }
+                        newRight = leftCombine.Combine(right, MathematicOperation.Multiply);
                     }
                     else if (operation == MathematicOperation.Multiply)
                     {
                         if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
                         {
                             // (a / 3.0) * 2.0 => a * (2.0 / 3.0)
-                            if (!MergeDivision(right, left, out newRight))
-                            {
-                                result = newRight;
-                                return false;
-                            }
-
+                            newRight = rightCombine.Combine(left, MathematicOperation.Divide);
                             newOperation = MathematicOperation.Multiply;
                         }
                         else
@@ -583,15 +407,23 @@ namespace RATools.Parser.Expressions
                     if (operation != MathematicOperation.BitwiseAnd)
                         return false;
 
-                    if (!MergeBitwiseAnd(left, right, out newRight))
-                    {
-                        result = newRight;
-                        return false;
-                    }
+                    newRight = leftCombine.Combine(right, MathematicOperation.BitwiseAnd);
                     break;
 
                 default:
                     return false;
+            }
+
+            if (newRight is ErrorExpression)
+            {
+                result = newRight;
+                return false;
+            }
+
+            if (newRight == null)
+            {
+                result = CreateCannotCombineError(left, newOperation, right);
+                return false;
             }
 
             return MergeOperands(newLeft, newOperation, newRight, out result);
