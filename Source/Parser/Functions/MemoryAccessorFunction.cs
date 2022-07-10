@@ -2,6 +2,7 @@
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -57,90 +58,33 @@ namespace RATools.Parser.Functions
                 return result;
             }
 
-            var mathematic = address as MathematicExpression;
-            if (mathematic != null)
+            var memoryValue = address as MemoryValueExpression;
+            if (memoryValue != null)
             {
-                var result = CreateMemoryAccessorExpression(mathematic.Left);
-                if (result.Type == ExpressionType.Error)
-                    return result;
-
-                accessor = result as MemoryAccessorExpression;
-                if (accessor == null)
-                    return new ErrorExpression("Cannot create pointer", mathematic.Left);
-
-                if (accessor.Field.Value != 0) // pointer chain already has an offset
-                    return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
-
-                integerConstant = mathematic.Right as IntegerConstantExpression;
-
-                switch (mathematic.Operation)
+                if (memoryValue.MemoryAccessors.Count() == 1)
                 {
-                    case MathematicOperation.Add:
-                        if (integerConstant == null) // offset cannot be a memory read because we need the size field for the final read
-                            return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
-
-                        accessor.Field = new Field
-                        {
-                            Type = accessor.Field.Type,
-                            Size = accessor.Field.Size,
-                            Value = (uint)integerConstant.Value
-                        };
-                        return accessor;
-
-                    case MathematicOperation.Subtract:
-                        if (integerConstant == null) // offset cannot be a memory read because we need the size field for the final read
-                            return new ErrorExpression("Cannot construct single address lookup from multiple memory references", mathematic);
-
-                        accessor.Field = new Field
-                        {
-                            Type = accessor.Field.Type,
-                            Size = accessor.Field.Size,
-                            Value = (uint)(-integerConstant.Value)
-                        };
-                        break;
-                }
-
-                Field field;
-                if (integerConstant != null)
-                {
-                    field = new Field
+                    var result = CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First());
+                    result.Field = new Field
                     {
-                        Type = FieldType.Value,
-                        Size = FieldSize.DWord,
-                        Value = (uint)integerConstant.Value
+                        Type = FieldType.MemoryAddress,
+                        Size = Size,
+                        Value = (uint)memoryValue.IntegerConstant
                     };
+                    return result;
                 }
-                else
+            }
+
+            var modifiedMemoryAccessor = address as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+            {
+                var result = CreateMemoryAccessorExpression(modifiedMemoryAccessor);
+                result.Field = new Field
                 {
-                    var accessorOperand = mathematic.Right as MemoryAccessorExpression;
-                    if (accessorOperand == null)
-                        return new ErrorExpression("Cannot create pointer", mathematic);
-
-                    if (!accessor.PointerChainMatches(accessorOperand))
-                        return new ErrorExpression("Cannot create pointer", mathematic);
-
-                    field = accessorOperand.Field;
-                }
-
-                Requirement requirement = accessor.PointerChain.Last();
-                requirement.Right = field;
-
-                switch (mathematic.Operation)
-                {
-                    case MathematicOperation.Multiply:
-                        requirement.Operator = RequirementOperator.Multiply;
-                        break;
-
-                    case MathematicOperation.Divide:
-                        requirement.Operator = RequirementOperator.Divide;
-                        break;
-
-                    case MathematicOperation.BitwiseAnd:
-                        requirement.Operator = RequirementOperator.BitwiseAnd;
-                        break;
-                }
-
-                return accessor;
+                    Type = FieldType.MemoryAddress,
+                    Size = Size,
+                    Value = 0 // no offset
+                };
+                return result;
             }
 
             var builder = new StringBuilder();
@@ -148,6 +92,23 @@ namespace RATools.Parser.Functions
             address.AppendString(builder);
 
             return new ErrorExpression(builder.ToString(), address);
+        }
+
+        private static MemoryAccessorExpression CreateMemoryAccessorExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
+        {
+            var result = new MemoryAccessorExpression();
+
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext();
+            context.Trigger = requirements;
+            modifiedMemoryAccessor.BuildTrigger(context);
+            foreach (var requirement in requirements)
+            {
+                requirement.Type = RequirementType.AddAddress;
+                result.AddPointer(requirement);
+            }
+
+            return result;
         }
     }
 }

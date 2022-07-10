@@ -66,7 +66,7 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        private static ComparisonOperation InvertComparisonOperation(ComparisonOperation op)
+        internal static ComparisonOperation ReverseComparisonOperation(ComparisonOperation op)
         {
             switch (op)
             {
@@ -76,802 +76,6 @@ namespace RATools.Parser.Expressions
                 case ComparisonOperation.GreaterThanOrEqual: return ComparisonOperation.LessThanOrEqual;
                 default: return op;
             }
-        }
-
-        private static bool MoveConstantsToRightHandSide(ComparisonExpression comparisonExpression, InterpreterScope scope, out ExpressionBase result)
-        {
-            // if left side is not mathematic, we can't move anything
-            var mathematicLeft = comparisonExpression.Left as MathematicExpression;
-            if (mathematicLeft == null)
-            {
-                // if left side is an integer and the right side is not, swap the sides
-                if (comparisonExpression.Left.Type == ExpressionType.IntegerConstant &&
-                    comparisonExpression.Right.Type != ExpressionType.IntegerConstant)
-                {
-                    var invertedComparisonOperation = InvertComparisonOperation(comparisonExpression.Operation);
-                    comparisonExpression = new ComparisonExpression(comparisonExpression.Right, invertedComparisonOperation, comparisonExpression.Left);
-
-                    // recurse if necessary
-                    if (comparisonExpression.Left.Type == ExpressionType.Mathematic)
-                        return MoveConstantsToRightHandSide(comparisonExpression, scope, out result);
-                }
-
-                result = comparisonExpression;
-            }
-            else
-            {
-                do
-                {
-                    if (!MoveConstantToRightHandSide(comparisonExpression, mathematicLeft, scope, out result))
-                        return false;
-
-                    if (ReferenceEquals(comparisonExpression, result))
-                    {
-                        if (MoveFloatToAvoidIntegerDivision(ref comparisonExpression))
-                            result = comparisonExpression;
-                        break;
-                    }
-
-                    comparisonExpression = result as ComparisonExpression;
-                    if (comparisonExpression == null)
-                        break;
-
-                    mathematicLeft = comparisonExpression.Left as MathematicExpression;
-                } while (mathematicLeft != null);
-            }
-
-            if (comparisonExpression.Right.Type == ExpressionType.FloatConstant && !HasFloat(comparisonExpression.Left))
-            {
-                if (!TruncateFloatComparison(comparisonExpression, out result))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private static bool MoveConstantToRightHandSide(ComparisonExpression comparisonExpression,
-            MathematicExpression mathematicLeft, InterpreterScope scope, out ExpressionBase result)
-        {
-            // if the same operation is being applied to both sides, just cancel it out
-            var mathematicRight = comparisonExpression.Right as MathematicExpression;
-            if (mathematicRight != null &&
-                mathematicLeft.Operation == mathematicRight.Operation &&
-                mathematicLeft.Right == mathematicRight.Right)
-            {
-                result = new ComparisonExpression(mathematicLeft.Left, comparisonExpression.Operation, mathematicRight.Left);
-                return true;
-            }
-
-
-            // if it's not numeric, don't try to move it
-            if (mathematicLeft.Right.Type != ExpressionType.IntegerConstant &&
-                mathematicLeft.Right.Type != ExpressionType.FloatConstant)
-            {
-                result = comparisonExpression;
-                return true;
-            }
-
-            // move the left constant to the other side by applying the inverse of the mathematical operation
-            var operation = MathematicExpression.GetOppositeOperation(mathematicLeft.Operation);
-            var right = new MathematicExpression(comparisonExpression.Right, operation, mathematicLeft.Right);
-            if (!right.ReplaceVariables(scope, out result))
-                return false;
-
-            // if the operators could not be merged, keep them where they were
-            if (result.Type == ExpressionType.Mathematic)
-            {
-                result = comparisonExpression;
-                return true;
-            }
-
-            var newRight = result;
-            var comparisonOperation = comparisonExpression.Operation;
-            var truncatedIntegerDivision = false;
-
-            // multiplication is converted to division.
-            // if the division is not exact, modify the comparison so its still logically valid (if possible).
-            if (operation == MathematicOperation.Divide)
-            {
-                if (newRight.Type == ExpressionType.IntegerConstant)
-                {
-                    var reversed = new MathematicExpression(result, MathematicOperation.Multiply, mathematicLeft.Right);
-                    if (!reversed.ReplaceVariables(scope, out result))
-                        return false;
-
-                    if (comparisonExpression.Right != result)
-                    {
-                        // division was not exact, recalculate the float value
-                        if (comparisonExpression.Right.Type == ExpressionType.IntegerConstant)
-                        {
-                            newRight = new FloatConstantExpression(((IntegerConstantExpression)comparisonExpression.Right).Value);
-                            right = new MathematicExpression(newRight, operation, mathematicLeft.Right);
-                            if (!right.ReplaceVariables(scope, out result))
-                                return false;
-
-                            newRight = result;
-
-                            truncatedIntegerDivision = !HasFloat(mathematicLeft.Left);
-                        }
-                        else
-                        {
-                            // unexpected - how did we get from a non-integer (comparisonExpression.Right) to an integer (newRight)?
-                            truncatedIntegerDivision = true;
-                        }
-                    }
-                }
-                else if (newRight.Type == ExpressionType.FloatConstant && !HasFloat(mathematicLeft.Left))
-                {
-                    var floatConstant = ((FloatConstantExpression)newRight).Value;
-                    if ((int)floatConstant != floatConstant)
-                    {
-                        var temp = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
-
-                        if (MoveFloatToAvoidIntegerDivision(ref temp))
-                        {
-                            result = temp;
-                            return true;
-                        }
-
-                        truncatedIntegerDivision = true;
-                    }
-
-                    newRight = new IntegerConstantExpression((int)floatConstant);
-                    result.CopyLocation(newRight);
-                }
-            }
-
-            // construct the new equation
-            var newRoot = new ComparisonExpression(mathematicLeft.Left, comparisonOperation, newRight);
-            comparisonExpression.CopyLocation(newRoot);
-            result = newRoot;
-
-            if (truncatedIntegerDivision)
-            {
-                // division was not exact, validate logic
-                if (!TruncateFloatComparison(newRoot, out result))
-                    return false;
-            }
-
-            return true;
-        }
-
-        private static bool TruncateFloatComparison(ComparisonExpression comparison, out ExpressionBase result)
-        {
-            switch (comparison.Operation)
-            {
-                case ComparisonOperation.Equal:
-                    // a * 10 == 9999 can never be true
-                    result = new ErrorExpression("Result can never be true using integer math", comparison);
-                    return false;
-
-                case ComparisonOperation.NotEqual:
-                    // a * 10 != 9999 is always true
-                    result = new ErrorExpression("Result is always true using integer math", comparison);
-                    return false;
-
-                case ComparisonOperation.LessThan:
-                    // a * 10 < 9999 becomes a <= 999
-                    comparison.Operation = ComparisonOperation.LessThanOrEqual;
-                    break;
-
-                case ComparisonOperation.LessThanOrEqual:
-                    // a * 10 <= 9999 becomes a <= 999
-                    break;
-
-                case ComparisonOperation.GreaterThan:
-                    // a * 10 > 9999 becomes a > 999
-                    break;
-
-                case ComparisonOperation.GreaterThanOrEqual:
-                    // a * 10 >= 9999 becomes a > 999
-                    comparison.Operation = ComparisonOperation.GreaterThan;
-                    break;
-            }
-
-            comparison.Right = new IntegerConstantExpression((int)((FloatConstantExpression)comparison.Right).Value);
-            result = comparison;
-            return true;
-        }
-
-        private static bool MoveFloatToAvoidIntegerDivision(ref ComparisonExpression comparison)
-        {
-            // if the right side is a floating point value and the left side is integer division, move the float to the left side
-            if (comparison.Right.Type == ExpressionType.FloatConstant)
-            {
-                var mathematicLeft = comparison.Left as MathematicExpression;
-                if (mathematicLeft != null && mathematicLeft.Operation == MathematicOperation.Divide && !HasFloat(mathematicLeft.Right))
-                {
-                    // "a / b > f" => "a > f * b" => "a / f > b"
-                    var newLeft = new MathematicExpression(mathematicLeft.Left, mathematicLeft.Operation, comparison.Right);
-                    var newComparison = new ComparisonExpression(newLeft, comparison.Operation, mathematicLeft.Right);
-                    comparison.CopyLocation(newComparison);
-                    comparison = newComparison;
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static ComparisonExpression EnsureSingleExpressionOnRightHandSide(ComparisonExpression comparison, InterpreterScope scope)
-        {
-            MathematicExpression newLeft;
-            ComparisonExpression newRoot;
-
-            // if the right hand side of the comparison is a mathematic, shift part of it to the left
-            // hand side so the right hand side eventually has a single value/address
-            var mathematic = comparison.Right as MathematicExpression;
-            if (mathematic == null)
-                return comparison;
-
-            bool moveLeft = true;
-
-            switch (mathematic.Operation)
-            {
-                case MathematicOperation.Add:
-                    if (mathematic.Right.Type == ExpressionType.IntegerConstant)
-                    {
-                        if (mathematic.Left.Type == ExpressionType.Mathematic)
-                        {
-                            var temp = new ComparisonExpression(comparison.Left, comparison.Operation, mathematic.Left);
-                            temp = EnsureSingleExpressionOnRightHandSide(temp, scope);
-
-                            mathematic = new MathematicExpression(temp.Right, MathematicOperation.Add, mathematic.Right);
-                            comparison = new ComparisonExpression(temp.Left, temp.Operation, mathematic);
-                        }
-
-                        // prefer to move the IntegerConstant unless a MemoryAccessor can be moved
-                        // note: prev() hides the memory accessor, so the IntegerConstant is given preference
-                        moveLeft = false;
-                    }
-                    break;
-
-                case MathematicOperation.Subtract:
-                    // the rightmost part of the right side will be moved to the left side as an addition
-                    moveLeft = false;
-                    break;
-
-                default:
-                    //result = new ParseErrorExpression("Cannot eliminate " + MathematicExpression.GetOperatorType(mathematic.Operation) +
-                    //    " from right side of comparison", comparisonExpression);
-                    //return false;
-                    return comparison;
-            }
-
-            if (moveLeft)
-            {
-                // left side is implicitly added on the right, so explicitly subtract it on the left
-                newLeft = new MathematicExpression(comparison.Left, MathematicOperation.Subtract, mathematic.Left);
-                newRoot = new ComparisonExpression(newLeft, comparison.Operation, mathematic.Right);
-            }
-            else
-            {
-                // invert the operation when moving the right side to the left
-                newLeft = new MathematicExpression(comparison.Left, MathematicExpression.GetOppositeOperation(mathematic.Operation), mathematic.Right);
-                newRoot = new ComparisonExpression(newLeft, comparison.Operation, mathematic.Left);
-            }
-
-            // ensure the IntegerConstant is the rightmost element of the left side
-            mathematic = comparison.Left as MathematicExpression;
-            if (mathematic != null && mathematic.Right.IsLiteralConstant)
-            {
-                newLeft.Left = mathematic.Left;
-                mathematic.Left = newLeft;
-                newRoot.Left = mathematic;
-            }
-
-            // recurse if necessary
-            return EnsureSingleExpressionOnRightHandSide(newRoot, scope);
-        }
-
-        private static void GetMinMax(ExpressionBase expression, InterpreterScope scope, out long min, out long max)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.Mathematic:
-                    var mathematic = (MathematicExpression)expression;
-
-                    long leftMin, leftMax;
-                    GetMinMax(mathematic.Left, scope, out leftMin, out leftMax);
-
-                    long rightMin, rightMax;
-                    GetMinMax(mathematic.Right, scope, out rightMin, out rightMax);
-
-                    switch (mathematic.Operation)
-                    {
-                        default:
-                        case MathematicOperation.Add:
-                            min = leftMin + rightMin;
-                            max = leftMax + rightMax;
-                            break;
-
-                        case MathematicOperation.Subtract:
-                            min = leftMin - rightMax;
-                            max = leftMax - rightMin;
-                            break;
-
-                        case MathematicOperation.Multiply:
-                            min = leftMin * rightMin;
-                            max = leftMax * rightMax;
-                            break;
-
-                        case MathematicOperation.Divide:
-                            if (mathematic.Left == mathematic.Right)
-                            {
-                                // A/A is either 0 or 1
-                                min = 0;
-                                max = 1;
-                            }
-                            else
-                            {
-                                // division by 0 will always return 0, so assume division by 1
-                                min = rightMax == 0 ? leftMin : leftMin / rightMax;
-                                max = rightMin == 0 ? leftMax : leftMax / rightMin;
-                            }
-                            break;
-
-                        case MathematicOperation.Modulus:
-                            // modulus will return at most right-1
-                            min = 0;
-                            max = rightMax - 1;
-                            break;
-
-                        case MathematicOperation.BitwiseAnd:
-                            // bitwise and will either return between 0 and all bits in the mask
-                            min = 0;
-                            max = rightMax;
-                            break;
-                    }
-                    break;
-
-                case ExpressionType.IntegerConstant:
-                    min = max = (uint)((IntegerConstantExpression)expression).Value;
-                    break;
-
-                case ExpressionType.FunctionCall:
-                    min = 0;
-                    max = 0xFFFFFFFF; // unknown function, assume it can return the full range of values
-                    break;
-                
-                case ExpressionType.MemoryAccessor:
-                    min = 0;
-                    max = Field.GetMaxValue(((MemoryAccessorExpression)expression).Field.Size);
-                    break;
-
-                default:
-                    min = 0;
-                    max = 0xFFFFFFFF;
-                    break;
-            }
-        }
-
-        private static bool HasDword(ExpressionBase expression, InterpreterScope scope)
-        {
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-            {
-                if (HasDword(mathematic.Left, scope) || HasDword(mathematic.Right, scope))
-                    return true;
-            }
-
-            var memoryAccessor = expression as MemoryAccessorExpression;
-            if (memoryAccessor != null)
-                return (memoryAccessor.Field.Size == FieldSize.DWord);
-
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall != null)
-            {
-                // assume the parameters might become reads. check them too
-                foreach (var parameter in functionCall.Parameters)
-                {
-                    if (HasDword(parameter, scope))
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool HasSubtract(ExpressionBase expression)
-        {
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-            {
-                if (mathematic.Operation == MathematicOperation.Subtract)
-                    return true;
-
-                if (HasSubtract(mathematic.Left) || HasSubtract(mathematic.Right))
-                    return true;
-            }
-
-            return false;
-        }
-
-        private static bool HasFloat(ExpressionBase expression)
-        {
-            if (expression.Type == ExpressionType.FloatConstant)
-                return true;
-
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-                return HasFloat(mathematic.Left) || HasFloat(mathematic.Right);
-
-            var memoryAccessor = expression as MemoryAccessorExpression;
-            if (memoryAccessor != null)
-            {
-                switch (memoryAccessor.Field.Size)
-                {
-                    case FieldSize.Float:
-                    case FieldSize.MBF32:
-                        return true;
-
-                    default:
-                        return false;
-                }
-            }
-
-            if (expression.Type == ExpressionType.FunctionCall)
-            {
-                // unknown function - assume it can return a float
-                return true;
-            }
-
-            return false;
-        }
-
-        static ExpressionBase AddConstant(ExpressionBase expr, int constant)
-        {
-            var temp = new MathematicExpression(expr, MathematicOperation.Add, new IntegerConstantExpression(constant));
-            return temp.MergeOperands();
-        }
-
-        static int ExtractConstant(ref ExpressionBase expr)
-        {
-            // ASSERT: BubbleUpIntegerConstants was previously called and any integer that is present
-            // will be the right part of the root node, or the root node itself
-            var mathematic = expr as MathematicExpression;
-            if (mathematic != null)
-            {
-                var integerConstant = mathematic.Right as IntegerConstantExpression;
-                if (integerConstant != null)
-                {
-                    // if an integer constant addition/subtraction was found, remove it
-                    switch (mathematic.Operation)
-                    {
-                        case MathematicOperation.Add:
-                            expr = mathematic.Left;
-                            return integerConstant.Value;
-
-                        case MathematicOperation.Subtract:
-                            expr = mathematic.Left;
-                            return -integerConstant.Value;
-
-                        default:
-                            break;
-                    }
-                }
-            }
-            else
-            {
-                // if there's only an integer constant, replace it with 0 and return its value
-                var integerConstant = expr as IntegerConstantExpression;
-                if (integerConstant != null)
-                {
-                    expr = new IntegerConstantExpression(0);
-                    return integerConstant.Value;
-                }
-            }
-
-            return 0;
-        }
-
-        private static bool HasUnderflowAdjustment(ExpressionBase expression, bool invert,
-            ref bool hasConstant, ref bool hasSubtractedFunction, ref bool hasNonSubtractedFunction)
-        {
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-            {
-                if (mathematic.Operation == MathematicOperation.Add || mathematic.Operation == MathematicOperation.Subtract)
-                {
-                    if (mathematic.Left.Type == ExpressionType.IntegerConstant ||
-                        mathematic.Right.Type == ExpressionType.IntegerConstant)
-                    {
-                        // explicit modification - assume underflow adjustment
-                        hasConstant = true;
-                        if (hasSubtractedFunction && hasNonSubtractedFunction)
-                            return true;
-                    }
-
-                    if (HasUnderflowAdjustment(mathematic.Left, invert, ref hasConstant,
-                        ref hasSubtractedFunction, ref hasNonSubtractedFunction))
-                    {
-                        return true;
-                    }
-
-                    if (mathematic.Operation == MathematicOperation.Subtract)
-                        invert = !invert;
-
-                    if (HasUnderflowAdjustment(mathematic.Right, invert, ref hasConstant,
-                        ref hasSubtractedFunction, ref hasNonSubtractedFunction))
-                    {
-                        return true;
-                    }
-                }
-            }
-            else
-            {
-                if (expression.Type == ExpressionType.MemoryAccessor)
-                {
-                    if (invert)
-                        hasSubtractedFunction = true;
-                    else
-                        hasNonSubtractedFunction = true;
-
-                    if (hasConstant && hasSubtractedFunction && hasNonSubtractedFunction)
-                        return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool HasUnderflowAdjustment(MathematicExpression expression)
-        {
-            bool hasConstant = false;
-            bool hasSubtractedFunction = false;
-            bool hasNonSubtractedFunction = false;
-            return HasUnderflowAdjustment(expression, false, ref hasConstant, ref hasSubtractedFunction, ref hasNonSubtractedFunction);
-        }
-
-        private static ComparisonExpression RearrangeToAvoidSubtraction(ComparisonExpression comparison)
-        {
-            var operation = comparison.Operation;
-
-            // extract integer constant from the left side
-            var left = comparison.Left;
-            var leftConstant = ExtractConstant(ref left);
-
-            // extract integer constant from the right side
-            var right = comparison.Right;
-            var rightConstant = ExtractConstant(ref right);
-
-            // ExtractConstant should remove the constants from both sides. if any are left, the expression
-            // was only a constant. if both were only constants, don't do any further processing.
-            if (left.Type == ExpressionType.IntegerConstant && right.Type == ExpressionType.IntegerConstant)
-                return comparison;
-
-            // merge the left constant with the right constant
-            rightConstant -= leftConstant;
-
-            // if no constant remains, just construct the comparison
-            if (rightConstant == 0)
-                return new ComparisonExpression(left, operation, right);
-
-            if (rightConstant > 0)
-            {
-                var integerConstant = new IntegerConstantExpression(rightConstant);
-                if (right.Type == ExpressionType.Mathematic)
-                {
-                    // A - N > B - C
-                    var newLeft = new MathematicExpression(left, MathematicOperation.Subtract, right);
-                    return new ComparisonExpression(newLeft, operation, integerConstant);
-                }
-                else
-                {
-                    var mathematicLeft = left as MathematicExpression;
-                    if (mathematicLeft == null)
-                    {
-                        if (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual)
-                        {
-                            // A - N == B  ~>  A - N == B
-                            var newLeft = new MathematicExpression(left, MathematicOperation.Subtract, integerConstant);
-                            return new ComparisonExpression(newLeft, operation, right);
-                        }
-                        else
-                        {
-                            // A - N < B  ~>  B + N > A
-                            var newLeft = new MathematicExpression(right, MathematicOperation.Add, integerConstant);
-                            return new ComparisonExpression(newLeft, InvertComparisonOperation(operation), left);
-                        }
-                    }
-
-                    if (mathematicLeft.Operation == MathematicOperation.Subtract)
-                    {
-                        var newRight = AddConstant(right, rightConstant);
-                        switch (operation)
-                        {
-                            case ComparisonOperation.GreaterThan:
-                            case ComparisonOperation.GreaterThanOrEqual:
-                                {
-                                    // A - B > N  ~>  N + B < A
-                                    var newLeft = new MathematicExpression(mathematicLeft.Right, MathematicOperation.Add, newRight);
-                                    return new ComparisonExpression(newLeft, InvertComparisonOperation(operation), mathematicLeft.Left);
-                                }
-
-                            default:
-                                if (right.Type != ExpressionType.IntegerConstant)
-                                {
-                                    // A - B == C + N  ~>  A - B - C == N
-                                    // A - B <= C + N  ~>  A - B - C <= N  [will have underflow added later]
-                                    var newLeft = new MathematicExpression(left, MathematicOperation.Subtract, right);
-                                    return new ComparisonExpression(newLeft, operation, integerConstant);
-                                }
-                                else
-                                {
-                                    // A - B == N  ~>  A - B == N
-                                    // A - B <= N  ~>  A - B <= N  [will have underflow added later]
-                                    return new ComparisonExpression(left, operation, newRight);
-                                }
-                        }
-                    }
-
-                    // A + B > N  ~>  A + B > N
-                    return new ComparisonExpression(left, operation, integerConstant);
-                }
-            }
-            else // if (rightConstant < 0)
-            {
-                var integerConstant = new IntegerConstantExpression(-rightConstant);
-
-                var mathematicLeft = left as MathematicExpression;
-                if (mathematicLeft == null)
-                {
-                    // A + N < B
-                    var newLeft = new MathematicExpression(left, MathematicOperation.Add, integerConstant);
-                    return new ComparisonExpression(newLeft, operation, right);
-                }
-
-                if (mathematicLeft.Operation == MathematicOperation.Subtract && mathematicLeft.Left.Type != ExpressionType.Mathematic)
-                {
-                    if (mathematicLeft.Left.Type == ExpressionType.IntegerConstant)
-                    {
-                        // 0 - A < -N  ~>  A > N
-
-                        // any other value would have been removed by ExtractConstant.
-                        // the 0 is necessary to perform the subtraction.
-                        Debug.Assert(((IntegerConstantExpression)mathematicLeft.Left).Value == 0);
-
-                        return new ComparisonExpression(mathematicLeft.Right, InvertComparisonOperation(operation), integerConstant);
-                    }
-
-                    // A - B < -N  ~>  A + N < B    [right is not mathematic per condition above]
-                    var newRight = AddConstant(right, -rightConstant);
-                    var newLeft = new MathematicExpression(mathematicLeft.Left, MathematicOperation.Add, newRight);
-                    return new ComparisonExpression(newLeft, operation, mathematicLeft.Right);
-                }
-                else
-                {
-                    // A - B - C < -N  ~>  no change, let underflow handle it
-                    var newRight = AddConstant(right, rightConstant);
-                    return new ComparisonExpression(left, operation, newRight);
-                }
-            }
-        }
-
-        private static bool CheckForUnderflow(ComparisonExpression comparison, InterpreterScope scope, out ExpressionBase result)
-        {
-            var right = comparison.Right;
-            var mathematicRight = right as MathematicExpression;
-            var left = comparison.Left;
-            var mathematicLeft = left as MathematicExpression;
-            bool checkForUnderflow = true;
-
-            if (mathematicLeft == null && mathematicRight == null)
-            {
-                // simple values on both sides
-                checkForUnderflow = false;
-            }
-            else
-            {
-                // if there's an explicit modification on the left hand side, and it's not an equality
-                // comparison, and there's a possibility of underflow (subtraction present), then assume
-                // it's a user-defined underflow adjustment and don't make any further modifications.
-                if (comparison.Operation != ComparisonOperation.Equal &&
-                    comparison.Operation != ComparisonOperation.NotEqual &&
-                    mathematicLeft != null && HasUnderflowAdjustment(mathematicLeft))
-                {
-                    checkForUnderflow = false;
-                }
-
-                // bubble up integer constants on both sides.
-                if (mathematicLeft != null)
-                    left = MathematicExpression.BubbleUpIntegerConstant(mathematicLeft);
-
-                if (mathematicRight != null)
-                    right = MathematicExpression.BubbleUpIntegerConstant(mathematicRight);
-
-                // BubbleUpIntegerConstant modifies the tree. update comparison
-                comparison = new ComparisonExpression(left, comparison.Operation, right);
-
-                // if the result of subtracting two bytes is negative, it becomes a very large positive number.
-                // so a check for less than some byte value may fail. Attempt to eliminate subtractions.
-                if (checkForUnderflow)
-                    comparison = RearrangeToAvoidSubtraction(comparison);
-            }
-
-            // shift stuff around so there's only a single expression on the right hand side
-            comparison = EnsureSingleExpressionOnRightHandSide(comparison, scope);
-
-            // if subtractions still exist, add a constant to both sides of the equation to prevent the
-            // subtraction from resulting in a negative number.
-            switch (comparison.Operation)
-            {
-                case ComparisonOperation.Equal:
-                case ComparisonOperation.NotEqual:
-                    // direct comparisons aren't affected by underflow.
-                    checkForUnderflow = false;
-                    break;
-
-                case ComparisonOperation.GreaterThan:
-                case ComparisonOperation.GreaterThanOrEqual:
-                    // greater than comparisons are always affected by underflow, even if a user-defined adjustment is provided
-                    checkForUnderflow = true;
-                    break;
-            }
-
-            // if the right side is a negative constant, attempt to adjust for it by forcing an underflow check
-            var integerConstant = comparison.Right as IntegerConstantExpression;
-            if (integerConstant != null && integerConstant.Value < 0)
-            {
-                if (HasSubtract(comparison.Left))
-                {
-                    // if the left side has a subtraction, the result could be negative. handle it with underflow
-                    checkForUnderflow = true;
-                }
-                else if (HasDword(comparison.Left, scope))
-                {
-                    // if there's a 32-bit read, the value might not be signed. don't adjust it
-                }
-                else
-                {
-                    // no 32-bit reads, and no subtraction - the comparison will never be true
-                    result = new ErrorExpression("Expression can never be true");
-                    return false;
-                }
-            }
-
-            if (checkForUnderflow)
-            {
-                // if the equation has a 32-bit read, the value may not actually be signed
-                mathematicLeft = comparison.Left as MathematicExpression;
-                if (mathematicLeft != null && !HasDword(mathematicLeft, scope))
-                {
-                    long min, max;
-                    GetMinMax(mathematicLeft, scope, out min, out max);
-                    var underflowAdjustment = -(int)min;
-
-                    // attempt to adjust the negative value up to 0.
-                    if (integerConstant != null && integerConstant.Value < 0)
-                    {
-                        var negativeAdjustment = -integerConstant.Value;
-                        if (underflowAdjustment < negativeAdjustment)
-                            underflowAdjustment = negativeAdjustment;
-                    }
-
-                    if (underflowAdjustment > 0)
-                    {
-                        if (comparison.Right is IntegerConstantExpression)
-                        {
-                            var newLeft = AddConstant(comparison.Left, underflowAdjustment);
-                            var newRight = AddConstant(comparison.Right, underflowAdjustment);
-                            comparison = new ComparisonExpression(newLeft, comparison.Operation, newRight);
-                        }
-                        else
-                        {
-                            GetMinMax(comparison.Right, scope, out min, out max);
-                            underflowAdjustment += (int)max;
-
-                            ExpressionBase newLeft = new MathematicExpression(comparison.Left, MathematicOperation.Subtract, comparison.Right);
-                            newLeft = AddConstant(newLeft, underflowAdjustment);
-                            var newRight = new IntegerConstantExpression(underflowAdjustment);
-                            comparison = new ComparisonExpression(newLeft, comparison.Operation, newRight);
-                        }
-                    }
-                }
-            }
-
-            result = comparison;
-            return true;
         }
 
         private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
@@ -1028,19 +232,46 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            // prefer "a == 1" over "1 == a"
             var comparison = new ComparisonExpression(left, Operation, right);
-            if (!MoveConstantsToRightHandSide(comparison, scope, out result))
-                return false;
-            comparison = (ComparisonExpression)result;
-
-            // check for underflow
-            if (!CheckForUnderflow(comparison, scope, out result))
+            do
             {
-                CopyLocation(result);
-                return false;
-            }
-            comparison = (ComparisonExpression)result;
+                if (comparison.Left.Type != comparison.Right.Type)
+                {
+                    // attempt to find a common type to perform the comparison
+                    var converter = comparison.Left as IUpconvertibleExpression;
+                    var newLeft = (converter != null) ? converter.UpconvertTo(comparison.Right.Type) : null;
+                    if (newLeft != null)
+                    {
+                        comparison = new ComparisonExpression(newLeft, comparison.Operation, comparison.Right);
+                    }
+                    else
+                    {
+                        converter = comparison.Right as IUpconvertibleExpression;
+                        var newRight = (converter != null) ? converter.UpconvertTo(comparison.Left.Type) : null;
+                        if (newRight != null)
+                            comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
+                    }
+                }
+
+                var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
+                if (comparisonNormalize == null)
+                    break;
+
+                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation);
+                if (newComparison == null)
+                {
+                    // could not make any further normalizations, we're done
+                    break;
+                }
+
+                comparison = newComparison as ComparisonExpression;
+                if (comparison == null)
+                {
+                    result = newComparison;
+                    CopyLocation(result);
+                    return (result.Type != ExpressionType.Error);
+                }
+            } while (true);
 
             // remove bcd() from both sides (if possible)
             if (!NormalizeBCD(comparison, out result))
@@ -1081,6 +312,55 @@ namespace RATools.Parser.Expressions
 
             CopyLocation(result);
             return true;
+        }
+
+        public static ExpressionBase NormalizeFloatComparisonForInteger(ExpressionBase left, ComparisonOperation operation, ExpressionBase right)
+        {
+            var floatRight = right as FloatConstantExpression;
+            if (floatRight != null)
+            {
+                right = new IntegerConstantExpression((int)floatRight.Value);
+
+                // if comparing against a non-fractional right side, just convert it to an IntegerConstantExpression
+                if (System.Math.Floor(floatRight.Value) == floatRight.Value)
+                    return new ComparisonExpression(left, operation, right);
+
+                // right has been floored, proceed.
+            }
+
+            // should be passed the floored value, or a float which has been floored by this point
+            Debug.Assert(right.Type == ExpressionType.IntegerConstant);
+
+            switch (operation)
+            {
+                case ComparisonOperation.Equal:
+                    // integer a == 4.2 can never be true
+                    return new ErrorExpression("Result can never be true using integer math");
+
+                case ComparisonOperation.NotEqual:
+                    // integer a != 4.2 is always true
+                    return new ErrorExpression("Result is always true using integer math");
+
+                case ComparisonOperation.LessThan:
+                    // integer a < 4.2 becomes integer a <= 4
+                    operation = ComparisonOperation.LessThanOrEqual;
+                    break;
+
+                case ComparisonOperation.LessThanOrEqual:
+                    // integer a <= 4.2 becomes integer a <= 4
+                    break;
+
+                case ComparisonOperation.GreaterThan:
+                    // integer a > 4.2 becomes integer a > 4
+                    break;
+
+                case ComparisonOperation.GreaterThanOrEqual:
+                    // integer a >= 4.2 becomes integer a > 4
+                    operation = ComparisonOperation.GreaterThan;
+                    break;
+            }
+
+            return new ComparisonExpression(left, operation, right);
         }
 
         /// <summary>

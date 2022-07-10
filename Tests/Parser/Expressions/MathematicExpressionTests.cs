@@ -378,7 +378,8 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase("byte(0) - 3 + 3", "byte(0)")]
         [TestCase("byte(0) * 4 * 2", "byte(0) * 8")]
         [TestCase("byte(0) * 4 / 2", "byte(0) * 2")]
-        [TestCase("byte(0) * 2 / 4", "byte(0) * 2 / 4")] // don't convert integer division to float yet
+        [TestCase("byte(0) * 2 / 4", "byte(0) / 2")] // whole integer division can be converted
+        [TestCase("byte(0) * 3 / 4", "byte(0) * 3 / 4")] // don't convert integer division to float yet
         [TestCase("byte(0) * 2.0 / 4", "byte(0) * 0.5")] // do convert partial float division to float
         [TestCase("byte(0) * 2 / 4.0", "byte(0) * 0.5")] // do convert partial float division to float
         [TestCase("byte(0) * 2 / 3.0", "byte(0) * 0.666667")] // do convert partial float division to float
@@ -388,7 +389,7 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase("byte(0) / 2 * 4", "byte(0) / 2 * 4")] // divide followed by multiply removes the modulus portion, cannot combine
         [TestCase("byte(0) / 3 * 3", "byte(0) / 3 * 3")] // divide followed by multiply removes the modulus portion, cannot combine
         [TestCase("byte(0) / 4.0 / 2", "byte(0) / 8.0")]
-        [TestCase("byte(0) / 4.0 * 2", "byte(0) * 0.5")] // divide followed by multiply with floats can be merged
+        [TestCase("byte(0) / 4.0 * 2", "byte(0) / 2.0")] // divide followed by multiply with floats can be merged
         [TestCase("byte(0) & 12 & 5", "byte(0) & 4")] // bitwise and is commutative. prefer merging constants
         [TestCase("byte(0) & 12 * 5", "byte(0) & 60")] // multiplication has higher precedence
         [TestCase("byte(0) & 12 - 5", "byte(0) & 7")] // addition has higher precedence

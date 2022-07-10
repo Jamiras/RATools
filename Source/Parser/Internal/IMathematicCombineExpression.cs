@@ -2,7 +2,7 @@
 
 namespace RATools.Parser.Internal
 {
-    internal interface IMathematicCombineOperation
+    internal interface IMathematicCombineExpression
     {
         /// <summary>
         /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.

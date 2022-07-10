@@ -255,6 +255,25 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets whether or not the value of this field is a floating point number.
+        /// </summary>
+        public bool IsFloat
+        {
+            get
+            {
+                switch (Size)
+                {
+                    case FieldSize.Float:
+                    case FieldSize.MBF32:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>
         /// Appends the serialized field to the <paramref name="builder"/>
         /// </summary>
         /// <remarks>

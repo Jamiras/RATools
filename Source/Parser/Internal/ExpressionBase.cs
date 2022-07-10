@@ -1185,7 +1185,7 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// A mathematic chain of MemoryAccessors (AddSource/SubSource)
         /// </summary>
-        RequirementClause,
+        MemoryValue,
 
         /// <summary>
         /// A comparison of requirement clauses. (manages AddHits chain)

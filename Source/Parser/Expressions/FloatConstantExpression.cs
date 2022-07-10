@@ -1,9 +1,10 @@
-﻿using RATools.Parser.Internal;
+﻿using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FloatConstantExpression : ExpressionBase, IMathematicCombineOperation
+    internal class FloatConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public FloatConstantExpression(float value)
             : base(ExpressionType.FloatConstant)
@@ -122,6 +123,10 @@ namespace RATools.Parser.Expressions
                 }
             }
 
+            var memoryAccessor = right as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+                return memoryAccessor.CombineInverse(this, operation);
+
             if (right is StringConstantExpression)
             {
                 var builder = new StringBuilder();
@@ -131,6 +136,46 @@ namespace RATools.Parser.Expressions
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Normalizes the comparison between the current expression and the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to compare with the current expression.</param>
+        /// <param name="operation">How to compare the expressions.</param>
+        /// <returns>
+        /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
+        /// </returns>
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        {
+            var integerRight = right as IntegerConstantExpression;
+            if (integerRight != null)
+                right = new FloatConstantExpression((float)integerRight.Value);
+
+            var floatRight = right as FloatConstantExpression;
+            if (floatRight != null)
+            {
+                switch (operation)
+                {
+                    case ComparisonOperation.Equal:
+                        return new BooleanConstantExpression(Value == floatRight.Value);
+                    case ComparisonOperation.NotEqual:
+                        return new BooleanConstantExpression(Value != floatRight.Value);
+                    case ComparisonOperation.GreaterThan:
+                        return new BooleanConstantExpression(Value > floatRight.Value);
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        return new BooleanConstantExpression(Value >= floatRight.Value);
+                    case ComparisonOperation.LessThan:
+                        return new BooleanConstantExpression(Value < floatRight.Value);
+                    case ComparisonOperation.LessThanOrEqual:
+                        return new BooleanConstantExpression(Value <= floatRight.Value);
+                    default:
+                        return null;
+                }
+            }
+
+            // prefer constants on right side of comparison
+            return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
         }
     }
 }
