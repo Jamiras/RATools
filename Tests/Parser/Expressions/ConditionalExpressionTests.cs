@@ -68,9 +68,9 @@ namespace RATools.Tests.Parser.Expressions
             input = input.Replace("B", "byte(11)");
             input = input.Replace("C", "byte(12)");
 
-            expected = expected.Replace("A", "byte(10)");
-            expected = expected.Replace("B", "byte(11)");
-            expected = expected.Replace("C", "byte(12)");
+            expected = expected.Replace("A", "byte(0x00000A)");
+            expected = expected.Replace("B", "byte(0x00000B)");
+            expected = expected.Replace("C", "byte(0x00000C)");
 
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var expression = ExpressionBase.Parse(tokenizer);

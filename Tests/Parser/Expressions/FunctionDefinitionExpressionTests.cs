@@ -143,7 +143,7 @@ namespace RATools.Tests.Parser.Expressions
 
             var builder = new StringBuilder();
             expr.DefaultParameters["j"].AppendString(builder);
-            Assert.That(builder.ToString(), Is.EqualTo("byte(4660)"));
+            Assert.That(builder.ToString(), Is.EqualTo("byte(0x001234)"));
 
             Assert.That(expr.Expressions.Count, Is.EqualTo(1));
 

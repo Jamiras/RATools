@@ -78,9 +78,7 @@ namespace RATools.Tests.Parser.Expressions
 
             var builder1 = new StringBuilder();
             arrayResult.Entries[0].AppendString(builder1);
-            var builder2 = new StringBuilder();
-            value.AppendString(builder2);
-            Assert.That(builder1.ToString(), Is.EqualTo(builder2.ToString()));
+            Assert.That(builder1.ToString(), Is.EqualTo("byte(0x000001)"));
         }
 
         [Test]
