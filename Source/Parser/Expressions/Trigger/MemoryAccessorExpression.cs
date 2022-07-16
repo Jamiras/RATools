@@ -49,6 +49,11 @@ namespace RATools.Parser.Expressions.Trigger
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected List<Requirement> _pointerChain;
 
+        public bool HasPointerChain
+        {
+            get { return _pointerChain != null && _pointerChain.Count > 0; }
+        }
+
         public void AddPointer(Requirement pointer)
         {
             if (_pointerChain == null)

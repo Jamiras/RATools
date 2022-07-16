@@ -19,8 +19,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234) == 10", "0xH001234=10")]
         [TestCase("byte(0x1234) > byte(0x2345)", "0xH001234>0xH002345")]
         [TestCase("byte(0x1234) / byte(0x2345) < 10", "A:0xH001234/0xH002345_0<10")]
-        [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/f0.8_0<0xH002345")]
-        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "Cannot generate condition using both Divide and Multiply")]
+        [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/0xH002345_0<f0.8")]
+        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "Cannot generate condition using both Multiply and Divide")]
         public void TestGetConditionString(string input, string expected)
         {
             ExpressionBase error;
@@ -74,13 +74,13 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234 + byte(0x2345)) + 1", "I:0xH002345_A:0xH001234_M:1")]
         [TestCase("byte(0x1234 + byte(0x2345)) + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_I:0xH002345_M:0xH001235")]
         [TestCase("byte(0x1234 + byte(0x2345)) + byte(0x1235 + byte(0x2345)) + 1", "I:0xH002345_A:0xH001234_I:0xH002345_A:0xH001235_M:1")]
-        [TestCase("byte(0x1234 + byte(0x2345)) + 1 + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_A:1_I:0xH002345_M:0xH001235")]
+        [TestCase("byte(0x1234 + byte(0x2345)) + 1 + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_I:0xH002345_A:0xH001235_M:1")]
         [TestCase("1 + byte(0x1234 + byte(0x2345))", "I:0xH002345_A:0xH001234_M:1")]
         [TestCase("byte(0x1234 + byte(0x2345)) - 1", "B:1_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) - byte(0x1235 + byte(0x2345))", "I:0xH002345_B:0xH001235_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) * 2", "I:0xH002345_M:0xH001234*2")]
-        [TestCase("byte(0x1234 + byte(0x2345)) / 2", "I:0xH002345_M:0xH001234*f0.5")] // implicitly measured value will multiply by a fraction
-        [TestCase("measured(byte(0x1234 + byte(0x2345)) / 2)", "I:0xH002345_M:0xH001234/2")] // explicitly measured value will keep the division
+        [TestCase("byte(0x1234 + byte(0x2345)) / 2", "I:0xH002345_M:0xH001234/2")]
+        [TestCase("measured(byte(0x1234 + byte(0x2345)) / 2)", "I:0xH002345_M:0xH001234/2")]
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234)))", "M:0xH001234!=d0xH001234")]
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
         [TestCase("tally(0, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
