@@ -91,7 +91,8 @@ namespace RATools.Parser.Expressions.Trigger
                             if (remainder is IntegerConstantExpression && ((IntegerConstantExpression)remainder).Value != 0)
                             {
                                 // remainder after dividing, don't do it
-                                return null;
+                                // return a MathematicExpression for now, it may get reduced in a comparison normalization
+                                return new MathematicExpression(this, operation, right);
                             }
                         }
 

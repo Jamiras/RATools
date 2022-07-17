@@ -64,6 +64,7 @@ namespace RATools.Tests.Parser.Functions
             "trigger_when(byte(0x000001) == 56 || byte(0x000002) == 3) && trigger_when(byte(0x000001) == 55 || byte(0x000002) == 4)")] // and can be separated, but not nested ors
         [TestCase("trigger_when((byte(1) == 56 && byte(2) == 3) && (byte(1) == 55 || byte(2) == 4))",
             "trigger_when(byte(0x000001) == 56) && trigger_when(byte(0x000002) == 3) && trigger_when(byte(0x000001) == 55 || byte(0x000002) == 4)")] // and can be separated, but not nested ors
+        [TestCase("never(0 + byte(1) + byte(2) == 56)", "never(byte(0x000001) + byte(0x000002) == 56)")]
         public void TestReplaceVariables(string input, string expected)
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());

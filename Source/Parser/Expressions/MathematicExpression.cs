@@ -151,7 +151,7 @@ namespace RATools.Parser.Expressions
                     result = inverseCombinable.CombineInverse(left, Operation);
 
                 if (result == null)
-                    result = new MathematicExpression(left, Operation, right);
+                    result = CreateCannotCombineError(left, Operation, right);
             }
 
             if (result.Location.IsEmpty)
