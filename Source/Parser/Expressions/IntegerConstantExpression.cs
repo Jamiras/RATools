@@ -96,10 +96,6 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            var memoryAccessor = right as MemoryAccessorExpression;
-            if (memoryAccessor != null)
-                return memoryAccessor.CombineInverse(this, operation);
-
             if (right is FloatConstantExpression)
             {
                 var floatLeft = new FloatConstantExpression((float)Value) { Location = this.Location };

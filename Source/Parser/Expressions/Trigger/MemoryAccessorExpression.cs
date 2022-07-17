@@ -8,7 +8,8 @@ using System.Text;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal class MemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
-        IMathematicCombineExpression, IComparisonNormalizeExpression, IUpconvertibleExpression
+        IMathematicCombineExpression, IMathematicCombineInverseExpression,
+        IComparisonNormalizeExpression, IUpconvertibleExpression
     {
         public MemoryAccessorExpression(FieldType type, FieldSize size, uint value)
             : this(new Field { Type = type, Size = size, Value = value })

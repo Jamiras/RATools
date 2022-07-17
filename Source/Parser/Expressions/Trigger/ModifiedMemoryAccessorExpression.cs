@@ -6,7 +6,8 @@ using System.Text;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal class ModifiedMemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression,
-        IMathematicCombineExpression, IComparisonNormalizeExpression, IUpconvertibleExpression
+        IMathematicCombineExpression, IMathematicCombineInverseExpression,
+        IComparisonNormalizeExpression, IUpconvertibleExpression
     {
         public ModifiedMemoryAccessorExpression()
             : base(ExpressionType.ModifiedMemoryAccessor)
@@ -111,6 +112,32 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var modifiedMemoryAccessorExpression = Clone();
             return modifiedMemoryAccessorExpression.ApplyMathematic(right, operation);
+        }
+
+        public ExpressionBase CombineInverse(ExpressionBase left, MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Add:
+                case MathematicOperation.Subtract:
+                    var clause = new MemoryValueExpression();
+                    clause = clause.ApplyMathematic(left, MathematicOperation.Add) as MemoryValueExpression;
+                    if (clause != null)
+                        return clause.ApplyMathematic(this, operation);
+                    break;
+
+                case MathematicOperation.Multiply:
+                case MathematicOperation.BitwiseAnd:
+                    return Combine(left, operation);
+
+                case MathematicOperation.Divide:
+                    return new ErrorExpression("Cannot divide by a complex runtime value");
+
+                case MathematicOperation.Modulus:
+                    return new ErrorExpression("Cannot modulus using a runtime value");
+            }
+
+            return null;
         }
 
         public ExpressionBase ApplyMathematic(ExpressionBase right, MathematicOperation operation)

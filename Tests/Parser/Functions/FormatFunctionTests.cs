@@ -36,7 +36,7 @@ namespace RATools.Tests.Parser.Functions
             }
         }
 
-        private string Evaluate(string formatString, ExpressionBase[] parameters)
+        private static string Evaluate(string formatString, ExpressionBase[] parameters)
         {
             var newParameters = new List<ExpressionBase>();
             newParameters.Add(new StringConstantExpression(formatString));
@@ -131,7 +131,7 @@ namespace RATools.Tests.Parser.Functions
             }), Is.EqualTo("1 + 2 = 3"));
         }
 
-        private string EvaluateError(string formatString, ExpressionBase[] parameters)
+        private static string EvaluateError(string formatString, ExpressionBase[] parameters)
         {
             var newParameters = new List<ExpressionBase>();
             newParameters.Add(new StringConstantExpression(formatString));
@@ -183,8 +183,16 @@ namespace RATools.Tests.Parser.Functions
         [Test]
         public void TestComparisonParameter()
         {
-            Assert.That(EvaluateError("{0}", new ExpressionBase[] {
+            Assert.That(Evaluate("{0}", new ExpressionBase[] {
                 new ComparisonExpression(new IntegerConstantExpression(1), ComparisonOperation.LessThan, new IntegerConstantExpression(2))
+            }), Is.EqualTo("true"));
+        }
+
+        [Test]
+        public void TestInvalidComparisonParameter()
+        {
+            Assert.That(EvaluateError("{0}", new ExpressionBase[] {
+                new ComparisonExpression(new IntegerConstantExpression(1), ComparisonOperation.LessThan, new StringConstantExpression("banana"))
             }), Is.EqualTo("Cannot convert expression to string"));
         }
     }

@@ -145,7 +145,14 @@ namespace RATools.Parser.Expressions
             var combinable = left as IMathematicCombineExpression;
             result = (combinable != null) ? combinable.Combine(right, Operation) : null;
             if (result == null)
-                result = new MathematicExpression(left, Operation, right);
+            {
+                var inverseCombinable = right as IMathematicCombineInverseExpression;
+                if (inverseCombinable != null)
+                    result = inverseCombinable.CombineInverse(left, Operation);
+
+                if (result == null)
+                    result = new MathematicExpression(left, Operation, right);
+            }
 
             if (result.Location.IsEmpty)
                 CopyLocation(result);
@@ -198,7 +205,14 @@ namespace RATools.Parser.Expressions
                 result = combinable.Combine(right, operation);
 
             if (result == null)
-                result = CreateCannotCombineError(left, operation, right);
+            {
+                var inverseCombinable = right as IMathematicCombineInverseExpression;
+                if (inverseCombinable != null)
+                    result = inverseCombinable.CombineInverse(left, operation);
+
+                if (result == null)
+                    result = CreateCannotCombineError(left, operation, right);
+            }
 
             result.Location = left.Location.Union(right.Location);
             return (result is not ErrorExpression);

@@ -86,6 +86,7 @@ namespace RATools.Tests.Parser
         [TestCase("tally(0, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
         [TestCase("tally(20, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234.20._R:0xH002345=1")]
         [TestCase("byte(byte(0x1234) - 10)", "I:0xH001234_M:0xHfffffff6")]
+        [TestCase("measured(repeated(10, byte(0x2345 + word(0x1234) * 4) == 6)))", "I:0x 001234*4_M:0xH002345=6.10.")]
         public void TestGetValueString(string input, string expected)
         {
             ExpressionBase error;

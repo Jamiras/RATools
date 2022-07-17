@@ -72,6 +72,8 @@ namespace RATools.Parser.Functions
                     };
                     return result;
                 }
+
+                return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
             }
 
             var modifiedMemoryAccessor = address as ModifiedMemoryAccessorExpression;

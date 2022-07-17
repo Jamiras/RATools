@@ -31,67 +31,55 @@ namespace RATools.Parser.Functions
 
             if (!parameter.ReplaceVariables(scope, out result))
                 return false;
-            parameter = result;
 
-            // convert "prev(a + b)" => "prev(a) + prev(b)"
-            var mathematic = parameter as MathematicExpression;
-            if (mathematic != null)
-                return ReplaceVariablesMathematic(mathematic, scope, out result);
+            if (!ReplaceVariables(result, scope, out result))
+                return false;
 
-            // make sure accessor is a memory accessor
-            return WrapMemoryAccessor(parameter, scope, out result);
+            CopyLocation(result);
+            return true;
+        }
+
+        private bool ReplaceVariables(ExpressionBase parameter, InterpreterScope scope, out ExpressionBase result)
+        { 
+            switch (parameter.Type)
+            {
+                case ExpressionType.Mathematic:
+                    // convert "prev(a + b)" => "prev(a) + prev(b)"
+                    return ReplaceVariablesMathematic((MathematicExpression)parameter, scope, out result);
+
+                case ExpressionType.MemoryAccessor:
+                    return WrapMemoryAccessor((MemoryAccessorExpression)parameter, scope, out result);
+
+                case ExpressionType.ModifiedMemoryAccessor:
+                    return WrapModifiedMemoryAccessor((ModifiedMemoryAccessorExpression)parameter, scope, out result);
+
+                case ExpressionType.MemoryValue:
+                    return WrapMemoryValue((MemoryValueExpression)parameter, scope, out result);
+            }
+
+            result = new ErrorExpression("accessor did not evaluate to a memory accessor", parameter);
+            return false;
         }
 
         private bool ReplaceVariablesMathematic(MathematicExpression mathematic, InterpreterScope scope, out ExpressionBase result)
         {
             // assert: left/right already expanded by calling function
             var left = mathematic.Left;
-
-            var mathematicLeft = left as MathematicExpression;
-            if (mathematicLeft != null)
-            {
-                if (!ReplaceVariablesMathematic(mathematicLeft, scope, out result))
-                    return false;
-
-                left = result;
-            }
-            else if (left.Type != ExpressionType.IntegerConstant)
-            {
-                if (!WrapMemoryAccessor(left, scope, out result))
-                    return false;
-                left = result;
-            }
+            if (!ReplaceVariables(left, scope, out result))
+                return false;
+            left = result;
 
             var right = mathematic.Right;
-            var mathematicRight = right as MathematicExpression;
-            if (mathematicRight != null)
-            {
-                if (!ReplaceVariablesMathematic(mathematicRight, scope, out result))
-                    return false;
-
-                right = result;
-            }
-            else if (right.Type != ExpressionType.IntegerConstant)
-            {
-                if (!WrapMemoryAccessor(right, scope, out result))
-                    return false;
-                right = result;
-            }
+            if (!ReplaceVariables(right, scope, out result))
+                return false;
+            right = result;
 
             result = new MathematicExpression(left, mathematic.Operation, right);
-            CopyLocation(result);
             return true;
         }
 
-        private bool WrapMemoryAccessor(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
+        private bool WrapMemoryAccessor(MemoryAccessorExpression memoryAccessor, InterpreterScope scope, out ExpressionBase result)
         {
-            var memoryAccessor = expression as MemoryAccessorExpression;
-            if (memoryAccessor == null)
-            {
-                result = new ErrorExpression("accessor did not evaluate to a memory accessor", expression);
-                return false;
-            }
-
             if (_fieldType == FieldType.BinaryCodedDecimal)
             {
                 result = new BinaryCodedDecimalExpression(memoryAccessor);
@@ -109,16 +97,65 @@ namespace RATools.Parser.Functions
 
                 case FieldType.Value:
                 case FieldType.Float:
-                    result = new ErrorExpression("cannot apply modifier to constant", expression);
+                    result = new ErrorExpression("cannot apply modifier to constant", memoryAccessor);
                     return false;
 
                 default:
-                    result = new ErrorExpression("cannot apply multiple modifiers to memory accessor", expression);
+                    result = new ErrorExpression("cannot apply multiple modifiers to memory accessor", memoryAccessor);
                     return false;
             }
 
             result = memoryAccessor;
-            CopyLocation(result);
+            return true;
+        }
+
+        private bool WrapModifiedMemoryAccessor(ModifiedMemoryAccessorExpression memoryAccessor, InterpreterScope scope, out ExpressionBase result)
+        {
+            if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, scope, out result))
+                return false;
+
+            var clone = memoryAccessor.Clone();
+            clone.MemoryAccessor = (MemoryAccessorExpression)result;
+            if (!UpdateModifier(clone, out result))
+                return false;
+
+            result = clone;
+            return true;
+        }
+
+        private bool WrapMemoryValue(MemoryValueExpression memoryValue, InterpreterScope scope, out ExpressionBase result)
+        {
+            var clone = memoryValue.Clone();
+            foreach (var memoryAccessor in clone.MemoryAccessors)
+            {
+                if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, scope, out result))
+                    return false;
+
+                memoryAccessor.MemoryAccessor = (MemoryAccessorExpression)result;
+
+                if (!UpdateModifier(memoryAccessor, out result))
+                    return false;
+            }
+
+            result = clone;
+            return true;
+        }
+
+        private bool UpdateModifier(ModifiedMemoryAccessorExpression memoryAccessor, out ExpressionBase error)
+        {
+            if (memoryAccessor.ModifyingOperator != RequirementOperator.None &&
+                memoryAccessor.Modifier.IsMemoryReference)
+            {
+                if (memoryAccessor.Modifier.Type != FieldType.MemoryAddress)
+                {
+                    error = new ErrorExpression("cannot apply multiple modifiers to memory accessor", memoryAccessor);
+                    return false;
+                }
+
+                memoryAccessor.Modifier = memoryAccessor.Modifier.ChangeType(_fieldType);
+            }
+
+            error = null;
             return true;
         }
     }
