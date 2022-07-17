@@ -30,6 +30,8 @@ namespace RATools.Parser.Expressions.Trigger
                     var memoryAccessor = (MemoryAccessorExpression)expression;
                     if (memoryAccessor.PointerChain.Any())
                         goto default;
+                    if (expression is BinaryCodedDecimalExpression)
+                        return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);
                     return memoryAccessor.Field;
 
                 default:

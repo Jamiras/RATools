@@ -98,7 +98,7 @@ namespace RATools.Parser
                             if ((term.multiplier % 1) == 0)
                             {
                                 // value is a whole number, just output it
-                                builder.Append((int)term.multiplier);
+                                builder.Append((int)(uint)term.multiplier);
                             }
                             else
                             {
@@ -292,17 +292,14 @@ namespace RATools.Parser
 
         private static Term ConvertToTerm(MemoryAccessorExpression memoryAccessor, out ExpressionBase error)
         {
-            if (!memoryAccessor.HasPointerChain)
-            {
-                error = null;
-                return new Term { field = FieldFactory.CreateField(memoryAccessor) };
-            }
-
             var requirements = new List<Requirement>();
             var context = new TriggerBuilderContext { Trigger = requirements };
             error = memoryAccessor.BuildTrigger(context);
             if (error != null)
                 return null;
+
+            if (requirements.Count == 1 && requirements[0].Operator == RequirementOperator.None)
+                return new Term { field = requirements[0].Left };
 
             if (requirements.Last().Type == RequirementType.None)
                 requirements.Last().Type = RequirementType.AddSource;
@@ -320,7 +317,12 @@ namespace RATools.Parser
             if (term.measured == null)
             {
                 if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
+                {
+                    if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
+                        term.multiplier = -1.0;
+
                     return term;
+                }
 
                 if (modifiedMemoryAccessor.Modifier.IsMemoryReference)
                 {

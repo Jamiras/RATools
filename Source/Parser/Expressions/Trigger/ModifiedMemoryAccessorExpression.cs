@@ -80,13 +80,27 @@ namespace RATools.Parser.Expressions.Trigger
                 clone.Field = Modifier;
                 clone.AppendString(builder);
             }
-            else if (ModifyingOperator == RequirementOperator.BitwiseAnd)
-            {
-                Modifier.AppendString(builder, NumberFormat.Hexadecimal);
-            }
             else
-            { 
-                Modifier.AppendString(builder, NumberFormat.Decimal);
+            {
+                switch (ModifyingOperator)
+                {
+                    case RequirementOperator.BitwiseAnd:
+                        Modifier.AppendString(builder, NumberFormat.Hexadecimal);
+                        break;
+
+                    case RequirementOperator.Multiply:
+                    case RequirementOperator.Divide:
+                        if (Modifier.Type != FieldType.Value)
+                            goto default; // default formating for floats
+
+                        // print signed values for integer multiplication and division
+                        builder.Append((int)Modifier.Value);
+                        break;
+
+                    default:
+                        Modifier.AppendString(builder, NumberFormat.Decimal);
+                        break;
+                }
             }
         }
 

@@ -51,10 +51,12 @@ namespace RATools.Tests.Parser
         [TestCase("1 + 3 * 2", "v7")]
         [TestCase("byte(0x1234)", "0xH001234")]
         [TestCase("byte(0x1234) * 10", "0xH001234*10")]
+        [TestCase("byte(0x1234) * -10", "0xH001234*-10")]
         [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
         [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) + 10", "0xH001234_v10")]
         [TestCase("byte(0x1234) - 10", "0xH001234_v-10")]
+        [TestCase("10 - byte(0x1234)", "0xH001234*-1_v10")]
         [TestCase("(byte(0) + byte(1)) * 10", "0xH000000*10_0xH000001*10")]
         [TestCase("(byte(0) + 2) * 10", "0xH000000*10_v20")]
         [TestCase("(byte(0) + byte(1)) / 10", "0xH000000*0.1_0xH000001*0.1")]
@@ -87,6 +89,8 @@ namespace RATools.Tests.Parser
         [TestCase("tally(20, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234.20._R:0xH002345=1")]
         [TestCase("byte(byte(0x1234) - 10)", "I:0xH001234_M:0xHfffffff6")]
         [TestCase("measured(repeated(10, byte(0x2345 + word(0x1234) * 4) == 6)))", "I:0x 001234*4_M:0xH002345=6.10.")]
+        [TestCase("prev(byte(0x1234))", "d0xH001234")]
+        [TestCase("bcd(byte(0x1234))", "b0xH001234")]
         public void TestGetValueString(string input, string expected)
         {
             ExpressionBase error;
