@@ -69,7 +69,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) * 50 + 12", "/", "3",
                 ExpressionType.None, null)] // division with remainder will not be processed
         [TestCase("byte(0x001234) * 12 + 5", "/", "3",
-                ExpressionType.None, null)] // division with remainder will not be processed
+                ExpressionType.Mathematic, "(byte(0x001234) * 12 + 5) / 3")] // division with remainder will return mathematic
         [TestCase("byte(0x001234) + 1.5", "*", "3",
                 ExpressionType.MemoryValue, "byte(0x001234) * 3 + 4.5")]
         [TestCase("byte(0x001234) + 3.0", "/", "4",
@@ -305,6 +305,15 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000003) + 2) > 100",
                   "byte(byte(0x000003) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
                   "I:0xH000003_A:0xH000002_I:0xH000002_B:0xH000001_100>255")] // different base pointer causes secondary AddSource
+        [TestCase("byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
+                  "byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
+                  "B:1_I:0xH000002_0xH000001=d0xH000001")]      // both A and B have the same base pointer
+        [TestCase("prev(byte(byte(0x000002) + 1)) == byte(byte(0x000002) + 1) - 1",
+                  "prev(byte(byte(0x000002) + 1)) + 1 == byte(byte(0x000002) + 1)",
+                  "A:1_I:0xH000002_d0xH000001=0xH000001")]      // constant will be moved
+        [TestCase("byte(byte(0x000002) + 1) - prev(byte(byte(0x000002) + 1)) == 1",
+                  "byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
+                  "B:1_I:0xH000002_0xH000001=d0xH000001")]      // prev(A) and -1 will be swapped to share pointer
         [TestCase("word(54) - word(word(43102) + 54) > 37",
                   "word(word(0x00A85E) + 54) + 37 < word(0x000036)", // A - B > 37  ~>  B + 37 < A
                   "A:37_I:0x 00a85e_A:0x 000036_0<0x 000036")] // underflow with combination of direct/indirect, word size

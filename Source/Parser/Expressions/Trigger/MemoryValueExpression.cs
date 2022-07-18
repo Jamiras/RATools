@@ -428,6 +428,9 @@ namespace RATools.Parser.Expressions.Trigger
                 var newLeft = ExtractModifiedMemoryAccessor();
                 if (newLeft != null)
                     return newLeft.NormalizeComparison(right, operation);
+
+                if (MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource))
+                    return SwapSubtractionWithConstant(right, operation);
             }
             else
             {

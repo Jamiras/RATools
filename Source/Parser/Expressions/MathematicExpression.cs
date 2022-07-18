@@ -24,7 +24,18 @@ namespace RATools.Parser.Expressions
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            Left.AppendString(builder);
+            var memoryValue = Left as MemoryValueExpression;
+            if (memoryValue != null && memoryValue.HasConstant)
+            {
+                builder.Append('(');
+                Left.AppendString(builder);
+                builder.Append(')');
+            }
+            else
+            {
+                Left.AppendString(builder);
+            }
+
             builder.Append(' ');
 
             builder.Append(GetOperatorCharacter(Operation));
