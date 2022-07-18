@@ -9,7 +9,7 @@ using System.Text;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal class MemoryValueExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
-        IMathematicCombineExpression, IComparisonNormalizeExpression
+        IMathematicCombineExpression, IMathematicCombineInverseExpression, IComparisonNormalizeExpression
     {
         public MemoryValueExpression()
             : base(ExpressionType.MemoryValue)
@@ -41,6 +41,40 @@ namespace RATools.Parser.Expressions.Trigger
             get
             {
                 return _memoryAccessors != null && _memoryAccessors.Count > 0;
+            }
+        }
+
+        /// <summary>
+        /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to combine with the current expression.</param>
+        /// <param name="operation">How to combine the expressions.</param>
+        /// <returns>
+        /// An expression representing the combined values on success, or <c>null</c> if the expressions could not be combined.
+        /// </returns>
+        public ExpressionBase CombineInverse(ExpressionBase left, MathematicOperation operation)
+        {
+            switch (operation)
+            {
+                case MathematicOperation.Multiply:
+                    // multiplication is commutative
+                    return Combine(left, operation);
+
+                case MathematicOperation.Divide:
+                    var reduced = ConvertToModifiedMemoryAccessor();
+                    if (reduced == null)
+                        return new ErrorExpression("Cannot divide by complex memory reference");
+                    return reduced.CombineInverse(left, operation);
+
+                default:
+                    // attempt to convert left to MemoryValue, then apply right
+                    var value = new MemoryValueExpression();
+
+                    var error = value.ApplyMathematic(left, MathematicOperation.Add);
+                    if (error.Type == ExpressionType.Error)
+                        return error;
+
+                    return value.ApplyMathematic(this, operation);
             }
         }
 
