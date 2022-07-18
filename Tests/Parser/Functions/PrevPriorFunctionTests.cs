@@ -65,8 +65,10 @@ namespace RATools.Tests.Parser.Functions
 
         [Test]
         [TestCase("prev(byte(0x1234)) == 56", "d0xH001234=56")]
-        [TestCase("prev(byte(0x1234) + 6) == 10", "d0xH001234=4")] // modifier is distributed
-        [TestCase("prev(byte(0x1234) * 10 + 20) == 80", "d0xH001234=6")] // modifier is distributed
+        [TestCase("prev(byte(0x1234) + 6) == 10", "d0xH001234=4")] // modifier is extracted and comparison is normalized
+        [TestCase("prev(byte(0x1234) - 1) / 4 == 10", "d0xH001234=41")] // modifier is extracted and comparison is normalized
+        [TestCase("prev((byte(0x1234) - 1) / 4) < 10", "d0xH001234<41")] // modifier is extracted and comparison is normalized
+        [TestCase("prev(byte(0x1234) * 10 + 20) == 80", "d0xH001234=6")] // modifier is extracted and comparison is normalized
         [TestCase("prev(byte(0x1234) + byte(0x2345)) == 7", "A:d0xH001234=0_d0xH002345=7")] // prev is distributed
         [TestCase("prev(byte(0x1234) - byte(0x2345)) == 7", "B:d0xH002345=0_d0xH001234=7")] // prev is distributed
         public void TestPrev(string input, string expected)

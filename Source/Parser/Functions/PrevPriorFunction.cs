@@ -65,14 +65,20 @@ namespace RATools.Parser.Functions
         {
             // assert: left/right already expanded by calling function
             var left = mathematic.Left;
-            if (!ReplaceVariables(left, scope, out result))
-                return false;
-            left = result;
+            if (!left.IsLiteralConstant)
+            {
+                if (!ReplaceVariables(left, scope, out result))
+                    return false;
+                left = result;
+            }
 
             var right = mathematic.Right;
-            if (!ReplaceVariables(right, scope, out result))
-                return false;
-            right = result;
+            if (!right.IsLiteralConstant)
+            {
+                if (!ReplaceVariables(right, scope, out result))
+                    return false;
+                right = result;
+            }
 
             result = new MathematicExpression(left, mathematic.Operation, right);
             return true;
