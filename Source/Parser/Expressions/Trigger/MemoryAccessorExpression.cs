@@ -272,9 +272,19 @@ namespace RATools.Parser.Expressions.Trigger
                 case ExpressionType.MemoryValue:
                 {
                     var memoryValue = (MemoryValueExpression)right;
+                    if (memoryValue.IntegerConstant >= 0 && memoryValue.FloatConstant >= 0)
+                    { 
+                        if (memoryValue.MemoryAccessors.All(a => a.CombiningOperator == RequirementType.AddSource))
+                        {
+                            // right side is all positive stuff, just invert everything
+                            return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
+                        }
+                    }
+
                     var modifiedMemoryAccessor = memoryValue.ConvertToModifiedMemoryAccessor();
                     if (modifiedMemoryAccessor != null)
                     {
+                        // right side can be simplified to a ModifierMemoryAccessor, treat it as such.
                         right = modifiedMemoryAccessor;
                         goto case ExpressionType.ModifiedMemoryAccessor;
                     }

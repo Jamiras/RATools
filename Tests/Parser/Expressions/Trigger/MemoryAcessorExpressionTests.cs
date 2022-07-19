@@ -125,7 +125,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234)", "=", "byte(0x002345) * 2",
             ExpressionType.Comparison, "byte(0x002345) * 2 == byte(0x001234)")] // move modified operation to left side of comparison
         [TestCase("byte(0x001234)", "=", "byte(0x002345) + 2",
-            ExpressionType.Comparison, "byte(0x001234) - 2 == byte(0x002345)")] // constant moved to left side
+            ExpressionType.Comparison, "byte(0x002345) + 2 == byte(0x001234)")] // prefer positive modifier, swap sides
         [TestCase("byte(0x001234)", "=", "byte(0x002345) - 2",
             ExpressionType.Comparison, "byte(0x001234) + 2 == byte(0x002345)")] // constant moved to left side
         [TestCase("byte(0x001234)", "=", "prev(byte(0x002345)) - 3",
@@ -133,7 +133,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234)", ">", "byte(0x002345) - 2",
             ExpressionType.Comparison, "byte(0x001234) + 2 > byte(0x002345)")] // constant moved to left side
         [TestCase("byte(0x001234)", ">", "byte(0x002345) + 2",
-            ExpressionType.Comparison, "byte(0x001234) - 2 > byte(0x002345)")] // constant moved to left side
+            ExpressionType.Comparison, "byte(0x002345) + 2 < byte(0x001234)")] // prefer positive modifier, swap sides
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);

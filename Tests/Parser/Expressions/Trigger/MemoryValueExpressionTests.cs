@@ -199,6 +199,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A / B - (B / C) >= 1", "A / B - B / C + 255 >= 256")] // B/C could be 255
         [TestCase("A / A - 2 > (B / B)", "A / A - B / B + 1 > 3")] // move constsnt to right, avoid underflow
         [TestCase("A / B - 2 > (B / C)", "A / B - B / C + 255 > 257")] // B/C could be 255
+        [TestCase("A <= B + 5", "B + 5 >= A")]
+        [TestCase("A == B + 5", "B + 5 == A")]
+        [TestCase("A + 0 <= B + 5", "B + 5 >= A")]
         public void TestUnderflow(string before, string after)
         {
             string left, op, right;
@@ -371,6 +374,12 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("prev(byte(0x000001)) - prev(byte(0x000002)) - prev(byte(0x000003)) < 2", // make sure the memory reference is seen inside the prev
                   "prev(byte(0x000001)) - prev(byte(0x000002)) - prev(byte(0x000003)) + 510 < 512", // overflow of 510 calculated
                   "A:510=0_B:d0xH000002=0_B:d0xH000003=0_d0xH000001<512")]
+        [TestCase("prev(byte(0x000001)) == byte(0x000002) - 1",
+                  "prev(byte(0x000001)) + 1 == byte(0x000002)", // rearrange to avoid subtraction
+                  "A:1=0_d0xH000001=0xH000002")]
+        [TestCase("byte(0x000001) - prev(byte(0x000001)) >= 100",
+                  "prev(byte(0x000001)) + 100 <= byte(0x000001)", // rearrange to avoid subtraction
+                  "A:100=0_d0xH000001<=0xH000001")]
         public void TestUnderflowComplex(string input, string expected, string expectedSerialized)
         {
             string left, op, right;

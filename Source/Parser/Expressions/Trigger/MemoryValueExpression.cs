@@ -257,6 +257,12 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
         {
+            var simplified = ReduceToSimpleExpression(this) as IComparisonNormalizeExpression;
+            if (simplified != null)
+                return simplified.NormalizeComparison(right, operation);
+
+            right = ReduceToSimpleExpression(right) ?? right;
+
             var normalized = MoveConstantsToRightHandSide(right, operation);
 
             var comparison = normalized ?? new ComparisonExpression(this, operation, right);
@@ -265,6 +271,42 @@ namespace RATools.Parser.Expressions.Trigger
                 normalized = underflowNormalized;
 
             return normalized;
+        }
+
+        private static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
+        {
+            switch (expression.Type)
+            {
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.FloatConstant:
+                    return expression;
+
+                case ExpressionType.MemoryAccessor:
+                    var memoryAccessor = (MemoryAccessorExpression)expression;
+                    if (!memoryAccessor.HasPointerChain)
+                        return memoryAccessor;
+                    break;
+
+                case ExpressionType.ModifiedMemoryAccessor:
+                    var modifiedMemoryAcceessor = (ModifiedMemoryAccessorExpression)expression;
+                    if (modifiedMemoryAcceessor.ModifyingOperator == RequirementOperator.None)
+                        return modifiedMemoryAcceessor.MemoryAccessor;
+                    break;
+
+                case ExpressionType.MemoryValue:
+                    var memoryValue = (MemoryValueExpression)expression;
+                    if (!memoryValue.HasMemoryAccessor)
+                        return memoryValue.ExtractConstant();
+                    if (!memoryValue.HasConstant)
+                    {
+                        var extracted = memoryValue.ExtractModifiedMemoryAccessor();
+                        if (extracted != null)
+                            return ReduceToSimpleExpression(extracted);
+                    }
+                    break;
+            }
+
+            return null;
         }
 
         private ExpressionBase MoveConstantsToRightHandSide(ExpressionBase right, ComparisonOperation operation)
@@ -389,13 +431,21 @@ namespace RATools.Parser.Expressions.Trigger
             if (!memoryValue.HasConstant && memoryValue._memoryAccessors.Count == 1)
                 return null;
 
+            var simpleLeft = ConvertToModifiedMemoryAccessor();
+            if (simpleLeft != null && simpleLeft.ModifyingOperator == RequirementOperator.None)
+                return simpleLeft.MemoryAccessor.NormalizeComparison(memoryValue, operation);
+
             var cloneLeft = Clone();
             var cloneRight = memoryValue.Clone();
             cloneLeft = cloneRight.InvertAndMigrateAccessorsTo(cloneLeft);
 
             var constant = cloneRight.ExtractConstant();
-            if (IsZero(constant))
-                return cloneLeft.SwapSubtractionWithConstant(constant, operation);
+            if (IsZero(constant) || IsNegative(constant))
+            {
+                var result = cloneLeft.SwapSubtractionWithConstant(constant, operation);
+                if (result != null)
+                    return result;
+            }
 
             return new ComparisonExpression(cloneLeft, operation, constant);
         }
@@ -422,44 +472,13 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var right = (ExpressionBase)combining;
 
-            // special handling for pointers - try to find a single AddAdress that can be applied
-            // to both sides of the equation
+            // special handling for pointers
+            // try to find a single AddAdress that can be applied to both sides of the equation
             if (_memoryAccessors != null && _memoryAccessors.Count >= 2)
             {
-                for (int i = _memoryAccessors.Count - 1; i >= 0; i--)
-                {
-                    if (_memoryAccessors[i].CombiningOperator != RequirementType.SubSource)
-                        continue;
-
-                    if (!_memoryAccessors[i].MemoryAccessor.HasPointerChain)
-                        continue;
-
-                    // found a SubSource with a pointer. see if there's an AddSource with the same pointer
-                    // try to match a prev with it's non-prev first
-                    var searchMemoryAccessor = _memoryAccessors[i].MemoryAccessor;
-                    var paired = _memoryAccessors.FirstOrDefault(a =>
-                        a.CombiningOperator == RequirementType.AddSource &&
-                        a.MemoryAccessor.Field.Value == searchMemoryAccessor.Field.Value &&
-                        a.MemoryAccessor.Field.Size == searchMemoryAccessor.Field.Size &&
-                        a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
-
-                    if (paired == null)
-                    {
-                        // could not find a prev/non-prev match. try again for any shared pointer chain
-                        paired = _memoryAccessors.FirstOrDefault(a =>
-                            a.CombiningOperator == RequirementType.AddSource &&
-                            a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
-                    }
-
-                    if (paired != null)
-                    {
-                        // found a pair, move the SubSource to the right side and the constant to the left
-                        var newLeft = (MemoryValueExpression)Combine(right, MathematicOperation.Subtract);
-                        var newRight = newLeft._memoryAccessors[i].MemoryAccessor;
-                        newLeft._memoryAccessors.RemoveAt(i);
-                        return new ComparisonExpression(newLeft, operation, newRight);
-                    }
-                }
+                var result = RebalanceForPointerChain(right, operation);
+                if (result != null)
+                    return result;
             }
 
             var adjustment = ExtractConstant();
@@ -514,6 +533,46 @@ namespace RATools.Parser.Expressions.Trigger
                 // remove the constants from the left as they're part of the newRight
                 var newLeft = ClearConstant();
                 return new ComparisonExpression(newLeft, operation, newRight);
+            }
+
+            return null;
+        }
+
+        private ExpressionBase RebalanceForPointerChain(ExpressionBase right, ComparisonOperation operation)
+        {
+            for (int i = _memoryAccessors.Count - 1; i >= 0; i--)
+            {
+                if (_memoryAccessors[i].CombiningOperator != RequirementType.SubSource)
+                    continue;
+
+                if (!_memoryAccessors[i].MemoryAccessor.HasPointerChain)
+                    continue;
+
+                // found a SubSource with a pointer. see if there's an AddSource with the same pointer
+                // try to match a prev with it's non-prev first
+                var searchMemoryAccessor = _memoryAccessors[i].MemoryAccessor;
+                var paired = _memoryAccessors.FirstOrDefault(a =>
+                    a.CombiningOperator == RequirementType.AddSource &&
+                    a.MemoryAccessor.Field.Value == searchMemoryAccessor.Field.Value &&
+                    a.MemoryAccessor.Field.Size == searchMemoryAccessor.Field.Size &&
+                    a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
+
+                if (paired == null)
+                {
+                    // could not find a prev/non-prev match. try again for any shared pointer chain
+                    paired = _memoryAccessors.FirstOrDefault(a =>
+                        a.CombiningOperator == RequirementType.AddSource &&
+                        a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
+                }
+
+                if (paired != null)
+                {
+                    // found a pair, move the SubSource to the right side and the constant to the left
+                    var newLeft = (MemoryValueExpression)Combine(right, MathematicOperation.Subtract);
+                    var newRight = newLeft._memoryAccessors[i].MemoryAccessor;
+                    newLeft._memoryAccessors.RemoveAt(i);
+                    return new ComparisonExpression(newLeft, operation, newRight);
+                }
             }
 
             return null;
