@@ -251,6 +251,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "A:0xH001234=0_B:d0xH001234=0_0xH002345=6")]
         [TestCase("once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_0xO20770f=0.1.")]
         [TestCase("never(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_R:0xO20770f=0")]
+        [TestCase("never(once(byte(0x1234) == 1) && repeated(12, always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
+        [TestCase("never(repeated(12, once(byte(0x1234) == 1) && always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
         [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
         [TestCase("float(0x1111) == 3.14", "fF001111=f3.14")]
         [TestCase("prev(float(0x1111)) > 3.14", "dfF001111>f3.14")]

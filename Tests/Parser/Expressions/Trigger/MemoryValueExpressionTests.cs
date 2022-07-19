@@ -297,7 +297,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         // invalid syntax (indirect memory references are not allowed on the right side), so go
         // one step farther to see the final optimized logic.
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > 100",
-                  "byte(byte(0x000002) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
+                  "byte(byte(0x000002) + 1) - 100 > byte(byte(0x000002) + 2)", // A - B > 100  ~>  A - 100 > B
                   "A:100_I:0xH000002_0xH000002<0xH000001")]      // both A and B have the same base pointer
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > -100",
                   "byte(byte(0x000002) + 1) + 100 > byte(byte(0x000002) + 2)", // A - B > -100  ~>  A + 100 > B
