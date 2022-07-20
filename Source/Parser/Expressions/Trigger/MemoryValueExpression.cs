@@ -44,6 +44,22 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
+        private bool HasSubtractedMemoryAccessor
+        {
+            get
+            {
+                return _memoryAccessors != null && _memoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource);
+            }
+        }
+
+        private bool HasAddedMemoryAccessor
+        {
+            get
+            {
+                return _memoryAccessors != null && _memoryAccessors.Any(a => a.CombiningOperator == RequirementType.AddSource);
+            }
+        }
+
         /// <summary>
         /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
         /// </summary>
@@ -270,7 +286,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (!ReferenceEquals(underflowNormalized, comparison))
                 normalized = underflowNormalized;
 
-            return normalized;
+            return ValidateComparison(normalized);
         }
 
         private static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
@@ -301,7 +317,10 @@ namespace RATools.Parser.Expressions.Trigger
                     {
                         var extracted = memoryValue.ExtractModifiedMemoryAccessor();
                         if (extracted != null)
-                            return ReduceToSimpleExpression(extracted);
+                        {
+                            var reduced = ReduceToSimpleExpression(extracted);
+                            return reduced ?? extracted;
+                        }
                     }
                     break;
             }
@@ -311,35 +330,46 @@ namespace RATools.Parser.Expressions.Trigger
 
         private ExpressionBase MoveConstantsToRightHandSide(ExpressionBase right, ComparisonOperation operation)
         {
-            switch (right.Type)
+            var memoryValue = right as MemoryValueExpression;
+            if (memoryValue == null)
             {
-                case ExpressionType.MemoryAccessor:
-                    right = new ModifiedMemoryAccessorExpression((MemoryAccessorExpression)right);
-                    goto case ExpressionType.ModifiedMemoryAccessor;
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                    var memoryValue = new MemoryValueExpression();
-                    memoryValue.ApplyMathematic(right, MathematicOperation.Add);
-                    right = memoryValue;
-                    goto case ExpressionType.MemoryValue;
-
-                case ExpressionType.MemoryValue:
-                    return MoveConstantsToRightHandSide((MemoryValueExpression)right, operation);
-
-                default:
-                    var combining = right as IMathematicCombineExpression;
-                    if (combining != null)
-                        return MoveConstantsToRightHandSide(combining, operation);
-
-                    return null;
+                memoryValue = new MemoryValueExpression();
+                memoryValue.ApplyMathematic(right, MathematicOperation.Add);
             }
+
+            return MoveConstantsToRightHandSide(memoryValue, operation);
         }
 
         private ExpressionBase MoveConstantsToRightHandSide(MemoryValueExpression memoryValue, ComparisonOperation operation)
         {
+            // special handling for pointers
+            // try to find a single AddAdress that can be applied to both sides of the equation
+            if (_memoryAccessors != null && _memoryAccessors.Count >= 2)
+            {
+                var result = RebalanceForPointerChain(memoryValue, operation);
+                if (result != null)
+                    return result;
+            }
+
             // if the left side doesn't have a constant to move, just normalize the right side
             if (!HasConstant)
                 return EnsureSingleExpressionOnRightHandSide(memoryValue, operation);
+
+            // constant on left. check for a constant on the right too
+            if (memoryValue.HasConstant)
+            {
+                if (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual)
+                {
+                    // direct comparisons aren't affected by underflow.
+                    return EnsureSingleExpressionOnRightHandSide(memoryValue, operation);
+                }
+
+                // if there are constants on both sides of the comparison and both added and
+                // subtracted accessors on the left, then assume the user is trying to account
+                // for the underflow themselves and don't merge the constants.
+                if (HasSubtractedMemoryAccessor && HasAddedMemoryAccessor)
+                    return null;
+            }
 
             var integerConstant = memoryValue.IntegerConstant - IntegerConstant;
             var floatConstant = memoryValue.FloatConstant - FloatConstant;
@@ -347,7 +377,8 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (constantSum < 0.0)
             {
-                // if there's no constant on the right, it'll just get moved back to the left. do nothing
+                // if there's no constant on the right, moving the left constant will create a negative constant on
+                // the right and it'll just get moved back to the left. do nothing
                 if (!memoryValue.HasConstant)
                     return null;
 
@@ -421,24 +452,47 @@ namespace RATools.Parser.Expressions.Trigger
             return new ComparisonExpression(newLeft, operation, newRight);
         }
 
-        private ExpressionBase EnsureSingleExpressionOnRightHandSide(MemoryValueExpression memoryValue, ComparisonOperation operation)
+        private ExpressionBase EnsureSingleExpressionOnRightHandSide(ExpressionBase right, ComparisonOperation operation)
         {
-            // just a constant, don't move it
-            if (!memoryValue.HasMemoryAccessor)
-                return null;
+            var memoryValue = right as MemoryValueExpression;
+            if (memoryValue == null)
+            {
+                memoryValue = new MemoryValueExpression();
+                memoryValue.ApplyMathematic(right, MathematicOperation.Add);
+            }
 
-            // just a single accessor, don't move it
-            if (!memoryValue.HasConstant && memoryValue._memoryAccessors.Count == 1)
-                return null;
+            if (!memoryValue.HasMemoryAccessor && !HasConstant)
+            {
+                // right side is alredy just a constant, don't move it
+                if (memoryValue.IntegerConstant != 0 || memoryValue.FloatConstant != 0.0)
+                    return null;
+            }
 
-            var simpleLeft = ConvertToModifiedMemoryAccessor();
-            if (simpleLeft != null && simpleLeft.ModifyingOperator == RequirementOperator.None)
-                return simpleLeft.MemoryAccessor.NormalizeComparison(memoryValue, operation);
+            if (memoryValue.IntegerConstant == IntegerConstant &&
+                memoryValue.FloatConstant == FloatConstant && HasConstant)
+            {
+                // constant is the same on both sidees, eliminate it
+                var newLeft = ClearConstant();
+                var newRight = memoryValue.ClearConstant();
+
+                memoryValue = newLeft as MemoryValueExpression;
+                if (memoryValue != null)
+                    return memoryValue.EnsureSingleExpressionOnRightHandSide(newRight, operation);
+
+                return new ComparisonExpression(newLeft, operation, newRight);
+            }
+
+            // right side is just a single accessor, don't move it
+            if (!memoryValue.HasConstant && memoryValue._memoryAccessors != null && memoryValue._memoryAccessors.Count == 1)
+                return null;
 
             var cloneLeft = Clone();
+            cloneLeft.IntegerConstant = 0;
+            cloneLeft.FloatConstant = 0.0;
             var cloneRight = memoryValue.Clone();
             cloneLeft = cloneRight.InvertAndMigrateAccessorsTo(cloneLeft);
 
+            cloneRight.ApplyMathematic(ExtractConstant(), MathematicOperation.Subtract);
             var constant = cloneRight.ExtractConstant();
             if (IsZero(constant) || IsNegative(constant))
             {
@@ -454,7 +508,10 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var value = target as MemoryValueExpression;
             if (value == null)
-                value = (MemoryValueExpression)((IUpconvertibleExpression)target).UpconvertTo(ExpressionType.MemoryValue);
+            {
+                value = new MemoryValueExpression();
+                value.ApplyMathematic(target, MathematicOperation.Add);
+            }
             if (value._memoryAccessors == null)
                 value._memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
 
@@ -466,76 +523,6 @@ namespace RATools.Parser.Expressions.Trigger
 
             _memoryAccessors = null;
             return value;
-        }
-
-        private ExpressionBase MoveConstantsToRightHandSide(IMathematicCombineExpression combining, ComparisonOperation operation)
-        {
-            var right = (ExpressionBase)combining;
-
-            // special handling for pointers
-            // try to find a single AddAdress that can be applied to both sides of the equation
-            if (_memoryAccessors != null && _memoryAccessors.Count >= 2)
-            {
-                var result = RebalanceForPointerChain(right, operation);
-                if (result != null)
-                    return result;
-            }
-
-            var adjustment = ExtractConstant();
-            if (IsZero(adjustment))
-            {
-                var newLeft = ExtractModifiedMemoryAccessor();
-                if (newLeft != null)
-                    return newLeft.NormalizeComparison(right, operation);
-            }
-            else
-            {
-                var newRight = combining.Combine(adjustment, MathematicOperation.Subtract);
-                if (newRight != null)
-                {
-                    // don't change the right side from a constant to an expression
-                    if (!newRight.IsLiteralConstant && right.IsLiteralConstant)
-                        return null;
-
-                    if (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual)
-                    {
-                        // underflow cannot occur for equality/inequality check
-                    }
-                    else if (HasConstant)
-                    {
-                        // constant on left. check for a constant on the right too
-                        var valueRight = right as MemoryValueExpression;
-                        if ((valueRight != null && valueRight.HasConstant) ||
-                            right.IsLiteralConstant)
-                        {
-                            // if there are constants on both sides of the comparison and both added and
-                            // subtracted accessors on the left, then assume the user is trying to account
-                            // for the underflow themselves and don't merge the constants.
-                            if (MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource) &&
-                                MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.AddSource))
-                            {
-                                return null;
-                            }
-                        }
-                    }
-
-                    if (IsNegative(newRight) && !MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource))
-                        return new ErrorExpression("Expression can never be true");
-
-                    var result = SwapSubtractionWithConstant(newRight, operation);
-                    if (result != null)
-                        return result;
-
-                    // no subtraction to swap with, just move the constant
-                    return new ComparisonExpression(ClearConstant(), operation, newRight);
-                }
-
-                // remove the constants from the left as they're part of the newRight
-                var newLeft = ClearConstant();
-                return new ComparisonExpression(newLeft, operation, newRight);
-            }
-
-            return null;
         }
 
         private ExpressionBase RebalanceForPointerChain(ExpressionBase right, ComparisonOperation operation)
@@ -615,22 +602,47 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
-        private ExpressionBase CheckForUnderflow(ExpressionBase expression)
+        private static ExpressionBase CheckForUnderflow(ExpressionBase expression)
         {
             var comparison = expression as ComparisonExpression;
             if (comparison == null)
                 return expression;
 
+            var leftMemoryValue = comparison.Left as MemoryValueExpression;
+            if (leftMemoryValue == null)
+                return comparison;
+
+            // direct comparisons aren't affected by underflow.
             if (comparison.Operation == ComparisonOperation.Equal ||
                 comparison.Operation == ComparisonOperation.NotEqual)
             {
-                // direct comparisons aren't affected by underflow.
-                return comparison;
+                return leftMemoryValue.EnsureSingleExpressionOnRightHandSide(comparison.Right, comparison.Operation) ?? comparison;
+            }
+
+            // if the right side is a positive constant, and the left has one added and one subtracted
+            // memory accessor, then move the subtracted memory accessor and reverse the comparison.
+            if (leftMemoryValue._memoryAccessors != null && leftMemoryValue._memoryAccessors.Count == 2 &&
+                !leftMemoryValue.HasConstant && IsPositive(comparison.Right))
+            {
+                var subtracted = leftMemoryValue._memoryAccessors.FirstOrDefault(a => a.CombiningOperator == RequirementType.SubSource);
+                if (subtracted != null)
+                {
+                    var added = leftMemoryValue._memoryAccessors.FirstOrDefault(a => a.CombiningOperator == RequirementType.AddSource);
+                    if (added != null && added.ModifyingOperator == RequirementOperator.None)
+                    {
+                        added = added.Clone();
+                        added.CombiningOperator = RequirementType.None;
+
+                        leftMemoryValue = new MemoryValueExpression();
+                        leftMemoryValue.ApplyMathematic(comparison.Right, MathematicOperation.Add);
+                        leftMemoryValue.ApplyMathematic(subtracted, MathematicOperation.Add);
+                        comparison = new ComparisonExpression(leftMemoryValue, ComparisonExpression.ReverseComparisonOperation(comparison.Operation), added);
+                    }
+                }
             }
 
             // left side must have at least one subtracted memory accessor
-            var leftMemoryValue = comparison.Left as MemoryValueExpression;
-            if (leftMemoryValue == null || !leftMemoryValue.MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource))
+            if (!leftMemoryValue.HasSubtractedMemoryAccessor)
                 return comparison;
 
             // if the result of subtracting two bytes is negative, it becomes a very large positive number.
@@ -643,9 +655,7 @@ namespace RATools.Parser.Expressions.Trigger
                 // if there's a 32-bit read, the value might not be signed. don't adjust it
                 checkForUnderflow = false;
             }
-            else if (IntegerConstant > 0 &&
-                _memoryAccessors != null &&
-                _memoryAccessors.Any(r => r.CombiningOperator == RequirementType.SubSource))
+            else if (leftMemoryValue.IntegerConstant > 0 && leftMemoryValue.HasSubtractedMemoryAccessor)
             {
                 // if there's an explicit modification on the left hand side (of the original
                 // equation) and it's less then the calcul-ated adjustment value, assume it's 
@@ -671,7 +681,7 @@ namespace RATools.Parser.Expressions.Trigger
                     var underflowAdjustment = leftMemoryValue.GetUnderflowAdjustment(comparison.Right);
                     if (underflowAdjustment > 0)
                     {
-                        if (IntegerConstant > underflowAdjustment)
+                        if (leftMemoryValue.IntegerConstant > underflowAdjustment)
                         {
                             // adjustment is too much, clamp it down to the minimum required
                             checkForUnderflow = true;
@@ -679,7 +689,7 @@ namespace RATools.Parser.Expressions.Trigger
                         else
                         {
                             // assume adjustwment was intentional
-                            underflowAdjustment = IntegerConstant - leftMemoryValue.IntegerConstant;
+                            underflowAdjustment = leftMemoryValue.IntegerConstant - leftMemoryValue.IntegerConstant;
                             if (underflowAdjustment > 0)
                                 return ApplyUnderflowAdjustment(comparison, underflowAdjustment);
                         }
@@ -748,7 +758,7 @@ namespace RATools.Parser.Expressions.Trigger
             return comparison;
         }
 
-        private ExpressionBase ApplyUnderflowAdjustment(ComparisonExpression comparison, int underflowAdjustment)
+        private static ExpressionBase ApplyUnderflowAdjustment(ComparisonExpression comparison, int underflowAdjustment)
         {
             Debug.Assert(comparison.Left is MemoryValueExpression);
             var leftMemoryValue = (MemoryValueExpression)comparison.Left;
@@ -764,7 +774,7 @@ namespace RATools.Parser.Expressions.Trigger
             var rightMemoryValue = newRight as MemoryValueExpression;
             if (rightMemoryValue != null)
             {
-                if (rightMemoryValue.MemoryAccessors.Contains(_memoryAccessors[0]))
+                if (rightMemoryValue.MemoryAccessors.Contains(leftMemoryValue._memoryAccessors[0]))
                 {
                     // prefer rebalancing towards first expression in original statement
                     rightMemoryValue = newLeft;
@@ -855,6 +865,55 @@ namespace RATools.Parser.Expressions.Trigger
             max = totalMax;
         }
 
+        private static ExpressionBase ValidateComparison(ExpressionBase expression)
+        {
+            var comparison = expression as ComparisonExpression;
+            if (comparison == null)
+                return expression;
+
+            // a comparison against a negative value without any subtractions can never be true
+            if (!IsNegative(comparison.Right))
+                return expression;
+
+            bool canBeTrue = true;
+
+            var memoryValue = comparison.Left as MemoryValueExpression;
+            if (memoryValue != null)
+            {
+                canBeTrue = memoryValue.HasSubtractedMemoryAccessor;
+            }
+            else
+            {
+                var modifiedMemoryAccessor = comparison.Left as ModifiedMemoryAccessorExpression;
+                if (modifiedMemoryAccessor != null)
+                {
+                    canBeTrue = modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.Multiply &&
+                        (int)modifiedMemoryAccessor.Modifier.Value < 0;
+                }
+                else
+                {
+                    canBeTrue = false;
+                }
+            }
+
+            if (!canBeTrue)
+            {
+                switch (comparison.Operation)
+                {
+                    case ComparisonOperation.Equal:
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.LessThanOrEqual:
+                        return new ErrorExpression("Expression can never be true");
+
+                    case ComparisonOperation.NotEqual:
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        return new ErrorExpression("Expression is always true");
+                }
+            }
+
+            return comparison;
+        }
 
         public ModifiedMemoryAccessorExpression ConvertToModifiedMemoryAccessor()
         {
@@ -929,6 +988,19 @@ namespace RATools.Parser.Expressions.Trigger
             var floatConstant = expression as FloatConstantExpression;
             if (floatConstant != null)
                 return floatConstant.Value < 0.0;
+
+            return false;
+        }
+
+        private static bool IsPositive(ExpressionBase expression)
+        {
+            var integerConstant = expression as IntegerConstantExpression;
+            if (integerConstant != null)
+                return integerConstant.Value > 0;
+
+            var floatConstant = expression as FloatConstantExpression;
+            if (floatConstant != null)
+                return floatConstant.Value > 0.0;
 
             return false;
         }

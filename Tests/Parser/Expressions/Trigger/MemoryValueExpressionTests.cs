@@ -124,13 +124,13 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) + 2", "=", "byte(0x002345)",
             ExpressionType.None, null)]
         [TestCase("byte(0x001234) + 2", "=", "byte(0x002345) + 6",
-            ExpressionType.Comparison, "byte(0x001234) - 4 == byte(0x002345)")]
+            ExpressionType.Comparison, "byte(0x001234) - byte(0x002345) == 4")]
         [TestCase("byte(0x001234) + 2", "=", "byte(0x002345) + 2",
             ExpressionType.Comparison, "byte(0x001234) == byte(0x002345)")]
         [TestCase("byte(0x001234) * 2 + 1", "=", "byte(0x002345) * 2 + 1",
             ExpressionType.Comparison, "byte(0x001234) * 2 == byte(0x002345) * 2")] // first step only removes addition
         [TestCase("byte(0x001234) + 1.2", "=", "byte(0x002345) + 2.6",
-            ExpressionType.Comparison, "byte(0x001234) - 1.4 == byte(0x002345)")]
+            ExpressionType.Comparison, "byte(0x001234) - byte(0x002345) == 1.4")]
         [TestCase("byte(0x001234) * 2 + 2", "=", "6",
             ExpressionType.Comparison, "byte(0x001234) * 2 == 4")] // normalization only undoes the addition at this level
         [TestCase("byte(0x001234) * 2 + byte(0x002345)", "=", "6",
