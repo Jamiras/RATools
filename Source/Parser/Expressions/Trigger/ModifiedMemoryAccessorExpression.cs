@@ -396,19 +396,15 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
         {
+            var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
+            if (simplified != null)
+                right = simplified;
+
             if (ModifyingOperator == RequirementOperator.None && CombiningOperator == RequirementType.None)
             {
                 var normalized = MemoryAccessor.NormalizeComparison(right, operation);
                 if (normalized != null)
                     return normalized;
-            }
-
-            var memoryValue = right as MemoryValueExpression;
-            if (memoryValue != null)
-            {
-                var converted = memoryValue.ConvertToModifiedMemoryAccessor();
-                if (converted != null)
-                    right = converted;
             }
 
             var modifiedMemoryAccessor = right as ModifiedMemoryAccessorExpression;

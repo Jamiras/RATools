@@ -265,6 +265,10 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
         {
+            var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
+            if (simplified != null)
+                right = simplified;
+
             bool swap = false;
 
             switch (right.Type)

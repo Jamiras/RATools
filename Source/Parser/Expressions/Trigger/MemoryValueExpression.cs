@@ -289,7 +289,7 @@ namespace RATools.Parser.Expressions.Trigger
             return ValidateComparison(normalized);
         }
 
-        private static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
+        public static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
         {
             switch (expression.Type)
             {
@@ -466,6 +466,9 @@ namespace RATools.Parser.Expressions.Trigger
                 // right side is alredy just a constant, don't move it
                 if (memoryValue.IntegerConstant != 0 || memoryValue.FloatConstant != 0.0)
                     return null;
+
+                // right side is zero. attempt to move a subtraction over there
+                return SwapSubtractionWithConstant(new IntegerConstantExpression(0), operation);
             }
 
             if (memoryValue.IntegerConstant == IntegerConstant &&
@@ -567,15 +570,17 @@ namespace RATools.Parser.Expressions.Trigger
 
         private ExpressionBase SwapSubtractionWithConstant(ExpressionBase constant, ComparisonOperation operation)
         {
+            // must have at least one SubSource to proceed
+            if (!HasSubtractedMemoryAccessor)
+                return null;
+
             // drop the constant portion - it's already part of 'constant'
             var newLeft = ClearConstant();
-
-            // must have at least one SubSource remaining to proceed
             var newLeftValue = newLeft as MemoryValueExpression;
             if (newLeftValue == null || newLeftValue._memoryAccessors == null)
                 return null;
 
-            if (_memoryAccessors.All(a => a.CombiningOperator == RequirementType.SubSource))
+            if (newLeftValue._memoryAccessors.All(a => a.CombiningOperator == RequirementType.SubSource))
             {
                 // everything on both sides is negative, invert it all
                 constant = new IntegerConstantExpression(0).Combine(constant, MathematicOperation.Subtract);

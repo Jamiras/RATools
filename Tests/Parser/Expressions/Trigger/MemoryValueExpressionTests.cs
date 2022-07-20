@@ -165,6 +165,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A + 10 == B", "A + 10 == B")] // no change needed for addition or equality
         [TestCase("A + 10 != B", "A + 10 != B")] // no change needed for addition or inequality
         [TestCase("A - B > 0", "A > B")] // move B
+        [TestCase("A + B > 0", "A + B > 0")] // any rearranging will introduce a subtraction
         [TestCase("A + B > 10", "A + B > 10")] // no change needed for addition
         [TestCase("A - B > 10", "B + 10 < A")] // reverse and change to addition
         [TestCase("A - B < 0", "A < B")] // move B
