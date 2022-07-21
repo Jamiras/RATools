@@ -872,7 +872,9 @@ namespace RATools.Parser
 
             if (requirement.Left.Size == FieldSize.BitCount &&
                 requirement.Operator == RequirementOperator.Equal &&
-                requirement.Right.Type == FieldType.Value)
+                requirement.Right.Type == FieldType.Value &&
+                requirement.Type != RequirementType.Measured &&
+                requirement.Type != RequirementType.MeasuredPercent)
             {
                 if (requirement.Right.Value == 0)
                 {
