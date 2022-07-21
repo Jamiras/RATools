@@ -13,12 +13,24 @@ namespace RATools.ViewModels
         public LeaderboardViewModel(GameViewModel owner)
             : base(owner)
         {
+            CopyTitleToClipboardCommand = new DelegateCommand(() =>
+            {
+                ServiceRepository.Instance.FindService<IClipboardService>().SetData(Title);
+            });
+
+            CopyDescriptionToClipboardCommand = new DelegateCommand(() =>
+            {
+                ServiceRepository.Instance.FindService<IClipboardService>().SetData(Description);
+            });
         }
 
         public override string ViewerType
         {
             get { return "Leaderboard"; }
         }
+
+        public DelegateCommand CopyTitleToClipboardCommand { get; private set; }
+        public DelegateCommand CopyDescriptionToClipboardCommand { get; private set; }
 
         protected override bool AreAssetSpecificPropertiesModified(AssetSourceViewModel left, AssetSourceViewModel right)
         {

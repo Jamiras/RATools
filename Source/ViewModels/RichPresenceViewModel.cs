@@ -1,4 +1,7 @@
 ﻿using Jamiras.Commands;
+using Jamiras.Components;
+using Jamiras.Services;
+using Jamiras.ViewModels;
 using RATools.Data;
 using System;
 using System.Collections.Generic;
@@ -11,6 +14,28 @@ namespace RATools.ViewModels
         public RichPresenceViewModel(GameViewModel owner)
             : base(owner)
         {
+            CopyToClipboardCommand = new DelegateCommand(() =>
+            {
+                var rp = Generated.Asset as RichPresence;
+                if (rp == null)
+                {
+                    rp = Local.Asset as RichPresence;
+                    if (rp == null)
+                    {
+                        rp = Published.Asset as RichPresence;
+                        if (rp == null)
+                            return;
+                    }
+                }
+
+                ServiceRepository.Instance.FindService<IClipboardService>().SetData(rp.Script);
+
+                if (rp.Script.Length > RichPresence.ScriptMaxLength)
+                {
+                    TaskDialogViewModel.ShowWarningMessage("Your Rich Presence may not function as expected.",
+                        "Rich Presence exceeds maximum length of " + RichPresence.ScriptMaxLength + " characters (" + rp.Script.Length + ")");
+                }
+            });
         }
 
         public override string ViewerType
