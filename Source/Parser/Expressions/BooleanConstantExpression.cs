@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class BooleanConstantExpression : ExpressionBase
+    internal class BooleanConstantExpression : ExpressionBase, IMathematicCombineExpression
     {
         public BooleanConstantExpression(bool value, int line, int column)
             : this(value)
@@ -64,6 +64,28 @@ namespace RATools.Parser.Expressions
         {
             error = null;
             return Value;
+        }
+
+        /// <summary>
+        /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to combine with the current expression.</param>
+        /// <param name="operation">How to combine the expressions.</param>
+        /// <returns>
+        /// An expression representing the combined values on success, or <c>null</c> if the expressions could not be combined.
+        /// </returns>
+        public ExpressionBase Combine(ExpressionBase right, MathematicOperation operation)
+        {
+            var stringExpression = right as StringConstantExpression;
+            if (stringExpression != null)
+            {
+                var builder = new StringBuilder();
+                AppendString(builder);
+                builder.Append(stringExpression.Value);
+                return new StringConstantExpression(builder.ToString());
+            }
+
+            return null;
         }
     }
 }

@@ -49,7 +49,7 @@ namespace RATools.Tests.Parser.Functions
         public void TestSimple()
         {
             Assert.That(Evaluate("array_map([1, 2, 3], a => byte(a))"),
-                Is.EqualTo("[byte(1), byte(2), byte(3)]"));
+                Is.EqualTo("[byte(0x000001), byte(0x000002), byte(0x000003)]"));
         }
 
         [Test]
@@ -78,21 +78,21 @@ namespace RATools.Tests.Parser.Functions
         {
             // if the predicate returns false, ignore the item
             Assert.That(Evaluate("array_map([1, 2, 3], (a) { if (a % 2 == 0) { return byte(a) } else { return false }})"),
-                Is.EqualTo("[false, byte(2), false]"));
+                Is.EqualTo("[false, byte(0x000002), false]"));
         }
 
         [Test]
         public void TestRange()
         {
             Assert.That(Evaluate("array_map(range(1,5,2), a => byte(a))"),
-                Is.EqualTo("[byte(1), byte(3), byte(5)]"));
+                Is.EqualTo("[byte(0x000001), byte(0x000003), byte(0x000005)]"));
         }
 
         [Test]
         public void TestDictionary()
         {
             Assert.That(Evaluate("array_map({1:\"One\",2:\"Two\",3:\"Three\"}, a => byte(a))"),
-                Is.EqualTo("[byte(1), byte(2), byte(3)]"));
+                Is.EqualTo("[byte(0x000001), byte(0x000002), byte(0x000003)]"));
         }
 
         [Test]

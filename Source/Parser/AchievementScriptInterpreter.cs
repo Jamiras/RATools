@@ -622,7 +622,7 @@ namespace RATools.Parser
             {
                 case ExpressionType.MemoryAccessor:
                 case ExpressionType.Requirement:
-                case ExpressionType.RequirementClause:
+                case ExpressionType.MemoryValue:
                 case ExpressionType.RequirementGroup:
                     return true;
 

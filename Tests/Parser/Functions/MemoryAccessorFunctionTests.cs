@@ -198,9 +198,9 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
         [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
         [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "Cannot construct single address lookup from multiple memory references")]
-        [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(4660) == 3)")]
-        [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(4660) == 3")]
-        [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(4660) == 3 && 2 > 1")]
+        [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert to an address: repeated(4, word(0x001234) == 3)")]
+        [TestCase("byte(word(0x1234) == 3)", "Cannot convert to an address: word(0x001234) == 3")]
+        [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert to an address: word(0x001234) == 3")] // 2>1 is true and will be removed before reporting the error
         public void TestInvalidAddress(string input, string error)
         {
             Evaluate(input, error);

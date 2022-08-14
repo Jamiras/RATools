@@ -5,6 +5,7 @@ using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -34,9 +35,6 @@ namespace RATools.Parser
         /// <returns>The string if successful, <c>null</c> if not.</returns>
         public static string GetValueString(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
-            var terms = new List<Term>();
-            terms.Add(new Term { multiplier = 1.0 });
-
             var triggerBuilderScope = new InterpreterScope(scope) { Context = new TriggerBuilderContext() };
             if (!expression.ReplaceVariables(triggerBuilderScope, out expression))
             {
@@ -44,6 +42,7 @@ namespace RATools.Parser
                 return null;
             }
 
+            var terms = new List<Term>();
             if (!ProcessValueExpression(expression, scope, terms, out result))
                 return null;
 
@@ -99,7 +98,7 @@ namespace RATools.Parser
                             if ((term.multiplier % 1) == 0)
                             {
                                 // value is a whole number, just output it
-                                builder.Append((int)term.multiplier);
+                                builder.Append((int)(uint)term.multiplier);
                             }
                             else
                             {
@@ -118,85 +117,117 @@ namespace RATools.Parser
 
         private static string BuildMeasuredValueString(List<Term> terms)
         {
-            var builder = new StringBuilder();
-
-            // move subsources before addsources
-            int index = 0;
-            while (terms.Last().multiplier < 0 && index < terms.Count)
+            foreach (var term in terms)
             {
-                var term = terms.Last();
-                terms.RemoveAt(terms.Count - 1);
-                terms.Insert(index++, term);
-            }
-
-            for (int i = 0; i < terms.Count; i++)
-            {
-                var term = terms[i];
-
-                if (builder.Length > 0)
-                    builder.Append('_');
-
                 if (term.measured != null)
-                {
-                    if (i < terms.Count - 1)
-                    {
-                        foreach (var requirement in term.measured)
-                        {
-                            if (requirement.Type == RequirementType.Measured)
-                            {
-                                if (term.multiplier < 0)
-                                {
-                                    requirement.Type = RequirementType.SubSource;
-                                    term.multiplier = -term.multiplier;
-                                }
-                                else
-                                {
-                                    requirement.Type = RequirementType.AddSource;
-                                }
-                                break;
-                            }
-                        }
-                    }
+                    continue;
 
-                    builder.Append(AchievementBuilder.SerializeRequirements(term.measured, new Requirement[0][]));
+                var requirement = new Requirement { Left = term.field };
+                if (term.multiplier < 0)
+                {
+                    requirement.Type = RequirementType.SubSource;
+                    term.multiplier = -term.multiplier;
                 }
                 else
                 {
-                    if (i == terms.Count - 1)
+                    requirement.Type = RequirementType.AddSource;
+                }
+
+                if (term.multiplier != 1)
+                {
+                    if ((term.multiplier % 1) == 0)
                     {
-                        builder.Append("M:");
-                    }
-                    else if (term.multiplier < 0)
-                    {
-                        builder.Append("B:");
-                        term.multiplier = -term.multiplier;
+                        requirement.Operator = RequirementOperator.Multiply;
+                        requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)term.multiplier };
                     }
                     else
                     {
-                        builder.Append("A:");
+                        var inverse = 1.0 / term.multiplier;
+                        if ((inverse % 1) == 0)
+                        {
+                            requirement.Operator = RequirementOperator.Divide;
+                            requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)inverse };
+                        }
+                        else
+                        {
+                            requirement.Operator = RequirementOperator.Multiply;
+                            requirement.Right = new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = (float)term.multiplier };
+                        }
                     }
-
-                    term.field.Serialize(builder);
                 }
 
-                if (term.multiplier != 1.0)
-                {
-                    builder.Append('*');
-                    if (term.multiplier != Math.Floor(term.multiplier))
-                        builder.Append('f');
+                term.measured = new[] { requirement };
+            }
 
-                    builder.Append(term.multiplier);
+            // ensure last element of chain is an AddSource and change it to Measured
+            int moveIndex = -1;
+            bool hasMeasured = false;
+            for (int i = terms.Count - 1; i >=0; i--)
+            {
+                var term = terms[i];
+                var type = term.measured.Last().Type;
+
+                if (type == RequirementType.AddSource)
+                {
+                    if (moveIndex != -1)
+                    {
+                        terms.RemoveAt(i);
+                        terms.Insert(moveIndex, term);
+                    }
+
+                    term.measured.Last().Type = RequirementType.Measured;
+                    hasMeasured = true;
+                    break;
+                }
+                else if (type == RequirementType.SubSource)
+                {
+                    if (moveIndex == -1)
+                        moveIndex = i;
+                }
+                else if (type == RequirementType.Measured || 
+                    term.measured.Any(r => r.Type == RequirementType.Measured))
+                {
+                    hasMeasured = true;
+                    break;
                 }
             }
 
-            return builder.ToString();
+            // if we couldn't turn an AddSource into a Measured, add an explicit Measured(0) to the chain
+            if (!hasMeasured)
+            {
+                for (int i = terms.Count - 1; i >= 0; i--)
+                {
+                    var term = terms[i];
+                    if (term.measured.Last().Type == RequirementType.AddSource)
+                    {
+                        terms.Insert(i + 1, new Term
+                        {
+                            measured = new[]
+                            {
+                                new Requirement
+                                {
+                                    Left = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = 0 },
+                                    Type = RequirementType.Measured
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+
+            var requirements = new List<Requirement>();
+            foreach (var term in terms)
+                requirements.AddRange(term.measured);
+
+            return AchievementBuilder.SerializeRequirements(requirements, Enumerable.Empty<IEnumerable<Requirement>>());
         }
 
+        [DebuggerDisplay("{field} * {multiplier}")]
         private class Term
         {
             public Field field;
             public IEnumerable<Requirement> measured;
-            public double multiplier;
+            public double multiplier = 1.0;
         }
 
         private static ExpressionBase WrapInMeasured(ExpressionBase expression)
@@ -259,117 +290,242 @@ namespace RATools.Parser
             return true;
         }
 
+        private static Term ConvertToTerm(MemoryAccessorExpression memoryAccessor, out ExpressionBase error)
+        {
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            error = memoryAccessor.BuildTrigger(context);
+            if (error != null)
+                return null;
+
+            if (requirements.Count == 1 && requirements[0].Operator == RequirementOperator.None)
+                return new Term { field = requirements[0].Left };
+
+            if (requirements.Last().Type == RequirementType.None)
+                requirements.Last().Type = RequirementType.AddSource;
+
+            return new Term { measured = requirements };
+        }
+
+        private static Term ConvertToTerm(ModifiedMemoryAccessorExpression modifiedMemoryAccessor, out ExpressionBase error)
+        {
+            var term = ConvertToTerm(modifiedMemoryAccessor.MemoryAccessor, out error);
+            if (term == null)
+                return term;
+
+            Requirement requirement;
+            if (term.measured == null)
+            {
+                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
+                {
+                    if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
+                        term.multiplier = -1.0;
+
+                    return term;
+                }
+
+                if (modifiedMemoryAccessor.Modifier.IsMemoryReference)
+                {
+                    // not a constant, have to use Measured syntax
+                    requirement = new Requirement { Left = modifiedMemoryAccessor.MemoryAccessor.Field };
+                    term.measured = new[] { requirement };
+                }
+                else
+                {
+                    // merge the constant into the multiplier
+                    if (modifiedMemoryAccessor.Modifier.Type == FieldType.Value)
+                    {
+                        term.multiplier = modifiedMemoryAccessor.Modifier.Value;
+                    }
+                    else if (modifiedMemoryAccessor.Modifier.Type == FieldType.Float)
+                    {
+                        term.multiplier = modifiedMemoryAccessor.Modifier.Float;
+                    }
+
+                    if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.Divide)
+                        term.multiplier = 1.0 / term.multiplier;
+                    if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
+                        term.multiplier = -term.multiplier;
+
+                    return term;
+                }
+            }
+            else
+            {
+                requirement = term.measured.Last();
+            }
+
+            requirement.Operator = modifiedMemoryAccessor.ModifyingOperator;
+            requirement.Right = modifiedMemoryAccessor.Modifier;
+
+            if (modifiedMemoryAccessor.CombiningOperator != RequirementType.None)
+                requirement.Type = modifiedMemoryAccessor.CombiningOperator;
+            else
+                requirement.Type = RequirementType.AddSource;
+
+            return term;
+        }
+
         private static bool ProcessValueExpression(ExpressionBase expression, InterpreterScope scope, List<Term> terms, out ExpressionBase result)
         {
-            var triggerExpression = expression as ITriggerExpression;
-            if (triggerExpression != null)
+            Term term;
+
+            switch (expression.Type)
             {
-                var requirements = new List<Requirement>();
-                var context = new TriggerBuilderContext() { Trigger = requirements };
-                var error = triggerExpression.BuildTrigger(context);
-                if (error != null)
-                {
-                    result = error;
-                    return false;
-                }
-
-                SetImpliedMeasuredTarget(requirements);
-                return ProcessMeasuredValue(requirements, expression, terms, out result);
-            }
-
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall != null)
-            {
-                var requirements = new List<Requirement>();
-                var context = new ValueBuilderContext() { Trigger = requirements };
-                var valueScope = new InterpreterScope(scope) { Context = context };
-                var error = context.CallFunction(functionCall, valueScope);
-                if (error != null)
-                {
-                    result = error;
-                    return false;
-                }
-
-                SetImpliedMeasuredTarget(requirements);
-                return ProcessMeasuredValue(requirements, expression, terms, out result);
-            }
-
-            var field = AchievementBuilder.CreateFieldFromExpression(expression);
-            if (field.Type != FieldType.None)
-            {
-                terms.Last().field = field;
-                result = null;
-                return true;
-            }
-
-            var mathematic = expression as MathematicExpression;
-            if (mathematic != null)
-            {
-                if (mathematic.Operation == MathematicOperation.Multiply || mathematic.Operation == MathematicOperation.Divide)
-                {
-                    var mathematicLeft = mathematic.Left as MathematicExpression;
-                    if (mathematicLeft != null && MathematicExpression.GetPriority(mathematicLeft.Operation) == MathematicPriority.Add)
-                    {
-                        var newLeft = new MathematicExpression(mathematicLeft.Left, mathematic.Operation, mathematic.Right);
-                        var newRight = new MathematicExpression(mathematicLeft.Right, mathematic.Operation, mathematic.Right);
-                        mathematic = new MathematicExpression(newLeft, mathematicLeft.Operation, newRight);
-                    }
-                }
-
-                if (!ProcessValueExpression(mathematic.Left, scope, terms, out result))
-                    return false;
-
-                field = AchievementBuilder.CreateFieldFromExpression(mathematic.Right);
-                if (MergeFields(field, terms.Last(), mathematic.Operation))
+                case ExpressionType.IntegerConstant:
+                case ExpressionType.FloatConstant:
+                    terms.Add(new Term { field = FieldFactory.CreateField(expression) }); 
+                    result = null;
                     return true;
 
-                switch (mathematic.Operation)
+                case ExpressionType.MemoryAccessor:
+                    term = ConvertToTerm((MemoryAccessorExpression)expression, out result);
+                    if (term == null)
+                        return false;
+
+                    terms.Add(term);
+                    return true;
+
+                case ExpressionType.ModifiedMemoryAccessor:
+                    term = ConvertToTerm((ModifiedMemoryAccessorExpression)expression, out result);
+                    if (term == null)
+                        return false;
+
+                    terms.Add(term);
+                    return true;
+
+                case ExpressionType.MemoryValue:
+                    var memoryValue = (MemoryValueExpression)expression;
+                    foreach (var accessor in memoryValue.MemoryAccessors)
+                    {
+                        term = ConvertToTerm(accessor, out result);
+                        if (term == null)
+                            return false;
+
+                        terms.Add(term);
+                    }
+
+                    if (memoryValue.HasConstant)
+                    {
+                        term = new Term();
+                        term.field = FieldFactory.CreateField(memoryValue.ExtractConstant());
+                        if (term.field.Type == FieldType.Value && (int)term.field.Value < 0)
+                        {
+                            term.field.Value = (uint)(-(int)term.field.Value);
+                            term.multiplier = -term.multiplier;
+                        }
+                        terms.Add(term);
+                    }
+
+                    result = null;
+                    return true;
+
+                case ExpressionType.Mathematic:
+                    var mathematic = (MathematicExpression)expression;
+                    if (mathematic.Operation == MathematicOperation.Multiply || mathematic.Operation == MathematicOperation.Divide)
+                    {
+                        var mathematicLeft = mathematic.Left as MathematicExpression;
+                        if (mathematicLeft != null && MathematicExpression.GetPriority(mathematicLeft.Operation) == MathematicPriority.Add)
+                        {
+                            var newLeft = new MathematicExpression(mathematicLeft.Left, mathematic.Operation, mathematic.Right);
+                            var newRight = new MathematicExpression(mathematicLeft.Right, mathematic.Operation, mathematic.Right);
+                            mathematic = new MathematicExpression(newLeft, mathematicLeft.Operation, newRight);
+                        }
+                    }
+
+                    if (!ProcessValueExpression(mathematic.Left, scope, terms, out result))
+                        return false;
+
+                    if (MergeFields(FieldFactory.CreateField(mathematic.Right), terms.Last(), mathematic.Operation))
+                        return true;
+
+                    switch (mathematic.Operation)
+                    {
+                        case MathematicOperation.Add:
+                            return ProcessValueExpression(mathematic.Right, scope, terms, out result);
+
+                        case MathematicOperation.Subtract:
+                            var numTerms = terms.Count;
+                            if (!ProcessValueExpression(mathematic.Right, scope, terms, out result))
+                                return false;
+                            for (int i = numTerms; i < terms.Count; i++)
+                                terms[i].multiplier = -terms[i].multiplier;
+                            return true;
+
+                        case MathematicOperation.Multiply:
+                        case MathematicOperation.Divide:
+                            return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
+                    }
+                    break;
+
+                case ExpressionType.FunctionCall:
                 {
-                    case MathematicOperation.Add:
-                        terms.Add(new Term { multiplier = 1.0 });
-                        return ProcessValueExpression(mathematic.Right, scope, terms, out result);
+                    var functionCall = (FunctionCallExpression)expression;
+                    var requirements = new List<Requirement>();
+                    var context = new ValueBuilderContext() { Trigger = requirements };
+                    var valueScope = new InterpreterScope(scope) { Context = context };
+                    var error = context.CallFunction(functionCall, valueScope);
+                    if (error != null)
+                    {
+                        result = error;
+                        return false;
+                    }
 
-                    case MathematicOperation.Subtract:
-                        terms.Add(new Term { multiplier = -1.0 });
-                        return ProcessValueExpression(mathematic.Right, scope, terms, out result);
-
-                    case MathematicOperation.Multiply:
-                    case MathematicOperation.Divide:
-                        return ProcessValueExpression(WrapInMeasured(expression), scope, terms, out result);
-                }
-            }
-
-            var conditionalExpression = expression as ConditionalExpression;
-            if (conditionalExpression != null)
-            {
-                var valueScope = new InterpreterScope(scope) { Context = new ValueBuilderContext() };
-
-                ErrorExpression parseError;
-                var achievement = new ScriptInterpreterAchievementBuilder();
-                if (!achievement.PopulateFromExpression(expression, valueScope, out parseError))
-                {
-                    result = parseError;
-                    return false;
+                    SetImpliedMeasuredTarget(requirements);
+                    return ProcessMeasuredValue(requirements, expression, terms, out result);
                 }
 
-                SetImpliedMeasuredTarget(achievement.CoreRequirements);
-                foreach (var alt in achievement.AlternateRequirements)
-                    SetImpliedMeasuredTarget(alt);
+                case ExpressionType.Conditional:
+                    var conditionalExpression = expression as ConditionalExpression;
+                    if (conditionalExpression != null)
+                    {
+                        var valueScope = new InterpreterScope(scope) { Context = new ValueBuilderContext() };
 
-                var message = achievement.Optimize();
-                if (message != null)
-                {
-                    result = new ErrorExpression(message, expression);
-                    return false;
-                }
+                        ErrorExpression parseError;
+                        var achievement = new ScriptInterpreterAchievementBuilder();
+                        if (!achievement.PopulateFromExpression(expression, valueScope, out parseError))
+                        {
+                            result = parseError;
+                            return false;
+                        }
 
-                if (achievement.AlternateRequirements.Any())
-                {
-                    result = new ErrorExpression("Alt groups not supported in value expression", expression);
-                    return false;
-                }
+                        SetImpliedMeasuredTarget(achievement.CoreRequirements);
+                        foreach (var alt in achievement.AlternateRequirements)
+                            SetImpliedMeasuredTarget(alt);
 
-                return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
+                        var message = achievement.Optimize();
+                        if (message != null)
+                        {
+                            result = new ErrorExpression(message, expression);
+                            return false;
+                        }
+
+                        if (achievement.AlternateRequirements.Any())
+                        {
+                            result = new ErrorExpression("Alt groups not supported in value expression", expression);
+                            return false;
+                        }
+
+                        return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
+                    }
+                    break;
+
+                default:
+                    var triggerExpression = expression as ITriggerExpression;
+                    if (triggerExpression != null)
+                    {
+                        var requirements = new List<Requirement>();
+                        var context = new TriggerBuilderContext() { Trigger = requirements };
+                        var error = triggerExpression.BuildTrigger(context);
+                        if (error != null)
+                        {
+                            result = error;
+                            return false;
+                        }
+
+                        return ProcessMeasuredValue(requirements, expression, terms, out result);
+                    }
+                    break;
             }
 
             result = new ErrorExpression("Value must be a constant or a memory accessor", expression);
@@ -421,7 +577,7 @@ namespace RATools.Parser
             // if expression is a single term, just return it
             if (count == 1 && requirements.First().Operator == RequirementOperator.None)
             {
-                terms.Last().field = requirements.First().Left;
+                terms.Add(new Term { field = requirements.First().Left });
                 result = null;
                 return true;
             }
@@ -471,7 +627,7 @@ namespace RATools.Parser
             if (measured.HitCount == uint.MaxValue)
                 measured.HitCount = 0;
 
-            terms.Last().measured = requirements;
+            terms.Add(new Term { measured = requirements });
 
             result = null;
             return true;

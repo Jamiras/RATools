@@ -19,8 +19,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234) == 10", "0xH001234=10")]
         [TestCase("byte(0x1234) > byte(0x2345)", "0xH001234>0xH002345")]
         [TestCase("byte(0x1234) / byte(0x2345) < 10", "A:0xH001234/0xH002345_0<10")]
-        [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/f0.8_0<0xH002345")]
-        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "Cannot generate condition using both Divide and Multiply")]
+        [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/0xH002345_0<f0.8")]
+        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "Cannot generate condition using both Multiply and Divide")]
         public void TestGetConditionString(string input, string expected)
         {
             ExpressionBase error;
@@ -51,10 +51,12 @@ namespace RATools.Tests.Parser
         [TestCase("1 + 3 * 2", "v7")]
         [TestCase("byte(0x1234)", "0xH001234")]
         [TestCase("byte(0x1234) * 10", "0xH001234*10")]
+        [TestCase("byte(0x1234) * -10", "0xH001234*-10")]
         [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
         [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) + 10", "0xH001234_v10")]
         [TestCase("byte(0x1234) - 10", "0xH001234_v-10")]
+        [TestCase("10 - byte(0x1234)", "0xH001234*-1_v10")]
         [TestCase("(byte(0) + byte(1)) * 10", "0xH000000*10_0xH000001*10")]
         [TestCase("(byte(0) + 2) * 10", "0xH000000*10_v20")]
         [TestCase("(byte(0) + byte(1)) / 10", "0xH000000*0.1_0xH000001*0.1")]
@@ -74,18 +76,21 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234 + byte(0x2345)) + 1", "I:0xH002345_A:0xH001234_M:1")]
         [TestCase("byte(0x1234 + byte(0x2345)) + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_I:0xH002345_M:0xH001235")]
         [TestCase("byte(0x1234 + byte(0x2345)) + byte(0x1235 + byte(0x2345)) + 1", "I:0xH002345_A:0xH001234_I:0xH002345_A:0xH001235_M:1")]
-        [TestCase("byte(0x1234 + byte(0x2345)) + 1 + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_A:1_I:0xH002345_M:0xH001235")]
+        [TestCase("byte(0x1234 + byte(0x2345)) + 1 + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_I:0xH002345_A:0xH001235_M:1")]
         [TestCase("1 + byte(0x1234 + byte(0x2345))", "I:0xH002345_A:0xH001234_M:1")]
         [TestCase("byte(0x1234 + byte(0x2345)) - 1", "B:1_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) - byte(0x1235 + byte(0x2345))", "I:0xH002345_B:0xH001235_I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) * 2", "I:0xH002345_M:0xH001234*2")]
-        [TestCase("byte(0x1234 + byte(0x2345)) / 2", "I:0xH002345_M:0xH001234*f0.5")] // implicitly measured value will multiply by a fraction
-        [TestCase("measured(byte(0x1234 + byte(0x2345)) / 2)", "I:0xH002345_M:0xH001234/2")] // explicitly measured value will keep the division
+        [TestCase("byte(0x1234 + byte(0x2345)) / 2", "I:0xH002345_M:0xH001234/2")]
+        [TestCase("measured(byte(0x1234 + byte(0x2345)) / 2)", "I:0xH002345_M:0xH001234/2")]
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234)))", "M:0xH001234!=d0xH001234")]
         [TestCase("measured(byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
         [TestCase("tally(0, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234_R:0xH002345=1")]
         [TestCase("tally(20, byte(0x1234) != prev(byte(0x1234))) && never(byte(0x2345) == 1)", "M:0xH001234!=d0xH001234.20._R:0xH002345=1")]
         [TestCase("byte(byte(0x1234) - 10)", "I:0xH001234_M:0xHfffffff6")]
+        [TestCase("measured(repeated(10, byte(0x2345 + word(0x1234) * 4) == 6)))", "I:0x 001234*4_M:0xH002345=6.10.")]
+        [TestCase("prev(byte(0x1234))", "d0xH001234")]
+        [TestCase("bcd(byte(0x1234))", "b0xH001234")]
         public void TestGetValueString(string input, string expected)
         {
             ExpressionBase error;

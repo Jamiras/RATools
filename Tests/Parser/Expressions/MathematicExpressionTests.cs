@@ -12,19 +12,6 @@ namespace RATools.Tests.Parser.Expressions
     [TestFixture]
     class MathematicExpressionTests
     {
-        private static void AssertEquivalent(ExpressionBase value, ExpressionBase expected)
-        {
-            // helper function for comparing a FunctionCallExpression for a memory accessor
-            // to the resulting MemoryAccessorExpression.
-            var leftBuilder = new StringBuilder();
-            value.AppendString(leftBuilder);
-
-            var rightBuilder = new StringBuilder();
-            expected.AppendString(rightBuilder);
-
-            Assert.That(leftBuilder.ToString(), Is.EqualTo(rightBuilder.ToString()));
-        }
-
         [Test]
         [TestCase(MathematicOperation.Add, "variable + 99")]
         [TestCase(MathematicOperation.Subtract, "variable - 99")]
@@ -69,7 +56,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            AssertEquivalent(result, left);
+            ExpressionTests.AssertAppendString(result, "byte(0x000000)");
         }
 
         [Test]
@@ -190,7 +177,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            AssertEquivalent(result, left);
+            ExpressionTests.AssertAppendString(result, "byte(0x000000)");
         }
 
         [Test]
@@ -234,7 +221,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            AssertEquivalent(result, left);
+            ExpressionTests.AssertAppendString(result, "byte(0x000000)");
         }
 
         [Test]
@@ -278,7 +265,7 @@ namespace RATools.Tests.Parser.Expressions
 
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
-            AssertEquivalent(result, left);
+            ExpressionTests.AssertAppendString(result, "byte(0x000000)");
         }
 
         [Test]
@@ -368,30 +355,31 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         [Test]
-        [TestCase("byte(0) + 3 + 1", "byte(0) + 4")]
-        [TestCase("byte(0) + 3 - 1", "byte(0) + 2")]
-        [TestCase("byte(0) + 1 - 3", "byte(0) - 2")]
-        [TestCase("byte(0) + 3 - 3", "byte(0)")]
-        [TestCase("byte(0) - 3 - 1", "byte(0) - 4")]
-        [TestCase("byte(0) - 3 + 1", "byte(0) - 2")]
-        [TestCase("byte(0) - 1 + 3", "byte(0) + 2")]
-        [TestCase("byte(0) - 3 + 3", "byte(0)")]
-        [TestCase("byte(0) * 4 * 2", "byte(0) * 8")]
-        [TestCase("byte(0) * 4 / 2", "byte(0) * 2")]
-        [TestCase("byte(0) * 2 / 4", "byte(0) * 2 / 4")] // don't convert integer division to float yet
-        [TestCase("byte(0) * 2.0 / 4", "byte(0) * 0.5")] // do convert partial float division to float
-        [TestCase("byte(0) * 2 / 4.0", "byte(0) * 0.5")] // do convert partial float division to float
-        [TestCase("byte(0) * 2 / 3.0", "byte(0) * 0.666667")] // do convert partial float division to float
-        [TestCase("byte(0) * 3 / 3", "byte(0)")]
-        [TestCase("byte(0) / 4 / 2", "byte(0) / 8")]
-        [TestCase("byte(0) / 4 * 2", "byte(0) / 4 * 2")] // divide followed by multiply removes the modulus portion, cannot combine
-        [TestCase("byte(0) / 2 * 4", "byte(0) / 2 * 4")] // divide followed by multiply removes the modulus portion, cannot combine
-        [TestCase("byte(0) / 3 * 3", "byte(0) / 3 * 3")] // divide followed by multiply removes the modulus portion, cannot combine
-        [TestCase("byte(0) / 4.0 / 2", "byte(0) / 8.0")]
-        [TestCase("byte(0) / 4.0 * 2", "byte(0) * 0.5")] // divide followed by multiply with floats can be merged
-        [TestCase("byte(0) & 12 & 5", "byte(0) & 4")] // bitwise and is commutative. prefer merging constants
-        [TestCase("byte(0) & 12 * 5", "byte(0) & 60")] // multiplication has higher precedence
-        [TestCase("byte(0) & 12 - 5", "byte(0) & 7")] // addition has higher precedence
+        [TestCase("byte(0) + 3 + 1", "byte(0x000000) + 4")]
+        [TestCase("byte(0) + 3 - 1", "byte(0x000000) + 2")]
+        [TestCase("byte(0) + 1 - 3", "byte(0x000000) - 2")]
+        [TestCase("byte(0) + 3 - 3", "byte(0x000000)")]
+        [TestCase("byte(0) - 3 - 1", "byte(0x000000) - 4")]
+        [TestCase("byte(0) - 3 + 1", "byte(0x000000) - 2")]
+        [TestCase("byte(0) - 1 + 3", "byte(0x000000) + 2")]
+        [TestCase("byte(0) - 3 + 3", "byte(0x000000)")]
+        [TestCase("byte(0) * 4 * 2", "byte(0x000000) * 8")]
+        [TestCase("byte(0) * 4 / 2", "byte(0x000000) * 2")]
+        [TestCase("byte(0) * 2 / 4", "byte(0x000000) / 2")] // whole integer division can be converted
+        [TestCase("byte(0) * 3 / 4", "byte(0x000000) * 3 / 4")] // don't convert integer division to float yet
+        [TestCase("byte(0) * 2.0 / 4", "byte(0x000000) * 0.5")] // do convert partial float division to float
+        [TestCase("byte(0) * 2 / 4.0", "byte(0x000000) * 0.5")] // do convert partial float division to float
+        [TestCase("byte(0) * 2 / 3.0", "byte(0x000000) * 0.666667")] // do convert partial float division to float
+        [TestCase("byte(0) * 3 / 3", "byte(0x000000)")]
+        [TestCase("byte(0) / 4 / 2", "byte(0x000000) / 8")]
+        [TestCase("byte(0) / 4 * 2", "byte(0x000000) / 4 * 2")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 2 * 4", "byte(0x000000) / 2 * 4")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 3 * 3", "byte(0x000000) / 3 * 3")] // divide followed by multiply removes the modulus portion, cannot combine
+        [TestCase("byte(0) / 4.0 / 2", "byte(0x000000) / 8.0")]
+        [TestCase("byte(0) / 4.0 * 2", "byte(0x000000) / 2.0")] // divide followed by multiply with floats can be merged
+        [TestCase("byte(0) & 12 & 5", "byte(0x000000) & 0x00000004")] // bitwise and is commutative. prefer merging constants
+        [TestCase("byte(0) & 12 * 5", "byte(0x000000) & 0x0000003C")] // multiplication has higher precedence
+        [TestCase("byte(0) & 12 - 5", "byte(0x000000) & 0x00000007")] // addition has higher precedence
         public void TestCombining(string input, string expected)
         {
             var expr = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));

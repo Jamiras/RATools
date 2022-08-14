@@ -43,27 +43,28 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
-        [TestCase("never(byte(1) == 56)", "never(byte(1) == 56)")]
-        [TestCase("never(repeated(6, byte(1) == 56))", "never(repeated(6, byte(1) == 56))")]
-        [TestCase("never(byte(1) == 56 || byte(2) == 3)", "never(byte(1) == 56) && never(byte(2) == 3)")] // or clauses can be separated
-        [TestCase("never(byte(1) == 56 && byte(2) == 3)", "never(byte(1) == 56 && byte(2) == 3)")] // and clauses cannot be separated
-        [TestCase("unless(byte(1) == 56)", "unless(byte(1) == 56)")]
-        [TestCase("unless(repeated(6, byte(1) == 56))", "unless(repeated(6, byte(1) == 56))")]
-        [TestCase("unless(byte(1) == 56 || byte(2) == 3)", "unless(byte(1) == 56) && unless(byte(2) == 3)")] // or clauses can be separated
-        [TestCase("unless(byte(1) == 56 && byte(2) == 3)", "unless(byte(1) == 56 && byte(2) == 3)")] // and clauses cannot be separated
-        [TestCase("trigger_when(byte(1) == 56)", "trigger_when(byte(1) == 56)")]
-        [TestCase("trigger_when(repeated(6, byte(1) == 56))", "trigger_when(repeated(6, byte(1) == 56))")]
-        [TestCase("trigger_when(byte(1) == 56 && byte(2) == 3)", "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3)")] // and clauses can be separated
-        [TestCase("trigger_when(byte(1) == 56 || byte(2) == 3)", "trigger_when(byte(1) == 56) || trigger_when(byte(2) == 3)")] // or clauses can be separated
-        [TestCase("trigger_when(repeated(6, byte(1) == 56) && unless(byte(2) == 3))", "trigger_when(repeated(6, byte(1) == 56)) && unless(byte(2) == 3)")] // PauseIf clause can be extracted
-        [TestCase("trigger_when(repeated(6, byte(1) == 56) && never(byte(2) == 3))", "trigger_when(repeated(6, byte(1) == 56)) && never(byte(2) == 3)")] // ResetIf clause can be extracted
-        [TestCase("trigger_when(repeated(6, byte(1) == 56 && never(byte(2) == 3)))", "trigger_when(repeated(6, byte(1) == 56 && never(byte(2) == 3)))")] // ResetNextIf clause should not be extracted
+        [TestCase("never(byte(1) == 56)", "never(byte(0x000001) == 56)")]
+        [TestCase("never(repeated(6, byte(1) == 56))", "never(repeated(6, byte(0x000001) == 56))")]
+        [TestCase("never(byte(1) == 56 || byte(2) == 3)", "never(byte(0x000001) == 56) && never(byte(0x000002) == 3)")] // or clauses can be separated
+        [TestCase("never(byte(1) == 56 && byte(2) == 3)", "never(byte(0x000001) == 56 && byte(0x000002) == 3)")] // and clauses cannot be separated
+        [TestCase("unless(byte(1) == 56)", "unless(byte(0x000001) == 56)")]
+        [TestCase("unless(repeated(6, byte(1) == 56))", "unless(repeated(6, byte(0x000001) == 56))")]
+        [TestCase("unless(byte(1) == 56 || byte(2) == 3)", "unless(byte(0x000001) == 56) && unless(byte(0x000002) == 3)")] // or clauses can be separated
+        [TestCase("unless(byte(1) == 56 && byte(2) == 3)", "unless(byte(0x000001) == 56 && byte(0x000002) == 3)")] // and clauses cannot be separated
+        [TestCase("trigger_when(byte(1) == 56)", "trigger_when(byte(0x000001) == 56)")]
+        [TestCase("trigger_when(repeated(6, byte(1) == 56))", "trigger_when(repeated(6, byte(0x000001) == 56))")]
+        [TestCase("trigger_when(byte(1) == 56 && byte(2) == 3)", "trigger_when(byte(0x000001) == 56) && trigger_when(byte(0x000002) == 3)")] // and clauses can be separated
+        [TestCase("trigger_when(byte(1) == 56 || byte(2) == 3)", "trigger_when(byte(0x000001) == 56) || trigger_when(byte(0x000002) == 3)")] // or clauses can be separated
+        [TestCase("trigger_when(repeated(6, byte(1) == 56) && unless(byte(2) == 3))", "trigger_when(repeated(6, byte(0x000001) == 56)) && unless(byte(0x000002) == 3)")] // PauseIf clause can be extracted
+        [TestCase("trigger_when(repeated(6, byte(1) == 56) && never(byte(2) == 3))", "trigger_when(repeated(6, byte(0x000001) == 56)) && never(byte(0x000002) == 3)")] // ResetIf clause can be extracted
+        [TestCase("trigger_when(repeated(6, byte(1) == 56 && never(byte(2) == 3)))", "trigger_when(repeated(6, byte(0x000001) == 56 && never(byte(0x000002) == 3)))")] // ResetNextIf clause should not be extracted
         [TestCase("trigger_when((byte(1) == 56 && byte(2) == 3) || (byte(1) == 55 && byte(2) == 4))",
-            "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3) || trigger_when(byte(1) == 55) && trigger_when(byte(2) == 4)")] // or with ands can be separated
+            "trigger_when(byte(0x000001) == 56) && trigger_when(byte(0x000002) == 3) || trigger_when(byte(0x000001) == 55) && trigger_when(byte(0x000002) == 4)")] // or with ands can be separated
         [TestCase("trigger_when((byte(1) == 56 || byte(2) == 3) && (byte(1) == 55 || byte(2) == 4))",
-            "trigger_when(byte(1) == 56 || byte(2) == 3) && trigger_when(byte(1) == 55 || byte(2) == 4)")] // and can be separated, but not nested ors
+            "trigger_when(byte(0x000001) == 56 || byte(0x000002) == 3) && trigger_when(byte(0x000001) == 55 || byte(0x000002) == 4)")] // and can be separated, but not nested ors
         [TestCase("trigger_when((byte(1) == 56 && byte(2) == 3) && (byte(1) == 55 || byte(2) == 4))",
-            "trigger_when(byte(1) == 56) && trigger_when(byte(2) == 3) && trigger_when(byte(1) == 55 || byte(2) == 4)")] // and can be separated, but not nested ors
+            "trigger_when(byte(0x000001) == 56) && trigger_when(byte(0x000002) == 3) && trigger_when(byte(0x000001) == 55 || byte(0x000002) == 4)")] // and can be separated, but not nested ors
+        [TestCase("never(0 + byte(1) + byte(2) == 56)", "never(byte(0x000001) + byte(0x000002) == 56)")]
         public void TestReplaceVariables(string input, string expected)
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
