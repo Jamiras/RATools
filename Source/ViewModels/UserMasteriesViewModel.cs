@@ -170,7 +170,7 @@ namespace RATools.ViewModels
                     {
                         result.NumMasters++;
 
-                        if (user.User == UserName)
+                        if (String.Compare(user.User, UserName, StringComparison.InvariantCultureIgnoreCase) == 0)
                         {
                             result.MasteryRank = result.NumMasters;
                             result.MasteryMinutes = (int)user.GameTime.TotalMinutes;

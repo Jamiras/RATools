@@ -498,8 +498,7 @@ namespace RATools.ViewModels
             var userStats = new List<UserStats>();
             var achievementStats = new List<AchievementStats>();
 
-            if (!LoadGameFromFile(achievementStats, userStats, false))
-                return;
+            bool updateFile = LoadGameFromFile(achievementStats, userStats, false);
 
             foreach (var user in users)
             {
@@ -516,7 +515,8 @@ namespace RATools.ViewModels
                     user.Achievements[kvp.Key] = kvp.Value;
             }
 
-            WriteGameStats(_gameName, achievementStats, userStats);
+            if (updateFile)
+                WriteGameStats(_gameName, achievementStats, userStats);
         }
 
         private bool MergeUserGameMastery(UserStats stats)
