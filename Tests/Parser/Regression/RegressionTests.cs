@@ -79,8 +79,11 @@ namespace RATools.Tests.Parser.Regression
                         {
                             yield return new string[]
                             {
+                                // For some reason, Test Explorer splits tests containing ")." into
+                                // a separate namespace. Trick it by changing the parenthesis to a,
+                                // curly bracket, which can't be part of a legal path
                                 Path.GetFileNameWithoutExtension(file),
-                                Path.GetFullPath(file).Replace(dir, "")
+                                Path.GetFullPath(file).Replace(dir, "").Replace(").", "}.")
                             };
                         }
                     }
@@ -95,6 +98,7 @@ namespace RATools.Tests.Parser.Regression
             if (scriptFileName == NoScriptsError)
                 return;
 
+            scriptPath = scriptPath.Replace("}.", ")."); // reverse the hack (see above)
             var parts = scriptPath.Split('\\');
             int i = 0;
 
