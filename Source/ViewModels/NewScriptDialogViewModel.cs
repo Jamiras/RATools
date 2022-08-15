@@ -1279,7 +1279,7 @@ namespace RATools.ViewModels
                         if (achievement.CoreRequirements.Count > 0 && achievement.CoreRequirements.Last().Type == RequirementType.Measured)
                             achievement.CoreRequirements.Last().Type = RequirementType.None;
 
-                        var vmAchievement = new AssetSourceViewModel(null, "Rich Presence");
+                        var vmAchievement = new AssetSourceViewModel(new AchievementViewModel(null), "Rich Presence");
                         vmAchievement.Asset = achievement.ToAchievement();
 
                         DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 32);
