@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
@@ -134,6 +135,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.Comparison, "byte(0x001234) + 2 > byte(0x002345)")] // constant moved to left side
         [TestCase("byte(0x001234)", ">", "byte(0x002345) + 2",
             ExpressionType.Comparison, "byte(0x002345) + 2 < byte(0x001234)")] // prefer positive modifier, swap sides
+        [TestCase("300 - byte(0x001234)", ">=", "100",
+            ExpressionType.Comparison, "byte(0x001234) <= 200")] // constant moved to right, then whole thing inverted
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);

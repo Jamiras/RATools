@@ -237,7 +237,7 @@ namespace RATools.Parser.Expressions
                 bool isLogicalUnit = value.IsLogicalUnit;
 
                 // not a basic type, evaluate it
-                var assignmentScope = new InterpreterScope(scope) { Context = assignment };
+                var assignmentScope = new InterpreterScope(parameterScope) { Context = assignment };
                 if (!value.ReplaceVariables(assignmentScope, out value))
                 {
                     var error = (ErrorExpression)value;

@@ -5,6 +5,7 @@ using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Tests.Parser.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -126,6 +127,21 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[1].Right.ToString(), Is.EqualTo("1"));
             Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
             Assert.That(requirements[1].HitCount, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void TestSubtractedTarget()
+        {
+            var requirements = Evaluate("measured(300 - byte(0x1234) >= 100)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.None));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.SubSource));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("300"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.GreaterThanOrEqual));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("100"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
         }
 
         [Test]
