@@ -82,9 +82,9 @@ namespace RATools.ViewModels
                     return null;
 
                 var name = vm.BadgeName;
-                if (!name.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                if (Path.GetExtension(name) == "")
                     name += ".png";
-                var path = Path.Combine(Path.Combine(vm._owner.RACacheDirectory, "..\\Badge"), vm.BadgeName);
+                var path = Path.Combine(Path.Combine(vm._owner.RACacheDirectory, "..\\Badge"), name);
                 if (File.Exists(path))
                 {
                     var image = new BitmapImage(new Uri(path));
