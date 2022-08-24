@@ -3,7 +3,6 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser.Functions
 {
@@ -180,7 +179,7 @@ namespace RATools.Parser.Functions
             return null;
         }
 
-        protected ErrorExpression EvaluateCondition(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
+        protected static ErrorExpression EvaluateCondition(TriggerBuilderContext context, InterpreterScope scope, ConditionalExpression condition)
         {
             ExpressionBase result;
 
@@ -345,6 +344,22 @@ namespace RATools.Parser.Functions
             }
 
             return true;
+        }
+
+        internal class OrNextWrapperFunction : RepeatedFunction
+        {
+            public OrNextWrapperFunction()
+                : base("__ornext")
+            {
+            }
+
+            public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+            {
+                var comparison = functionCall.Parameters.ElementAt(0);
+
+                // last requirement hit target will implicitly be left at 0
+                return BuildTriggerCondition(context, scope, comparison);
+            }
         }
     }
 }

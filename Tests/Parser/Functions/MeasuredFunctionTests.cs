@@ -51,6 +51,8 @@ namespace RATools.Tests.Parser.Functions
             {
                 var parseError = funcDef.BuildTrigger(context, scope, funcCall);
                 Assert.That(parseError, Is.Not.Null);
+                if (parseError.InnerError != null)
+                    parseError = parseError.InnermostError;
                 Assert.That(parseError.Message, Is.EqualTo(expectedError));
             }
 
@@ -123,13 +125,39 @@ namespace RATools.Tests.Parser.Functions
         [Test]
         public void TestRepeatedZero()
         {
-            var requirements = Evaluate("measured(repeated(0, byte(0x1234) == 20))");
+            Evaluate("measured(repeated(0, byte(0x1234) == 20))",
+                "Unbounded count is only supported in measured value expressions");
+        }
+
+        [Test]
+        public void TestRepeatedZeroInValue()
+        {
+            var input = "measured(repeated(0, byte(0x1234) == 20))";
+
+            var requirements = new List<Requirement>();
+            var funcDef = new MeasuredFunction();
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            ExpressionBase error;
+            var valueScope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = new ValueBuilderContext() };
+            var funcCallScope = new InterpreterScope(valueScope) { Context = funcCall };
+            var scope = funcCall.GetParameters(funcDef, funcCallScope, out error);
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
+
+            ExpressionBase evaluated;
+            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
+            funcCall = (FunctionCallExpression)evaluated;
+            Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+
             Assert.That(requirements.Count, Is.EqualTo(1));
             Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
             Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
             Assert.That(requirements[0].Right.ToString(), Is.EqualTo("20"));
             Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
-            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(uint.MaxValue)); // will be removed when serialized
         }
 
         [Test]
@@ -418,6 +446,49 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[1].Right.ToString(), Is.EqualTo("126"));
             Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
             Assert.That(requirements[1].HitCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestTallyZero()
+        {
+            Evaluate("measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))",
+                "Unbounded count is only supported in measured value expressions");
+        }
+
+        [Test]
+        public void TestTallyZeroInValue()
+        {
+            var input = "measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))";
+
+            var requirements = new List<Requirement>();
+            var funcDef = new MeasuredFunction();
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            ExpressionBase error;
+            var valueScope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = new ValueBuilderContext() };
+            var funcCallScope = new InterpreterScope(valueScope) { Context = funcCall };
+            var scope = funcCall.GetParameters(funcDef, funcCallScope, out error);
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
+
+            ExpressionBase evaluated;
+            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
+            funcCall = (FunctionCallExpression)evaluated;
+            Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("20"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(uint.MaxValue)); // will be removed when serialized
         }
 
         [Test]

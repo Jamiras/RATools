@@ -19,7 +19,8 @@ namespace RATools.Parser.Functions
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
-            var error = base.BuildTrigger(context, scope, functionCall);
+            var measuredScope = new InterpreterScope(scope) { Context = functionCall };
+            var error = base.BuildTrigger(context, measuredScope, functionCall);
             if (error != null)
                 return error;
 

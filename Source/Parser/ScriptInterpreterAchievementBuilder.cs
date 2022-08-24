@@ -70,7 +70,7 @@ namespace RATools.Parser
 
             // first turn the OR trees into flat lists -- (A || (B || (C || D))) -> A, B, C, D
             var flattenedClauses = new List<List<ExpressionBase>>();
-            var expansionSize = 1;
+            long expansionSize = 1;
             foreach (var clause in orConditions)
             {
                 var flattened = new List<ExpressionBase>();
@@ -197,9 +197,8 @@ namespace RATools.Parser
                     result = new ConditionalExpression(result, ConditionalOperation.Or, condition);
             }
 
-            result = new FunctionCallExpression("repeated", new ExpressionBase[]
+            result = new FunctionCallExpression("__ornext", new ExpressionBase[]
             {
-                new IntegerConstantExpression(0),
                 result
             });
 

@@ -135,6 +135,8 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new ArrayPushFunction());
                 _globalScope.AddFunction(new ArrayPopFunction());
                 _globalScope.AddFunction(new ArrayMapFunction());
+
+                _globalScope.AddFunction(new RepeatedFunction.OrNextWrapperFunction());
             }
 
             return _globalScope;

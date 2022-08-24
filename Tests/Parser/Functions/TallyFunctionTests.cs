@@ -159,19 +159,8 @@ namespace RATools.Tests.Parser.Functions
         [Test]
         public void TestZeroCount()
         {
-            // allow for infinite counting of some set of conditions - mostly for leaderboard values
-            var requirements = Evaluate("tally(0, byte(0x1234) == 56, byte(0x1234) == 67)");
-            Assert.That(requirements.Count, Is.EqualTo(2));
-            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
-            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
-            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("56"));
-            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddHits));
-            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
-            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
-            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
-            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
-            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
-            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+            Evaluate("tally(0, byte(0x1234) == 56, byte(0x1234) == 67)",
+                "Unbounded count is only supported in measured value expressions");
         }
 
         [Test]
