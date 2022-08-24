@@ -461,6 +461,26 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         [Test]
+        public void TestEvaluateVariableShared()
+        {
+            // func2 should be called with the i value passed into func (6),
+            // not the one queued to be passed into func1 (4)
+            var function1Definition = Parse("function func1(i, j) { return i + j }");
+            var function2Definition = Parse("function func2(i) { return i - 1 }");
+            var functionDefinition = Parse("function func(i) { return func1(4, func2(i)) }");
+            var scope = new InterpreterScope();
+            scope.AddFunction(function1Definition);
+            scope.AddFunction(function2Definition);
+            scope.AddFunction(functionDefinition);
+            var value = new IntegerConstantExpression(6);
+            var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
+
+            ExpressionBase result;
+            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(result, Is.EqualTo(new IntegerConstantExpression(9)));
+        }
+
+        [Test]
         public void TestEvaluateMathematical()
         {
             var functionDefinition = Parse("function func(i) { return i * 2 }");

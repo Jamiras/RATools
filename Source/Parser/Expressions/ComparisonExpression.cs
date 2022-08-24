@@ -238,9 +238,16 @@ namespace RATools.Parser.Expressions
             // if we are, the right side is the measured target, and we don't want to modify that.
             if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
             {
-                var functionContext = scope.GetContext<FunctionDefinitionExpression>();
-                if (functionContext != null && functionContext is MeasuredFunction)
-                    attemptNormalization = false;
+                var initializationContext = scope.GetContext<ParameterInitializationContext>();
+                if (initializationContext != null)
+                {
+                    var format = initializationContext.GetParameter<StringConstantExpression>(scope, "format");
+                    if (format != null && format.Value == "raw")
+                    {
+                        // capturing raw measured value. don't modify comparison
+                        attemptNormalization = false;
+                    }
+                }
             }
 
             var comparison = new ComparisonExpression(left, Operation, right);

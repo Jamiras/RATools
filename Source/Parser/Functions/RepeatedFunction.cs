@@ -3,6 +3,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser.Functions
 {
@@ -40,10 +41,10 @@ namespace RATools.Parser.Functions
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
             var comparison = functionCall.Parameters.ElementAt(1);
 
-            return BuildTriggerConditions(context, scope, comparison, count.Value);
+            return BuildTriggerConditions(context, scope, comparison, count);
         }
 
-        protected ErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, int count)
+        protected ErrorExpression BuildTriggerConditions(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase comparison, IntegerConstantExpression count)
         {
             ErrorExpression error;
 
@@ -116,7 +117,34 @@ namespace RATools.Parser.Functions
             if (error != null)
                 return error;
 
-            context.LastRequirement.HitCount = (uint)count;
+            return AssignHitCount(context, scope, count, Name.Name);
+        }
+
+        protected static ErrorExpression AssignHitCount(TriggerBuilderContext context, InterpreterScope scope, IntegerConstantExpression count, string functionName)
+        {
+            if (count.Value < 0)
+                return new ErrorExpression("count must be greater than or equal to zero", count);
+
+            if (count.Value == 0)
+            {
+                // a repeated/tally expression with a count of 0 is unbounded. unbounded target
+                // counts are invalid by themselves. make sure we're in a valid context.
+                var functionContext = scope.GetContext<FunctionCallExpression>();
+                if (functionContext != null && functionContext.FunctionName.Name == "measured")
+                {
+                    // an unbounded count can be measured for a value expression
+                    if (scope.GetContext<ValueBuilderContext>() != null)
+                    {
+                        // assign the maximum allowed value for now. it'll be removed by the serializer.
+                        context.LastRequirement.HitCount = uint.MaxValue;
+                        return null;
+                    }
+                }
+
+                return new ErrorExpression("Unbounded count is only supported in measured value expressions", count);
+            }
+
+            context.LastRequirement.HitCount = (uint)count.Value;
             return null;
         }
 

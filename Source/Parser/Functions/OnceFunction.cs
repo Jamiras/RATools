@@ -14,7 +14,7 @@ namespace RATools.Parser.Functions
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
             var comparison = functionCall.Parameters.First();
-            return BuildTriggerConditions(context, scope, comparison, 1);
+            return BuildTriggerConditions(context, scope, comparison, new IntegerConstantExpression(1));
         }
     }
 }

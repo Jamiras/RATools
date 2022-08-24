@@ -70,6 +70,45 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
+        public void TestComparisonAddSource()
+        {
+            var requirements = Evaluate("measured(byte(0x1234) + word(0x2345) == 120)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.None));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddSource));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("word(0x002345)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestComparisonAddAddress()
+        {
+            var requirements = Evaluate("measured(byte(0x1234 + word(0x2345)) == 120)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("word(0x002345)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.None));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddAddress));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("120"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestComparisonAndNext()
+        {
+            Evaluate("measured(byte(0x2345) == 6 && byte(0x1234) == 120)",
+                "measured comparison can only have one logical clause");
+        }
+
+        [Test]
         public void TestRepeated()
         {
             var requirements = Evaluate("measured(repeated(10, byte(0x1234) == 20))");
@@ -79,6 +118,18 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[0].Right.ToString(), Is.EqualTo("20"));
             Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
             Assert.That(requirements[0].HitCount, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void TestRepeatedZero()
+        {
+            var requirements = Evaluate("measured(repeated(0, byte(0x1234) == 20))");
+            Assert.That(requirements.Count, Is.EqualTo(1));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("20"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.Measured));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -142,6 +193,55 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.GreaterThanOrEqual));
             Assert.That(requirements[1].Right.ToString(), Is.EqualTo("100"));
             Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+        }
+
+        [Test]
+        public void TestAdjustedTargetRaw()
+        {
+            // for raw measurements, make sure we keep the specified target for display
+            // in this case, the bar will start at 22/100 and go to 100/100
+            var requirements = Evaluate("measured(byte(0x1234) + 22 >= 100)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("22"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.None));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddSource));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.GreaterThanOrEqual));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("100"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+        }
+
+        [Test]
+        public void TestAdjustedTargetRawExplicit()
+        {
+            // for raw measurements, make sure we keep the specified target for display
+            // in this case, the bar will start at 22/100 and go to 100/100
+            var requirements = Evaluate("measured(byte(0x1234) + 22 >= 100, format=\"raw\")");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("22"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.None));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AddSource));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.GreaterThanOrEqual));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("100"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.Measured));
+        }
+
+        [Test]
+        public void TestAdjustedTargetPercent()
+        {
+            // for percent measurements, we can ignore the specified target and optimize
+            // the display bar. in this case, the bar will go from 0% to 100% representing
+            // the values 22-100.
+            var requirements = Evaluate("measured(byte(0x1234) + 22 >= 100, format=\"percent\")");
+            Assert.That(requirements.Count, Is.EqualTo(1));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.GreaterThanOrEqual));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("78"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.MeasuredPercent));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
         }
 
         [Test]
