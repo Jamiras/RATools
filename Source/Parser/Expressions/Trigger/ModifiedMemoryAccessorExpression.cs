@@ -410,6 +410,13 @@ namespace RATools.Parser.Expressions.Trigger
             var modifiedMemoryAccessor = right as ModifiedMemoryAccessorExpression;
             if (modifiedMemoryAccessor != null)
             {
+                if (modifiedMemoryAccessor.ModifyingOperator == ModifyingOperator &&
+                    modifiedMemoryAccessor.Modifier == Modifier)
+                {
+                    // same modifier applied to both sides, eliminate it
+                    return new ComparisonExpression(MemoryAccessor.Clone(), operation, modifiedMemoryAccessor.MemoryAccessor.Clone());
+                }
+
                 var opposingOperator = MathematicExpression.GetOppositeOperation(GetMathematicOperation(modifiedMemoryAccessor.ModifyingOperator));
                 if (opposingOperator != MathematicOperation.Multiply && opposingOperator != MathematicOperation.Divide)
                     return null;

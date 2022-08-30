@@ -5,6 +5,7 @@ using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Tests.Parser.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -131,12 +132,22 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
-        public void TestOrNextNoHitTarget()
+        public void TestOrNextWrapper()
         {
             // ensures an OrNext chain can be forcibly generated even without a hit target
             // this behavior is required by CrossMultiplyOrConditions to prevent the number
             // of generated alts from becoming too cumbersome.
-            var requirements = Evaluate("repeated(0, byte(0x1234) == 56 || byte(0x2345) == 67)");
+            var expr = ExpressionTests.Parse("byte(0x1234) == 56 || byte(0x2345) == 67");
+            var funcDef = new RepeatedFunction.OrNextWrapperFunction();
+            var funcCall = new FunctionCallExpression("__ornext", new[] { expr });
+
+            ExpressionBase error;
+            var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            scope.Context = context;
+            Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+
             Assert.That(requirements.Count, Is.EqualTo(2));
             Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
             Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));

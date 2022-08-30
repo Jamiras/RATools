@@ -294,6 +294,7 @@ namespace RATools.Parser.Expressions
         public InterpreterScope GetParameters(FunctionDefinitionExpression function, InterpreterScope scope, out ExpressionBase error)
         {
             var parameterScope = function.CreateCaptureScope(scope);
+            var initializationScope = new InterpreterScope(scope) { Context = new ParameterInitializationContext(function, Parameters) };
 
             // optimization for no parameter function
             if (function.Parameters.Count == 0 && Parameters.Count == 0)
@@ -344,7 +345,7 @@ namespace RATools.Parser.Expressions
                         return null;
                     }
 
-                    var value = GetParameter(parameterScope, scope, assignedParameter);
+                    var value = GetParameter(parameterScope, initializationScope, assignedParameter);
                     error = value as ErrorExpression;
                     if (error != null)
                         return null;
@@ -371,7 +372,7 @@ namespace RATools.Parser.Expressions
                     var variableName = index < parameterCount ? function.Parameters.ElementAt(index).Name : "...";
 
                     assignedParameter = new AssignmentExpression(new VariableExpression(variableName), parameter);
-                    var value = GetParameter(parameterScope, scope, assignedParameter);
+                    var value = GetParameter(parameterScope, initializationScope, assignedParameter);
                     error = value as ErrorExpression;
                     if (error != null)
                         return null;
@@ -401,7 +402,7 @@ namespace RATools.Parser.Expressions
                     return null;
                 }
 
-                var assignmentScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression(parameter), value) };
+                var assignmentScope = new InterpreterScope(initializationScope) { Context = new AssignmentExpression(new VariableExpression(parameter), value) };
                 if (!value.ReplaceVariables(assignmentScope, out value))
                 {
                     error = new ErrorExpression(value, this);

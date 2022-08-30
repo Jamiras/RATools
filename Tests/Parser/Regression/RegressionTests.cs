@@ -6,7 +6,6 @@ using RATools.Parser;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 
 namespace RATools.Tests.Parser.Regression
 {
@@ -204,7 +203,18 @@ namespace RATools.Tests.Parser.Regression
                     var outputFileLine = outputFileTokenizer.ReadTo('\n').TrimRight();
 
                     if (expectedFileLine != outputFileLine)
-                        Assert.AreEqual(expectedFileLine.ToString(), outputFileLine.ToString(), "Line " + line);
+                    {
+                        var message = "Line " + line;
+
+                        if (line == 1)
+                        {
+                            // if the first line is not a version, it's an error, dump the entire error
+                            if (outputFileLine.Contains(':'))
+                                message += "\n" + outputFileContents;
+                        }
+
+                        Assert.AreEqual(expectedFileLine.ToString(), outputFileLine.ToString(), message);
+                    }
 
                     expectedFileTokenizer.Advance();
                     outputFileTokenizer.Advance();

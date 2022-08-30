@@ -19,7 +19,8 @@ namespace RATools.Parser.Functions
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
         {
-            var error = base.BuildTrigger(context, scope, functionCall);
+            var measuredScope = new InterpreterScope(scope) { Context = functionCall };
+            var error = base.BuildTrigger(context, measuredScope, functionCall);
             if (error != null)
                 return error;
 
@@ -68,6 +69,39 @@ namespace RATools.Parser.Functions
             }
 
             return null;
+        }
+
+        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
+        {
+            bool seenLogicalJoin = false;
+            foreach (var requirement in builder.CoreRequirements)
+            {
+                switch (requirement.Type)
+                {
+                    case RequirementType.AndNext:
+                    case RequirementType.OrNext:
+                        seenLogicalJoin = true;
+                        break;
+
+                    case RequirementType.AddHits:
+                    case RequirementType.SubHits:
+                    case RequirementType.ResetNextIf:
+                        seenLogicalJoin = false;
+                        break;
+
+                    default:
+                        if (seenLogicalJoin && !requirement.IsCombining)
+                        {
+                            if (requirement.HitCount == 0 && requirement == builder.CoreRequirements.Last())
+                                return new ErrorExpression("measured comparison can only have one logical clause");
+                        }
+
+                        seenLogicalJoin = false;
+                        break;
+                }
+            }
+
+            return base.ModifyRequirements(builder);
         }
     }
 }

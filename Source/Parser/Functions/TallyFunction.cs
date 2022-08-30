@@ -137,11 +137,7 @@ namespace RATools.Parser.Functions
 
             // set the target hitcount
             var count = (IntegerConstantExpression)functionCall.Parameters.First();
-            if (count.Value < 0)
-                return new ErrorExpression("count must be greater than or equal to zero", functionCall.Parameters.First());
-            context.LastRequirement.HitCount = (uint)count.Value;
-
-            return null;
+            return AssignHitCount(context, scope, count, Name.Name);
         }
     }
 
