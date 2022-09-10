@@ -37,7 +37,7 @@ namespace RATools.ViewModels
             /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
             GameId = gameId;
             Title = title;
-            Notes = new TinyDictionary<int, string>();
+            Notes = new Dictionary<int, string>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _publishedAchievements = new List<Achievement>();
@@ -71,7 +71,7 @@ namespace RATools.ViewModels
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
-        internal TinyDictionary<int, string> Notes { get; private set; }
+        internal Dictionary<int, string> Notes { get; private set; }
 
         public ScriptViewModel Script { get; protected set; }
 
@@ -488,6 +488,9 @@ namespace RATools.ViewModels
 
             if (String.IsNullOrEmpty(_localAssets.Title))
                 _localAssets.Title = Title;
+
+            foreach (var kvp in _localAssets.Notes)
+                Notes[kvp.Key] = kvp.Value;
         }
 
         private void ReadCodeNotes()
