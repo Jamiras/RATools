@@ -104,7 +104,13 @@ namespace RATools.Parser.Functions
                 }
 
                 if (error == null)
-                    error = BuildTriggerCondition(nestedContext, scope, condition);
+                {
+                    // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
+                    // from optimizing out the ResetIf
+                    var innerScope = new InterpreterScope(scope);
+                    innerScope.Context = nestedContext;
+                    error = BuildTriggerCondition(nestedContext, innerScope, condition, true);
+                }
                 if (error != null)
                     return error;
 

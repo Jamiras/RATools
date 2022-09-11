@@ -797,7 +797,7 @@ namespace RATools.Parser
             return null;
         }
 
-        private static bool? NormalizeLimits(Requirement requirement)
+        private static bool? NormalizeLimits(Requirement requirement, bool forSubclause)
         {
             if (requirement.Right.Type != FieldType.Value)
             {
@@ -870,7 +870,8 @@ namespace RATools.Parser
             if (result != null)
                 return result;
 
-            if (requirement.Left.Size == FieldSize.BitCount &&
+            if (!forSubclause &&
+                requirement.Left.Size == FieldSize.BitCount &&
                 requirement.Operator == RequirementOperator.Equal &&
                 requirement.Right.Type == FieldType.Value &&
                 requirement.Type != RequirementType.Measured &&
@@ -953,7 +954,7 @@ namespace RATools.Parser
             return null;
         }
 
-        private static void NormalizeComparisons(IList<RequirementEx> requirements)
+        private static void NormalizeComparisons(IList<RequirementEx> requirements, bool forSubclause)
         {
             var alwaysTrue = new List<RequirementEx>();
             var alwaysFalse = new List<RequirementEx>();
@@ -971,7 +972,7 @@ namespace RATools.Parser
                 if (result == null)
                     result = requirement.Evaluate();
                 if (result == null)
-                    result = NormalizeLimits(requirement);
+                    result = NormalizeLimits(requirement, forSubclause);
 
                 // any condition with a HitCount greater than 1 cannot be always_true(), so create a copy
                 // without the HitCount and double-check.
@@ -2052,19 +2053,17 @@ namespace RATools.Parser
                     {
                         bool hasResetNextIf = false;
 
-                        foreach (var requirement in requirementEx.Requirements)
+                        for (int i = 0; i < requirementEx.Requirements.Count; i++)
                         {
+                            var requirement = requirementEx.Requirements[i];
                             if (requirement.Type == RequirementType.ResetNextIf)
                             {
                                 hasResetNextIf = true;
 
                                 var subclause = new RequirementEx();
-                                foreach (var requirement2 in requirementEx.Requirements)
-                                {
-                                    subclause.Requirements.Add(requirement2);
-                                    if (requirement2.Type == RequirementType.ResetNextIf)
-                                        break;
-                                }
+                                int j = FindResetNextIfStart(requirementEx.Requirements, i);
+                                for (int k = j; k <= i; k++)
+                                    subclause.Requirements.Add(requirementEx.Requirements[k]);
 
                                 if (resetNextIf == null)
                                 {
@@ -2157,6 +2156,16 @@ namespace RATools.Parser
 
         public string Optimize()
         {
+            return Optimize(false);
+        }
+
+        public string OptimizeForSubClause()
+        {
+            return Optimize(true);
+        }
+
+        private string Optimize(bool forSubclause)
+        {
             if (_core.Count == 0 && _alts.Count == 0)
                 return "No requirements found.";
 
@@ -2170,16 +2179,19 @@ namespace RATools.Parser
             foreach (var group in groups)
                 MergeAddSourceConstants(group);
 
-            // convert PauseIfs not guarding anything to standard requirements
-            NormalizePauseIfs(groups);
-
-            // attempt to convert ResetNextIf into ResetIf and place in alt group
-            NormalizeResetNextIfs(groups);
-
-            // convert ResetIfs to standard requirements if there aren't any hits to reset
-            bool hasHitCount = HasHitCount(groups);
-            if (!hasHitCount)
+            if (!forSubclause)
             {
+                // convert PauseIfs not guarding anything to standard requirements
+                NormalizePauseIfs(groups);
+
+                // attempt to convert ResetNextIf into ResetIf and place in alt group
+                NormalizeResetNextIfs(groups);
+            }
+
+            bool hasHitCount = HasHitCount(groups);
+            if (!hasHitCount && !forSubclause)
+            {
+                // convert ResetIfs to standard requirements if there aren't any hits to reset
                 if (NormalizeResetIfs(groups))
                 {
                     // if at least one ResetIf was converted, check for unnecessary PauseIfs again
@@ -2191,7 +2203,7 @@ namespace RATools.Parser
             // clamp memory reference comparisons to bounds; identify comparisons that can never
             // be true, or are always true; ensures constants are on the right
             foreach (var group in groups)
-                NormalizeComparisons(group);
+                NormalizeComparisons(group, forSubclause);
 
             // remove duplicates within a set of requirements
             RemoveDuplicates(groups[0], null);
@@ -2245,21 +2257,48 @@ namespace RATools.Parser
             while (_alts.Count >= groups.Count)
                 _alts.RemoveAt(_alts.Count - 1);
 
-            // ensure only one Measured target exists
-            uint measuredTarget = 0;
-            string measuredError = CheckForMultipleMeasuredTargets(_core, ref measuredTarget);
-            if (measuredError != null)
-                return measuredError;
-
-            foreach (var group in _alts)
+            if (!forSubclause)
             {
-                measuredError = CheckForMultipleMeasuredTargets(group, ref measuredTarget);
+                // ensure only one Measured target exists
+                uint measuredTarget = 0;
+                string measuredError = CheckForMultipleMeasuredTargets(_core, ref measuredTarget);
                 if (measuredError != null)
                     return measuredError;
+
+                foreach (var group in _alts)
+                {
+                    measuredError = CheckForMultipleMeasuredTargets(group, ref measuredTarget);
+                    if (measuredError != null)
+                        return measuredError;
+                }
             }
 
             // success!
             return null;
+        }
+
+        private static int FindResetNextIfStart(IList<Requirement> requirements, int resetNextIfIndex)
+        {
+            int i = resetNextIfIndex;
+            while (i > 0)
+            {
+                switch (requirements[i - 1].Type)
+                {
+                    case RequirementType.AddAddress:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                    case RequirementType.AndNext:
+                    case RequirementType.OrNext:
+                    case RequirementType.ResetNextIf:
+                        // these have higher precedence than ResetNextIf, drag them with
+                        i--;
+                        continue;
+                }
+
+                break;
+            }
+
+            return i;
         }
 
         /// <summary>
@@ -2269,10 +2308,41 @@ namespace RATools.Parser
         {
             var newCore = new List<Requirement>();
 
-            // the last item cannot have its own HitCount as it will hold the HitCount for the group.
-            // if necessary, find one without a HitCount and make it the last.
-            if (_core.Count == 0)
-                EnsureLastGroupHasNoHitCount(_alts);
+            // if a ResetIf is found, change it to a ResetNextIf and move it to the front
+            if (_core.Any(r => r.Type == RequirementType.ResetIf))
+            {
+                for (int i = 0; i < _core.Count; i++)
+                {
+                    if (_core[i].Type == RequirementType.ResetIf)
+                    {
+                        int j = FindResetNextIfStart(_core, i);
+
+                        for (int k = j; k <= i; k++)
+                            newCore.Add(_core[k]);
+
+                        _core.RemoveRange(j, i - j + 1);
+                        i = j - 1;
+                    }
+                }
+
+                // if ResetIfs are attached to something, change them to ResetNextIfs
+                if (_core.Count != 0)
+                {
+                    foreach (var r in newCore)
+                    {
+                        if (r.Type == RequirementType.ResetIf)
+                            r.Type = RequirementType.ResetNextIf;
+                    }
+                }
+            }
+
+            if (_alts.Count > 0)
+            {
+                // the last item cannot have its own HitCount as it will hold the HitCount for the group.
+                // if necessary, find one without a HitCount and make it the last.
+                if (_core.Count == 0)
+                    EnsureLastGroupHasNoHitCount(_alts);
+            }
 
             // merge the alts into the core group as an OrNext chain. only one AndNext chain can be generated
             // by the alt groups or the logic cannot be represented using only AndNext and OrNext conditions
@@ -2322,7 +2392,7 @@ namespace RATools.Parser
             //
             if (_core.Count > 0)
             {
-                if (newCore.Count > 0)
+                if (newCore.Count > 0 && newCore.Last().Type != RequirementType.ResetNextIf)
                     newCore.Last().Type = RequirementType.AndNext;
 
                 // turn the core group into an AndNext chain and append it to the end of the clause

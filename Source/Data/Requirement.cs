@@ -226,17 +226,28 @@ namespace RATools.Data
         {
             if (HitCount == 0 && addHits == null)
             {
+                bool wrapInParenthesis = false;
+
                 if (!string.IsNullOrEmpty(andNext) && andNext[0] != '(' &&
                     (andNext.Contains(" && ") || andNext.Contains(" || ")))
                 {
+                    wrapInParenthesis = true;
+                }
+
+                if (wrapInParenthesis)
                     builder.Append('(');
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
-                    builder.Append(')');
-                }
-                else
+
+                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+
+                if (resetNextIf != null)
                 {
-                    AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
+                    builder.Append(" && never(");
+                    builder.Append(RemoveOuterParentheses(resetNextIf));
+                    builder.Append(")");
                 }
+
+                if (wrapInParenthesis)
+                    builder.Append(')');
             }
             else
             {
