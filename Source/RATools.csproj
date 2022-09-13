@@ -43,4 +43,10 @@
     <Resource Include="Resources\script.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Page Update="Views\GameProgressionDialog.xaml">
+      <XamlRuntime>$(DefaultXamlRuntime)</XamlRuntime>
+    </Page>
+  </ItemGroup>
+
 </Project>
