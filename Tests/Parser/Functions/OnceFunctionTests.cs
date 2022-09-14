@@ -38,17 +38,27 @@ namespace RATools.Tests.Parser.Functions
 
             ExpressionBase evaluated;
             Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
-            funcCall = evaluated as FunctionCallExpression;
 
-            if (expectedError == null)
+
+            var triggerExpression = evaluated as ITriggerExpression;
+            if (triggerExpression != null)
             {
-                Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+                error = triggerExpression.BuildTrigger(context);
             }
             else
             {
-                var parseError = funcDef.BuildTrigger(context, scope, funcCall);
-                Assert.That(parseError, Is.Not.Null);
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
+                funcCall = evaluated as FunctionCallExpression;
+                error = funcDef.BuildTrigger(context, scope, funcCall);
+            }
+
+            if (expectedError == null)
+            {
+                Assert.That(error, Is.Null);
+            }
+            else
+            {
+                Assert.That(error, Is.InstanceOf<ErrorExpression>());
+                Assert.That(((ErrorExpression)error).Message, Is.EqualTo(expectedError));
             }
 
             return requirements;

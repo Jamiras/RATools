@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System.Linq;
+using System.Runtime;
 
 namespace RATools.Parser.Expressions.Trigger
 {
@@ -29,14 +30,16 @@ namespace RATools.Parser.Expressions.Trigger
                 case ExpressionType.MemoryAccessor:
                     var memoryAccessor = (MemoryAccessorExpression)expression;
                     if (memoryAccessor.PointerChain.Any())
-                        goto default;
+                        break;
                     if (expression is BinaryCodedDecimalExpression)
                         return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);
                     return memoryAccessor.Field;
 
                 default:
-                    return new Field();
+                    break;
             }
+
+            return new Field();
         }
 
         internal static Field ApplyMathematic(Field left, RequirementOperator operation, Field right)

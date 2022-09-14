@@ -9,7 +9,7 @@ namespace RATools.Parser.Expressions.Trigger
 {
     internal class MemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
         IMathematicCombineExpression, IMathematicCombineInverseExpression,
-        IComparisonNormalizeExpression, IUpconvertibleExpression
+        IComparisonNormalizeExpression, IUpconvertibleExpression, ICloneableExpression
     {
         public MemoryAccessorExpression(FieldType type, FieldSize size, uint value)
             : this(new Field { Type = type, Size = size, Value = value })
@@ -64,6 +64,11 @@ namespace RATools.Parser.Expressions.Trigger
             _pointerChain.Add(pointer);
         }
 
+        public void ClearPointerChain()
+        {
+            _pointerChain = null;
+        }
+
         public bool PointerChainMatches(MemoryAccessorExpression that)
         {
             if (_pointerChain == null || that._pointerChain == null)
@@ -81,10 +86,32 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
+        public bool PointerChainMatches(ExpressionBase that)
+        {
+            var memoryAccessor = that as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+                return PointerChainMatches(memoryAccessor);
+
+            var modifiedMemoryAccessor = that as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+                return PointerChainMatches(modifiedMemoryAccessor.MemoryAccessor);
+
+            var memoryValue = that as MemoryValueExpression;
+            if (memoryValue != null)
+                return PointerChainMatches(memoryValue.MemoryAccessors.Last().MemoryAccessor);
+
+            return (_pointerChain == null || _pointerChain.Count == 0);
+        }
+
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as MemoryAccessorExpression;
             return (that != null && Field == that.Field && PointerChainMatches(that));
+        }
+
+        ExpressionBase ICloneableExpression.Clone()
+        {
+            return Clone();
         }
 
         public virtual MemoryAccessorExpression Clone()
@@ -323,10 +350,21 @@ namespace RATools.Parser.Expressions.Trigger
                 case ExpressionType.MemoryAccessor:
                 {
                     var memoryAccessor = (MemoryAccessorExpression)right;
-                    if (memoryAccessor.PointerChain.Count() > 0 &&
-                        PointerChain.Count() == 0)
+                    if (memoryAccessor.HasPointerChain)
                     {
-                        swap = true;
+                        if (!HasPointerChain)
+                        {
+                            swap = true;
+                        }
+                        else if (!PointerChainMatches(memoryAccessor))
+                        {
+                            // both sides have pointers (that are not the same).
+                            // move them both to the same side and compare to 0
+                            var memoryValue = new MemoryValueExpression();
+                            memoryValue.ApplyMathematic(this, MathematicOperation.Add);
+                            memoryValue.ApplyMathematic(memoryAccessor, MathematicOperation.Subtract);
+                            return new ComparisonExpression(memoryValue, operation, new IntegerConstantExpression(0));
+                        }
                     }
                     break;
                 }

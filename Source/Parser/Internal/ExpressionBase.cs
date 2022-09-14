@@ -1183,12 +1183,17 @@ namespace RATools.Parser.Internal
         ModifiedMemoryAccessor,
 
         /// <summary>
-        /// A mathematic chain of MemoryAccessors (AddSource/SubSource)
+        /// A mathematic chain of MemoryAccessors (AddSource/SubSource).
         /// </summary>
         MemoryValue,
 
         /// <summary>
-        /// A comparison of requirement clauses. (manages AddHits chain)
+        /// A comparison of MemoryValues with a possible hit target.
+        /// </summary>
+        RequirementClause,
+
+        /// <summary>
+        /// A chain of RequirementClauses (AndNext/OrNext/AddHits/SubHits)
         /// </summary>
         Requirement,
 

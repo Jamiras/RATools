@@ -2,7 +2,6 @@
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 
@@ -10,13 +9,17 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 {
     internal static class TriggerExpressionTests
     {
-        public static ExpressionBase Parse(string input)
+        public static InterpreterScope CreateScope()
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new TriggerBuilderContext();
+            return scope;
+        }
+
+        public static ExpressionBase Parse(string input, InterpreterScope scope)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
-
-            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            scope.Context = new TriggerBuilderContext();
 
             ExpressionBase result;
             if (!expr.ReplaceVariables(scope, out result))
@@ -25,10 +28,23 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             return result;
         }
 
+        public static ExpressionBase Parse(string input)
+        {
+            return Parse(input, CreateScope());
+        }
+
         public static T Parse<T>(string input)
             where T : ExpressionBase
         {
             var result = Parse(input);
+            Assert.That(result, Is.InstanceOf<T>());
+            return (T)result;
+        }
+
+        public static T Parse<T>(string input, InterpreterScope scope)
+            where T : ExpressionBase
+        {
+            var result = Parse(input, scope);
             Assert.That(result, Is.InstanceOf<T>());
             return (T)result;
         }

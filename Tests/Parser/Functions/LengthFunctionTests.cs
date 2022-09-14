@@ -131,7 +131,7 @@ namespace RATools.Tests.Parser.Functions
         public void TestComparison()
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            Evaluate("length(byte(0x1234) != 12)", scope, "Cannot calculate length of Comparison");
+            Evaluate("length(byte(0x1234) != 12)", scope, "Cannot calculate length of RequirementClause");
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using RATools.Parser.Expressions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -399,6 +400,22 @@ namespace RATools.Parser.Internal
             {
                 var context = scope.Context as T;
                 if (context != null)
+                    return context;
+
+                scope = scope._parent;
+            } while (scope != null);
+
+            return null;
+        }
+
+        internal T GetContext<T>(Predicate<T> match)
+            where T : class
+        {
+            var scope = this;
+            do
+            {
+                var context = scope.Context as T;
+                if (context != null && match(context))
                     return context;
 
                 scope = scope._parent;

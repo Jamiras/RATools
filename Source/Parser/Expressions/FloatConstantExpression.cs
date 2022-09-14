@@ -175,7 +175,10 @@ namespace RATools.Parser.Expressions
             }
 
             // prefer constants on right side of comparison
-            return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
+            if (!right.IsLiteralConstant)
+                return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
+
+            return null;
         }
     }
 }

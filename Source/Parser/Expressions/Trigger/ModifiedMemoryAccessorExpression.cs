@@ -7,7 +7,7 @@ namespace RATools.Parser.Expressions.Trigger
 {
     internal class ModifiedMemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression,
         IMathematicCombineExpression, IMathematicCombineInverseExpression,
-        IComparisonNormalizeExpression, IUpconvertibleExpression
+        IComparisonNormalizeExpression, IUpconvertibleExpression, ICloneableExpression
     {
         public ModifiedMemoryAccessorExpression()
             : base(ExpressionType.ModifiedMemoryAccessor)
@@ -102,6 +102,11 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
                 }
             }
+        }
+
+        ExpressionBase ICloneableExpression.Clone()
+        {
+            return Clone();
         }
 
         public ModifiedMemoryAccessorExpression Clone()
