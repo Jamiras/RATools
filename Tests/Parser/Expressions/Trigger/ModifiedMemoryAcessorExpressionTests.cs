@@ -37,6 +37,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("prev(high4(0x001234)) * prior(bit3(0x001235))", "d0xU001234*p0xP001235")]
         [TestCase("low4(word(0x001234)) * high4(word(0x001234) + 10)", "I:0x 001234_0xL000000*0xU00000a")]
         [TestCase("byte(0x001234) * -1", "0xH001234*4294967295")]
+        [TestCase("byte(dword(0x001234) + 0x10) * 10", "I:0xX001234_0xH000010*10")]
+        [TestCase("byte(dword(0x001234) + 0x10) * byte(dword(0x001234) + 0x14)", "I:0xX001234_0xH000010*0xH000014")]
+        [TestCase("byte(dword(0x001234) + 0x10) / 10", "I:0xX001234_0xH000010/10")]
+        [TestCase("byte(dword(0x001234) + 0x10) / byte(dword(0x001234) + 0x14)", "I:0xX001234_0xH000010/0xH000014")]
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<ModifiedMemoryAccessorExpression>(input);
@@ -78,6 +82,18 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.ModifiedMemoryAccessor, "byte(0x001234)")] // "*1" is unnecessary
         [TestCase("byte(0x001234) / 10", "*", "10",
             ExpressionType.Mathematic, "byte(0x001234) / 10 * 10")] // "/1" could produce differing results: 17/10*10 = 10, 17/1=17
+        [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(dword(0x002345) + 0x14)",
+            ExpressionType.Error, "Cannot multiply two values with differing pointers")]
+        [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(dword(0x002345) + 0x14)",
+            ExpressionType.Error, "Cannot divide two values with differing pointers")]
+        [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(0x10)",
+            ExpressionType.Error, "Cannot multiply two values with differing pointers")]
+        [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(0x10)",
+            ExpressionType.Error, "Cannot divide two values with differing pointers")]
+        [TestCase("byte(0x10) * 10", "*", "byte(dword(0x002345) + 0x14)",
+            ExpressionType.Error, "Cannot multiply pointer value and modified value")]
+        [TestCase("byte(0x10) * 10", "/", "byte(dword(0x002345) + 0x14)",
+            ExpressionType.Error, "Cannot divide pointer value and modified value")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertCombine(left, operation, right, expectedType, expected);
