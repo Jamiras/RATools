@@ -31,8 +31,11 @@ namespace RATools.Parser
         internal LocalAssets(string filename, IFileSystemService fileSystemService)
         {
             _fileSystemService = fileSystemService;
+            _extraLines = new List<string>();
+
             _achievements = new List<Achievement>();
             _leaderboards = new List<Leaderboard>();
+            _notes = new Dictionary<int, string>();
             RichPresence = null;
 
             _filename = filename;
@@ -43,6 +46,7 @@ namespace RATools.Parser
 
         private readonly IFileSystemService _fileSystemService;
         private readonly string _filename;
+        private readonly List<string> _extraLines;
 
         public string Version { get; private set; }
 
@@ -71,6 +75,16 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Leaderboard> _leaderboards;
 
+        /// <summary>
+        /// Gets the notes read from the file.
+        /// </summary>
+        public Dictionary<int, string> Notes
+        {
+            get { return _notes; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private Dictionary<int, string> _notes;
+
         public RichPresence RichPresence { get; private set; }
 
         private static DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -89,14 +103,23 @@ namespace RATools.Parser
                         var line = reader.ReadLine();
                         var tokenizer = Tokenizer.CreateTokenizer(line);
 
-                        if (tokenizer.NextChar == 'L')
+                        if (Char.IsDigit(tokenizer.NextChar))
+                        {
+                            ReadAchievement(tokenizer);
+                        }
+                        else if (tokenizer.NextChar == 'L')
                         {
                             tokenizer.Advance();
                             ReadLeaderboard(tokenizer);
                         }
+                        else if (tokenizer.NextChar == 'N')
+                        {
+                            tokenizer.Advance(3); // 'N0:'
+                            ReadNote(tokenizer);
+                        }
                         else
                         {
-                            ReadAchievement(tokenizer);
+                            _extraLines.Add(line);
                         }
                     }
                 }
@@ -241,6 +264,21 @@ namespace RATools.Parser
             _leaderboards.Add(leaderboard);
         }
 
+        private void ReadNote(Tokenizer tokenizer)
+        {
+            var addressString = tokenizer.ReadTo(':');
+            tokenizer.Advance();
+            var note = tokenizer.ReadQuotedString();
+
+            if (addressString.StartsWith("0x"))
+            {
+                int address;
+                addressString = addressString.SubToken(2);
+                if (Int32.TryParse(addressString.ToString(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out address))
+                    _notes[address] = note.ToString();
+            }
+        }
+
         /// <summary>
         /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
         /// </summary>
@@ -322,6 +360,12 @@ namespace RATools.Parser
                     writer.Write("\\\"");
                 else if (c == '\\')
                     writer.Write("\\\\");
+                else if (c == '\n')
+                    writer.Write("\\n");
+                else if (c == '\r')
+                    writer.Write("\\r");
+                else if (c == '\t')
+                    writer.Write("\\t");
                 else
                     writer.Write(c);
             }
@@ -348,7 +392,9 @@ namespace RATools.Parser
                     version = leaderboardMinimumVersion;
             }
 
-            if (version > 0.30)
+            if (_notes.Count > 0 && version < 1.1)
+                Version = "1.0.5";
+            else if (version > 0.30)
                 Version = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:F2}", version);
 
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
@@ -356,11 +402,21 @@ namespace RATools.Parser
                 writer.WriteLine(Version);
                 writer.WriteLine(Title);
 
+                foreach (var note in _notes)
+                {
+                    writer.Write("N0:0x{0:x6}:\"", note.Key);
+                    WriteEscaped(writer, note.Value);
+                    writer.WriteLine("\"");
+                }
+
                 foreach (var achievement in _achievements)
                     WriteAchievement(writer, author, achievement, (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
 
                 foreach (var leaderboard in _leaderboards)
                     WriteLeaderboard(writer, leaderboard, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
+
+                foreach (var line in _extraLines)
+                    writer.WriteLine(line);
             }
 
             if (assetsToValidate == null || assetsToValidate.Any(a => a is RichPresence))
