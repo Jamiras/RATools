@@ -56,6 +56,7 @@ namespace RATools.Views
             dialogService.RegisterDialogHandler(typeof(UpdateLocalViewModel), vm => new OkCancelView(new UpdateLocalDialog()));
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel), vm => new GameStatsDialog());
             dialogService.RegisterDialogHandler(typeof(GameStatsViewModel.UserHistoryViewModel), vm => new UserHistoryDialog());
+            dialogService.RegisterDialogHandler(typeof(GameProgressionViewModel), vm => new GameProgressionDialog());
             dialogService.RegisterDialogHandler(typeof(OpenTicketsViewModel), vm => new OpenTicketsDialog());
             dialogService.RegisterDialogHandler(typeof(AboutDialogViewModel), vm => new OkCancelView(new AboutDialog()));
             dialogService.RegisterDialogHandler(typeof(ConditionsAnalyzerViewModel), vm => new ConditionsAnalyzerDialog());

@@ -193,7 +193,7 @@ namespace RATools.ViewModels
                     {
                         var achievement = gameStats.Achievements.FirstOrDefault(a => a.Id == id);
                         return (achievement != null) ? achievement.Points : 0;
-                    });
+                    }, null);
 
                     if (user.PointsEarned == gameStats.TotalPoints)
                     {
