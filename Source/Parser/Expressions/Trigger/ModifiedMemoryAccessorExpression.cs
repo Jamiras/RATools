@@ -168,14 +168,46 @@ namespace RATools.Parser.Expressions.Trigger
             Field field;
 
             var rightAccessor = right as MemoryAccessorExpression;
-            if (rightAccessor != null && MemoryAccessor.PointerChainMatches(rightAccessor))
+            if (rightAccessor != null)
             {
                 // FieldFactory won't process a MemoryAccessor with a Pointer chain. We want
-                // to allow it, but only if it matches the pointer chain of this MemorAccessor.
+                // to allow it, but only if it matches the pointer chain of this MemoryAccessor.
+                if (!MemoryAccessor.PointerChainMatches(rightAccessor))
+                {
+                    if (!MemoryAccessor.HasPointerChain)
+                    {
+                        if (operation == MathematicOperation.Multiply)
+                        {
+                            // right has a pointer chain. left does not. multiplication is communitive. invert
+                            return rightAccessor.Combine(this, MathematicOperation.Multiply);
+                        }
+
+                        return new ErrorExpression(
+                            string.Format("Cannot {0} pointer value and modified value",
+                                            MathematicExpression.GetOperatorVerb(operation)), right);
+                    }
+
+                    return new ErrorExpression(
+                        string.Format("Cannot {0} two values with differing pointers",
+                                      MathematicExpression.GetOperatorVerb(operation)), right);
+                }
+
+                // pointer chain matched. extract the field
                 field = rightAccessor.Field;
             }
             else
             {
+                if (MemoryAccessor.HasPointerChain)
+                {
+                    var rightModifiedAccessor = right as ModifiedMemoryAccessorExpression;
+                    if (rightModifiedAccessor != null && rightModifiedAccessor.ModifyingOperator != RequirementOperator.None)
+                    {
+                        return new ErrorExpression(
+                            string.Format("Cannot {0} pointer value and modified value",
+                                          MathematicExpression.GetOperatorVerb(operation)), right);
+                    }
+                }
+
                 field = FieldFactory.CreateField(right);
                 if (field.Type == FieldType.None)
                     return new MathematicExpression(this, operation, right);
