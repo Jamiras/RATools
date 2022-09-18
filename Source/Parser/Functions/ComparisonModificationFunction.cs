@@ -18,7 +18,7 @@ namespace RATools.Parser.Functions
             return BuildTriggerCondition(context, scope, comparison);
         }
 
-        protected ErrorExpression BuildTriggerCondition(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase condition)
+        protected ErrorExpression BuildTriggerCondition(TriggerBuilderContext context, InterpreterScope scope, ExpressionBase condition, bool optimize = false)
         { 
             var builder = new ScriptInterpreterAchievementBuilder();
             ExpressionBase result;
@@ -35,6 +35,13 @@ namespace RATools.Parser.Functions
                         // non-allowed construct
                         return new ErrorExpression("comparison did not evaluate to a valid comparison", condition) { InnerError = (ErrorExpression)result };
                 }
+            }
+
+            if (optimize)
+            {
+                var message = builder.OptimizeForSubClause();
+                if (message != null)
+                    return new ErrorExpression(message, condition);
             }
 
             var error = builder.CollapseForSubClause();

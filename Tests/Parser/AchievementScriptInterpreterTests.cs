@@ -1180,5 +1180,36 @@ namespace RATools.Tests.Parser
             }
             Assert.That(seen, Is.True);
         }
+
+        [Test]
+        public void TestTallyNeverComplex()
+        {
+            var parser = Parse(
+                "achievement(\"T\", \"D\", 5,\n" +
+                "  tally(8, byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3))\n"+
+                ")");
+
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("never((byte(0x002345) == 2 && byte(0x003456) == 3)) && repeated(8, byte(0x001234) == 1)"));
+        }
+
+        [Test]
+        public void TestTallyMultipleNeverComplex()
+        {
+            var parser = Parse(
+                "achievement(\"T\", \"D\", 5,\n" +
+                "  tally(8,\n" +
+                "    byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3),\n" +
+                "    byte(0x1234) == 2 && never(byte(0x2345) == 3 && byte(0x3456) == 4)\n" +
+                "  )\n" +
+                ")");
+
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(GetRequirements(achievement), Is.EqualTo("tally(8, byte(0x001234) == 1 && never(byte(0x002345) == 2 && byte(0x003456) == 3), byte(0x001234) == 2 && never(byte(0x002345) == 3 && byte(0x003456) == 4))"));
+        }
     }
 }

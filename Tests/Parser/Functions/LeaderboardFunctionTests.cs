@@ -165,7 +165,7 @@ namespace RATools.Tests.Parser.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234), when=repeated(10, byte(0x2345) == 10) && never(byte(0x2345) == 20)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Q:0xH002345=10.10._R:0xH002345=20"));
+            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Z:0xH002345=20_Q:0xH002345=10.10."));
 
             // never outside measured
             leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
