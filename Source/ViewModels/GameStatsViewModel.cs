@@ -626,7 +626,16 @@ namespace RATools.ViewModels
                 else
                     info.Distance = TimeSpan.MaxValue;
             }
-            _progressionStats.Sort((l, r) => (int)((l.Distance - r.Distance).TotalSeconds));
+
+            _progressionStats.Sort((l, r) =>
+            {
+                // can't just return the difference between two distances, as it's entirely
+                // possible that a value could be a few milliseconds or several years, so
+                // there's no easy way to convert the different into a 32-bit integer.
+                if (l.Distance == r.Distance)
+                    return 0;
+                return (l.Distance > r.Distance) ? 1 : -1;
+            });
 
             // determine how many players mastered the set and how many sessions/days it took them
             var sessions = new List<int>(32);
