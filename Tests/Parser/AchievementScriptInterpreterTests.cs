@@ -1079,8 +1079,8 @@ namespace RATools.Tests.Parser
             Evaluate("function f() => byte(0x1234) == 2\n" +
                      "achievement(\"T\", \"D\", 5, f() == 1)\n",
 
-                     "2:1 achievement call failed\r\n" +
-                     "- 2:26 comparison did not evaluate to a valid comparison");
+                     "2:26 Invalid value for parameter: trigger\r\n" +
+                     "- 2:26 Cannot chain comparisons");
         }
 
         [Test]

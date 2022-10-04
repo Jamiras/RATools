@@ -186,11 +186,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A + B + C < 100", "A + B + C < 100")] // no change needed
         [TestCase("A + B - C < 100", "A + B - C + 255 < 355")] // possible underflow of 255, add to both sides
         [TestCase("A - B + C < 100", "A - B + C + 255 < 355")] // possible underflow of 255, add to both sides
-        [TestCase("A - B - C < 100", "A - B - C + 510 < 610")] // possible underflow of 510, add to both sides
+        [TestCase("A - B - C < 100", "B + C + 100 > A")] // move B and C to right and reverse
         [TestCase("A - B - C < -100", "A - B - C + 510 < 410")] // possible underflow of 510, add to both sides
         [TestCase("A - B - C + 700 < 800", "A - B - C + 510 < 610")] // excess underflow coverage will be minimized
         [TestCase("A - B - C + 300 < 100", "A - B - C + 510 < 310")] // possible underflow of 210, add to both sides
-        [TestCase("A - B < C + 100", "A - B - C + 510 < 610")] // move C to left side, possible underflow of 510
+        [TestCase("A - B < C + 100", "B + C + 100 > A")] // C will be moved to left side, then B and C back to the right, and finally reverse
         [TestCase("A - 100 > B - C", "A - B + C + 255 > 355")] // move 100 to right side, B and C to left, and add 255 to prevent underflow
         [TestCase("A * 2 - B < 3", "A * 2 - B + 255 < 258")] // reverse and change to addition
         [TestCase("A - B * 2 < 3", "B * 2 + 3 > A")] // reverse and change to addition
@@ -307,8 +307,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "byte(byte(0x000002) + 1) + 100 > byte(byte(0x000002) + 2)", // A - B > -100  ~>  A + 100 > B
                   "A:100_I:0xH000002_0xH000001>0xH000002")]      // both A and B have the same base pointer
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000003) + 2) > 100",
-                  "byte(byte(0x000003) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
-                  "I:0xH000003_A:0xH000002_I:0xH000002_B:0xH000001_100>255")] // different base pointer causes secondary AddSource
+                  "byte(byte(0x000002) + 1) - byte(byte(0x000003) + 2) + 255 > 355",  // different base pointer causes secondary AddSource
+                  "A:255_I:0xH000003_B:0xH000002_I:0xH000002_0xH000001>355")]
         [TestCase("byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
                   "byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
                   "B:1_I:0xH000002_0xH000001=d0xH000001")]      // both A and B have the same base pointer
@@ -320,10 +320,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "B:1_I:0xH000002_0xH000001=d0xH000001")]      // prev(A) and -1 will be swapped to share pointer
         [TestCase("word(54) - word(word(43102) + 54) > 37",
                   "word(word(0x00A85E) + 54) + 37 < word(0x000036)", // A - B > 37  ~>  B + 37 < A
-                  "A:37_I:0x 00a85e_A:0x 000036_0<0x 000036")] // underflow with combination of direct/indirect, word size
+                  "I:0x 00a85e_A:0x 000036_37<0x 000036")] // underflow with combination of direct/indirect, word size
         [TestCase("word(0x000036) + 37 >= word(word(0x00A85E) + 54)",
-                  "word(0x000036) + 37 >= word(word(0x00A85E) + 54)", // A + N >= B  ~>  A + N >= B
-                  "A:0x 000036_I:0x 00a85e_B:0x 000036_65572>=65535")] // combination of direct/indirect, word size
+                  "word(word(0x00A85E) + 54) - word(0x000036) + 65535 <= 65572", // move A to right side, reverse and adjust for underflow
+                  "A:65535_B:0x 000036_I:0x 00a85e_0x 000036<=65572")] // combination of direct/indirect, word size
         [TestCase("word(0x000001) - word(0x000002) + word(0x000003) < 100",
                   "word(0x000001) - word(0x000002) + word(0x000003) + 65535 < 65635", // possible underflow of 65535
                   "A:65535=0_A:0x 000001=0_B:0x 000002=0_0x 000003<65635")]
@@ -333,9 +333,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(dword(0x000001)) - byte(dword(0x000002)) + byte(dword(0x000003)) < 100",
                   "byte(dword(0x000001)) - byte(dword(0x000002)) + byte(dword(0x000003)) + 255 < 355", // reads are only bytes, underflow is 255
                   "A:255_I:0xX000001_A:0xH000000_I:0xX000002_B:0xH000000_I:0xX000003_0xH000000<355")]
-        [TestCase("word(0x000001) - word(0x000002) - byte(0x000003) < 100",
-                  "word(0x000001) - word(0x000002) - byte(0x000003) + 65790 < 65890", // combination of byte and word
-                  "A:65790=0_B:0x 000002=0_B:0xH000003=0_0x 000001<65890")]
+        [TestCase("word(0x000001) - word(0x000002) - byte(0x000003) + byte(0x000004) < 100",
+                  "word(0x000001) - word(0x000002) - byte(0x000003) + byte(0x000004) + 65790 < 65890", // combination of byte and word
+                  "A:65790=0_A:0x 000001=0_B:0x 000002=0_B:0xH000003=0_0xH000004<65890")]
         [TestCase("byte(0x000001) + byte(0x000002) > byte(0x000003) - byte(0x000004)",
                   "byte(0x000001) + byte(0x000002) + byte(0x000004) > byte(0x000003)", // move byte(4) to left side
                   "A:0xH000001=0_A:0xH000002=0_0xH000004>0xH000003")]
@@ -372,9 +372,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x000001) - prev(byte(0x000001)) >= 2",
                   "prev(byte(0x000001)) + 2 <= byte(0x000001)", // rearrange to avoid subtraction
                   "A:2=0_d0xH000001<=0xH000001")]
-        [TestCase("prev(byte(0x000001)) - prev(byte(0x000002)) - prev(byte(0x000003)) < 2", // make sure the memory reference is seen inside the prev
-                  "prev(byte(0x000001)) - prev(byte(0x000002)) - prev(byte(0x000003)) + 510 < 512", // overflow of 510 calculated
-                  "A:510=0_B:d0xH000002=0_B:d0xH000003=0_d0xH000001<512")]
+        [TestCase("prev(byte(0x000001)) - prev(byte(0x000002)) + prev(byte(0x000003)) < 2", // make sure the memory reference is seen inside the prev
+                  "prev(byte(0x000001)) - prev(byte(0x000002)) + prev(byte(0x000003)) + 255 < 257", // overflow of 510 calculated
+                  "A:255=0_A:d0xH000001=0_B:d0xH000002=0_d0xH000003<257")]
         [TestCase("prev(byte(0x000001)) == byte(0x000002) - 1",
                   "prev(byte(0x000001)) + 1 == byte(0x000002)", // rearrange to avoid subtraction
                   "A:1=0_d0xH000001=0xH000002")]

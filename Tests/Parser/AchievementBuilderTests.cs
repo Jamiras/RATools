@@ -730,7 +730,7 @@ namespace RATools.Tests.Parser
             result = result.Replace("byte(0x00000E) == 1", "E");
             result = result.Replace("byte(0x00000F) == 1", "F");
 
-            Assert.That(result , Is.EqualTo(expected));
+            Assert.That(result, Is.EqualTo(expected));
         }
 
         [Test]
@@ -781,55 +781,6 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
-        [TestCase("byte(WA) > prev(byte(WA))", "byte(WA + 0x000000) > prev(byte(WA + 0x000000))")] // simple compare to prev of same address
-        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 0x00000A) > prev(byte(WA + 0x00000A))")] // simple compare to prev of same address with offset
-        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 0x00000A) > byte(WA + 0x00000B)")] // same base, different offsets
-        [TestCase("byte(WA + 10) > byte(WB + 10)", "(byte(WB + 0x00000A) - (byte(WA + 0x00000A))) > 255")] // different bases, same offset
-        [TestCase("byte(WA) == byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) == 0")] // becomes B-A==0
-        [TestCase("byte(WA) != byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) != 0")] // becomes B-A!=0
-        [TestCase("byte(WA) > byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000))) > 255")] // becomes B-A>M
-        [TestCase("byte(WA) >= byte(WB)", "(byte(WB + 0x000000) - (byte(WA + 0x000000)) - 1) >= 255")] // becomes B-A-1>=M
-        [TestCase("byte(WA) < byte(WB)", "((byte(WB + 0x000000)) + 255 - (byte(WA + 0x000000))) > 255")] // becomes B-A+M>M
-        [TestCase("byte(WA) <= byte(WB)", "((byte(WB + 0x000000)) + 255 - (byte(WA + 0x000000))) >= 255")] // becomes B-A+M>=M
-        [TestCase("byte(WA + 10) + 20 > byte(WB)", "((byte(word(0x001234) + 0x00000A)) + 275 - (byte(word(0x002345) + 0x000000))) > 255")] // A+N>B becomes A+N+M-B>M
-        [TestCase("byte(WA + 10) > byte(WB) - 20", "((byte(word(0x001234) + 0x00000A)) + 275 - (byte(word(0x002345) + 0x000000))) > 255")] // inverted to A+N>B, becomes A+N+M-B>M
-        [TestCase("byte(WA + 10) - 20 > byte(WB)", "((byte(word(0x002345) + 0x000000)) + 20 - (byte(word(0x001234) + 0x00000A))) > 255")] // inverted to B+N<A, becomes A+N-B>M
-        [TestCase("byte(WA + 10) > byte(WB) + 20", "((byte(word(0x002345) + 0x000000)) + 20 - (byte(word(0x001234) + 0x00000A))) > 255")] // inverted to B+N<A, becomes A+N-B>M
-        [TestCase("word(WA) > word(WB)", "(word(WB + 0x000000) - (word(WA + 0x000000))) > 65535")] // different addresses (16-bit)
-        [TestCase("byte(WA) > word(WB)", "(word(WB + 0x000000) - (byte(WA + 0x000000))) > 65535")] // different sizes and addresses
-        [TestCase("word(WA) > byte(WB)", "(byte(WB + 0x000000) - (word(WA + 0x000000))) > 65535")] // different sizes and addresses
-        [TestCase("tbyte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777215")] // different addresses (24-bit)
-        [TestCase("byte(WA) > tbyte(WB)", "(tbyte(WB + 0x000000) - (byte(WA + 0x000000))) > 16777215")] // different sizes and addresses
-        [TestCase("tbyte(WA) > word(WB)", "(word(WB + 0x000000) - (tbyte(WA + 0x000000))) > 16777215")] // different sizes and addresses
-        [TestCase("byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2)",  // simple compare to prev of same address (double indirect)
-            "byte(word(WA + 0x00000A) + 0x000002) > prev(byte(word(WA + 0x00000A) + 0x000002))")]
-        [TestCase("bit(18, WA + 10) > prev(bit(18, WA + 10))", "bit2(WA + 0x00000C) > prev(bit2(WA + 0x00000C))")] // simple compare to prev of same address with offset
-        public void TestAddAddressAcrossCondition(string input, string expected)
-        {
-            input = input.Replace("WA", "word(0x1234)");
-            input = input.Replace("WB", "word(0x2345)");
-            var achievement = CreateAchievement(input);
-            achievement.Optimize();
-
-            expected = expected.Replace("WA", "word(0x001234)");
-            expected = expected.Replace("WB", "word(0x002345)");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void TestAddAddressAcrossConditionDword()
-        {
-            CreateAchievement("byte(word(0x1234)) > dword(word(0x2345))", "Indirect memory addresses must match on both sides of a comparison for 32-bit values");
-        }
-
-        [Test]
-        public void TestAddAddressCompareToAddress()
-        {
-            var achievement = CreateAchievement("byte(word(0x1234)) == word(0x2345)");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("((byte(word(0x001234) + 0x000000)) + 0) == word(0x002345)"));
-        }
-
-        [Test]
         public void TestMemoryReferenceWithoutComparison()
         {
             CreateAchievement("byte(0x1234)", "Incomplete trigger condition");
@@ -842,7 +793,7 @@ namespace RATools.Tests.Parser
         [Test]
         public void TestNestedComparison()
         {
-            CreateAchievement("(byte(0x1234) == 2) == 1", "comparison did not evaluate to a valid comparison");
+            CreateAchievement("(byte(0x1234) == 2) == 1", "Cannot chain comparisons");
         }
 
         [Test]

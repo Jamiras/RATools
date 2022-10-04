@@ -141,7 +141,7 @@ namespace RATools.Tests.Parser.Functions
 
             Evaluate("array_push(arr, byte(1) == 2)", scope);
 
-            var comparison = (ComparisonExpression)array.Entries[0];
+            var comparison = (RequirementClauseExpression)array.Entries[0];
             Assert.That(comparison.Left, Is.InstanceOf<MemoryAccessorExpression>());
             Assert.That(((MemoryAccessorExpression)comparison.Left).Field.Size, Is.EqualTo(FieldSize.Byte));
             Assert.That(((MemoryAccessorExpression)comparison.Left).Field.Value, Is.EqualTo(1));

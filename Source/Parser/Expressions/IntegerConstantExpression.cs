@@ -143,8 +143,15 @@ namespace RATools.Parser.Expressions
                 }
             }
 
+            var floatRight = right as FloatConstantExpression;
+            if (floatRight != null)
+                return new FloatConstantExpression((float)Value).NormalizeComparison(right, operation);
+
             // prefer constants on right side of comparison
-            return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
+            if (!right.IsLiteralConstant)
+                return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
+
+            return null;
         }
     }
 }

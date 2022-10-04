@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,6 +20,60 @@ namespace RATools.Parser.Functions
         protected RepeatedFunction(string name)
             : base(name)
         {
+        }
+
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            var count = GetIntegerParameter(scope, "count", out result);
+            if (count == null)
+                return false;
+
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
+
+            if (comparison is not RequirementClauseExpression)
+                return base.ReplaceVariables(scope, out result);
+
+            result = AddHitCount(comparison, count, scope);
+            return (result.Type != ExpressionType.Error);
+        }
+
+        protected ExpressionBase AddHitCount(ExpressionBase comparison, IntegerConstantExpression count, InterpreterScope scope)
+        {
+            if (count.Value < 0)
+                return new ErrorExpression("count must be greater than or equal to zero", count);
+
+            uint hitTarget = (uint)count.Value;
+            if (hitTarget == 0)
+            {
+                // a repeated/tally expression with a count of 0 is unbounded. unbounded target
+                // counts are invalid by themselves. make sure we're in a valid context.
+                var functionContext = scope.GetContext<FunctionCallExpression>(f => f.FunctionName.Name == "measured");
+                if (functionContext != null)
+                {
+                    // an unbounded count can be measured for a value expression
+                    if (scope.GetContext<ValueBuilderContext>() != null)
+                    {
+                        // assign the maximum allowed value for now. it'll be removed by the serializer.
+                        hitTarget = uint.MaxValue;
+                    }
+                }
+
+                if (hitTarget == 0)
+                    return new ErrorExpression("Unbounded count is only supported in measured value expressions", count);
+            }
+
+            var requirement = comparison as RequirementClauseExpression;
+            if (requirement == null)
+                return new ErrorExpression(Name.Name + " can ony be applied to requirement clauses", this);
+        
+            if (requirement.HitTarget != 0)
+                return new ErrorExpression("Comparison already has a hit target", comparison);
+
+            var newRequirement = requirement.Clone();
+            newRequirement.HitTarget = hitTarget;
+            return newRequirement;
         }
 
         protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
@@ -351,6 +406,18 @@ namespace RATools.Parser.Functions
             public OrNextWrapperFunction()
                 : base("__ornext")
             {
+            }
+
+            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+            {
+                var comparison = GetParameter(scope, "comparison", out result);
+                if (comparison == null)
+                    return false;
+
+                // cannot directly access FunctionDefinitionExpression.ReplaceVariables, so mimic it
+                result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { comparison });
+                CopyLocation(result);
+                return true;
             }
 
             public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)

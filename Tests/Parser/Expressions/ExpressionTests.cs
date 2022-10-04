@@ -4,6 +4,7 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
+using System;
 using System.Text;
 
 namespace RATools.Tests.Parser.Expressions
@@ -163,6 +164,16 @@ namespace RATools.Tests.Parser.Expressions
 
                 AssertAppendString(result, expected);
             }
+        }
+
+        public static void AssertError(ExpressionBase expression, string message)
+        {
+            Assert.That(expression, Is.InstanceOf<ErrorExpression>());
+            var error = (ErrorExpression)expression;
+            if (error.InnerError != null)
+                Assert.That(error.InnermostError.Message, Is.EqualTo(message));
+            else
+                Assert.That(error.Message, Is.EqualTo(message));
         }
     }
 }

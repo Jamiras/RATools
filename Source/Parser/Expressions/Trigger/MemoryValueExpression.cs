@@ -9,7 +9,8 @@ using System.Text;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal class MemoryValueExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
-        IMathematicCombineExpression, IMathematicCombineInverseExpression, IComparisonNormalizeExpression
+        IMathematicCombineExpression, IMathematicCombineInverseExpression, IComparisonNormalizeExpression,
+        ICloneableExpression
     {
         public MemoryValueExpression()
             : base(ExpressionType.MemoryValue)
@@ -18,8 +19,6 @@ namespace RATools.Parser.Expressions.Trigger
 
         public int IntegerConstant { get; private set; }
         public double FloatConstant { get; private set; }
-
-        public RequirementType RequirementType { get; set; }
 
         public IEnumerable<ModifiedMemoryAccessorExpression> MemoryAccessors
         {
@@ -286,7 +285,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (!ReferenceEquals(underflowNormalized, comparison))
                 normalized = underflowNormalized;
 
-            return ValidateComparison(normalized);
+            return CheckForImpossibleValues(normalized);
         }
 
         public static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
@@ -380,7 +379,21 @@ namespace RATools.Parser.Expressions.Trigger
                 // if there's no constant on the right, moving the left constant will create a negative constant on
                 // the right and it'll just get moved back to the left. do nothing
                 if (!memoryValue.HasConstant)
+                {
+                    // cannot leave pointer chain on right side unless it matches the left.
+                    if (memoryValue._memoryAccessors.Any(
+                        a => a.MemoryAccessor.HasPointerChain &&
+                             !_memoryAccessors.Any(b => b.MemoryAccessor.PointerChainMatches(a))))
+                    {
+                        // move non-constants to right and reverse
+                        var constant = ExtractConstant();
+                        var newComparison = memoryValue.Clone();
+                        newComparison = Clone().InvertAndMigrateAccessorsTo(newComparison);
+                        return new ComparisonExpression(newComparison, ComparisonExpression.ReverseComparisonOperation(operation), constant);
+                    }
+
                     return null;
+                }
 
                 // left constant is greater than right constant, reverse comparison
                 operation = ComparisonExpression.ReverseComparisonOperation(operation);
@@ -594,7 +607,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             // find an unmodified SubSource to move to the right side
-            var memoryAccessor = newLeftValue._memoryAccessors.LastOrDefault(a => a.CombiningOperator == RequirementType.SubSource && a.ModifyingOperator == RequirementOperator.None);
+            var memoryAccessor = newLeftValue._memoryAccessors.LastOrDefault(IsSimpleSubtraction);
             if (memoryAccessor != null)
             {
                 // found at least one subtraction on the left side, move it to the right and put the constant on the left
@@ -605,6 +618,20 @@ namespace RATools.Parser.Expressions.Trigger
 
             // no unmodified SubSources, don't rearrange
             return null;
+        }
+
+        private static bool IsSimpleSubtraction(ModifiedMemoryAccessorExpression expr)
+        {
+            return expr.CombiningOperator == RequirementType.SubSource &&
+                   expr.ModifyingOperator == RequirementOperator.None &&
+                   !expr.MemoryAccessor.HasPointerChain;
+        }
+
+        private static bool IsSimpleAddition(ModifiedMemoryAccessorExpression expr)
+        {
+            return expr.CombiningOperator == RequirementType.AddSource &&
+                   expr.ModifyingOperator == RequirementOperator.None &&
+                   !expr.MemoryAccessor.HasPointerChain;
         }
 
         private static ExpressionBase CheckForUnderflow(ExpressionBase expression)
@@ -624,29 +651,39 @@ namespace RATools.Parser.Expressions.Trigger
                 return leftMemoryValue.EnsureSingleExpressionOnRightHandSide(comparison.Right, comparison.Operation) ?? comparison;
             }
 
-            // if the right side is a positive constant, and the left has one added and one subtracted
-            // memory accessor, then move the subtracted memory accessor and reverse the comparison.
-            if (leftMemoryValue._memoryAccessors != null && leftMemoryValue._memoryAccessors.Count == 2 &&
+            // if the right side is a positive constant, and the left side has one simple added and at least one subtracted
+            // memory accessor, move all the subtracted memory accessors to the right side and reverse the comparison
+            if (leftMemoryValue._memoryAccessors != null && leftMemoryValue._memoryAccessors.Count > 1 &&
                 !leftMemoryValue.HasConstant && IsPositive(comparison.Right))
             {
-                var subtracted = leftMemoryValue._memoryAccessors.FirstOrDefault(a => a.CombiningOperator == RequirementType.SubSource);
-                if (subtracted != null)
+                var subtractCount = leftMemoryValue._memoryAccessors.Count(a => a.CombiningOperator == RequirementType.SubSource);
+                if (subtractCount == leftMemoryValue._memoryAccessors.Count - 1)
                 {
-                    var added = leftMemoryValue._memoryAccessors.FirstOrDefault(a => a.CombiningOperator == RequirementType.AddSource);
-                    if (added != null && added.ModifyingOperator == RequirementOperator.None)
+                    var simpleAdd = leftMemoryValue._memoryAccessors.FirstOrDefault(IsSimpleAddition);
+                    if (simpleAdd != null)
                     {
-                        added = added.Clone();
-                        added.CombiningOperator = RequirementType.None;
+                        var newRight = simpleAdd.Clone();
+                        newRight.CombiningOperator = RequirementType.None;
 
-                        leftMemoryValue = new MemoryValueExpression();
-                        leftMemoryValue.ApplyMathematic(comparison.Right, MathematicOperation.Add);
-                        leftMemoryValue.ApplyMathematic(subtracted, MathematicOperation.Add);
-                        comparison = new ComparisonExpression(leftMemoryValue, ComparisonExpression.ReverseComparisonOperation(comparison.Operation), added);
+                        var newLeft = new MemoryValueExpression();
+                        newLeft.ApplyMathematic(comparison.Right, MathematicOperation.Add);
+
+                        foreach (var accessor in leftMemoryValue.MemoryAccessors)
+                        {
+                            if (accessor.CombiningOperator == RequirementType.SubSource)
+                            {
+                                // NOTE: ApplyMathematic ignores the existing CombiningOperator
+                                newLeft.ApplyMathematic(accessor, MathematicOperation.Add);
+                            }
+                        } 
+
+                        comparison = new ComparisonExpression(newLeft, ComparisonExpression.ReverseComparisonOperation(comparison.Operation), newRight);
+                        leftMemoryValue = newLeft;
                     }
                 }
             }
 
-            // left side must have at least one subtracted memory accessor
+            // underflow will not occur if left side does not have at least one subtracted memory accessor
             if (!leftMemoryValue.HasSubtractedMemoryAccessor)
                 return comparison;
 
@@ -720,17 +757,18 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else
             {
-                // if there's only one subtraction on the left side and a constant on the right, swap them
-                if (comparison.Right.Type == ExpressionType.IntegerConstant &&
-                    leftMemoryValue.MemoryAccessors.Count(a => a.CombiningOperator == RequirementType.SubSource) == 1)
+                // if there's only one non-complex subtraction on the left side and a constant on the right, swap them
+                if (comparison.Right.Type == ExpressionType.IntegerConstant && 
+                    leftMemoryValue._memoryAccessors.Count(IsSimpleSubtraction) == 1)
                 {
                     var newLeft = leftMemoryValue.Clone();
-                    var memoryAccessor = newLeft._memoryAccessors.FirstOrDefault(a => a.CombiningOperator == RequirementType.SubSource);
+                    var memoryAccessor = newLeft._memoryAccessors.FirstOrDefault(IsSimpleSubtraction);
                     newLeft._memoryAccessors.Remove(memoryAccessor);
                     memoryAccessor.CombiningOperator = RequirementType.None;
 
                     var collapsed = newLeft.ConvertToModifiedMemoryAccessor();
-                    if (collapsed != null && collapsed.ModifyingOperator == RequirementOperator.None)
+                    if (collapsed != null && collapsed.ModifyingOperator == RequirementOperator.None &&
+                        !collapsed.MemoryAccessor.HasPointerChain)
                     { 
                         if (((IntegerConstantExpression)comparison.Right).Value > 0)
                         {
@@ -758,6 +796,10 @@ namespace RATools.Parser.Expressions.Trigger
                 var underflowAdjustment = leftMemoryValue.GetUnderflowAdjustment(comparison.Right);
                 if (underflowAdjustment != 0)
                     return ApplyUnderflowAdjustment(comparison, underflowAdjustment);
+            }
+            else if (IsZero(comparison.Right))
+            {
+                return leftMemoryValue.SwapSubtractionWithConstant(comparison.Right, comparison.Operation);
             }
 
             return comparison;
@@ -870,7 +912,7 @@ namespace RATools.Parser.Expressions.Trigger
             max = totalMax;
         }
 
-        private static ExpressionBase ValidateComparison(ExpressionBase expression)
+        private static ExpressionBase CheckForImpossibleValues(ExpressionBase expression)
         {
             var comparison = expression as ComparisonExpression;
             if (comparison == null)
@@ -880,7 +922,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (!IsNegative(comparison.Right))
                 return expression;
 
-            bool canBeTrue = true;
+            bool canBeTrue;
 
             var memoryValue = comparison.Left as MemoryValueExpression;
             if (memoryValue != null)
@@ -1033,6 +1075,11 @@ namespace RATools.Parser.Expressions.Trigger
             return (that != null && IntegerConstant == that.IntegerConstant && MemoryAccessorsMatch(that));
         }
 
+        ExpressionBase ICloneableExpression.Clone()
+        {
+            return Clone();
+        }
+
         public MemoryValueExpression Clone()
         {
             var clone = new MemoryValueExpression() { Location = this.Location };
@@ -1140,6 +1187,11 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
+            return BuildTrigger(context, null);
+        }
+
+        public ErrorExpression BuildTrigger(TriggerBuilderContext context, ExpressionBase comparison)
+        {
             var memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
 
             if (FloatConstant != 0.0)
@@ -1161,27 +1213,46 @@ namespace RATools.Parser.Expressions.Trigger
             if (_memoryAccessors != null)
                 memoryAccessors.AddRange(_memoryAccessors);
 
-            if (memoryAccessors.Last().CombiningOperator == RequirementType.SubSource)
+            // last item has to be an unmodified AddSource.
+            // if a comparison is provided then the AddAddress chain must also match.
+            var comparisonAccessor = (comparison != null) ? ReduceToSimpleExpression(comparison) as MemoryAccessorExpression : null;
+
+            var lastIndex = memoryAccessors.Count - 1;
+            for (; lastIndex >= 0; --lastIndex)
             {
-                var lastAdded = memoryAccessors.LastOrDefault(a => a.CombiningOperator == RequirementType.AddSource);
-                if (lastAdded != null)
-                {
-                    // move the lastAdded item to the end of the list
-                    var index = memoryAccessors.IndexOf(lastAdded);
-                    memoryAccessors.RemoveAt(index);
-                    memoryAccessors.Add(lastAdded);
-                }
-                else
-                {
-                    // no added items, append a item with value 0
-                    memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
-                }
+                var last = memoryAccessors[lastIndex];
+                if (last.CombiningOperator == RequirementType.SubSource)
+                    continue;
+
+                if (last.ModifyingOperator != RequirementOperator.None)
+                    continue;
+
+                if (comparisonAccessor != null && !comparisonAccessor.PointerChainMatches(last))
+                    continue;
+
+                break;
             }
 
+            if (lastIndex == -1)
+            {
+                // no unmodified AddSource items, append a item with value 0
+                memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
+            }
+            else if (lastIndex != memoryAccessors.Count - 1)
+            {
+                // move the last unmodified AddSource item to the end of the list
+                var last = memoryAccessors[lastIndex];
+                memoryAccessors.RemoveAt(lastIndex);
+                memoryAccessors.Add(last);
+            }
+
+            // output the accessor chain
             foreach (var accessor in memoryAccessors)
                 accessor.BuildTrigger(context);
 
-            context.LastRequirement.Type = this.RequirementType;
+            // the last item will be flagged as an AddSource (or None if 0 was appended)
+            // make sure it's None before leaving
+            context.LastRequirement.Type = RequirementType.None;
 
             return null;
         }

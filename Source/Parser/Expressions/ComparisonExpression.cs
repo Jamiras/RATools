@@ -1,10 +1,6 @@
-﻿using RATools.Data;
-using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Functions;
+﻿using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -78,113 +74,6 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
-        {
-            var bcdWrapper = expression as BinaryCodedDecimalExpression;
-            if (bcdWrapper != null)
-            {
-                newExpression = new MemoryAccessorExpression(bcdWrapper);
-                return true;
-            }
-
-            newExpression = expression;
-            return false;
-        }
-
-        private static bool ConvertToBCD(ExpressionBase expression, out ExpressionBase newExpression)
-        {
-            var integerExpression = expression as IntegerConstantExpression;
-            if (integerExpression != null)
-            {
-                int newValue = 0;
-                int modifier = 0;
-                int value = integerExpression.Value;
-                while (value > 0)
-                {
-                    newValue |= value % 10 << modifier;
-                    modifier += 4;
-                    value /= 10;
-                }
-
-                // modifier > 32 means the value can't be encoded in a 32-bit BCD value
-                if (modifier > 32)
-                {
-                    newExpression = null;
-                    return false;
-                }
-
-                newExpression = new IntegerConstantExpression(newValue);
-                integerExpression.CopyLocation(newExpression);
-                return true;
-            }
-
-            newExpression = expression;
-            return false;
-        }
-
-        private static bool NormalizeBCD(ComparisonExpression comparison, out ExpressionBase result)
-        {
-            ExpressionBase newLeft;
-            ExpressionBase newRight;
-            bool leftHasBCD = ExtractBCD(comparison.Left, out newLeft);
-            bool rightHasBCD = ExtractBCD(comparison.Right, out newRight);
-
-            if (leftHasBCD || rightHasBCD)
-            {
-                if (!rightHasBCD)
-                {
-                    rightHasBCD = ConvertToBCD(comparison.Right, out newRight);
-                    if (newRight == null)
-                    {
-                        // right value cannot be decoded into 32-bits
-                        switch (comparison.Operation)
-                        {
-                            case ComparisonOperation.NotEqual:
-                            case ComparisonOperation.LessThan:
-                            case ComparisonOperation.LessThanOrEqual:
-                                result = new BooleanConstantExpression(true);
-                                return false;
-
-                            default:
-                                result = new BooleanConstantExpression(false);
-                                return false;
-                        }
-                    }
-                }
-                else if (!leftHasBCD)
-                {
-                    leftHasBCD = ConvertToBCD(comparison.Right, out newLeft);
-                    if (newLeft == null)
-                    {
-                        // left value cannot be decoded into 32-bits
-                        switch (comparison.Operation)
-                        {
-                            case ComparisonOperation.NotEqual:
-                            case ComparisonOperation.GreaterThan:
-                            case ComparisonOperation.GreaterThanOrEqual:
-                                result = new BooleanConstantExpression(true);
-                                return false;
-
-                            default:
-                                result = new BooleanConstantExpression(false);
-                                return false;
-                        }
-                    }
-                }
-
-                if (leftHasBCD && rightHasBCD)
-                {
-                    var newComparison = new ComparisonExpression(newLeft, comparison.Operation, newRight);
-                    comparison.CopyLocation(newComparison);
-                    result = newComparison;
-                    return true;
-                }
-            }
-
-            result = comparison;
-            return true;
-        }
-
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
@@ -233,7 +122,6 @@ namespace RATools.Parser.Expressions
             }
 
             bool attemptNormalization = true;
-
             // if the right side is only a constant, check to see if we're in a measured.
             // if we are, the right side is the measured target, and we don't want to modify that.
             if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
@@ -287,6 +175,7 @@ namespace RATools.Parser.Expressions
                     comparison = newComparison as ComparisonExpression;
                     if (comparison == null)
                     {
+                        // result of normalization is error or constant, return it
                         result = newComparison;
                         CopyLocation(result);
                         return (result.Type != ExpressionType.Error);
@@ -294,13 +183,36 @@ namespace RATools.Parser.Expressions
                 } while (true);
             }
 
-            // remove bcd() from both sides (if possible)
-            if (!NormalizeBCD(comparison, out result))
+            // if it's a memory comparison, wrap it is a RequirementClause
+            switch (comparison.Left.Type)
             {
-                CopyLocation(result);
-                return result.Type == ExpressionType.BooleanConstant;
+                case ExpressionType.MemoryAccessor:
+                case ExpressionType.ModifiedMemoryAccessor:
+                case ExpressionType.MemoryValue:
+                    var requirement = new RequirementClauseExpression
+                    {
+                        Left = comparison.Left,
+                        Comparison = comparison.Operation,
+                        Right = comparison.Right,
+                    };
+                    result = requirement.Normalize();
+                    return (result is not ErrorExpression);
             }
-            comparison = (ComparisonExpression)result;
+
+            switch (comparison.Right.Type)
+            {
+                case ExpressionType.MemoryAccessor:
+                case ExpressionType.ModifiedMemoryAccessor:
+                case ExpressionType.MemoryValue:
+                    var requirement = new RequirementClauseExpression
+                    {
+                        Left = comparison.Right,
+                        Comparison = ReverseComparisonOperation(comparison.Operation),
+                        Right = comparison.Left,
+                    };
+                    result = requirement.Normalize();
+                    return (result is not ErrorExpression);
+            }
 
             // if the result is unchanged, prevent reprocessing the source and return it
             if (comparison == this)
@@ -310,27 +222,9 @@ namespace RATools.Parser.Expressions
                 return true;
             }
 
-            // if the expression can be fully evaluated, do so
-            ErrorExpression error;
-            var comparisonResult = comparison.IsTrue(scope, out error);
-            if (error != null)
-            {
-                result = error;
-                return false;
-            }
-
-            if (comparisonResult != null)
-            {
-                // result of comparison is known, return a boolean
-                result = new BooleanConstantExpression(comparisonResult.GetValueOrDefault());
-            }
-            else
-            {
-                // prevent reprocessing the result and return it
-                comparison._fullyExpanded = true;
-                result = comparison;
-            }
-
+            // prevent reprocessing the result and return it
+            comparison._fullyExpanded = true;
+            result = comparison;
             CopyLocation(result);
             return true;
         }
@@ -409,102 +303,25 @@ namespace RATools.Parser.Expressions
 
             error = null;
 
-            if (left.Type == ExpressionType.FloatConstant || right.Type == ExpressionType.FloatConstant)
+            var normalizeComparison = left as IComparisonNormalizeExpression;
+            if (left != null)
             {
-                ExpressionBase result;
-                if (!ConvertToFloat(ref left, ref right, out result))
-                    return null;
-
-                var leftFloat = (FloatConstantExpression)left;
-                var rightFloat = (FloatConstantExpression)right;
-
-                switch (Operation)
-                {
-                    case ComparisonOperation.Equal:
-                        return leftFloat.Value == rightFloat.Value;
-                    case ComparisonOperation.NotEqual:
-                        return leftFloat.Value != rightFloat.Value;
-                    case ComparisonOperation.GreaterThan:
-                        return leftFloat.Value > rightFloat.Value;
-                    case ComparisonOperation.GreaterThanOrEqual:
-                        return leftFloat.Value >= rightFloat.Value;
-                    case ComparisonOperation.LessThan:
-                        return leftFloat.Value < rightFloat.Value;
-                    case ComparisonOperation.LessThanOrEqual:
-                        return leftFloat.Value <= rightFloat.Value;
-                    default:
-                        return null;
-                }
+                var result = normalizeComparison.NormalizeComparison(right, Operation);
+                var boolResult = result as BooleanConstantExpression;
+                return (boolResult != null) ? boolResult.Value : null;
             }
 
-            var integerLeft = left as IntegerConstantExpression;
-            if (integerLeft != null)
+            if (left == right)
             {
-                var integerRight = right as IntegerConstantExpression;
-                if (integerRight == null)
-                    return null;
-
                 switch (Operation)
                 {
                     case ComparisonOperation.Equal:
-                        return integerLeft.Value == integerRight.Value;
-                    case ComparisonOperation.NotEqual:
-                        return integerLeft.Value != integerRight.Value;
-                    case ComparisonOperation.GreaterThan:
-                        return integerLeft.Value > integerRight.Value;
                     case ComparisonOperation.GreaterThanOrEqual:
-                        return integerLeft.Value >= integerRight.Value;
-                    case ComparisonOperation.LessThan:
-                        return integerLeft.Value < integerRight.Value;
                     case ComparisonOperation.LessThanOrEqual:
-                        return integerLeft.Value <= integerRight.Value;
+                        return true;
+
                     default:
-                        return null;
-                }
-            }
-
-            var booleanLeft = left as BooleanConstantExpression;
-            if (booleanLeft != null)
-            {
-                var booleanRight = right as BooleanConstantExpression;
-                if (booleanRight == null)
-                    return null;
-
-                switch (Operation)
-                {
-                    case ComparisonOperation.Equal:
-                        return booleanLeft.Value == booleanRight.Value;
-                    case ComparisonOperation.NotEqual:
-                        return booleanLeft.Value != booleanRight.Value;
-                    default:
-                        error = new ErrorExpression("Cannot perform relative comparison on boolean values", this);
-                        return null;
-                }
-            }
-
-            var stringLeft = left as StringConstantExpression;
-            if (stringLeft != null)
-            {
-                var stringRight = right as StringConstantExpression;
-                if (stringRight == null)
-                    return null;
-
-                switch (Operation)
-                {
-                    case ComparisonOperation.Equal:
-                        return stringLeft.Value == stringRight.Value;
-                    case ComparisonOperation.NotEqual:
-                        return stringLeft.Value != stringRight.Value;
-                    case ComparisonOperation.GreaterThan:
-                        return string.Compare(stringLeft.Value, stringRight.Value) > 0;
-                    case ComparisonOperation.GreaterThanOrEqual:
-                        return string.Compare(stringLeft.Value, stringRight.Value) >= 0;
-                    case ComparisonOperation.LessThan:
-                        return string.Compare(stringLeft.Value, stringRight.Value) < 0;
-                    case ComparisonOperation.LessThanOrEqual:
-                        return string.Compare(stringLeft.Value, stringRight.Value) <= 0;
-                    default:
-                        return null;
+                        return false;
                 }
             }
 

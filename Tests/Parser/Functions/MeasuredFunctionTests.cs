@@ -36,20 +36,25 @@ namespace RATools.Tests.Parser.Functions
 
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
-            var context = new TriggerBuilderContext { Trigger = requirements };
-            scope.Context = context;
+            if (error == null)
+            {
+                var context = new TriggerBuilderContext { Trigger = requirements };
+                scope.Context = context;
 
-            ExpressionBase evaluated;
-            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
-            funcCall = (FunctionCallExpression)evaluated;
+                ExpressionBase evaluated;
+                Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
+                funcCall = (FunctionCallExpression)evaluated;
+
+                error = funcDef.BuildTrigger(context, scope, funcCall);
+            }
 
             if (expectedError == null)
             {
-                Assert.That(funcDef.BuildTrigger(context, scope, funcCall), Is.Null);
+                Assert.That(error, Is.Null);
             }
             else
             {
-                var parseError = funcDef.BuildTrigger(context, scope, funcCall);
+                var parseError = error as ErrorExpression;
                 Assert.That(parseError, Is.Not.Null);
                 if (parseError.InnerError != null)
                     parseError = parseError.InnermostError;

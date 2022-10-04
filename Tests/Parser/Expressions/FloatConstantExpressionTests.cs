@@ -63,5 +63,35 @@ namespace RATools.Tests.Parser.Expressions
                 Assert.That(builder.ToString(), Is.EqualTo(expected));
             }
         }
+
+        [Test]
+        [TestCase("2.5", "=", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("2.5", "!=", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("2.5", "<", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("2.5", "<=", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("2.5", ">", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("2.5", ">=", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", "=", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", "!=", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", "<", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", "<=", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", ">", "3.5", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", ">=", "3.5", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", "=", "4", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", "!=", "4", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", "<", "4", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", "<=", "4", ExpressionType.BooleanConstant, "true")]
+        [TestCase("3.5", ">", "4", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", ">=", "4", ExpressionType.BooleanConstant, "false")]
+        [TestCase("3.5", "=", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) == 3.5")]
+        [TestCase("3.5", "!=", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) != 3.5")]
+        [TestCase("3.5", "<", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) > 3.5")]
+        [TestCase("3.5", "<=", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) >= 3.5")]
+        [TestCase("3.5", ">", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) < 3.5")]
+        [TestCase("3.5", ">=", "float(0x1234)", ExpressionType.Comparison, "float(0x001234) <= 3.5")]
+        public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
+        {
+            ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);
+        }
     }
 }

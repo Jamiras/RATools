@@ -3,7 +3,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class StringConstantExpression : ExpressionBase, IMathematicCombineExpression
+    internal class StringConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public StringConstantExpression(string value)
             : base(ExpressionType.StringConstant)
@@ -96,6 +96,45 @@ namespace RATools.Parser.Expressions
                     right.AppendString(builder);
                     return new StringConstantExpression(builder.ToString());
             }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Normalizes the comparison between the current expression and the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to compare with the current expression.</param>
+        /// <param name="operation">How to compare the expressions.</param>
+        /// <returns>
+        /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
+        /// </returns>
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        {
+            var stringRight = right as StringConstantExpression;
+            if (stringRight != null)
+            {
+                switch (operation)
+                {
+                    case ComparisonOperation.Equal:
+                        return new BooleanConstantExpression(Value == stringRight.Value);
+                    case ComparisonOperation.NotEqual:
+                        return new BooleanConstantExpression(Value != stringRight.Value);
+                    case ComparisonOperation.GreaterThan:
+                        return new BooleanConstantExpression(string.Compare(Value, stringRight.Value) > 0);
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        return new BooleanConstantExpression(string.Compare(Value, stringRight.Value) >= 0);
+                    case ComparisonOperation.LessThan:
+                        return new BooleanConstantExpression(string.Compare(Value, stringRight.Value) < 0);
+                    case ComparisonOperation.LessThanOrEqual:
+                        return new BooleanConstantExpression(string.Compare(Value, stringRight.Value) <= 0);
+                    default:
+                        return null;
+                }
+            }
+
+            // prefer constants on right side of comparison
+            if (!right.IsLiteralConstant)
+                return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;
         }

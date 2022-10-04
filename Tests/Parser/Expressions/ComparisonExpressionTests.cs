@@ -44,10 +44,8 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase("variable1 == byte(2) + 1", "byte(0x000002) == 97")] // differing modifier should be merged, move constant to right side
         [TestCase("0 + byte(1) + 0 == 9", "byte(0x000001) == 9")] // 0s should be removed without reordering
         [TestCase("0 + byte(1) - 9 == 0", "byte(0x000001) == 9")] // 9 should be moved to right hand side, then 0s removed
-
         [TestCase("bcd(byte(1)) == 24", "byte(0x000001) == 36")] // bcd should be factored out
         [TestCase("byte(1) != bcd(byte(2))", "byte(0x000001) != bcd(byte(0x000002))")] // bcd cannot be factored out
-        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", "byte(0x000001) != prev(byte(0x000001))")] // bcd should be factored out
         public void TestReplaceVariables(string input, string expected)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);

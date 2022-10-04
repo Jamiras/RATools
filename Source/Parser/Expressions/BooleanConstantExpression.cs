@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class BooleanConstantExpression : ExpressionBase, IMathematicCombineExpression
+    internal class BooleanConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public BooleanConstantExpression(bool value, int line, int column)
             : this(value)
@@ -84,6 +84,37 @@ namespace RATools.Parser.Expressions
                 builder.Append(stringExpression.Value);
                 return new StringConstantExpression(builder.ToString());
             }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Normalizes the comparison between the current expression and the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to compare with the current expression.</param>
+        /// <param name="operation">How to compare the expressions.</param>
+        /// <returns>
+        /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
+        /// </returns>
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        {
+            var booleanRight = right as BooleanConstantExpression;
+            if (booleanRight != null)
+            {
+                switch (operation)
+                {
+                    case ComparisonOperation.Equal:
+                        return new BooleanConstantExpression(Value == booleanRight.Value);
+                    case ComparisonOperation.NotEqual:
+                        return new BooleanConstantExpression(Value != booleanRight.Value);
+                    default:
+                        return new ErrorExpression("Cannot perform relative comparison on boolean values", this);
+                }
+            }
+
+            // prefer constants on right side of comparison
+            if (!right.IsLiteralConstant)
+                return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;
         }

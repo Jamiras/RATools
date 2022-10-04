@@ -340,6 +340,15 @@ namespace RATools.Parser.Expressions
                     comparison.Right);
             }
 
+            // requirement clause
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+            {
+                clause = clause.Clone();
+                clause.Comparison = ComparisonExpression.GetOppositeComparisonOperation(clause.Comparison);
+                return clause;
+            }
+
             // boolean constant
             var boolean = expression as BooleanConstantExpression;
             if (boolean != null)

@@ -145,6 +145,12 @@ namespace RATools.Parser
                     var comparison = (ComparisonExpression)expression;
                     return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
 
+                case ExpressionType.RequirementClause:
+                    var clause = (RequirementClauseExpression)expression;
+                    if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
+                        return false;
+                    return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+
                 case ExpressionType.FunctionCall:
                     var funcCall = (FunctionCallExpression)expression;
 
