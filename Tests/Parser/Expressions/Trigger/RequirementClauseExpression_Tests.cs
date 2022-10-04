@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
@@ -32,6 +31,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) * byte(0x002345) == 3", "A:0xH001234*0xH002345_0=3")]
         [TestCase("byte(0x001234) / byte(0x002345) == 3", "A:0xH001234/0xH002345_0=3")]
         [TestCase("byte(0x001234) & 7 == 3", "A:0xH001234&7_0=3")]
+        [TestCase("float(0x001234) == 3.14", "fF001234=f3.14")]
+        [TestCase("float(0x001234) > 2.0", "fF001234>f2.0")]
+        [TestCase("float(0x001234) != 2", "fF001234!=2")]
+        [TestCase("float(0x001234) < 0", "fF001234<0")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
