@@ -145,7 +145,7 @@ namespace RATools.Parser
                     var comparison = (ComparisonExpression)expression;
                     return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
 
-                case ExpressionType.RequirementClause:
+                case ExpressionType.Requirement:
                     if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
                         return true;
 

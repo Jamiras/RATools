@@ -1190,6 +1190,6 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// A comparison of MemoryValues with a possible hit target.
         /// </summary>
-        RequirementClause,
+        Requirement,
     }
 }

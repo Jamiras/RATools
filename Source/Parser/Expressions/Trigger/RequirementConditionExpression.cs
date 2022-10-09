@@ -4,11 +4,11 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class RequirementConditionExpression : ExpressionBase, 
-        ITriggerExpression, ICloneableExpression, IComparisonNormalizeExpression
+    internal class RequirementConditionExpression : RequirementExpressionBase, 
+        ICloneableExpression
     {
         public RequirementConditionExpression()
-            : base(ExpressionType.RequirementClause)
+            : base()
         {
         }
 
@@ -34,7 +34,7 @@ namespace RATools.Parser.Expressions.Trigger
             return Clone();
         }
 
-        public RequirementConditionExpression Clone()
+        public new RequirementConditionExpression Clone()
         {
             return new RequirementConditionExpression(this);
         }
@@ -87,7 +87,7 @@ namespace RATools.Parser.Expressions.Trigger
                 Behavior == that.Behavior && Right == that.Right && Left == that.Left);
         }
 
-        public ErrorExpression BuildTrigger(TriggerBuilderContext context)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             ErrorExpression error;
             var right = MemoryValueExpression.ReduceToSimpleExpression(Right) ?? Right;
@@ -265,11 +265,6 @@ namespace RATools.Parser.Expressions.Trigger
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);
             return result;
-        }
-
-        ExpressionBase IComparisonNormalizeExpression.NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
-        {
-            return new ErrorExpression("Cannot chain comparisons", this);
         }
     }
 }

@@ -39,11 +39,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         // bcd should be factored out
-        [TestCase("bcd(byte(1)) == 24", ExpressionType.RequirementClause, "byte(0x000001) == 36")]
-        [TestCase("prev(bcd(byte(1))) == 150", ExpressionType.RequirementClause, "prev(byte(0x000001)) == 336")]
-        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", ExpressionType.RequirementClause, "byte(0x000001) != prev(byte(0x000001))")]
+        [TestCase("bcd(byte(1)) == 24", ExpressionType.Requirement, "byte(0x000001) == 36")]
+        [TestCase("prev(bcd(byte(1))) == 150", ExpressionType.Requirement, "prev(byte(0x000001)) == 336")]
+        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", ExpressionType.Requirement, "byte(0x000001) != prev(byte(0x000001))")]
         // bcd cannot be factored out
-        [TestCase("byte(1) != bcd(byte(2))", ExpressionType.RequirementClause, "byte(0x000001) != bcd(byte(0x000002))")]
+        [TestCase("byte(1) != bcd(byte(2))", ExpressionType.Requirement, "byte(0x000001) != bcd(byte(0x000002))")]
         // bcd representation of 100M doesn't fit in 32-bits
         [TestCase("bcd(dword(1)) == 100000000", ExpressionType.BooleanConstant, "false")]
         [TestCase("bcd(dword(1)) != 100000000", ExpressionType.BooleanConstant, "true")]
@@ -56,7 +56,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             var result = TriggerExpressionTests.Parse(input);
             Assert.That(result.Type, Is.EqualTo(expectedType));
 
-            if (expectedType == ExpressionType.RequirementClause)
+            if (expectedType == ExpressionType.Requirement)
                 result = ((RequirementConditionExpression)result).Normalize();
 
             ExpressionTests.AssertAppendString(result, expected);
