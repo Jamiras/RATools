@@ -146,7 +146,10 @@ namespace RATools.Parser
                     return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
 
                 case ExpressionType.RequirementClause:
-                    var clause = (RequirementClauseExpression)expression;
+                    if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
+                        return true;
+
+                    var clause = (RequirementConditionExpression)expression;
                     if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
                         return false;
                     return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
@@ -171,12 +174,6 @@ namespace RATools.Parser
 
                 case ExpressionType.MemoryAccessor:
                     return true;
-
-                case ExpressionType.Requirement:
-                    if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
-                        return true;
-
-                    return false;
 
                 default:
                     return false;

@@ -7,7 +7,7 @@ namespace RATools.Parser.Expressions.Trigger
     internal class AlwaysFalseExpression : ExpressionBase, ITriggerExpression, IExecutableExpression
     {
         public AlwaysFalseExpression()
-            : base(ExpressionType.Requirement)
+            : base(ExpressionType.RequirementClause)
         {
         }
 

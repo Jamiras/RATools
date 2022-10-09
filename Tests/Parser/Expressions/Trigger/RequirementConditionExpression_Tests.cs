@@ -1,12 +1,11 @@
 ﻿using NUnit.Framework;
-using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
 {
     [TestFixture]
-    class RequirementClauseExpressionTests
+    class RequirementConditionExpressionTests
     {
         [Test]
         [TestCase("byte(0x001234) == 3")]
@@ -17,7 +16,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("repeated(6, word(0x001234) > 100)")]
         public void TestAppendString(string input)
         {
-            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
             ExpressionTests.AssertAppendString(clause, input);
         }
         
@@ -34,7 +33,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) & 7 == 3", "A:0xH001234&7_0=3")]
         public void TestBuildTrigger(string input, string expected)
         {
-            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
             TriggerExpressionTests.AssertSerialize(clause, expected);
         }
 
@@ -58,7 +57,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             Assert.That(result.Type, Is.EqualTo(expectedType));
 
             if (expectedType == ExpressionType.RequirementClause)
-                result = ((RequirementClauseExpression)result).Normalize();
+                result = ((RequirementConditionExpression)result).Normalize();
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -67,7 +66,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         public void TestAddAddressCompareToAddress()
         {
             var input = "byte(word(0x1234)) == word(0x2345)";
-            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
             ExpressionTests.AssertAppendString(clause, "byte(word(0x001234)) == word(0x002345)");
         }
 
@@ -101,7 +100,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             input = input.Replace("WA", "word(0x1234)");
             input = input.Replace("WB", "word(0x2345)");
 
-            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
 
             expected = expected.Replace("WA", "word(0x001234)");
             expected = expected.Replace("WB", "word(0x002345)");

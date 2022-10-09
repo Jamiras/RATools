@@ -626,8 +626,6 @@ namespace RATools.Parser
                 case ExpressionType.ModifiedMemoryAccessor:
                 case ExpressionType.MemoryValue:
                 case ExpressionType.RequirementClause:
-                case ExpressionType.Requirement:
-                case ExpressionType.RequirementGroup:
                     return true;
 
                 default:

@@ -189,7 +189,7 @@ namespace RATools.Parser.Expressions
                 case ExpressionType.MemoryAccessor:
                 case ExpressionType.ModifiedMemoryAccessor:
                 case ExpressionType.MemoryValue:
-                    var requirement = new RequirementClauseExpression
+                    var requirement = new RequirementConditionExpression
                     {
                         Left = comparison.Left,
                         Comparison = comparison.Operation,
@@ -204,7 +204,7 @@ namespace RATools.Parser.Expressions
                 case ExpressionType.MemoryAccessor:
                 case ExpressionType.ModifiedMemoryAccessor:
                 case ExpressionType.MemoryValue:
-                    var requirement = new RequirementClauseExpression
+                    var requirement = new RequirementConditionExpression
                     {
                         Left = comparison.Right,
                         Comparison = ReverseComparisonOperation(comparison.Operation),

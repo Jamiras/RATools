@@ -4,15 +4,15 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class RequirementClauseExpression : ExpressionBase, 
+    internal class RequirementConditionExpression : ExpressionBase, 
         ITriggerExpression, ICloneableExpression, IComparisonNormalizeExpression
     {
-        public RequirementClauseExpression()
+        public RequirementConditionExpression()
             : base(ExpressionType.RequirementClause)
         {
         }
 
-        public RequirementClauseExpression(RequirementClauseExpression source)
+        public RequirementConditionExpression(RequirementConditionExpression source)
             : this()
         {
             Behavior = source.Behavior;
@@ -34,9 +34,9 @@ namespace RATools.Parser.Expressions.Trigger
             return Clone();
         }
 
-        public RequirementClauseExpression Clone()
+        public RequirementConditionExpression Clone()
         {
-            return new RequirementClauseExpression(this);
+            return new RequirementConditionExpression(this);
         }
         
         private static ExpressionBase Clone(ExpressionBase expr)
@@ -82,7 +82,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as RequirementClauseExpression;
+            var that = obj as RequirementConditionExpression;
             return (that != null && Comparison == that.Comparison && HitTarget == that.HitTarget &&
                 Behavior == that.Behavior && Right == that.Right && Left == that.Left);
         }
@@ -240,7 +240,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (leftHasBCD && rightHasBCD)
             {
-                return new RequirementClauseExpression(this)
+                return new RequirementConditionExpression(this)
                 {
                     Left = newLeft,
                     Right = newRight,

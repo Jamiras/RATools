@@ -32,7 +32,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (comparison is not RequirementClauseExpression)
+            if (comparison is not RequirementConditionExpression)
                 return base.ReplaceVariables(scope, out result);
 
             result = AddHitCount(comparison, count, scope);
@@ -64,7 +64,7 @@ namespace RATools.Parser.Functions
                     return new ErrorExpression("Unbounded count is only supported in measured value expressions", count);
             }
 
-            var requirement = comparison as RequirementClauseExpression;
+            var requirement = comparison as RequirementConditionExpression;
             if (requirement == null)
                 return new ErrorExpression(Name.Name + " can ony be applied to requirement clauses", this);
         

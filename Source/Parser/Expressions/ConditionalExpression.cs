@@ -341,7 +341,7 @@ namespace RATools.Parser.Expressions
             }
 
             // requirement clause
-            var clause = expression as RequirementClauseExpression;
+            var clause = expression as RequirementConditionExpression;
             if (clause != null)
             {
                 clause = clause.Clone();
