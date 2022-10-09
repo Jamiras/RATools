@@ -6,7 +6,7 @@ using System.Linq;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal abstract class RequirementExpressionBase : ExpressionBase,
-        ITriggerExpression, IComparisonNormalizeExpression
+        ITriggerExpression, IComparisonNormalizeExpression, IExecutableExpression
     {
         protected RequirementExpressionBase()
             : base(ExpressionType.Requirement)
@@ -150,6 +150,14 @@ namespace RATools.Parser.Expressions.Trigger
         public virtual RequirementExpressionBase InvertLogic()
         {
             return null;
+        }
+
+        ErrorExpression IExecutableExpression.Execute(InterpreterScope scope)
+        {
+            var asString = ToString();
+            var index = asString.IndexOf('(');
+            var functionName = (index == -1) ? "expression" : asString.Substring(0, index);
+            return new ErrorExpression(functionName + " has no meaning outside of a trigger");
         }
     }
 }
