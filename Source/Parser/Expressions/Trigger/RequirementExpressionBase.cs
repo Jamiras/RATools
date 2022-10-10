@@ -6,7 +6,8 @@ using System.Linq;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal abstract class RequirementExpressionBase : ExpressionBase,
-        ITriggerExpression, IComparisonNormalizeExpression, IExecutableExpression
+        ITriggerExpression, IComparisonNormalizeExpression, 
+        ILogicalCombineExpression, IExecutableExpression
     {
         protected RequirementExpressionBase()
             : base(ExpressionType.Requirement)
@@ -58,7 +59,7 @@ namespace RATools.Parser.Expressions.Trigger
             return (RequirementExpressionBase)((ICloneableExpression)this).Clone();
         }
 
-        protected static bool CompareRequirements(List<RequirementExpressionBase> left, List<RequirementExpressionBase> right)
+        protected static bool CompareRequirements(List<ExpressionBase> left, List<ExpressionBase> right)
         {
             if (left == null)
                 return (right == null);
@@ -98,7 +99,7 @@ namespace RATools.Parser.Expressions.Trigger
             return 0;
         }
 
-        protected static bool EnsureLastClauseHasNoHitCount(ICollection<Requirement> requirements, RequirementType type)
+        public static bool EnsureLastClauseHasNoHitCount(ICollection<Requirement> requirements, RequirementType type)
         {
             if (requirements.Last().HitCount == 0)
                 return true;
@@ -136,6 +137,30 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         /// <summary>
+        /// Combines the current expression with the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
+        /// </summary>
+        /// <param name="right">The expression to combine with the current expression.</param>
+        /// <param name="operation">How to combine the expressions.</param>
+        /// <returns>
+        /// An expression representing the combined values on success, or <c>null</c> if the expressions could not be combined.
+        /// </returns>
+        public virtual ExpressionBase Combine(ExpressionBase right, ConditionalOperation operation)
+        {
+            if (operation == ConditionalOperation.Not)
+                return InvertLogic();
+
+            var requirement = right as RequirementExpressionBase;
+            if (requirement == null)
+                return null;
+
+            var clause = new RequirementClauseExpression();
+            clause.Operation = operation;
+            clause.AddCondition(this);
+            clause.AddCondition(requirement);
+            return clause;
+        }
+
+        /// <summary>
         /// Returns a <see cref="RequirementExpressionBase"/> that represents the optimal logic for the provided context.
         /// </summary>
         public virtual RequirementExpressionBase Optimize(TriggerBuilderContext context)
@@ -149,6 +174,24 @@ namespace RATools.Parser.Expressions.Trigger
         /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
         public virtual RequirementExpressionBase InvertLogic()
         {
+            return null;
+        }
+
+        /// <summary>
+        /// Returns an expression that represents the logical intersection of this expression and
+        /// <paramref name="that"> expression, when they are <paramref name="condition"/>ed together.
+        /// </summary>
+        /// <param name="that">The second expression</param>
+        /// <param name="condition">How to combine the expressions</param>
+        /// <returns>
+        /// <c>this</c>, <paramref name="that"/>, or a new expression if they intersect,
+        /// <c>null</c> if not.
+        /// </returns>
+        public virtual RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
+        {
+            if (this == that)
+                return this;
+
             return null;
         }
 

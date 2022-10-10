@@ -40,12 +40,15 @@ namespace RATools.Tests.Parser
             input = input.Replace("C", "byte(0x00000C)");
 
             var achievement = CreateAchievement(input);
-            achievement.Optimize();
+            achievement.OptimizeForSubClause();
 
             var result = achievement.RequirementsDebugString;
             result = result.Replace("byte(0x00000A)", "A");
             result = result.Replace("byte(0x00000B)", "B");
             result = result.Replace("byte(0x00000C)", "C");
+
+            while (result[0] == '(' && result.IndexOf(')') == result.Length - 1)
+                result = result.Substring(1, result.Length - 2);
 
             if (expected == "ignore")
             {
@@ -185,7 +188,7 @@ namespace RATools.Tests.Parser
 
         [Test]
         [TestCase("once(A == 1) && once(A == 2)", "ignore")] // once() should not cause a conflict
-        [TestCase("(A != 255 && B == 5 && A < 6)", "B == 5 && A < 6")] // A != 255 is handled by A < 6
+        [TestCase("(A != 255 && B == 5 && A < 6)", "A < 6 && B == 5")] // A != 255 is handled by A < 6
         [TestCase("once(C == 18 && A == 0 && B == 1) && never(A > 5)", "ignore")] // reset condition should not be merged into andnext chain
         [TestCase("never((once(A == 0 && B == 1) && A > 5))", "ignore")] // hitcount on once(A/B) should prevent merge of A>5
         [TestCase("never((once(once(C == 18) && A == 0 && B == 1) && A > 5))", "ignore")] // hitcount on once(A/B) should prevent merge of A>5
@@ -212,7 +215,7 @@ namespace RATools.Tests.Parser
         [TestCase("(A < 5 && B == 5) || B == 5", "B == 5")] // A is superfluous
         [TestCase("(A < 5 && B == 5) || B < 6", "B < 6")] // A is superfluous
         [TestCase("(A < 5 && B == 5) || B > 6", "ignore")] // A matters for B == 5
-        [TestCase("A > 7 || (A == 7 && B > 5)", "ignore")] // B matters for A == 7
+        [TestCase("A > 7 || (A == 7 && B > 5)", "(A == 7 && B > 5) || A > 7")] // B matters for A == 7
         [TestCase("(A == 7 && B > 5) || A > 7", "ignore")] // B matters for A == 7
         [TestCase("(A <= 5 && B <= 6 && C <= 7) || (A < 5 && B == 5)", "ignore")] // A and B are a subset, but C is more restrictive
         [TestCase("(A <= 5 && B <= 6) || (A < 5 && B == 5 && C <= 7)", "A <= 5 && B <= 6")] // A and B are a superset, so more restrive C can be discarded

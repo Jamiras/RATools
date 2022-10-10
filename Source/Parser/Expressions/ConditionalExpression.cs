@@ -280,6 +280,14 @@ namespace RATools.Parser.Expressions
                         updatedConditions.InsertRange(i, conditionalExpression._conditions);
                         isChanged = true;
                     }
+
+                    var requirementExpression = updatedConditions[i] as RequirementClauseExpression;
+                    if (requirementExpression != null && requirementExpression.Operation == Operation)
+                    {
+                        updatedConditions.RemoveAt(i);
+                        updatedConditions.InsertRange(i, requirementExpression.Conditions);
+                        isChanged = true;
+                    }
                 }
 
                 if (!isChanged)
@@ -288,12 +296,48 @@ namespace RATools.Parser.Expressions
                     result = this;
                     return true;
                 }
-                else
+
+                if (updatedConditions.All(c => c is RequirementExpressionBase))
                 {
-                    var newConditionalExpression = new ConditionalExpression(Operation, updatedConditions);
-                    newConditionalExpression._fullyExpanded = true;
-                    result = newConditionalExpression;
+                    var clause = new RequirementClauseExpression { Operation = Operation };
+                    foreach (var condition in updatedConditions)
+                        clause.AddCondition((RequirementExpressionBase)condition);
+                    CopyLocation(clause);
+                    result = clause;
+                    return true;
                 }
+
+                if (updatedConditions.Count >= 2)
+                {
+                    var logicalCombiningExpression = updatedConditions[0] as ILogicalCombineExpression;
+                    if (logicalCombiningExpression != null)
+                    {
+                        for (int i = 1; i < updatedConditions.Count; i++)
+                        {
+                            var newExpression = logicalCombiningExpression.Combine(updatedConditions[i], Operation);
+                            if (newExpression != null && newExpression.Type == ExpressionType.Error)
+                            {
+                                result = newExpression;
+                                return false;
+                            }
+
+                            logicalCombiningExpression = newExpression as ILogicalCombineExpression;
+                            if (logicalCombiningExpression == null)
+                                break;
+                        }
+
+                        if (logicalCombiningExpression != null)
+                        {
+                            result = (ExpressionBase)logicalCombiningExpression;
+                            CopyLocation(result);
+                            return true;
+                        }
+                    }
+                }
+
+                var newConditionalExpression = new ConditionalExpression(Operation, updatedConditions);
+                newConditionalExpression._fullyExpanded = true;
+                result = newConditionalExpression;
             }
 
             CopyLocation(result);
@@ -341,12 +385,12 @@ namespace RATools.Parser.Expressions
             }
 
             // requirement clause
-            var clause = expression as RequirementConditionExpression;
+            var clause = expression as RequirementExpressionBase;
             if (clause != null)
             {
-                clause = clause.Clone();
-                clause.Comparison = ComparisonExpression.GetOppositeComparisonOperation(clause.Comparison);
-                return clause;
+                var inverted = clause.InvertLogic();
+                if (inverted != null)
+                    return inverted;
             }
 
             // boolean constant

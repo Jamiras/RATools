@@ -32,5 +32,10 @@ namespace RATools.Parser.Expressions.Trigger
             context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
             return null;
         }
+
+        public override RequirementExpressionBase InvertLogic()
+        {
+            return new AlwaysTrueExpression();
+        }
     }
 }

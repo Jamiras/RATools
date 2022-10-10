@@ -308,7 +308,7 @@ namespace RATools.Parser
                 andedConditions.Add(orConditions[0]);
             }
 
-            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
+            var context = new AchievementBuilderContext(this);
             var innerScope = new InterpreterScope(scope) { Context = context };
             foreach (var condition in andedConditions)
             {

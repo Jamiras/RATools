@@ -2237,8 +2237,11 @@ namespace RATools.Parser
             // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
             RemoveAlwaysFalseAlts(groups);
 
-            // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
-            DenormalizeOrNexts(groups);
+            if (!forSubclause)
+            {
+                // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
+                DenormalizeOrNexts(groups);
+            }
 
             // convert back to flattened expressions
             _core.Clear();

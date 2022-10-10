@@ -1,5 +1,8 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -133,18 +136,37 @@ namespace RATools.Parser.Expressions.Trigger
             if (lastRequirement.Right.Type == FieldType.None)
                 return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type), Right);
 
-            switch (Comparison)
-            {
-                case ComparisonOperation.Equal: lastRequirement.Operator = RequirementOperator.Equal; break;
-                case ComparisonOperation.NotEqual: lastRequirement.Operator = RequirementOperator.NotEqual; break;
-                case ComparisonOperation.LessThan: lastRequirement.Operator = RequirementOperator.LessThan; break;
-                case ComparisonOperation.LessThanOrEqual: lastRequirement.Operator = RequirementOperator.LessThanOrEqual; break;
-                case ComparisonOperation.GreaterThan: lastRequirement.Operator = RequirementOperator.GreaterThan; break;
-                case ComparisonOperation.GreaterThanOrEqual: lastRequirement.Operator = RequirementOperator.GreaterThanOrEqual; break;
-            }
-
+            lastRequirement.Operator = ConvertToRequirementOperator(Comparison);
             lastRequirement.HitCount = HitTarget;
             return null;
+        }
+
+        private static RequirementOperator ConvertToRequirementOperator(ComparisonOperation op)
+        {
+            switch (op)
+            {
+                case ComparisonOperation.Equal: return RequirementOperator.Equal;
+                case ComparisonOperation.NotEqual: return RequirementOperator.NotEqual;
+                case ComparisonOperation.LessThan: return RequirementOperator.LessThan;
+                case ComparisonOperation.LessThanOrEqual: return RequirementOperator.LessThanOrEqual;
+                case ComparisonOperation.GreaterThan: return RequirementOperator.GreaterThan;
+                case ComparisonOperation.GreaterThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
+                default: return RequirementOperator.None;
+            }
+        }
+
+        private static ComparisonOperation ConvertToComparisonOperation(RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.Equal: return ComparisonOperation.Equal;
+                case RequirementOperator.NotEqual: return ComparisonOperation.NotEqual;
+                case RequirementOperator.LessThan: return ComparisonOperation.LessThan;
+                case RequirementOperator.LessThanOrEqual: return ComparisonOperation.LessThanOrEqual;
+                case RequirementOperator.GreaterThan: return ComparisonOperation.GreaterThan;
+                case RequirementOperator.GreaterThanOrEqual: return ComparisonOperation.GreaterThanOrEqual;
+                default: return ComparisonOperation.None;
+            }
         }
 
         private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
@@ -265,6 +287,125 @@ namespace RATools.Parser.Expressions.Trigger
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);
             return result;
+        }
+
+        private static Field CreateField(ExpressionBase expr)
+        {
+            switch (expr.Type)
+            {
+                default:
+                    return FieldFactory.CreateField(expr);
+
+                case ExpressionType.ModifiedMemoryAccessor:
+                    return FieldFactory.CreateField(((ModifiedMemoryAccessorExpression)expr).MemoryAccessor);
+
+                case ExpressionType.MemoryValue:
+                    return FieldFactory.CreateField(((MemoryValueExpression)expr).MemoryAccessors.Last().MemoryAccessor);
+            }
+        }
+
+        public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
+        {
+            var thatCondition = that as RequirementConditionExpression;
+            if (thatCondition == null)
+            {
+                var thatClause = that as RequirementClauseExpression;
+                return (thatClause != null) ? thatClause.LogicalIntersect(this, condition) : null;
+            }
+
+            if (Behavior != thatCondition.Behavior || Left != thatCondition.Left)
+                return null;
+
+            // cannot merge if either condition has an infinite hit target
+            if (HitTarget != thatCondition.HitTarget && (HitTarget == 0 || thatCondition.HitTarget == 0))
+                return null;
+
+            var leftField = CreateField(Right);
+            var rightField = CreateField(thatCondition.Right);
+            if (leftField.Type != rightField.Type || leftField.Type == FieldType.None)
+                return null;
+            if (leftField.IsMemoryReference && (leftField.Value != rightField.Value || leftField.Size != rightField.Size))
+                return null; // reading different addresses or different sizes
+
+            //var leftEx = new RequirementEx();
+            //leftEx.Requirements.Add(new Requirement
+            //{
+            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
+            //    Operator = ConvertToRequirementOperator(Comparison),
+            //    Right = leftField,
+            //    HitCount = HitTarget
+            //});
+
+            //var rightEx = new RequirementEx();
+            //rightEx.Requirements.Add(new Requirement
+            //{
+            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
+            //    Operator = ConvertToRequirementOperator(thatClause.Comparison),
+            //    Right = rightField,
+            //    HitCount = thatClause.HitTarget
+            //});
+
+            //var mergedEx = RequirementMerger.MergeRequirements(leftEx, rightEx, condition);
+
+            var leftCondition = ConvertToRequirementOperator(Comparison);
+            var rightCondition = ConvertToRequirementOperator(thatCondition.Comparison);
+            var merged = RequirementMerger.MergeComparisons(
+                leftCondition, leftField.Value, rightCondition, rightField.Value, condition);
+
+            if (merged.Key != RequirementOperator.None)
+            {
+                if (merged.Key == RequirementOperator.Multiply)
+                    return new AlwaysTrueExpression();
+
+                if (merged.Key == RequirementOperator.Divide)
+                {
+                    // these are allowed to conflict with each other
+                    if (HitTarget > 0)
+                        return null;
+                    if (Behavior == RequirementType.PauseIf)
+                        return null;
+                    if (Behavior == RequirementType.ResetIf)
+                        return null;
+
+                    return new AlwaysFalseExpression();
+                }
+
+                var result = new RequirementConditionExpression
+                {
+                    Behavior = Behavior,
+                    HitTarget = Math.Max(HitTarget, thatCondition.HitTarget),
+                    Left = Left,
+                    Comparison = ConvertToComparisonOperation(merged.Key),
+                };
+
+                switch (leftField.Type)
+                {
+                    case FieldType.Value:
+                        result.Right = new IntegerConstantExpression((int)merged.Value);
+                        break;
+
+                    default:
+                        // already ensured the addresses are the same
+                        result.Right = new MemoryAccessorExpression(leftField);
+                        break;
+                }
+
+                if (result.Comparison == Comparison && result.Right == Right && result.HitTarget == HitTarget)
+                    return this;
+                if (result.Comparison == thatCondition.Comparison && result.Right == thatCondition.Right && result.HitTarget == thatCondition.HitTarget)
+                    return thatCondition;
+
+                return result;
+            }
+
+            return base.LogicalIntersect(that, condition);
+        }
+
+        public override RequirementExpressionBase InvertLogic()
+        {
+            var condition = Clone();
+            condition.Comparison = ComparisonExpression.GetOppositeComparisonOperation(condition.Comparison);
+            return condition;
         }
     }
 }

@@ -721,6 +721,28 @@ namespace RATools.Parser
         }
     }
 
+    internal class AchievementBuilderContext : TriggerBuilderContext
+    {
+        public AchievementBuilderContext(AchievementBuilder builder)
+        {
+            Achievement = builder;
+            Trigger = Achievement.CoreRequirements;
+        }
+
+        public AchievementBuilderContext()
+            : this(new AchievementBuilder())
+        {
+        }
+
+        public AchievementBuilder Achievement { get; private set; }
+
+        public void BeginAlt()
+        {
+            Trigger = new List<Requirement>();
+            Achievement.AlternateRequirements.Add(Trigger);
+        }
+    }
+
     internal class ValueBuilderContext : TriggerBuilderContext
     {
     }
