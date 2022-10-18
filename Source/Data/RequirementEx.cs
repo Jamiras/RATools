@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RATools.Parser.Functions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -263,8 +264,19 @@ namespace RATools.Data
 
                     if (requirement.Type == RequirementType.AddHits)
                     {
-                        int subclauseWidth = wrapWidth - indent - 4;
-                        AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                        if (addHitsRequirements.Count > 1 && addHitsRequirements.Last().HitCount > 0)
+                        {
+                            addHitsRequirements.Last().Type = RequirementType.OrNext;
+                            addHitsRequirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                            int subclauseWidth = wrapWidth - indent - 4;
+                            AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                            builder.Replace(" || always_false()", "");
+                        }
+                        else
+                        {
+                            int subclauseWidth = wrapWidth - indent - 4;
+                            AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                        }
                     }
                     else
                     {
