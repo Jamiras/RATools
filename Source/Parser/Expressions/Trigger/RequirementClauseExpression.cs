@@ -157,6 +157,8 @@ namespace RATools.Parser.Expressions.Trigger
                 var achievementContext = context as AchievementBuilderContext;
                 if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
                 {
+                    BubbleUpOrs(complexSubclauses);
+
                     var altsNeeded = 1;
                     if (complexSubclauses.Count > 1)
                     {
@@ -180,6 +182,74 @@ namespace RATools.Parser.Expressions.Trigger
 
             subclauses.Insert(0, complexSubclauses[0]);
             return AppendSubclauses(context, subclauses, joinBehavior);
+        }
+
+        private static void BubbleUpOrs(List<RequirementClauseExpression> complexSubclauses)
+        {
+            // ASSERT: all subclauses are complex ORs
+            // If one of them is an AND with nested ORs, we have to expand it
+            // (A || (B && (C || D))) => (A || (B && C) || (B && D))
+            for (int i = 0; i < complexSubclauses.Count; i++)
+            {
+                // complexSubclause = (A || (B && (C || D)))
+                var complexSubclause = complexSubclauses[i];
+                if (!complexSubclause._conditions.Any(c => c is RequirementClauseExpression))
+                    continue;
+
+                var newSubclause = new RequirementClauseExpression
+                {
+                    Operation = complexSubclauses[i].Operation
+                };
+
+                foreach (var condition in complexSubclause._conditions)
+                {
+                    // clause = (B && (C || D)) => (B && C) || (B && D)
+                    var clause = condition as RequirementClauseExpression;
+                    if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
+                    {
+                        newSubclause.AddCondition(condition);
+                        continue;
+                    }
+
+                    var indices = new int[clause._conditions.Count];
+                    int k;
+                    do
+                    {
+                        var group = new List<ExpressionBase>();
+                        for (int j = 0; j < indices.Length; j++)
+                        {
+                            var subclause = clause._conditions[j];
+                            var subclauseClause = subclause as RequirementClauseExpression; 
+                            if (subclauseClause == null)
+                                group.Add(subclause); // B
+                            else
+                                group.Add(subclauseClause._conditions[indices[j]]); // C || D
+                        }
+
+                        newSubclause.AddCondition(new RequirementClauseExpression
+                        {
+                            _conditions = group,
+                            Operation = ConditionalOperation.And
+                        });
+
+                        k = indices.Length - 1;
+                        do
+                        {
+                            var subclause = clause._conditions[k] as RequirementClauseExpression;
+                            if (subclause != null)
+                            {
+                                indices[k]++;
+                                if (indices[k] < subclause._conditions.Count)
+                                    break;
+                            }
+
+                            indices[k--] = 0;
+                        } while (k >= 0);
+                    } while (k >= 0);
+                }
+
+                complexSubclauses[i] = newSubclause;
+            }
         }
 
         private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
@@ -466,18 +536,21 @@ namespace RATools.Parser.Expressions.Trigger
 
             for (int i = requirements.Count - 1; i > 0; i--)
             {
-                var requirementI = requirements[i] as RequirementExpressionBase;
-                if (requirementI == null)
-                    continue;
-
-                for (int j = 0; j < i; j++)
+                var conditionI = requirements[i] as RequirementConditionExpression;
+                if (conditionI != null)
                 {
-                    if (i != j)
+                    // singular condition, see if it can be handled by any of the other conditions
+                    for (int j = 0; j < requirements.Count - 1; j++)
                     {
+                        if (i == j)
+                            continue;
+
                         var requirementJ = requirements[j] as RequirementExpressionBase;
-                        if (requirementJ != null)
+                        if (requirementJ == null)
+                            continue;
+
                         {
-                            var intersect = requirementJ.LogicalIntersect(requirementI, condition);
+                            var intersect = requirementJ.LogicalIntersect(conditionI, condition);
                             if (intersect != null)
                             {
                                 requirements[j] = intersect;
@@ -485,6 +558,22 @@ namespace RATools.Parser.Expressions.Trigger
                                 updated = true;
                                 break;
                             }
+                        }
+                    }
+                }
+                else
+                {
+                    // complex condition. only merge if it's an exact match
+                    for (int j = 0; j < requirements.Count - 1; j++)
+                    {
+                        if (i == j)
+                            continue;
+
+                        if (requirements[j] == requirements[i])
+                        {
+                            requirements.RemoveAt(i);
+                            updated = true;
+                            break;
                         }
                     }
                 }
