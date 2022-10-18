@@ -224,7 +224,7 @@ namespace RATools.Parser.Expressions.Trigger
                     if (clause != null)
                         error = BuildTrigger(triggerContext, clause._conditions, RequirementType.None);
                     else
-                        error = BuildSubclauseTrigger(clause, triggerContext);
+                        error = BuildSubclauseTrigger(subclause, triggerContext);
 
                     if (error != null)
                         return error;
@@ -577,10 +577,12 @@ namespace RATools.Parser.Expressions.Trigger
                     return thatClause.LogicalIntersect(this, condition);
 
                 // ASSERT: _conditions.Count >= thatClause._conditions.Count;
-                var matches = new bool[_conditions.Count];
-                var sharedConditions = new List<ExpressionBase>();
+                var sharedConditions = new List<ExpressionBase>(_conditions.Count);
                 var unsharedConditions = new List<ExpressionBase>();
                 bool updated = false;
+
+                for (int i = 0; i < _conditions.Count; i++)
+                    sharedConditions.Add(null);
 
                 // both sides use the same set of addresses, see if their logics can be combined
                 // (A || B || C) && (A || B) => (A || B)
@@ -588,106 +590,138 @@ namespace RATools.Parser.Expressions.Trigger
                 // (A && B && C) && (A && B) => (A && B && C)
                 // (A && B && C) || (A && B) => (A && B)
                 // (A && B) || (A && C) => A && (B || C)
+
+                // first pass - look for exact matches
                 foreach (var thatCondition in thatClause.Conditions)
                 {
-                    bool foundMatch = false;
-                    for (int i = 0; i < matches.Length; i++)
+                    var found = false;
+                    for (int i = 0; i < sharedConditions.Count; i++)
                     {
-                        if (!matches[i] && thatCondition == _conditions[i])
+                        if (sharedConditions[i] == null && thatCondition == _conditions[i])
                         {
-                            matches[i] = true;
-                            sharedConditions.Add(_conditions[i]);
-                            foundMatch = true;
+                            sharedConditions[i] = _conditions[i];
                             updated = true;
+                            found = true;
                             break;
                         }
                     }
-                    if (!foundMatch)
-                    {
-                        if (condition == ConditionalOperation.And)
-                            return null;
 
+                    if (!found)
                         unsharedConditions.Add(thatCondition);
+                }
+
+                // second pass - if there's a single unmatched item, try to merge it
+                if (unsharedConditions.Count == 1)
+                {
+                    var unsharedExpr = unsharedConditions[0] as RequirementExpressionBase;
+                    if (unsharedExpr != null)
+                    {
+                        for (int i = 0; i < sharedConditions.Count; i++)
+                        {
+                            if (sharedConditions[i] != null)
+                                continue;
+
+                            var exprI = _conditions[i] as RequirementExpressionBase;
+                            if (exprI != null)
+                            {
+                                var merged = exprI.LogicalIntersect(unsharedExpr, condition);
+                                if (merged != null)
+                                {
+                                    sharedConditions[i] = merged;
+                                    unsharedConditions.Clear();
+                                    updated = true;
+                                    break;
+                                }
+                            }
+
+                            if (unsharedConditions.Count == 0)
+                                break;
+                        }
                     }
                 }
 
-                if (sharedConditions.Count == 0)
+                // if no expressions were merged, we're done
+                if (!updated)
                     return null;
 
-                if (unsharedConditions.Count > 0 && matches.Any(m => !m))
+                if (unsharedConditions.Count == 0)
                 {
-                    // unsharedConditions will only be populated if condition is OR
-                    //
+                    // if all items were matched, copy over the remaining items from this
+                    for (int i = 0; i < sharedConditions.Count; i++)
+                    {
+                        if (sharedConditions[i] == null)
+                            sharedConditions[i] = _conditions[i];
+                    }
+                }
+                else
+                {
                     //   (A && B) || (A && C) => A && (B || C)
-                    //    A = sharedConditions
-                    //    B = !matches
+                    //   (A || B) && (A || C) => A || (B && C)
+                    //    A = sharedConditions.Where( ! null )
+                    //    B = conditions.Where(sharedCondition == null)
                     //    C = unsharedConditions
-                    ExpressionBase b, c;
-
-                    if (unsharedConditions.Count > 1)
+                    var bConditions = new List<ExpressionBase>();
+                    for (int i = 0; i < sharedConditions.Count; i++)
                     {
-                        c = new RequirementClauseExpression
-                        {
-                            Operation = ConditionalOperation.And,
-                            _conditions = unsharedConditions
-                        };
+                        if (sharedConditions[i] == null)
+                            bConditions.Add(_conditions[i]);
+                    }
+
+                    if (bConditions.Count == 0)
+                    {
+                        // if all items were matched, copy over the remaining items from that
+                        sharedConditions.AddRange(unsharedConditions);
+                        updated = true;
                     }
                     else
                     {
-                        c = unsharedConditions[0];
-                    }
+                        ExpressionBase b, c;
+                        sharedConditions.RemoveAll(c => c == null);
 
-                    unsharedConditions = new List<ExpressionBase>();
-                    for (int i = 0; i < _conditions.Count; i++)
-                    {
-                        if (!matches[i])
-                            unsharedConditions.Add(_conditions[i]);
-                    }
-
-                    if (unsharedConditions.Count > 1)
-                    {
-                        b = new RequirementClauseExpression
+                        if (unsharedConditions.Count > 1)
                         {
-                            Operation = ConditionalOperation.And,
-                            _conditions = unsharedConditions
+                            c = new RequirementClauseExpression
+                            {
+                                Operation = ConditionalOperation.And,
+                                _conditions = unsharedConditions
+                            };
+                        }
+                        else
+                        {
+                            c = unsharedConditions[0];
+                        }
+
+                        if (bConditions.Count > 1)
+                        {
+                            b = new RequirementClauseExpression
+                            {
+                                Operation = ConditionalOperation.And,
+                                _conditions = bConditions
+                            };
+                        }
+                        else
+                        {
+                            b = bConditions[0];
+                        }
+
+                        var bOrC = new RequirementClauseExpression
+                        {
+                            Operation = ConditionalOperation.Or,
+                            _conditions = new List<ExpressionBase>() { b, c }
                         };
-                    }
-                    else
-                    {
-                        b = unsharedConditions[0];
-                    }
 
-                    var bOrC = new RequirementClauseExpression
-                    {
-                        Operation = ConditionalOperation.Or,
-                        _conditions = new List<ExpressionBase>() { b, c }
-                    };
-
-                    var a = new RequirementClauseExpression { Operation = ConditionalOperation.And };
-                    a._conditions = sharedConditions;
-                    a._conditions.Add(bOrC);
-                    return a;
+                        var a = new RequirementClauseExpression { Operation = ConditionalOperation.And };
+                        a._conditions = sharedConditions;
+                        a._conditions.Add(bOrC);
+                        return a;
+                    }
                 }
 
-                if (updated)
-                {
-                    var newClause = new RequirementClauseExpression { Operation = Operation };
-                    newClause._conditions = sharedConditions;
-                    return newClause;
-                }
-
-                return (condition == Operation) ? this : that;
+                var newClause = new RequirementClauseExpression { Operation = Operation };
+                newClause._conditions = sharedConditions;
+                return newClause;
             }
 
-            // if any condition in this also handles that, that can be eliminated
-            // (A > 1 && B > 1) || (A > 1) => (A > 1)
-            //if (_conditions.OfType<RequirementExpressionBase>().Any(c => {
-            //        var intersect = c.LogicalIntersect(that, condition);
-            //        if (intersect == null)
-            //            return false;
-
-            //        return ReferenceEquals(intersect, that) || (c == that);
-            //    }))
             if (_conditions.OfType<RequirementExpressionBase>().Any(c => c == that))
             {
                 // (A && B) && B  =>  A && B

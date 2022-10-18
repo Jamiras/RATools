@@ -215,7 +215,7 @@ namespace RATools.Tests.Parser
         [TestCase("(A < 5 && B == 5) || B == 5", "B == 5")] // A is superfluous
         [TestCase("(A < 5 && B == 5) || B < 6", "B < 6")] // A is superfluous
         [TestCase("(A < 5 && B == 5) || B > 6", "ignore")] // A matters for B == 5
-        [TestCase("A > 7 || (A == 7 && B > 5)", "(A == 7 && B > 5) || A > 7")] // B matters for A == 7
+        [TestCase("A > 7 || (A == 7 && B > 5)", "ignore")] // B matters for A == 7
         [TestCase("(A == 7 && B > 5) || A > 7", "ignore")] // B matters for A == 7
         [TestCase("(A <= 5 && B <= 6 && C <= 7) || (A < 5 && B == 5)", "ignore")] // A and B are a subset, but C is more restrictive
         [TestCase("(A <= 5 && B <= 6) || (A < 5 && B == 5 && C <= 7)", "A <= 5 && B <= 6")] // A and B are a superset, so more restrive C can be discarded
