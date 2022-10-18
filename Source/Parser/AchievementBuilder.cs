@@ -2339,14 +2339,6 @@ namespace RATools.Parser
                 }
             }
 
-            if (_alts.Count > 0)
-            {
-                // the last item cannot have its own HitCount as it will hold the HitCount for the group.
-                // if necessary, find one without a HitCount and make it the last.
-                if (_core.Count == 0)
-                    EnsureLastGroupHasNoHitCount(_alts);
-            }
-
             // merge the alts into the core group as an OrNext chain. only one AndNext chain can be generated
             // by the alt groups or the logic cannot be represented using only AndNext and OrNext conditions
             ICollection<Requirement> andNextAlt = null;

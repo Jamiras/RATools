@@ -78,7 +78,7 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
-        private static int GetStartOfClause(IList<Requirement> requirements, int index, RequirementType breakOnType)
+        private static int GetStartOfClause(IList<Requirement> requirements, int index)
         {
             while (index > 0)
             {
@@ -99,19 +99,19 @@ namespace RATools.Parser.Expressions.Trigger
             return 0;
         }
 
-        public static bool EnsureLastClauseHasNoHitCount(ICollection<Requirement> requirements, RequirementType type)
+        public static bool EnsureLastClauseHasNoHitCount(ICollection<Requirement> requirements)
         {
             if (requirements.Last().HitCount == 0)
                 return true;
 
             var items = new List<Requirement>(requirements);
-            int otherClauseStart = GetStartOfClause(items, items.Count - 1, type);
+            int otherClauseStart = GetStartOfClause(items, items.Count - 1);
             if (otherClauseStart == 0)
                 return false;
 
             do
             {
-                int clauseStart = GetStartOfClause(items, otherClauseStart - 1, type);
+                int clauseStart = GetStartOfClause(items, otherClauseStart - 1);
                 if (items[otherClauseStart - 1].HitCount == 0)
                 {
                     requirements.Clear();

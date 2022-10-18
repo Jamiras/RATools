@@ -198,6 +198,14 @@ namespace RATools.Parser.Functions
                 return new ErrorExpression("Unbounded count is only supported in measured value expressions", count);
             }
 
+            // the last item cannot have its own HitCount as it will hold the HitCount for the group.
+            // if necessary, find one without a HitCount and make it the last.
+            if (!RequirementClauseExpression.EnsureLastClauseHasNoHitCount(context.Trigger))
+            {
+                context.LastRequirement.Type = RequirementType.OrNext;
+                context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+            }
+
             context.LastRequirement.HitCount = (uint)count.Value;
             return null;
         }

@@ -1,4 +1,6 @@
 ﻿using RATools.Data;
+using RATools.Parser.Expressions;
+using RATools.Parser;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
@@ -133,48 +135,58 @@ namespace RATools.Parser.Expressions.Trigger
         private static ErrorExpression BuildTrigger(TriggerBuilderContext context, 
             List<ExpressionBase> conditions, RequirementType joinBehavior)
         {
-            // complex subclauses must appear before non-complex subclauses for AndNext/OrNext chaining
-            var subclauses = new List<ExpressionBase>(conditions.OfType<RequirementClauseExpression>());
-            if (subclauses.Count > 1)
-                return new ErrorExpression("Cannot logically join multiple subclauses");
+            // no complex subclauses, just dump them
+            if (!conditions.OfType<RequirementClauseExpression>().Any())
+                return AppendSubclauses(context, conditions, joinBehavior);
 
-            if (subclauses.Count == 1)
+            // separate into complex and non-complex
+            var complexSubclauses = new List<RequirementClauseExpression>();
+            var subclauses = new List<ExpressionBase>();
+            foreach (var condition in conditions)
             {
-                var subclause = (RequirementClauseExpression)subclauses[0];
-                if (subclause.Operation == ConditionalOperation.Or)
-                {
-                    // if there's a single OR clause, attempt to put the OR'd subclauses into alts
-                    var achievementContext = context as AchievementBuilderContext;
-                    if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
-                    {
-                        foreach (var condition in conditions.OfType<ITriggerExpression>())
-                        {
-                            if (!ReferenceEquals(condition, subclause))
-                            {
-                                var error = condition.BuildTrigger(context);
-                                if (error != null)
-                                    return error;
-                            }
-                        }
+                var clause = condition as RequirementClauseExpression;
+                if (clause != null && clause._conditions != null)
+                    complexSubclauses.Add(clause);
+                else
+                    subclauses.Add(condition);
+            }
 
-                        return subclause.BuildAlts(achievementContext);
+            // if we're attempting to AND one or more OR subclauses at the top level, put them into alts
+            if (joinBehavior == RequirementType.None && complexSubclauses.All(c => c.Operation == ConditionalOperation.Or))
+            {
+                var achievementContext = context as AchievementBuilderContext;
+                if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
+                {
+                    var altsNeeded = 1;
+                    if (complexSubclauses.Count > 1)
+                    {
+                        foreach (var subclause in complexSubclauses)
+                            altsNeeded *= subclause._conditions.Count;
+                    }
+
+                    if (altsNeeded < 20)
+                    {
+                        var error = AppendSubclauses(context, subclauses, joinBehavior);
+                        if (error != null)
+                            return error;
+
+                        return CrossMultiplyOrs(achievementContext, complexSubclauses);
                     }
                 }
-
-                // append the simple subclauses
-                foreach (var condition in conditions)
-                {
-                    if (!ReferenceEquals(condition, subclause))
-                        subclauses.Add(condition);
-                }
-            }
-            else
-            {
-                // no complex subclauses, just iterate the provided collection
-                subclauses = conditions;
             }
 
-            // build each subclause, using joinBehavior to join them
+            if (complexSubclauses.Count > 1)
+                return new ErrorExpression("Cannot logically join multiple subclauses");
+
+            subclauses.Insert(0, complexSubclauses[0]);
+            return AppendSubclauses(context, subclauses, joinBehavior);
+        }
+
+        private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
+        {
+            if (subclauses.Count == 0)
+                return null;
+
             for (int i = 0; i < subclauses.Count - 1; i++)
             {
                 var error = BuildSubclauseTrigger(subclauses[i], context);
@@ -192,6 +204,45 @@ namespace RATools.Parser.Expressions.Trigger
 
             var lastClause = subclauses.Last();
             return BuildSubclauseTrigger(lastClause, context);
+        }
+
+        private static ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
+            List<RequirementClauseExpression> subclauses)
+        {
+            ErrorExpression error;
+            var triggerContext = new TriggerBuilderContext();
+            var indices = new int[subclauses.Count];
+            do
+            {
+                context.BeginAlt();
+                triggerContext.Trigger = context.Trigger;
+
+                for (int i = 0; i < indices.Length; i++)
+                {
+                    var subclause = subclauses[i]._conditions[indices[i]];
+                    var clause = subclause as RequirementClauseExpression;
+                    if (clause != null)
+                        error = BuildTrigger(triggerContext, clause._conditions, RequirementType.None);
+                    else
+                        error = BuildSubclauseTrigger(clause, triggerContext);
+
+                    if (error != null)
+                        return error;
+                }
+
+                var j = indices.Length - 1;
+                do
+                {
+                    indices[j]++;
+                    if (indices[j] < subclauses[j]._conditions.Count)
+                        break;
+
+                    if (j == 0)
+                        return null;
+
+                    indices[j--] = 0;
+                } while (true);
+            } while (true);
         }
 
         private static ErrorExpression BuildSubclauseTrigger(ExpressionBase expression, TriggerBuilderContext context)
@@ -348,19 +399,6 @@ namespace RATools.Parser.Expressions.Trigger
 
             return null;
         }
-
-        //private static RequirementExpressionBase GetNestedRequirement(RequirementExpressionBase requirement)
-        //{
-        //    var behavioralRequirement = requirement as BehavioralRequirementExpression;
-        //    if (behavioralRequirement != null)
-        //        return GetNestedRequirement(behavioralRequirement.Condition);
-
-        //    var repeatedRequirement = requirement as RepeatedRequirementExpression;
-        //    if (repeatedRequirement != null)
-        //        return GetNestedRequirement(repeatedRequirement.Condition);
-
-        //    return requirement;
-        //}
 
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
