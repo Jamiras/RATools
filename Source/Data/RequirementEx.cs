@@ -264,19 +264,20 @@ namespace RATools.Data
 
                     if (requirement.Type == RequirementType.AddHits)
                     {
-                        if (addHitsRequirements.Count > 1 && addHitsRequirements.Last().HitCount > 0)
+                        bool hasAlwaysFalse = false;
+                        if (addHitsRequirements.Count(r => !r.IsScalable) > 1 &&
+                            addHitsRequirements.All(r => r.HitCount != 0 || r.IsScalable))
                         {
                             addHitsRequirements.Last().Type = RequirementType.OrNext;
                             addHitsRequirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-                            int subclauseWidth = wrapWidth - indent - 4;
-                            AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+                            hasAlwaysFalse = true;
+                        }
+
+                        int subclauseWidth = wrapWidth - indent - 4;
+                        AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+
+                        if (hasAlwaysFalse)
                             builder.Replace(" || always_false()", "");
-                        }
-                        else
-                        {
-                            int subclauseWidth = wrapWidth - indent - 4;
-                            AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
-                        }
                     }
                     else
                     {
