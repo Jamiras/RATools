@@ -177,11 +177,20 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            if (complexSubclauses.Count > 1)
-                return new ErrorExpression("Cannot logically join multiple subclauses");
+            if (joinBehavior != RequirementType.None)
+            {
+                // one complex clause can be joined to as many non-complex clauses as desired
+                // as long as it's the first in the chain. if there are multiple, they can't
+                // be joined.
+                if (complexSubclauses.Count > 1)
+                    return new ErrorExpression("Cannot logically join multiple subclauses");
 
-            subclauses.Insert(0, complexSubclauses[0]);
-            return AppendSubclauses(context, subclauses, joinBehavior);
+                subclauses.Insert(0, complexSubclauses[0]);
+                return AppendSubclauses(context, subclauses, joinBehavior);
+            }
+
+            // keep the AndNext/OrNext chains and proceed
+            return AppendSubclauses(context, conditions, joinBehavior);
         }
 
         private static void BubbleUpOrs(List<RequirementClauseExpression> complexSubclauses)

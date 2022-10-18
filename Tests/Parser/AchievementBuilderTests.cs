@@ -745,21 +745,6 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
-        public void TestOrExpansionLargeWithOnce()
-        {
-            var largeExpression = "(A || B || C) && (D || once(E) || F) && (A || C || E)";
-
-            // cross-multiplication would result in 27 clauses. if more than 20 would be generated,
-            // the code switches to using OrNext and cross-multiplying simpler clauses. The once(E)
-            // prevent complete collapse of the second clause, so the result is 1 x 3 x 1 = 3 alt groups
-            var expected = "((A || B || C) && D && (A || C || E)) || " +
-                           "((A || B || C) && once(E) && (A || C || E)) || " +
-                           "((A || B || C) && F && (A || C || E))";
-
-            TestOrExpansion(largeExpression, expected);
-        }
-
-        [Test]
         public void TestNotAlwaysFalse()
         {
             var achievement = CreateAchievement("!always_false()");
