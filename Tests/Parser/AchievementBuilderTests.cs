@@ -791,5 +791,26 @@ namespace RATools.Tests.Parser
             Assert.That(achievement.SerializeRequirements(), 
                 Is.EqualTo("0xH001234=1.1._T:0xH002345=2_T:0xH002346=3_R:0xH003456=2ST:0xH002347=0ST:0xH002347=1"));
         }
+
+        [Test]
+        public void TestOrFirst()
+        {
+            var achievement = CreateAchievement("(byte(0x1234) == 1 || byte(0x1234) == 2) && " +
+                "never(byte(0x2345) == 3) && once(byte(0x3456) == 4)");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(),
+                Is.EqualTo("R:0xH002345=3_0xH003456=4.1.S0xH001234=1S0xH001234=2"));
+        }
+
+        [Test]
+        public void TestGuardedResetIfWithAlts()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "(always_true() || (always_false() && never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
+                "(byte(0x4567) == 1 || byte(0x004567) == 2)");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(),
+                Is.EqualTo("0xH001234=1.1.S0xH004567=1S0xH004567=2SR:0xH002345=2_P:0xH003456=3_0=1"));
+        }
     }
 }

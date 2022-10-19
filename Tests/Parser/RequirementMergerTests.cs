@@ -188,7 +188,7 @@ namespace RATools.Tests.Parser
 
         [Test]
         [TestCase("once(A == 1) && once(A == 2)", "ignore")] // once() should not cause a conflict
-        [TestCase("(A != 255 && B == 5 && A < 6)", "A < 6 && B == 5")] // A != 255 is handled by A < 6
+        [TestCase("(A != 255 && B == 5 && A < 6)", "B == 5 && A < 6")] // A != 255 is handled by A < 6
         [TestCase("once(C == 18 && A == 0 && B == 1) && never(A > 5)", "ignore")] // reset condition should not be merged into andnext chain
         [TestCase("never((once(A == 0 && B == 1) && A > 5))", "ignore")] // hitcount on once(A/B) should prevent merge of A>5
         [TestCase("never((once(once(C == 18) && A == 0 && B == 1) && A > 5))", "ignore")] // hitcount on once(A/B) should prevent merge of A>5
