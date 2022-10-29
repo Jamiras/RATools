@@ -202,7 +202,8 @@ namespace RATools.Parser.Functions
             // if necessary, find one without a HitCount and make it the last.
             if (!RequirementClauseExpression.EnsureLastClauseHasNoHitCount(context.Trigger))
             {
-                context.LastRequirement.Type = RequirementType.OrNext;
+                // could not find one. add a new clause to hold the total count
+                context.LastRequirement.Type = RequirementType.AddHits;
                 context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
             }
 

@@ -125,16 +125,17 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             Assert.That(SerializeValue(expression), Is.EqualTo(expected));
         }
 
-        public static string SerializeAchievement(RequirementExpressionBase expression)
+        public static string SerializeAchievement(ITriggerExpression expression)
         {
-            var builder = new ScriptInterpreterAchievementBuilder();
-            var error = builder.PopulateFromExpression(expression);
-            Assert.That(error, Is.Null);
+            var context = new AchievementBuilderContext();
 
-            return builder.SerializeRequirements();
+            var result = expression.BuildTrigger(context);
+            Assert.That(result, Is.Null);
+
+            return context.Achievement.SerializeRequirements();
         }
 
-        public static void AssertSerializeAchievement(RequirementExpressionBase expression, string expected)
+        public static void AssertSerializeAchievement(ITriggerExpression expression, string expected)
         {
             Assert.That(SerializeAchievement(expression), Is.EqualTo(expected));
         }
