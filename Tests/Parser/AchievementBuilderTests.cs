@@ -709,9 +709,6 @@ namespace RATools.Tests.Parser
                   "A && ((B && D) || (B && E) || (C && D) || (C && E))")]
         [TestCase("A && (B || (C && D)) && (E || F)",
                   "A && ((B && E) || (B && F) || (C && D && E) || (C && D && F))")]
-        // ==== BubbleUpOrs ====
-        [TestCase("(((A || B) && C) || D) && (C || E)",
-                  "(A && C && C) || (A && C && E) || (B && C && C) || (B && C && E) || (D && C) || (D && E)")]
         public void TestOrExpansion(string input, string expected)
         {
             input = input.Replace("A", "byte(0x00000A) == 1");

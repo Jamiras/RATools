@@ -121,6 +121,10 @@ namespace RATools.Parser.Expressions.Trigger
                         requirements.Add(items[i]);
                     for (int i = clauseStart; i < otherClauseStart; i++)
                         requirements.Add(items[i]);
+
+                    var lastType = items[items.Count - 1].Type;
+                    items[items.Count - 1].Type = items[otherClauseStart - 1].Type;
+                    items[otherClauseStart - 1].Type = lastType;
                     return true;
                 }
 
