@@ -491,8 +491,6 @@ namespace RATools.Parser.Expressions.Trigger
                 if (requirementExpression != null)
                 {
                     var optimized = requirementExpression.Optimize(context);
-                    newRequirements.Add(optimized);
-                    updated |= !ReferenceEquals(optimized, requirement);
 
                     if (optimized is AlwaysTrueExpression)
                     {
@@ -503,8 +501,12 @@ namespace RATools.Parser.Expressions.Trigger
                             updated = true;
                             break;
                         }
+
+                        updated = true;
+                        continue;
                     }
-                    else if (optimized is AlwaysFalseExpression)
+                    
+                    if (optimized is AlwaysFalseExpression)
                     {
                         if (Operation == ConditionalOperation.And)
                         {
@@ -513,7 +515,13 @@ namespace RATools.Parser.Expressions.Trigger
                             updated = true;
                             break;
                         }
+
+                        updated = true;
+                        continue;
                     }
+
+                    newRequirements.Add(optimized);
+                    updated |= !ReferenceEquals(optimized, requirement);
                 }
                 else
                 {
@@ -541,9 +549,11 @@ namespace RATools.Parser.Expressions.Trigger
         {
             bool updated = false;
 
-            for (int i = requirements.Count - 1; i > 0; i--)
+            for (int i = requirements.Count - 1; i >= 0; i--)
             {
-                var conditionI = requirements[i] as RequirementConditionExpression;
+                var requirementI = requirements[i];
+
+                var conditionI = requirementI as RequirementConditionExpression;
                 if (conditionI != null)
                 {
                     // singular condition, see if it can be handled by any of the other conditions
@@ -556,17 +566,41 @@ namespace RATools.Parser.Expressions.Trigger
                         if (requirementJ == null)
                             continue;
 
+                        var intersect = requirementJ.LogicalIntersect(conditionI, condition);
+                        if (intersect != null)
                         {
-                            var intersect = requirementJ.LogicalIntersect(conditionI, condition);
-                            if (intersect != null)
-                            {
-                                requirements[j] = intersect;
-                                requirements.RemoveAt(i);
-                                updated = true;
-                                break;
-                            }
+                            requirements[j] = intersect;
+                            requirements.RemoveAt(i);
+                            updated = true;
+                            break;
                         }
                     }
+                }
+                else if (requirementI is AlwaysTrueExpression)
+                {
+                    if (condition == ConditionalOperation.Or)
+                    {
+                        requirements.Clear();
+                        requirements.Add(requirementI);
+                        return true;
+                    }
+
+                    requirements.RemoveAt(i);
+                    updated = true;
+                    continue;
+                }
+                else if (requirementI is AlwaysFalseExpression)
+                {
+                    if (condition == ConditionalOperation.And)
+                    {
+                        requirements.Clear();
+                        requirements.Add(requirementI);
+                        return true;
+                    }
+
+                    requirements.RemoveAt(i);
+                    updated = true;
+                    continue;
                 }
                 else
                 {
@@ -576,7 +610,7 @@ namespace RATools.Parser.Expressions.Trigger
                         if (i == j)
                             continue;
 
-                        if (requirements[j] == requirements[i])
+                        if (requirements[j] == requirementI)
                         {
                             requirements.RemoveAt(i);
                             updated = true;
@@ -604,58 +638,6 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return updated;
-        }
-
-        private static bool GetAddresses(HashSet<uint> addresses, ExpressionBase expression, bool populate)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.Requirement:
-                    var clause = expression as RequirementClauseExpression;
-                    if (clause != null)
-                    {
-                        foreach (var condition in clause.Conditions)
-                        {
-                            if (!GetAddresses(addresses, condition, populate))
-                                return false;
-                        }
-                    }
-                    var conditionRequirement = expression as RequirementConditionExpression;
-                    if (conditionRequirement != null)
-                        return GetAddresses(addresses, conditionRequirement.Left, populate) &&
-                               GetAddresses(addresses, conditionRequirement.Right, populate);
-                    break;
-
-                case ExpressionType.MemoryValue:
-                    var memoryValue = (MemoryValueExpression)expression;
-                    foreach (var accessor in memoryValue.MemoryAccessors)
-                    {
-                        if (!GetAddresses(addresses, accessor, populate))
-                            return false;
-                    }
-                    break;
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                    expression = ((ModifiedMemoryAccessorExpression)expression).MemoryAccessor;
-                    goto case ExpressionType.MemoryAccessor;
-
-                case ExpressionType.MemoryAccessor:
-                    var memoryAccessor = (MemoryAccessorExpression)expression;
-                    var address = memoryAccessor.Field.Value;
-                    if (memoryAccessor.HasPointerChain)
-                        address = memoryAccessor.PointerChain.First().Left.Value;
-                    else if (!memoryAccessor.Field.IsMemoryReference)
-                        break;
-
-                    if (populate)
-                        addresses.Add(address);
-                    else if (!addresses.Contains(address))
-                        return false;
-
-                    break;
-            }
-
-            return true;
         }
 
         public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
@@ -742,11 +724,18 @@ namespace RATools.Parser.Expressions.Trigger
 
                 if (unsharedConditions.Count == 0)
                 {
-                    // if all items were matched, copy over the remaining items from this
-                    for (int i = 0; i < sharedConditions.Count; i++)
+                    if (condition == Operation)
                     {
-                        if (sharedConditions[i] == null)
-                            sharedConditions[i] = _conditions[i];
+                        // if all items were matched, copy over the remaining items from this
+                        for (int i = 0; i < sharedConditions.Count; i++)
+                        {
+                            if (sharedConditions[i] == null)
+                                sharedConditions[i] = _conditions[i];
+                        }
+                    }
+                    else
+                    {
+                        sharedConditions.RemoveAll(c => c == null);
                     }
                 }
                 else
@@ -778,7 +767,7 @@ namespace RATools.Parser.Expressions.Trigger
                         {
                             c = new RequirementClauseExpression
                             {
-                                Operation = ConditionalOperation.And,
+                                Operation = Operation,
                                 _conditions = unsharedConditions
                             };
                         }
@@ -791,7 +780,7 @@ namespace RATools.Parser.Expressions.Trigger
                         {
                             b = new RequirementClauseExpression
                             {
-                                Operation = ConditionalOperation.And,
+                                Operation = Operation,
                                 _conditions = bConditions
                             };
                         }
@@ -802,11 +791,11 @@ namespace RATools.Parser.Expressions.Trigger
 
                         var bOrC = new RequirementClauseExpression
                         {
-                            Operation = ConditionalOperation.Or,
+                            Operation = (Operation == ConditionalOperation.And) ? ConditionalOperation.Or : ConditionalOperation.And,
                             _conditions = new List<ExpressionBase>() { b, c }
                         };
 
-                        var a = new RequirementClauseExpression { Operation = ConditionalOperation.And };
+                        var a = new RequirementClauseExpression { Operation = Operation };
                         a._conditions = sharedConditions;
                         a._conditions.Add(bOrC);
                         return a;

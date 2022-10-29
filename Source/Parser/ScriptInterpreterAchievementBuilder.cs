@@ -155,13 +155,15 @@ namespace RATools.Parser
                     return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
 
                 case ExpressionType.Requirement:
-                    if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
-                        return true;
+                    var clause = expression as RequirementConditionExpression;
+                    if (clause != null)
+                    {
+                        if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
+                            return false;
+                        return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+                    }
 
-                    var clause = (RequirementConditionExpression)expression;
-                    if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
-                        return false;
-                    return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+                    return true;
 
                 case ExpressionType.FunctionCall:
                     var funcCall = (FunctionCallExpression)expression;

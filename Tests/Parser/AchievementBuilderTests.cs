@@ -339,6 +339,8 @@ namespace RATools.Tests.Parser
         // ==== NormalizeLimits ===
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
+        [TestCase("byte(0x001234) == 1 && prev(byte(0x004567)) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
+        [TestCase("byte(0x001234) == 1 || prev(byte(0x004567)) < 0", "byte(0x001234) == 1")] // less than 0 is always false, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
         [TestCase("byte(0x001234) > 0", "byte(0x001234) != 0")] // less than 0 can never be true, so if it's greater than 0, it's just not zero
         [TestCase("bit0(0x001234) <= 0", "bit0(0x001234) == 0")] // less than 0 can never be true, only keep the equals
