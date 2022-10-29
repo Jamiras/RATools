@@ -203,8 +203,18 @@ namespace RATools.Parser
             }
 
             ExpressionBase result = null;
+            ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {
+                var reqClause = condition as RequirementClauseExpression;
+                if (reqClause != null && reqClause.Operation == ConditionalOperation.And)
+                {
+                    // if there's more than one AndNext subclause, we can't convert it to an OrNext chain
+                    if (andNextClause != null)
+                        return null;
+                    andNextClause = reqClause;
+                }
+
                 if (result == null)
                     result = condition;
                 else
