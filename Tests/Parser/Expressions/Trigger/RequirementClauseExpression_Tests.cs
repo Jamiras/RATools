@@ -107,6 +107,18 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
+        public void TestNestedComplex2()
+        {
+            var input = "(A == 1 && B == 1) || (A == 2 && ((B == 2 && C == 2) || (B == 3 && C == 3)))";
+
+            input = ReplacePlaceholders(input);
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+
+            var expected = "1=1S0xH001234=1_0xH002345=1S0xH001234=2_0xH002345=2_0xH003456=2S0xH001234=2_0xH002345=3_0xH003456=3";
+            TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
+        }
+
+        [Test]
         public void TestNestedComplexWithOnce()
         {
             var input = "once(prev(A) == 0 && A == 1) && once(once(once(always_true() && B == 1) && B == 2) && B == 3)";

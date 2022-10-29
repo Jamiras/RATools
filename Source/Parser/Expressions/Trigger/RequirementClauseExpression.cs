@@ -209,54 +209,73 @@ namespace RATools.Parser.Expressions.Trigger
                 };
 
                 foreach (var condition in complexSubclause._conditions)
-                {
-                    // clause = (B && (C || D)) => (B && C) || (B && D)
-                    var clause = condition as RequirementClauseExpression;
-                    if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
-                    {
-                        newSubclause.AddCondition(condition);
-                        continue;
-                    }
-
-                    var indices = new int[clause._conditions.Count];
-                    int k;
-                    do
-                    {
-                        var group = new List<ExpressionBase>();
-                        for (int j = 0; j < indices.Length; j++)
-                        {
-                            var subclause = clause._conditions[j];
-                            var subclauseClause = subclause as RequirementClauseExpression; 
-                            if (subclauseClause == null)
-                                group.Add(subclause); // B
-                            else
-                                group.Add(subclauseClause._conditions[indices[j]]); // C || D
-                        }
-
-                        newSubclause.AddCondition(new RequirementClauseExpression
-                        {
-                            _conditions = group,
-                            Operation = ConditionalOperation.And
-                        });
-
-                        k = indices.Length - 1;
-                        do
-                        {
-                            var subclause = clause._conditions[k] as RequirementClauseExpression;
-                            if (subclause != null)
-                            {
-                                indices[k]++;
-                                if (indices[k] < subclause._conditions.Count)
-                                    break;
-                            }
-
-                            indices[k--] = 0;
-                        } while (k >= 0);
-                    } while (k >= 0);
-                }
+                    BubbleUpOrs(newSubclause, condition);
 
                 complexSubclauses[i] = newSubclause;
             }
+        }
+
+        private static void BubbleUpOrs(RequirementClauseExpression newSubclause, ExpressionBase condition)
+        {
+            var clause = condition as RequirementClauseExpression;
+            if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
+            {
+                newSubclause.AddCondition(condition);
+                return;
+            }
+
+            // clause = (B && (C || D)) => (B && C) || (B && D)
+            var indices = new int[clause._conditions.Count];
+            int k;
+            do
+            {
+                var group = new List<ExpressionBase>();
+                for (int j = 0; j < indices.Length; j++)
+                {
+                    var subclause = clause._conditions[j];
+                    var subclauseClause = subclause as RequirementClauseExpression;
+                    if (subclauseClause == null)
+                    {
+                        group.Add(subclause); // B
+                    }
+                    else
+                    {
+                        // capture the appropriate subclause for this iteration of the expansion
+                        var loopSubclause = subclauseClause._conditions[indices[j]]; // C or D (depending on iteration)
+
+                        subclauseClause = loopSubclause as RequirementClauseExpression;
+                        if (subclauseClause != null && subclauseClause.Operation == ConditionalOperation.And)
+                        {
+                            // subclause is another set of ANDed conditions, merge instead of nesting it
+                            group.AddRange(subclauseClause.Conditions);
+                        }
+                        else
+                        {
+                            group.Add(loopSubclause);
+                        }
+                    }
+                }
+
+                newSubclause.AddCondition(new RequirementClauseExpression
+                {
+                    _conditions = group,
+                    Operation = ConditionalOperation.And
+                });
+
+                k = indices.Length - 1;
+                do
+                {
+                    var subclause = clause._conditions[k] as RequirementClauseExpression;
+                    if (subclause != null)
+                    {
+                        indices[k]++;
+                        if (indices[k] < subclause._conditions.Count)
+                            break;
+                    }
+
+                    indices[k--] = 0;
+                } while (k >= 0);
+            } while (k >= 0);
         }
 
         private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
@@ -458,8 +477,13 @@ namespace RATools.Parser.Expressions.Trigger
 
         private ErrorExpression BuildAlts(AchievementBuilderContext context)
         {
-            var triggerContext = new TriggerBuilderContext();
+            // (A || (B && (C || D)))  =>  (A || (B && C) || (B && D))
+            var newClause = new RequirementClauseExpression() { Operation = ConditionalOperation.Or };
             foreach (var condition in Conditions)
+                BubbleUpOrs(newClause, condition);
+
+            var triggerContext = new TriggerBuilderContext();
+            foreach (var condition in newClause.Conditions)
             {
                 context.BeginAlt();
                 triggerContext.Trigger = context.Trigger;
