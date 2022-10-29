@@ -247,7 +247,7 @@ namespace RATools.Parser
                     reqClause = BubbleUpOrs(reqClause);
                     if (!ReferenceEquals(reqClause, conditions[i]))
                     {
-                        conditions[i] = clause;
+                        conditions[i] = reqClause;
                         modified = true;
                     }
 
@@ -307,7 +307,7 @@ namespace RATools.Parser
                     reqClause = BubbleUpOrs(reqClause);
                     if (!ReferenceEquals(reqClause, conditions[i]))
                     {
-                        conditions[i] = clause;
+                        conditions[i] = reqClause;
                         modified = true;
                     }
 
