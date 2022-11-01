@@ -191,6 +191,7 @@ namespace RATools.Tests.Parser.Functions
         [Test]
         public void TestOrNextRestrictedAll()
         {
+            // value must be 56 or 67 a total of 4 times, but at least once each (no more than 3 times each)
             var requirements = Evaluate("repeated(4, repeated(3, byte(0x1234) == 56) || repeated(3, byte(0x2345) == 67))");
             Assert.That(requirements.Count, Is.EqualTo(3));
             Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));

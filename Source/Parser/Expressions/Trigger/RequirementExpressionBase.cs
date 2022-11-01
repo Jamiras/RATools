@@ -78,63 +78,6 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
-        private static int GetStartOfClause(IList<Requirement> requirements, int index)
-        {
-            while (index > 0)
-            {
-                switch (requirements[index].Type)
-                {
-                    case RequirementType.AddAddress:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                        break;
-
-                    default:
-                        return index;
-                }
-
-                index--;
-            }
-
-            return 0;
-        }
-
-        public static bool EnsureLastClauseHasNoHitCount(ICollection<Requirement> requirements)
-        {
-            if (requirements.Last().HitCount == 0)
-                return true;
-
-            var items = new List<Requirement>(requirements);
-            int otherClauseStart = GetStartOfClause(items, items.Count - 1);
-            if (otherClauseStart == 0)
-                return false;
-
-            do
-            {
-                int clauseStart = GetStartOfClause(items, otherClauseStart - 1);
-                if (items[otherClauseStart - 1].HitCount == 0)
-                {
-                    requirements.Clear();
-                    for (int i = 0; i < clauseStart; i++)
-                        requirements.Add(items[i]);
-                    for (int i = otherClauseStart; i < items.Count; i++)
-                        requirements.Add(items[i]);
-                    for (int i = clauseStart; i < otherClauseStart; i++)
-                        requirements.Add(items[i]);
-
-                    var lastType = items[items.Count - 1].Type;
-                    items[items.Count - 1].Type = items[otherClauseStart - 1].Type;
-                    items[otherClauseStart - 1].Type = lastType;
-                    return true;
-                }
-
-                if (clauseStart == 0)
-                    return false;
-
-                otherClauseStart = clauseStart;
-            } while (true);
-        }
-
         ExpressionBase IComparisonNormalizeExpression.NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
         {
             return new ErrorExpression("Cannot chain comparisons", this);

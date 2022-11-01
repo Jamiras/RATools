@@ -220,8 +220,21 @@ namespace RATools.Parser.Expressions.Trigger
             var clause = condition as RequirementClauseExpression;
             if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
             {
+                // no subclauses, nothing to bubble up
                 newSubclause.AddCondition(condition);
                 return;
+            }
+
+            if (clause._conditions.Count == 2 && clause._conditions.Any(c => c is RequirementConditionExpression))
+            {
+                var secondaryClause = clause._conditions.OfType<RequirementClauseExpression>().First();
+                if (secondaryClause != null && !secondaryClause.Conditions.Any(c => c is RequirementClauseExpression))
+                {
+                    // only two subclauses. one is just a single condition, and the other is made
+                    // up entirely of single conditions. they can be joined using AndNext/OrNext
+                    newSubclause.AddCondition(condition);
+                    return;
+                }
             }
 
             // clause = (B && (C || D)) => (B && C) || (B && D)
@@ -508,6 +521,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             bool updated = false;
             var newRequirements = new List<ExpressionBase>(_conditions.Count);
+            bool seenHitCount = false;
 
             foreach (var requirement in _conditions)
             {
@@ -526,8 +540,11 @@ namespace RATools.Parser.Expressions.Trigger
                             break;
                         }
 
-                        updated = true;
-                        continue;
+                        if (!seenHitCount || context is not TallyBuilderContext)
+                        {
+                            updated = true;
+                            continue;
+                        }
                     }
                     
                     if (optimized is AlwaysFalseExpression)
@@ -540,21 +557,30 @@ namespace RATools.Parser.Expressions.Trigger
                             break;
                         }
 
-                        updated = true;
-                        continue;
+                        if (!seenHitCount || context is not TallyBuilderContext)
+                        {
+                            updated = true;
+                            continue;
+                        }
                     }
+
+                    if (!seenHitCount && context is TallyBuilderContext)
+                        seenHitCount = HasHitTarget(optimized);
 
                     newRequirements.Add(optimized);
                     updated |= !ReferenceEquals(optimized, requirement);
                 }
                 else
                 {
+                    if (!seenHitCount && context is TallyBuilderContext)
+                        seenHitCount = HasHitTarget(requirement);
+
                     newRequirements.Add(requirement);
                 }
             }
 
             if (newRequirements.Count < 100)
-                updated |= EliminateRedundantConditions(newRequirements, Operation);
+                updated |= EliminateRedundantConditions(newRequirements, Operation, context);
 
             updated |= FlattenClauses(newRequirements, Operation);
 
@@ -566,10 +592,12 @@ namespace RATools.Parser.Expressions.Trigger
 
             var newClause = new RequirementClauseExpression { Operation = Operation };
             newClause._conditions = newRequirements;
+            CopyLocation(newClause);
             return newClause;
         }
 
-        private static bool EliminateRedundantConditions(IList<ExpressionBase> requirements, ConditionalOperation condition)
+        private static bool EliminateRedundantConditions(IList<ExpressionBase> requirements,
+            ConditionalOperation condition, TriggerBuilderContext context)
         {
             bool updated = false;
 
@@ -609,9 +637,12 @@ namespace RATools.Parser.Expressions.Trigger
                         return true;
                     }
 
-                    requirements.RemoveAt(i);
-                    updated = true;
-                    continue;
+                    if (context is not TallyBuilderContext)
+                    {
+                        requirements.RemoveAt(i);
+                        updated = true;
+                        continue;
+                    }
                 }
                 else if (requirementI is AlwaysFalseExpression)
                 {
@@ -622,9 +653,12 @@ namespace RATools.Parser.Expressions.Trigger
                         return true;
                     }
 
-                    requirements.RemoveAt(i);
-                    updated = true;
-                    continue;
+                    if (context is not TallyBuilderContext)
+                    {
+                        requirements.RemoveAt(i);
+                        updated = true;
+                        continue;
+                    }
                 }
                 else
                 {
@@ -884,6 +918,56 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return newClause;
+        }
+
+        /// <summary>
+        /// If the last condition of the clause has a hit count, create a new clause and rearrange
+        /// the conditions so the last condition does not have a hit count.
+        /// </summary>
+        /// <returns>
+        /// Original clause if the last condition does not have a hit count, a new target where the
+        /// last condition does not have a hit target, or <c>null</c> if all conditions have hit targets.
+        /// </returns>
+        public RequirementClauseExpression EnsureLastConditionHasNoHitTarget()
+        {
+            if (_conditions != null)
+            {
+                var lastCondition = _conditions.Last();
+
+                // if last condition already has no hit target, return self
+                if (!HasHitTarget(lastCondition))
+                    return this;
+
+                // create a copy where we can move an item without a hit target to the end
+                var clone = Clone();
+                for (int i = clone._conditions.Count - 2; i >= 0; i--)
+                {
+                    var condition = clone._conditions[i];
+                    if (!HasHitTarget(condition))
+                    {
+                        clone._conditions.RemoveAt(i);
+                        clone._conditions.Add(condition);
+                        return clone;
+                    }
+                }
+
+                // all conditions had hit targets, return null
+            }
+
+            return null;
+        }
+
+        internal static bool HasHitTarget(ExpressionBase expression)
+        {
+            var condition = expression as RequirementConditionExpression;
+            if (condition != null)
+                return (condition.HitTarget != 0);
+
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall != null)
+                return (functionCall.FunctionName.Name == "once" || functionCall.FunctionName.Name == "repeated");
+
+            return false;
         }
 
         public override RequirementExpressionBase InvertLogic()
