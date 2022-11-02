@@ -418,10 +418,12 @@ namespace RATools.Parser.Expressions
         public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             bool? isTrue;
+            bool? result;
 
             switch (Operation)
             {
                 case ConditionalOperation.And:
+                    result = true;
                     foreach (var condition in _conditions)
                     {
                         isTrue = condition.IsTrue(scope, out error);
@@ -432,13 +434,14 @@ namespace RATools.Parser.Expressions
                             return false;
 
                         if (isTrue == null)
-                            return null;
+                            result = null;
                     }
 
                     error = null;
-                    return true;
+                    return result;
 
                 case ConditionalOperation.Or:
+                    result = false;
                     foreach (var condition in _conditions)
                     {
                         isTrue = condition.IsTrue(scope, out error);
@@ -449,11 +452,11 @@ namespace RATools.Parser.Expressions
                             return true;
 
                         if (isTrue == null)
-                            return null;
+                            result = null;
                     }
 
                     error = null;
-                    return false;
+                    return result;
 
                 case ConditionalOperation.Not:
                     isTrue = _conditions[0].IsTrue(scope, out error);

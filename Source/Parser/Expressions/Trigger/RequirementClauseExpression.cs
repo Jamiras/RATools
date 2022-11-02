@@ -237,15 +237,36 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
+            var expanded = new List<ExpressionBase>();
+            foreach (var subclause in clause._conditions)
+            {
+                var subclauseClause = subclause as RequirementClauseExpression;
+                if (subclauseClause != null && subclauseClause.Operation == ConditionalOperation.Or &&
+                    subclauseClause.Conditions.OfType<RequirementClauseExpression>().Any(c => 
+                        c.Operation == ConditionalOperation.And && c.Conditions.OfType<RequirementClauseExpression>().Any(c2 => c2.Operation == ConditionalOperation.Or)))
+                {
+                    // at least one nested Or clause, need to bubble it up
+                    var newClause = new RequirementClauseExpression() { Operation = ConditionalOperation.Or };
+                    foreach (var subclauseCondition in subclauseClause.Conditions)
+                        BubbleUpOrs(newClause, subclauseCondition);
+
+                    expanded.Add(newClause);
+                }
+                else
+                {
+                    expanded.Add(subclause);
+                }
+            }
+
             // clause = (B && (C || D)) => (B && C) || (B && D)
-            var indices = new int[clause._conditions.Count];
+            var indices = new int[expanded.Count];
             int k;
             do
             {
                 var group = new List<ExpressionBase>();
                 for (int j = 0; j < indices.Length; j++)
                 {
-                    var subclause = clause._conditions[j];
+                    var subclause = expanded[j];
                     var subclauseClause = subclause as RequirementClauseExpression;
                     if (subclauseClause == null)
                     {
@@ -278,7 +299,7 @@ namespace RATools.Parser.Expressions.Trigger
                 k = indices.Length - 1;
                 do
                 {
-                    var subclause = clause._conditions[k] as RequirementClauseExpression;
+                    var subclause = expanded[k] as RequirementClauseExpression;
                     if (subclause != null)
                     {
                         indices[k]++;
@@ -444,7 +465,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             error = achievementContext.Achievement.CollapseForSubClause();
             if (error != null)
-                return error;
+                return new ErrorExpression(error.Message, this);
 
             if (achievementContext.Achievement.AlternateRequirements.Count > 0)
                 return new ErrorExpression("Combination of &&s and ||s is too complex for subclause", this);
@@ -509,6 +530,25 @@ namespace RATools.Parser.Expressions.Trigger
                     if (error != null)
                         return error;
                 }
+                else
+                {
+                    var conditional = condition as ConditionalExpression;
+                    if (conditional != null)
+                    {
+                        var builder = new ScriptInterpreterAchievementBuilder();
+                        var scope = new InterpreterScope();
+
+                        ErrorExpression error;
+                        if (!builder.PopulateFromExpression(conditional, scope, out error))
+                            return error;
+
+                        if (builder.AlternateRequirements.Count > 0)
+                            return new ErrorExpression("Oops", conditional);
+
+                        foreach (var subclauseRequirement in builder.CoreRequirements)
+                            context.Trigger.Add(subclauseRequirement);
+                    }
+                }
             }
 
             return null;
@@ -521,62 +561,59 @@ namespace RATools.Parser.Expressions.Trigger
 
             bool updated = false;
             var newRequirements = new List<ExpressionBase>(_conditions.Count);
+            var scope = new InterpreterScope();
             bool seenHitCount = false;
 
             foreach (var requirement in _conditions)
             {
+                var optimized = requirement;
+
                 var requirementExpression = requirement as RequirementExpressionBase;
                 if (requirementExpression != null)
                 {
-                    var optimized = requirementExpression.Optimize(context);
-
-                    if (optimized is AlwaysTrueExpression)
-                    {
-                        if (Operation == ConditionalOperation.Or)
-                        {
-                            newRequirements.Clear();
-                            newRequirements.Add(optimized);
-                            updated = true;
-                            break;
-                        }
-
-                        if (!seenHitCount || context is not TallyBuilderContext)
-                        {
-                            updated = true;
-                            continue;
-                        }
-                    }
-                    
-                    if (optimized is AlwaysFalseExpression)
-                    {
-                        if (Operation == ConditionalOperation.And)
-                        {
-                            newRequirements.Clear();
-                            newRequirements.Add(optimized);
-                            updated = true;
-                            break;
-                        }
-
-                        if (!seenHitCount || context is not TallyBuilderContext)
-                        {
-                            updated = true;
-                            continue;
-                        }
-                    }
-
-                    if (!seenHitCount && context is TallyBuilderContext)
-                        seenHitCount = HasHitTarget(optimized);
-
-                    newRequirements.Add(optimized);
+                    optimized = requirementExpression.Optimize(context);
                     updated |= !ReferenceEquals(optimized, requirement);
                 }
-                else
-                {
-                    if (!seenHitCount && context is TallyBuilderContext)
-                        seenHitCount = HasHitTarget(requirement);
 
-                    newRequirements.Add(requirement);
+                ErrorExpression error;
+                var result = optimized.IsTrue(scope, out error);
+                if (result == true)
+                {
+                    if (Operation == ConditionalOperation.Or)
+                    {
+                        newRequirements.Clear();
+                        newRequirements.Add(optimized);
+                        updated = true;
+                        break;
+                    }
+
+                    if (!seenHitCount || context is not TallyBuilderContext)
+                    {
+                        updated = true;
+                        continue;
+                    }
                 }
+                else if (result == false)
+                {
+                    if (Operation == ConditionalOperation.And)
+                    {
+                        newRequirements.Clear();
+                        newRequirements.Add(optimized);
+                        updated = true;
+                        break;
+                    }
+
+                    if (!seenHitCount || context is not TallyBuilderContext)
+                    {
+                        updated = true;
+                        continue;
+                    }
+                }
+
+                if (!seenHitCount && context is TallyBuilderContext)
+                    seenHitCount = HasHitTarget(optimized);
+
+                newRequirements.Add(optimized);
             }
 
             if (newRequirements.Count < 100)
