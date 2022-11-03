@@ -439,6 +439,8 @@ namespace RATools.Tests.Parser
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && unless(once(byte(0x2345) == 0x2345))", "byte(0x001234) == 1")] // condition becomes always_false(), and unless(always_false()) can be eliminated
+        [TestCase("float(0x001234) < 0.0", "float(0x001234) < 0.0")]
+        [TestCase("float(0x001234) < 0", "float(0x001234) < 0")]
         public void TestOptimizeNormalizeComparisons(string input, string expected)
         {
             var achievement = CreateAchievement(input);

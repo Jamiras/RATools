@@ -1,11 +1,9 @@
-﻿using Jamiras.Components;
+using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Windows;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
 {
