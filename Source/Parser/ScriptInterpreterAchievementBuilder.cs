@@ -39,7 +39,16 @@ namespace RATools.Parser
             }
             else
             {
-                flattened.Add(clause);
+                var reqClause = clause as RequirementClauseExpression;
+                if (reqClause != null && reqClause.Operation == ConditionalOperation.Or)
+                {
+                    foreach (var condition in reqClause.Conditions)
+                        FlattenOrClause(condition, flattened);
+                }
+                else
+                {
+                    flattened.Add(clause);
+                }
             }
         }
 
@@ -145,11 +154,16 @@ namespace RATools.Parser
                     var comparison = (ComparisonExpression)expression;
                     return IsValidInOrNextChain(comparison.Left) && IsValidInOrNextChain(comparison.Right);
 
-                case ExpressionType.RequirementClause:
-                    var clause = (RequirementClauseExpression)expression;
-                    if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
-                        return false;
-                    return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+                case ExpressionType.Requirement:
+                    var clause = expression as RequirementConditionExpression;
+                    if (clause != null)
+                    {
+                        if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
+                            return false;
+                        return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+                    }
+
+                    return true;
 
                 case ExpressionType.FunctionCall:
                     var funcCall = (FunctionCallExpression)expression;
@@ -172,12 +186,6 @@ namespace RATools.Parser
                 case ExpressionType.MemoryAccessor:
                     return true;
 
-                case ExpressionType.Requirement:
-                    if (expression is AlwaysFalseExpression || expression is AlwaysTrueExpression)
-                        return true;
-
-                    return false;
-
                 default:
                     return false;
             }
@@ -195,8 +203,18 @@ namespace RATools.Parser
             }
 
             ExpressionBase result = null;
+            ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {
+                var reqClause = condition as RequirementClauseExpression;
+                if (reqClause != null && reqClause.Operation == ConditionalOperation.And)
+                {
+                    // if there's more than one AndNext subclause, we can't convert it to an OrNext chain
+                    if (andNextClause != null)
+                        return null;
+                    andNextClause = reqClause;
+                }
+
                 if (result == null)
                     result = condition;
                 else
@@ -209,6 +227,66 @@ namespace RATools.Parser
             });
 
             return result;
+        }
+
+        private static RequirementClauseExpression BubbleUpOrs(RequirementClauseExpression condition)
+        {
+            bool modified = false;
+            bool hasChildOr = false;
+
+            var conditions = condition.Conditions.ToList();
+
+            for (int i = 0; i < conditions.Count; ++i)
+            {
+                ConditionalExpression clause = conditions[i] as ConditionalExpression;
+                if (clause != null)
+                {
+                    clause = BubbleUpOrs(clause);
+                    if (!ReferenceEquals(clause, conditions[i]))
+                    {
+                        conditions[i] = clause;
+                        modified = true;
+                    }
+
+                    hasChildOr |= (clause.Operation == ConditionalOperation.Or);
+                }
+
+                var reqClause = conditions[i] as RequirementClauseExpression;
+                if (reqClause != null)
+                {
+                    reqClause = BubbleUpOrs(reqClause);
+                    if (!ReferenceEquals(reqClause, conditions[i]))
+                    {
+                        conditions[i] = reqClause;
+                        modified = true;
+                    }
+
+                    hasChildOr |= (reqClause.Operation == ConditionalOperation.Or);
+                }
+            }
+
+            if (modified)
+            {
+                var newCondition = new RequirementClauseExpression { Operation = condition.Operation };
+                foreach (var c in conditions)
+                    newCondition.AddCondition(c);
+                condition.CopyLocation(newCondition);
+                condition = newCondition;
+            }
+
+            if (condition.Operation == ConditionalOperation.And && hasChildOr)
+            {
+                var orConditions = new List<ExpressionBase>();
+                orConditions.AddRange(conditions);
+
+                var expression = (ConditionalExpression)CrossMultiplyOrConditions(orConditions);
+                var reqClause = new RequirementClauseExpression { Operation = expression.Operation };
+                foreach (var c in expression.Conditions)
+                    reqClause.AddCondition(c);
+                return reqClause;
+            }
+
+            return condition;
         }
 
         private static ConditionalExpression BubbleUpOrs(ConditionalExpression condition)
@@ -231,6 +309,19 @@ namespace RATools.Parser
                     }
 
                     hasChildOr |= (clause.Operation == ConditionalOperation.Or);
+                }
+
+                var reqClause = conditions[i] as RequirementClauseExpression;
+                if (reqClause != null)
+                {
+                    reqClause = BubbleUpOrs(reqClause);
+                    if (!ReferenceEquals(reqClause, conditions[i]))
+                    {
+                        conditions[i] = reqClause;
+                        modified = true;
+                    }
+
+                    hasChildOr |= (reqClause.Operation == ConditionalOperation.Or);
                 }
             }
 
@@ -255,32 +346,58 @@ namespace RATools.Parser
 
         private static bool SortConditions(ExpressionBase expression, List<ExpressionBase> andedConditions, List<ExpressionBase> orConditions, out ErrorExpression error)
         {
-            var condition = expression as ConditionalExpression;
-            if (condition == null)
+            var reqClause = expression as RequirementClauseExpression;
+            if (reqClause != null)
             {
-                andedConditions.Add(expression);
+                switch (reqClause.Operation)
+                {
+                    case ConditionalOperation.And:
+                        foreach (var clause in reqClause.Conditions)
+                        {
+                            if (!SortConditions(clause, andedConditions, orConditions, out error))
+                                return false;
+                        }
+                        break;
+
+                    case ConditionalOperation.Or:
+                        orConditions.Add(reqClause);
+                        break;
+
+                    default:
+                        error = new ErrorExpression("Unexpected condition: " + reqClause.Operation, reqClause);
+                        return false;
+                }
+
                 error = null;
                 return true;
             }
 
-            switch (condition.Operation)
+            var condition = expression as ConditionalExpression;
+            if (condition == null)
             {
-                case ConditionalOperation.And:
-                    foreach (var clause in condition.Conditions)
-                    {
-                        if (!SortConditions(clause, andedConditions, orConditions, out error))
-                            return false;
-                    }
-                    break;
+                andedConditions.Add(expression);
+            }
+            else
+            {
+                switch (condition.Operation)
+                {
+                    case ConditionalOperation.And:
+                        foreach (var clause in condition.Conditions)
+                        {
+                            if (!SortConditions(clause, andedConditions, orConditions, out error))
+                                return false;
+                        }
+                        break;
 
-                case ConditionalOperation.Or:
-                    condition = BubbleUpOrs(condition);
-                    orConditions.Add(condition);
-                    break;
+                    case ConditionalOperation.Or:
+                        condition = BubbleUpOrs(condition);
+                        orConditions.Add(condition);
+                        break;
 
-                default:
-                    error = new ErrorExpression("Unexpected condition: " + condition.Operation, condition);
-                    return false;
+                    default:
+                        error = new ErrorExpression("Unexpected condition: " + condition.Operation, condition);
+                        return false;
+                }
             }
 
             error = null;
@@ -311,7 +428,7 @@ namespace RATools.Parser
                 andedConditions.Add(orConditions[0]);
             }
 
-            var context = new TriggerBuilderContext { Trigger = CoreRequirements };
+            var context = new AchievementBuilderContext(this);
             var innerScope = new InterpreterScope(scope) { Context = context };
             foreach (var condition in andedConditions)
             {

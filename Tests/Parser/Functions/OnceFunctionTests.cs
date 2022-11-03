@@ -168,5 +168,66 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
             Assert.That(requirements[1].HitCount, Is.EqualTo(1));
         }
+
+        [Test]
+        public void TestNested()
+        {
+            var requirements = Evaluate("once(byte(0x1234) == 1 && prev(byte(0x1235)) == 2 && once(byte(0x1235) == 3))");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001235)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("3"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("prev(byte(0x001235))"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("2"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestNested2()
+        {
+            var requirements = Evaluate("once(once(once(always_true() && byte(0x1234) == 1) && byte(0x1234) == 2) && byte(0x1234) == 3)");
+            Assert.That(requirements.Count, Is.EqualTo(3));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("2"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+            Assert.That(requirements[2].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[2].Right.ToString(), Is.EqualTo("3"));
+            Assert.That(requirements[2].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[2].HitCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TestDelta()
+        {
+            var requirements = Evaluate("once(prev(byte(0x1234)) == 0 && byte(0x1234) == 1)");
+            Assert.That(requirements.Count, Is.EqualTo(2));
+            Assert.That(requirements[0].Left.ToString(), Is.EqualTo("prev(byte(0x001234))"));
+            Assert.That(requirements[0].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[0].Right.ToString(), Is.EqualTo("0"));
+            Assert.That(requirements[0].Type, Is.EqualTo(RequirementType.AndNext));
+            Assert.That(requirements[0].HitCount, Is.EqualTo(0));
+            Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
+            Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirements[1].Right.ToString(), Is.EqualTo("1"));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirements[1].HitCount, Is.EqualTo(1));
+        }
     }
 }

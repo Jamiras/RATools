@@ -118,7 +118,7 @@ namespace RATools.Tests.Parser.Functions
             Assert.That(requirements[1].Left.ToString(), Is.EqualTo("byte(0x001234)"));
             Assert.That(requirements[1].Operator, Is.EqualTo(RequirementOperator.Equal));
             Assert.That(requirements[1].Right.ToString(), Is.EqualTo("67"));
-            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.OrNext));
+            Assert.That(requirements[1].Type, Is.EqualTo(RequirementType.AddHits));
             Assert.That(requirements[1].HitCount, Is.EqualTo(1));
             Assert.That(requirements[2].Left.ToString(), Is.EqualTo("0"));
             Assert.That(requirements[2].Operator, Is.EqualTo(RequirementOperator.Equal));

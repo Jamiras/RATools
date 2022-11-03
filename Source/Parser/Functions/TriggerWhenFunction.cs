@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
@@ -38,13 +39,35 @@ namespace RATools.Parser.Functions
                         return base.ReplaceVariables(scope, out result);
                     }
 
-                    return SplitConditions(scope, condition, ConditionalOperation.Or, out result);
+                    return SplitConditions(scope, condition, condition.Operation, ConditionalOperation.Or, out result);
                 }
 
                 if (condition.Operation == ConditionalOperation.And)
                 {
                     var newScope = new InterpreterScope(scope) { Context = this };
-                    return SplitConditions(newScope, condition, ConditionalOperation.And, out result);
+                    return SplitConditions(newScope, condition, condition.Operation, ConditionalOperation.And, out result);
+                }
+            }
+
+            var clause = comparison as RequirementClauseExpression;
+            if (clause != null && !clause.IsLogicalUnit)
+            {
+                if (clause.Operation == ConditionalOperation.Or)
+                {
+                    // OR within an AND must be kept as an OrNext
+                    if (scope.GetContext<TriggerWhenFunction>() != null)
+                    {
+                        clause.IsLogicalUnit = true;
+                        return base.ReplaceVariables(scope, out result);
+                    }
+
+                    return SplitConditions(scope, clause, clause.Operation, ConditionalOperation.Or, out result);
+                }
+
+                if (clause.Operation == ConditionalOperation.And)
+                {
+                    var newScope = new InterpreterScope(scope) { Context = this };
+                    return SplitConditions(newScope, clause, clause.Operation, ConditionalOperation.And, out result);
                 }
             }
 

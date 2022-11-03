@@ -1190,21 +1190,6 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// A comparison of MemoryValues with a possible hit target.
         /// </summary>
-        RequirementClause,
-
-        /// <summary>
-        /// A chain of RequirementClauses (AndNext/OrNext/AddHits/SubHits)
-        /// </summary>
         Requirement,
-
-        /// <summary>
-        /// A collection of requirements.
-        /// </summary>
-        RequirementGroup,
-
-        /// <summary>
-        /// A core requirement group and 0 or more alternate requirement groups.
-        /// </summary>
-        Trigger,
     }
 }
