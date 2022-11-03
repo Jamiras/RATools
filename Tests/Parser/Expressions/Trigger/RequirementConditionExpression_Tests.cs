@@ -12,8 +12,6 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("low4(word(0x001234)) < 5")]
         [TestCase("word(dword(0x002345) + 4660) >= 500")]
         [TestCase("byte(0x001234) > prev(byte(0x001234))")]
-        [TestCase("once(dword(0x001234) <= 10000)")]
-        [TestCase("repeated(6, word(0x001234) > 100)")]
         public void TestAppendString(string input)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -26,8 +24,6 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("word(dword(0x002345) + 4660) >= 500", "I:0xX002345_0x 001234>=500")]
         [TestCase("byte(0x001234) > prev(byte(0x001234))", "0xH001234>d0xH001234")]
         [TestCase("low4(word(0x001234)) > prior(low4(word(0x001234)))", "I:0x 001234_0xL000000>p0xL000000")]
-        [TestCase("once(dword(0x001234) <= 10000)", "0xX001234<=10000.1.")]
-        [TestCase("repeated(6, word(0x001234) > 100)", "0x 001234>100.6.")]
         [TestCase("byte(0x001234) * byte(0x002345) == 3", "A:0xH001234*0xH002345_0=3")]
         [TestCase("byte(0x001234) / byte(0x002345) == 3", "A:0xH001234/0xH002345_0=3")]
         [TestCase("byte(0x001234) & 7 == 3", "A:0xH001234&7_0=3")]

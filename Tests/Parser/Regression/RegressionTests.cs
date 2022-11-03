@@ -69,7 +69,7 @@ namespace RATools.Tests.Parser.Regression
                     else
                     {
                         var files = new List<string>();
-                        GetFiles(files, dir);
+                        GetFiles(files, Path.Combine(dir, "scripts"));
 
                         if (!dir.EndsWith("\\"))
                             dir += "\\";

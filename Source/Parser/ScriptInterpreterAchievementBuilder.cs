@@ -158,9 +158,20 @@ namespace RATools.Parser
                     var clause = expression as RequirementConditionExpression;
                     if (clause != null)
                     {
-                        if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
+                        if (clause.Behavior != RequirementType.None)
                             return false;
                         return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+                    }
+                    var tallied = expression as TalliedRequirementExpression;
+                    if (tallied != null)
+                    {
+                        if (tallied.HitTarget > 0)
+                            return false;
+                        foreach (var condition in tallied.Conditions)
+                        {
+                            if (!IsValidInOrNextChain(condition))
+                                return false;
+                        }
                     }
 
                     return true;

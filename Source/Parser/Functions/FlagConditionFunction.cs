@@ -7,6 +7,8 @@ using System.Linq;
 
 namespace RATools.Parser.Functions
 {
+    // TODO: still used by disable_when and measured
+    //       then subclass unless/never/trigger_when from this
     internal abstract class FlagConditionFunction : ComparisonModificationFunction
     {
         public FlagConditionFunction(string name, RequirementType type)

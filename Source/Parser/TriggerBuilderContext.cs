@@ -652,7 +652,10 @@ namespace RATools.Parser
                 return ReplaceVariables(scope, out result);
             }
 
-            public abstract ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);
+            public virtual ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+            {
+                return new ErrorExpression("Not implemented", functionCall);
+            }
         }
 
         public ErrorExpression CallFunction(FunctionCallExpression functionCall, InterpreterScope scope)

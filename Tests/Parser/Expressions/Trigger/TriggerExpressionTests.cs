@@ -28,7 +28,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             {
                 var error = result as ErrorExpression;
                 if (error != null && error.InnerError != null)
-                    Assert.Fail(error.InnerError.ToString());
+                    Assert.Fail(error.InnermostError.ToString());
 
                 Assert.Fail(result.ToString());
             }

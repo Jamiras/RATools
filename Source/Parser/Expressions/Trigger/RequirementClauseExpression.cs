@@ -110,20 +110,6 @@ namespace RATools.Parser.Expressions.Trigger
                     return BuildAlts(achievementContext);
 
                 return BuildTrigger(context, _conditions, RequirementType.OrNext);
-/*
-                // if there's more than one complex subclause, or a reset with non-reset conditions,
-                // we have to use alts
-                if (NeedAltsForOr(_conditions))
-                {
-                    var achievementContext = context as AchievementBuilderContext;
-                    if (achievementContext == null)
-                        return new ErrorExpression("Cannot logically join multiple subclauses", this);
-
-                    return BuildAlts(achievementContext);
-                }
-
-                return BuildTrigger(context, _conditions, RequirementType.OrNext);
-*/
             }
 
             // don't explicitly add AndNext joiners. they will be inserted by CollapseForSubClause if necessary
@@ -996,7 +982,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         internal static bool HasHitTarget(ExpressionBase expression)
         {
-            var condition = expression as RequirementConditionExpression;
+            var condition = expression as TalliedRequirementExpression;
             if (condition != null)
                 return (condition.HitTarget != 0);
 

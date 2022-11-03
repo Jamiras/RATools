@@ -1,7 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -22,15 +20,12 @@ namespace RATools.Parser.Expressions.Trigger
             Left = Clone(source.Left);
             Comparison = source.Comparison;
             Right = Clone(source.Right);
-            HitTarget = source.HitTarget;
         }
 
         public RequirementType Behavior { get; set; }
         public ExpressionBase Left { get; set; }
         public ComparisonOperation Comparison { get; set; }
         public ExpressionBase Right { get; set; }
-
-        public uint HitTarget { get; set; }
 
         ExpressionBase ICloneableExpression.Clone()
         {
@@ -53,14 +48,6 @@ namespace RATools.Parser.Expressions.Trigger
 
         internal override void AppendString(StringBuilder builder)
         {
-            if (HitTarget > 0)
-            {
-                if (HitTarget == 1)
-                    builder.Append("once(");
-                else
-                    builder.AppendFormat("repeated({0}, ", HitTarget);
-            }
-
             Left.AppendString(builder);
 
             builder.Append(' ');
@@ -78,15 +65,12 @@ namespace RATools.Parser.Expressions.Trigger
             builder.Append(' ');
 
             Right.AppendString(builder);
-
-            if (HitTarget > 0)
-                builder.Append(')');
         }
 
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as RequirementConditionExpression;
-            return (that != null && Comparison == that.Comparison && HitTarget == that.HitTarget &&
+            return (that != null && Comparison == that.Comparison &&
                 Behavior == that.Behavior && Right == that.Right && Left == that.Left);
         }
 
@@ -137,7 +121,6 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type), Right);
 
             lastRequirement.Operator = ConvertToRequirementOperator(Comparison);
-            lastRequirement.HitCount = HitTarget;
             return null;
         }
 
@@ -316,9 +299,9 @@ namespace RATools.Parser.Expressions.Trigger
             if (Behavior != thatCondition.Behavior || Left != thatCondition.Left)
                 return null;
 
-            // cannot merge if either condition has an infinite hit target
-            if (HitTarget != thatCondition.HitTarget && (HitTarget == 0 || thatCondition.HitTarget == 0))
-                return null;
+            //// cannot merge if either condition has an infinite hit target
+            //if (HitTarget != thatCondition.HitTarget && (HitTarget == 0 || thatCondition.HitTarget == 0))
+            //    return null;
 
             var leftField = CreateField(Right);
             var rightField = CreateField(thatCondition.Right);
@@ -326,26 +309,6 @@ namespace RATools.Parser.Expressions.Trigger
                 return null;
             if (leftField.IsMemoryReference && (leftField.Value != rightField.Value || leftField.Size != rightField.Size))
                 return null; // reading different addresses or different sizes
-
-            //var leftEx = new RequirementEx();
-            //leftEx.Requirements.Add(new Requirement
-            //{
-            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
-            //    Operator = ConvertToRequirementOperator(Comparison),
-            //    Right = leftField,
-            //    HitCount = HitTarget
-            //});
-
-            //var rightEx = new RequirementEx();
-            //rightEx.Requirements.Add(new Requirement
-            //{
-            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
-            //    Operator = ConvertToRequirementOperator(thatClause.Comparison),
-            //    Right = rightField,
-            //    HitCount = thatClause.HitTarget
-            //});
-
-            //var mergedEx = RequirementMerger.MergeRequirements(leftEx, rightEx, condition);
 
             var leftCondition = ConvertToRequirementOperator(Comparison);
             var rightCondition = ConvertToRequirementOperator(thatCondition.Comparison);
@@ -360,8 +323,8 @@ namespace RATools.Parser.Expressions.Trigger
                 if (merged.Key == RequirementOperator.Divide)
                 {
                     // these are allowed to conflict with each other
-                    if (HitTarget > 0)
-                        return null;
+                    //if (HitTarget > 0)
+                    //    return null;
                     if (Behavior == RequirementType.PauseIf)
                         return null;
                     if (Behavior == RequirementType.ResetIf)
@@ -373,7 +336,7 @@ namespace RATools.Parser.Expressions.Trigger
                 var result = new RequirementConditionExpression
                 {
                     Behavior = Behavior,
-                    HitTarget = Math.Max(HitTarget, thatCondition.HitTarget),
+                    //HitTarget = Math.Max(HitTarget, thatCondition.HitTarget),
                     Left = Left,
                     Comparison = ConvertToComparisonOperation(merged.Key),
                 };
@@ -390,9 +353,9 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
                 }
 
-                if (result.Comparison == Comparison && result.Right == Right && result.HitTarget == HitTarget)
+                if (result.Comparison == Comparison && result.Right == Right)
                     return this;
-                if (result.Comparison == thatCondition.Comparison && result.Right == thatCondition.Right && result.HitTarget == thatCondition.HitTarget)
+                if (result.Comparison == thatCondition.Comparison && result.Right == thatCondition.Right)
                     return thatCondition;
 
                 return result;

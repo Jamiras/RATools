@@ -5,29 +5,40 @@ using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
 {
-    internal class NeverFunction : FlagConditionFunction
+    internal class NeverFunction : FunctionDefinitionExpression
     {
         public NeverFunction()
-            : base("never", RequirementType.ResetIf)
+            : base("never")
         {
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var comparison = GetParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
 
-            // never(A || B) => never(A) && never(B)
-            var condition = comparison as ConditionalExpression;
-            if (condition != null && condition.Operation == ConditionalOperation.Or)
-                return SplitConditions(scope, condition, condition.Operation, ConditionalOperation.And, out result);
+            var expression = comparison as RequirementExpressionBase;
+            if (expression == null)
+            {
+                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                return false;
+            }
 
-            var clause = comparison as RequirementClauseExpression;
-            if (clause != null && clause.Operation == ConditionalOperation.Or)
-                return SplitConditions(scope, clause, clause.Operation, ConditionalOperation.And, out result);
+            result = new BehavioralRequirementExpression
+            {
+                Behavior = RequirementType.ResetIf ,
+                Condition = (RequirementExpressionBase)comparison
+            };
 
-            return base.ReplaceVariables(scope, out result);
+            CopyLocation(result);
+            return true;
         }
     }
 }
