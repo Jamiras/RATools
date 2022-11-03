@@ -263,7 +263,7 @@ namespace RATools.Tests.Parser.Regression
                     var dir = RegressionDir;
                     if (dir == NoScriptsError)
                     {
-                        yield return new string[] { NoScriptsError, "" };
+                        yield return new string[] { NoScriptsError };
                     }
                     else
                     {
@@ -286,6 +286,9 @@ namespace RATools.Tests.Parser.Regression
         [TestCaseSource(typeof(RegressionTestDumpFactory), "Files")]
         public void DumpTest(string patchDataFileName)
         {
+            if (patchDataFileName == NoScriptsError)
+                return;
+
             var baseDir = Path.Combine(RegressionDir, "dumps");
             var mockSettings = new Mock<ISettings>();
             mockSettings.Setup(s => s.EmulatorDirectories).Returns(new string[] { baseDir });
