@@ -122,30 +122,41 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <StackPanel Orientation="Horizontal" Margin="4,0,4,0" ToolTip="Specifies which code notes to display">
-                <TextBlock Text="Filter:" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0" />
-                <ComboBox Width="180" Height="21" SelectedValue="{Binding SelectedCodeNotesFilter}" ItemsSource="{Binding CodeNoteFilters}" SelectedValuePath="Id">
+                <TextBlock Text="Filter:" FontSize="11" VerticalAlignment="Center" Margin="0,1,4,0" />
+                <ComboBox Width="130" Height="21" SelectedValue="{Binding SelectedCodeNotesFilter}" ItemsSource="{Binding CodeNoteFilters}" SelectedValuePath="Id">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Label}" FontSize="12" />
+                            <TextBlock Text="{Binding Label}" FontSize="12" Margin="0,-1,0,0" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Column="1" Margin="4,0,4,0" ToolTip="Specifies when to dump code note information for displayed code notes">
-                <TextBlock Text="Dump Notes:" FontSize="11" VerticalAlignment="Center" Margin="0,0,4,0"  />
-                <ComboBox Width="140" Height="21" SelectedValue="{Binding SelectedNoteDump}" ItemsSource="{Binding NoteDumps}" SelectedValuePath="Id">
+                <TextBlock Text="Dump Notes:" FontSize="11" VerticalAlignment="Center" Margin="0,1,4,0"  />
+                <ComboBox Width="125" Height="21" SelectedValue="{Binding SelectedNoteDump}" ItemsSource="{Binding NoteDumps}" SelectedValuePath="Id">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding Label}" FontSize="12" />
+                            <TextBlock Text="{Binding Label}" FontSize="12" Margin="0,-1,0,0" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
             </StackPanel>
-            <Button Grid.Column="3" HorizontalAlignment="Right" Margin="2" Width="80" IsEnabled="{Binding IsGameLoaded}" 
+            <StackPanel Orientation="Horizontal" Grid.Column="2" Margin="4,0,4,0" ToolTip="Specifies how to format generated function names">
+                <TextBlock Text="Function Names:" FontSize="11" VerticalAlignment="Center" Margin="0,1,4,0"  />
+                <ComboBox Width="90" Height="21" SelectedValue="{Binding SelectedFunctionNameStyle}" ItemsSource="{Binding FunctionNameStyles}" SelectedValuePath="Id">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Label}" FontSize="12" Margin="0,-1,0,0" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+            <Button Grid.Column="4" HorizontalAlignment="Right" Margin="2" Width="80" IsEnabled="{Binding IsGameLoaded}" 
                     Content="_Create" Command="{Binding OkCommand}" ToolTip="Creates a new script file with the current settings" />
         </Grid>
     </Grid>

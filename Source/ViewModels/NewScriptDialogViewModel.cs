@@ -24,7 +24,22 @@ namespace RATools.ViewModels
     public class NewScriptDialogViewModel : DialogViewModelBase
     {
         public NewScriptDialogViewModel()
+            : this(ServiceRepository.Instance.FindService<ISettings>(),
+                   ServiceRepository.Instance.FindService<IDialogService>(),
+                   ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools"),
+                   ServiceRepository.Instance.FindService<IFileSystemService>())
         {
+
+        }
+
+        internal NewScriptDialogViewModel(ISettings settings, IDialogService dialogService,
+            ILogger logger, IFileSystemService fileSystemService)
+            : base(dialogService)
+        {
+            _settings = settings;
+            _logger = logger;
+            _fileSystemService = fileSystemService;
+
             DialogTitle = "New Script";
             CanClose = true;
 
@@ -33,7 +48,6 @@ namespace RATools.ViewModels
             UncheckAllCommand = new DelegateCommand(UncheckAll);
             CheckWithTicketsCommand = new DelegateCommand(CheckWithTickets);
 
-            var settings = ServiceRepository.Instance.FindService<ISettings>();
             CanCheckWithTickets = (!String.IsNullOrEmpty(settings.ApiKey) && !String.IsNullOrEmpty(settings.UserName));
 
             GameId = new IntegerFieldViewModel("Game _ID", 1, 999999);
@@ -56,12 +70,24 @@ namespace RATools.ViewModels
                 new NoteDumpLookupItem(NoteDump.OnlyForDefinedMethods, "Only for Functions"),
             };
 
+            FunctionNameStyles = new[]
+            {
+                new FunctionNameStyleLookupItem(FunctionNameStyle.None, "None"),
+                new FunctionNameStyleLookupItem(FunctionNameStyle.SnakeCase, "snake_case"),
+                new FunctionNameStyleLookupItem(FunctionNameStyle.CamelCase, "camelCase"),
+                new FunctionNameStyleLookupItem(FunctionNameStyle.PascalCase, "PascalCase"),
+            };
+
             MemoryAddresses = new GridViewModel();
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
             MemoryAddresses.Columns.Add(new TextColumnDefinition("Function Name", MemoryItem.FunctionNameProperty, new StringFieldMetadata("Function Name", 40, StringFieldAttributes.Required)) { Width = 120 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Notes", MemoryItem.NotesProperty));
         }
+
+        private readonly ISettings _settings;
+        private readonly IFileSystemService _fileSystemService;
+        private readonly ILogger _logger;
 
         public IntegerFieldViewModel GameId { get; private set; }
 
@@ -76,7 +102,7 @@ namespace RATools.ViewModels
         private void Search()
         {
             int gameId = GameId.Value.GetValueOrDefault();
-            foreach (var directory in ServiceRepository.Instance.FindService<ISettings>().EmulatorDirectories)
+            foreach (var directory in _settings.EmulatorDirectories)
             {
                 var dataDirectory = Path.Combine(directory, "RACache", "Data");
 
@@ -107,7 +133,7 @@ namespace RATools.ViewModels
 
         private void LoadGame(int gameId, string raCacheDirectory)
         {
-            _game = new GameViewModel(gameId, "");
+            _game = new GameViewModel(gameId, "", _logger, _fileSystemService);
             _game.AssociateRACacheDirectory(raCacheDirectory);
             _game.PopulateEditorList(null);
             DialogTitle = "New Script - " + _game.Title;
@@ -129,13 +155,13 @@ namespace RATools.ViewModels
             IsGameLoaded = true;
             GameId.IsEnabled = false;
 
-            if (_assets.Count > 0)
+            if (_assets.Count > 0 && CanCheckWithTickets)
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
         private void LoadUserFile(string userFile)
         {
-            var assets = new LocalAssets(userFile);
+            var assets = new LocalAssets(userFile, _fileSystemService);
 
             if (assets.Achievements.Any())
             {
@@ -458,6 +484,15 @@ namespace RATools.ViewModels
                     }
                 }
 
+                if (macro.Type == DumpAssetType.Lookup)
+                {
+                    foreach (var address in macro.MemoryAddresses)
+                    {
+                        if (!displayRichPresence.MemoryAddresses.Contains(address))
+                            displayRichPresence.MemoryAddresses.Add(address);
+                    }
+                }
+
                 index = index2 + 1;
             } while (true);
         }
@@ -641,6 +676,14 @@ namespace RATools.ViewModels
             OnlyForDefinedMethods,
         }
 
+        public enum FunctionNameStyle
+        {
+            None = 0,
+            SnakeCase,  // lower_with_underscore
+            PascalCase, // UpperEachFirst
+            CamelCase,  // upperInMiddle
+        }
+
         public class CodeNoteFilterLookupItem
         {
             public CodeNoteFilterLookupItem(CodeNoteFilter id, string label)
@@ -665,6 +708,18 @@ namespace RATools.ViewModels
         }
         public IEnumerable<NoteDumpLookupItem> NoteDumps { get; private set; }
 
+        public class FunctionNameStyleLookupItem
+        {
+            public FunctionNameStyleLookupItem(FunctionNameStyle id, string label)
+            {
+                Id = id;
+                Label = label;
+            }
+            public FunctionNameStyle Id { get; private set; }
+            public string Label { get; private set; }
+        }
+        public IEnumerable<FunctionNameStyleLookupItem> FunctionNameStyles { get; private set; }
+
         public static readonly ModelProperty SelectedCodeNotesFilterProperty = 
             ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedCodeNotesFilter", typeof(CodeNoteFilter), CodeNoteFilter.ForSelectedAssets, OnSelectedCodeNotesFilterChanged);
         public CodeNoteFilter SelectedCodeNotesFilter
@@ -683,6 +738,18 @@ namespace RATools.ViewModels
         {
             get { return (NoteDump)GetValue(SelectedNoteDumpProperty); }
             set { SetValue(SelectedNoteDumpProperty, value); }
+        }
+
+        public static readonly ModelProperty SelectedFunctionNameStyleProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedFunctionNameStyle", typeof(FunctionNameStyle), FunctionNameStyle.None, OnSelectedFunctionNameStyleChanged);
+        public FunctionNameStyle SelectedFunctionNameStyle
+        {
+            get { return (FunctionNameStyle)GetValue(SelectedFunctionNameStyleProperty); }
+            set { SetValue(SelectedFunctionNameStyleProperty, value); }
+        }
+
+        private static void OnSelectedFunctionNameStyleChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            ((NewScriptDialogViewModel)sender).UpdateFunctionNames();
         }
 
         public static readonly ModelProperty MemoryAddressesLabelProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "MemoryAddressesLabel", typeof(string), "Referenced memory addresses");
@@ -735,7 +802,7 @@ namespace RATools.ViewModels
             foreach (var row in MemoryAddresses.Rows)
             {
                 var memoryItem = (MemoryItem)row.Model;
-                if (!visibleAddresses.Remove(memoryItem))
+                if (visibleAddresses.Remove(memoryItem))
                     rowsToRemove.Add(memoryItem);
             }
             foreach (var memoryItem in rowsToRemove)
@@ -749,6 +816,7 @@ namespace RATools.ViewModels
                 return diff;
             });
 
+            var functionNameStyle = SelectedFunctionNameStyle;
             var memIndex = 0;
             for (int addrIndex = 0; addrIndex < visibleAddresses.Count; addrIndex++)
             {
@@ -765,7 +833,28 @@ namespace RATools.ViewModels
                     break;
                 }
 
+                if (functionNameStyle != FunctionNameStyle.None)
+                {
+                    string note;
+                    if (_game.Notes.TryGetValue((int)memoryItem.Address, out note))
+                        memoryItem.UpdateFunctionName(functionNameStyle, note);
+                }
+
                 MemoryAddresses.InsertRow(memIndex, memoryItem);
+            }
+        }
+
+        private void UpdateFunctionNames()
+        {
+            var functionNameStyle = SelectedFunctionNameStyle;
+
+            foreach (var row in MemoryAddresses.Rows)
+            {
+                var memoryItem = (MemoryItem)row.Model;
+
+                string note;
+                if (_game.Notes.TryGetValue((int)memoryItem.Address, out note))
+                    memoryItem.UpdateFunctionName(functionNameStyle, note);
             }
         }
 
@@ -809,12 +898,158 @@ namespace RATools.ViewModels
                 get { return (string)GetValue(NotesProperty); }
                 private set { SetValue(NotesProperty, value); }
             }
+
+            public void UpdateFunctionName(FunctionNameStyle style, string note)
+            {
+                if (style == FunctionNameStyle.None)
+                {
+                    FunctionName = String.Empty;
+                    return;
+                }
+
+                var index = note.IndexOf('\n');
+
+                var bitSuffix = new StringBuilder();
+                switch (Size)
+                {
+                    case FieldSize.Bit0:
+                    case FieldSize.Bit1:
+                    case FieldSize.Bit2:
+                    case FieldSize.Bit3:
+                    case FieldSize.Bit4:
+                    case FieldSize.Bit5:
+                    case FieldSize.Bit6:
+                    case FieldSize.Bit7:
+                        var bitSize = Size.ToString();
+                        var bitIndex = note.IndexOf(bitSize, StringComparison.OrdinalIgnoreCase);
+                        if (bitIndex == -1)
+                        {
+                            bitSize = "b" + bitSize[3];
+                            bitIndex = note.IndexOf(bitSize, StringComparison.OrdinalIgnoreCase);
+                        }
+                        if (bitIndex == -1)
+                            goto case FieldSize.LowNibble;
+
+                        bitIndex += bitSize.Length;
+                        if (Char.IsLetterOrDigit(note[bitIndex]))
+                            goto case FieldSize.LowNibble;
+
+                        while (bitIndex < note.Length && (Char.IsWhiteSpace(note[bitIndex]) || note[bitIndex] == '=' || note[bitIndex] == ':'))
+                            ++bitIndex;
+
+                        if (!Char.IsLetterOrDigit(note[bitIndex]))
+                            goto case FieldSize.LowNibble;
+
+                        while (bitIndex < note.Length && note[bitIndex] != '\n' && note[bitIndex] != ',')
+                            bitSuffix.Append(note[bitIndex++]);
+
+                        if (bitSuffix.Length == 0)
+                            goto case FieldSize.LowNibble;
+
+                        break;
+
+                    case FieldSize.LowNibble:
+                    case FieldSize.HighNibble:
+                        // ignore multi-line note for sizes smaller than a byte
+                        if (index != -1 || note.Contains(',') || note.Contains(';'))
+                            return;
+                        break;
+                }
+
+                if (index != -1)
+                    note = note.Substring(0, index);
+                note = note.Trim();
+
+                // remove size indicator if present
+                var startIndex = note.IndexOf('[');
+                if (startIndex != -1)
+                {
+                    var endIndex = note.IndexOf(']', startIndex + 1);
+                    if (endIndex != -1)
+                    {
+                        var size = note.Substring(startIndex + 1, endIndex - startIndex - 1);
+
+                        if (size.Contains("byte", StringComparison.OrdinalIgnoreCase) ||
+                            size.Contains("bit", StringComparison.OrdinalIgnoreCase) ||
+                            size.Contains("float", StringComparison.OrdinalIgnoreCase) ||
+                            size.Contains("MBF", StringComparison.OrdinalIgnoreCase) ||
+                            size.Contains('=') || size.Contains(','))
+                        {
+                            note = note.Substring(0, startIndex) + note.Substring(endIndex + 1);
+                        }
+                    }
+                }
+
+                // remove potential value assigments
+                var equalsIndex = note.IndexOfAny(new[] { '=', ':' });
+                if (equalsIndex != -1)
+                {
+                    var left = note.Substring(0, equalsIndex).Trim();
+                    var right = note.Substring(equalsIndex + 1).Trim();
+                    if (left.Length > 0 && Char.IsDigit(left[0]))
+                        note = right;
+                    else if (right.Length > 0 && Char.IsDigit(right[0]))
+                        note = left;
+                }
+
+                if (bitSuffix.Length > 0)
+                    note += " - " + bitSuffix.ToString();
+
+                // build the function name
+                bool valid = false;
+                var functionName = new StringBuilder();
+
+                var newWord = true;
+                foreach (var c in note)
+                {
+                    if (Char.IsLetter(c) || (valid && Char.IsDigit(c)))
+                    {
+                        valid = true;
+
+                        if (newWord)
+                        {
+                            newWord = false;
+
+                            switch (style)
+                            {
+                                case FunctionNameStyle.PascalCase:
+                                    functionName.Append(Char.ToUpper(c));
+                                    continue;
+
+                                case FunctionNameStyle.CamelCase:
+                                    if (functionName.Length != 0)
+                                    {
+                                        functionName.Append(Char.ToUpper(c));
+                                        continue;
+                                    }
+                                    break;
+
+                                case FunctionNameStyle.SnakeCase:
+                                    if (functionName.Length != 0)
+                                        functionName.Append('_');
+                                    break;
+                            }
+                        }
+
+                        functionName.Append(Char.ToLower(c));
+                    }
+                    else if (valid)
+                    {
+                        newWord = true;
+                    }
+                }
+
+                if (valid)
+                    FunctionName = functionName.ToString();
+            }
         }
 
         private readonly List<MemoryItem> _memoryItems;
 
         public GameViewModel Finalize()
         {
+            _game.InitializeForUI();
+
             var cleansed = _game.Title;
             foreach (var c in Path.GetInvalidFileNameChars())
                 cleansed = cleansed.Replace(c.ToString(), "");
@@ -835,7 +1070,7 @@ namespace RATools.ViewModels
             return input.Replace("\"", "\\\"");
         }
 
-        private void Dump(Stream outStream)
+        internal void Dump(Stream outStream)
         {
             MemoryAddresses.Commit();
 
@@ -846,7 +1081,7 @@ namespace RATools.ViewModels
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
 
-                var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
+                var numberFormat = _settings.HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
@@ -900,34 +1135,35 @@ namespace RATools.ViewModels
                                 continue;
                         }
                     }
-                }
 
-                if (!String.IsNullOrEmpty(notes))
-                {
-                    notes = notes.Trim();
-                    if (notes.Length > 0)
+                    if (!String.IsNullOrEmpty(notes) && memoryItem.Address != previousNoteAddress)
                     {
-                        if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
-                        {
-                            needLine = false;
-                            stream.WriteLine();
-                        }
-
-                        var lines = notes.Split('\n');
-                        stream.Write("// $");
-
                         previousNoteAddress = memoryItem.Address;
-                        var address = String.Format(addressFormat, memoryItem.Address);
-                        stream.Write(address);
-                        stream.Write(": ");
-                        stream.WriteLine(lines[0].Trim());
 
-                        for (int i = 1; i < lines.Length; i++)
+                        notes = notes.Trim();
+                        if (notes.Length > 0)
                         {
-                            stream.Write("//        ");
-                            if (address.Length > 4)
-                                stream.Write("   ".ToCharArray(), 0, address.Length - 4);
-                            stream.WriteLine(lines[i].Trim());
+                            if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
+                            {
+                                needLine = false;
+                                stream.WriteLine();
+                            }
+
+                            var lines = notes.Split('\n');
+                            stream.Write("// $");
+
+                            var address = String.Format(addressFormat, memoryItem.Address);
+                            stream.Write(address);
+                            stream.Write(": ");
+                            stream.WriteLine(lines[0].Trim());
+
+                            for (int i = 1; i < lines.Length; i++)
+                            {
+                                stream.Write("//        ");
+                                if (address.Length > 4)
+                                    stream.Write("   ".ToCharArray(), 0, address.Length - 4);
+                                stream.WriteLine(lines[i].Trim());
+                            }
                         }
                     }
                 }
@@ -1044,11 +1280,13 @@ namespace RATools.ViewModels
 
                 stream.Write("    title = \"");
                 stream.Write(EscapeString(achievementData.Title));
-                stream.Write("\", description = \"");
-                stream.Write(EscapeString(achievementData.Description));
                 stream.Write("\", points = ");
                 stream.Write(achievementData.Points);
                 stream.WriteLine(",");
+
+                stream.Write("    description = \"");
+                stream.Write(EscapeString(achievementData.Description));
+                stream.WriteLine("\",");
 
                 if (dumpAchievement.ViewerType != "Local Achievement")
                 {
