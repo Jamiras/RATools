@@ -339,6 +339,8 @@ namespace RATools.Tests.Parser
         // ==== NormalizeLimits ===
         [TestCase("byte(0x001234) == 1 && byte(0x004567) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
         [TestCase("byte(0x001234) >= 0 && byte(0x001234) <= 15", "byte(0x001234) <= 15")] // greater than or equal to 0 is always true, ignore it
+        [TestCase("byte(0x001234) == 1 && prev(byte(0x004567)) >= 0", "byte(0x001234) == 1")] // greater than or equal to 0 is always true, ignore it
+        [TestCase("byte(0x001234) == 1 || prev(byte(0x004567)) < 0", "byte(0x001234) == 1")] // less than 0 is always false, ignore it
         [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")] // less than 0 can never be true, only keep the equals
         [TestCase("byte(0x001234) > 0", "byte(0x001234) != 0")] // less than 0 can never be true, so if it's greater than 0, it's just not zero
         [TestCase("bit0(0x001234) <= 0", "bit0(0x001234) == 0")] // less than 0 can never be true, only keep the equals
@@ -684,7 +686,7 @@ namespace RATools.Tests.Parser
         [TestCase("tally(2, once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301))",
                   "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301))")] // always_false() inside once() is optimized out
         [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))",
-                  "repeated(2, once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3) || always_false())")] // always_false has to be added since every subclause has a hit target and should not be eliminated
+                  "tally(2, (once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3)))")]
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
                   "measured(byte(0x001234) == 120, when=(byte(0x002345) == 6 || byte(0x002346) == 7))")]
         public void TestOptimizeComplex(string input, string expected)
@@ -709,9 +711,6 @@ namespace RATools.Tests.Parser
                   "A && ((B && D) || (B && E) || (C && D) || (C && E))")]
         [TestCase("A && (B || (C && D)) && (E || F)",
                   "A && ((B && E) || (B && F) || (C && D && E) || (C && D && F))")]
-        // ==== BubbleUpOrs ====
-        [TestCase("(((A || B) && C) || D) && (C || E)",
-                  "(A && C && C) || (A && C && E) || (B && C && C) || (B && C && E) || (D && C) || (D && E)")]
         public void TestOrExpansion(string input, string expected)
         {
             input = input.Replace("A", "byte(0x00000A) == 1");
@@ -744,21 +743,6 @@ namespace RATools.Tests.Parser
             // the code switches to using OrNext and cross-multiplying simpler clauses.
             // in this case, OrNext can be used in all clauses, so the output should match the input.
             TestOrExpansion(largeExpression, largeExpression);
-        }
-
-        [Test]
-        public void TestOrExpansionLargeWithOnce()
-        {
-            var largeExpression = "(A || B || C) && (D || once(E) || F) && (A || C || E)";
-
-            // cross-multiplication would result in 27 clauses. if more than 20 would be generated,
-            // the code switches to using OrNext and cross-multiplying simpler clauses. The once(E)
-            // prevent complete collapse of the second clause, so the result is 1 x 3 x 1 = 3 alt groups
-            var expected = "((A || B || C) && D && (A || C || E)) || " +
-                           "((A || B || C) && once(E) && (A || C || E)) || " +
-                           "((A || B || C) && F && (A || C || E))";
-
-            TestOrExpansion(largeExpression, expected);
         }
 
         [Test]
@@ -807,6 +791,27 @@ namespace RATools.Tests.Parser
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(), 
                 Is.EqualTo("0xH001234=1.1._T:0xH002345=2_T:0xH002346=3_R:0xH003456=2ST:0xH002347=0ST:0xH002347=1"));
+        }
+
+        [Test]
+        public void TestOrFirst()
+        {
+            var achievement = CreateAchievement("(byte(0x1234) == 1 || byte(0x1234) == 2) && " +
+                "never(byte(0x2345) == 3) && once(byte(0x3456) == 4)");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(),
+                Is.EqualTo("R:0xH002345=3_0xH003456=4.1.S0xH001234=1S0xH001234=2"));
+        }
+
+        [Test]
+        public void TestGuardedResetIfWithAlts()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "(always_true() || (always_false() && never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
+                "(byte(0x4567) == 1 || byte(0x004567) == 2)");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(),
+                Is.EqualTo("0xH001234=1.1.S0xH004567=1S0xH004567=2SR:0xH002345=2_P:0xH003456=3_0=1"));
         }
     }
 }

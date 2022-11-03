@@ -18,7 +18,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (comparison is not RequirementClauseExpression)
+            if (comparison is not RequirementConditionExpression)
             {
                 // cannot directly access FunctionDefinitionExpression.ReplaceVariables, so mimic it
                 result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { comparison });

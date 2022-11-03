@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RATools.Parser.Functions;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -263,8 +264,20 @@ namespace RATools.Data
 
                     if (requirement.Type == RequirementType.AddHits)
                     {
+                        bool hasAlwaysFalse = false;
+                        if (addHitsRequirements.Count(r => !r.IsScalable) > 1 &&
+                            addHitsRequirements.All(r => r.HitCount != 0 || r.IsScalable))
+                        {
+                            addHitsRequirements.Last().Type = RequirementType.OrNext;
+                            addHitsRequirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                            hasAlwaysFalse = true;
+                        }
+
                         int subclauseWidth = wrapWidth - indent - 4;
                         AppendString(builder, addHitsRequirements, numberFormat, ref subclauseWidth, wrapWidth, indent, null);
+
+                        if (hasAlwaysFalse)
+                            builder.Replace(" || always_false()", "");
                     }
                     else
                     {

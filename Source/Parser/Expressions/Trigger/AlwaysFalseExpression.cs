@@ -4,10 +4,10 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class AlwaysFalseExpression : ExpressionBase, ITriggerExpression, IExecutableExpression
+    internal class AlwaysFalseExpression : RequirementExpressionBase
     {
         public AlwaysFalseExpression()
-            : base(ExpressionType.Requirement)
+            : base()
         {
         }
 
@@ -27,15 +27,15 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        public ErrorExpression BuildTrigger(TriggerBuilderContext context)
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
             return null;
         }
 
-        public ErrorExpression Execute(InterpreterScope scope)
+        public override RequirementExpressionBase InvertLogic()
         {
-            return new ErrorExpression("always_false() has no meaning outside of a trigger clause", this);
+            return new AlwaysTrueExpression();
         }
     }
 }

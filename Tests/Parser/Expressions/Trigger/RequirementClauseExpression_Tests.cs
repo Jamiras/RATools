@@ -1,4 +1,7 @@
-﻿using NUnit.Framework;
+using Jamiras.Components;
+using NUnit.Framework;
+using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
@@ -8,12 +11,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
     class RequirementClauseExpressionTests
     {
         [Test]
-        [TestCase("byte(0x001234) == 3")]
-        [TestCase("low4(word(0x001234)) < 5")]
-        [TestCase("word(dword(0x002345) + 4660) >= 500")]
-        [TestCase("byte(0x001234) > prev(byte(0x001234))")]
-        [TestCase("once(dword(0x001234) <= 10000)")]
-        [TestCase("repeated(6, word(0x001234) > 100)")]
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4")]
+        [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4")]
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4 && byte(0x003456) == 5")]
+        [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4 || byte(0x003456) == 5")]
         public void TestAppendString(string input)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
@@ -21,94 +22,192 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
         
         [Test]
-        [TestCase("byte(0x001234) == 3", "0xH001234=3")]
-        [TestCase("low4(word(0x001234)) < 5", "I:0x 001234_0xL000000<5")]
-        [TestCase("word(dword(0x002345) + 4660) >= 500", "I:0xX002345_0x 001234>=500")]
-        [TestCase("byte(0x001234) > prev(byte(0x001234))", "0xH001234>d0xH001234")]
-        [TestCase("low4(word(0x001234)) > prior(low4(word(0x001234)))", "I:0x 001234_0xL000000>p0xL000000")]
-        [TestCase("once(dword(0x001234) <= 10000)", "0xX001234<=10000.1.")]
-        [TestCase("repeated(6, word(0x001234) > 100)", "0x 001234>100.6.")]
-        [TestCase("byte(0x001234) * byte(0x002345) == 3", "A:0xH001234*0xH002345_0=3")]
-        [TestCase("byte(0x001234) / byte(0x002345) == 3", "A:0xH001234/0xH002345_0=3")]
-        [TestCase("byte(0x001234) & 7 == 3", "A:0xH001234&7_0=3")]
-        [TestCase("float(0x001234) == 3.14", "fF001234=f3.14")]
-        [TestCase("float(0x001234) > 2.0", "fF001234>f2.0")]
-        [TestCase("float(0x001234) != 2", "fF001234!=2")]
-        [TestCase("float(0x001234) < 0", "fF001234<0")]
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4", "0xH001234=3_0xH002345=4")]
+        [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4", "O:0xH001234=3_0xH002345=4")]
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4 && byte(0x003456) == 5", "0xH001234=3_0xH002345=4_0xH003456=5")]
+        [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4 || byte(0x003456) == 5", "O:0xH001234=3_O:0xH002345=4_0xH003456=5")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
             TriggerExpressionTests.AssertSerialize(clause, expected);
         }
 
-        [Test]
-        // bcd should be factored out
-        [TestCase("bcd(byte(1)) == 24", ExpressionType.RequirementClause, "byte(0x000001) == 36")]
-        [TestCase("prev(bcd(byte(1))) == 150", ExpressionType.RequirementClause, "prev(byte(0x000001)) == 336")]
-        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", ExpressionType.RequirementClause, "byte(0x000001) != prev(byte(0x000001))")]
-        // bcd cannot be factored out
-        [TestCase("byte(1) != bcd(byte(2))", ExpressionType.RequirementClause, "byte(0x000001) != bcd(byte(0x000002))")]
-        // bcd representation of 100M doesn't fit in 32-bits
-        [TestCase("bcd(dword(1)) == 100000000", ExpressionType.BooleanConstant, "false")]
-        [TestCase("bcd(dword(1)) != 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) < 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) <= 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) > 100000000", ExpressionType.BooleanConstant, "false")]
-        [TestCase("bcd(dword(1)) >= 100000000", ExpressionType.BooleanConstant, "false")]
-        public void TestNormalizeBCD(string input, ExpressionType expectedType, string expected)
+        private static string ReplacePlaceholders(string input)
         {
-            var result = TriggerExpressionTests.Parse(input);
-            Assert.That(result.Type, Is.EqualTo(expectedType));
-
-            if (expectedType == ExpressionType.RequirementClause)
-                result = ((RequirementClauseExpression)result).Normalize();
-
-            ExpressionTests.AssertAppendString(result, expected);
+            input = input.Replace("A", "byte(0x001234)");
+            input = input.Replace("B", "byte(0x002345)");
+            input = input.Replace("C", "byte(0x003456)");
+            return input;
         }
 
         [Test]
-        public void TestAddAddressCompareToAddress()
+        [TestCase("A == 1 || B == 1 || always_true()", "always_true()")]
+        [TestCase("A == 1 || always_true() || C== 1", "always_true()")]
+        [TestCase("always_true() || B == 1 || C== 1", "always_true()")]
+        [TestCase("A == 1 || B == 1 || C == 1", "A == 1 || B == 1 || C == 1")]
+        [TestCase("A == 1 || B == 1 || always_false()", "A == 1 || B == 1")]
+        [TestCase("A == 1 || always_false() || C == 1", "A == 1 || C == 1")]
+        [TestCase("always_false() || B == 1 || C == 1", "B == 1 || C == 1")]
+        [TestCase("A == 1 && B == 1 && C == 1", "A == 1 && B == 1 && C == 1")]
+        [TestCase("A == 1 && B == 1 && always_true()", "A == 1 && B == 1")]
+        [TestCase("A == 1 && always_true() && C == 1", "A == 1 && C == 1")]
+        [TestCase("always_true() && B == 1 && C == 1", "B == 1 && C == 1")]
+        [TestCase("A == 1 && B == 1 && always_false()", "always_false()")]
+        [TestCase("A == 1 && always_false() && C == 1", "always_false()")]
+        [TestCase("always_false() && B == 1 && C == 1", "always_false()")]
+        [TestCase("A == 1 || B == 1 || A == 1", "A == 1 || B == 1")]
+        [TestCase("A == 1 && B == 1 && A == 1", "A == 1 && B == 1")]
+        [TestCase("A == 1 && B == 1 && A == 3", "always_false()")]
+        [TestCase("A > 1 && B == 1 && A == 3", "A == 3 && B == 1")]
+        public void TestOptimize(string input, string expected)
         {
-            var input = "byte(word(0x1234)) == word(0x2345)";
+            input = ReplacePlaceholders(input);
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
-            ExpressionTests.AssertAppendString(clause, "byte(word(0x001234)) == word(0x002345)");
+            var optimized = clause.Optimize(new TriggerBuilderContext());
+
+            expected = ReplacePlaceholders(expected);
+            ExpressionTests.AssertAppendString(optimized, expected);
         }
 
         [Test]
-        [TestCase("byte(WA) > prev(byte(WA))", "byte(WA) > prev(byte(WA))")] // simple compare to prev of same address
-        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 10) > prev(byte(WA + 10))")] // simple compare to prev of same address with offset
-        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 10) > byte(WA + 11)")] // same base, different offsets
-        [TestCase("byte(WA + 10) > byte(WB + 10)", "byte(WA + 10) - byte(WB + 10) + 255 > 255")] // different bases, same offset
-        [TestCase("byte(WA) == byte(WB)", "byte(WA) - byte(WB) == 0")] // becomes B-A==0
-        [TestCase("byte(WA) != byte(WB)", "byte(WA) - byte(WB) != 0")] // becomes B-A!=0
-        [TestCase("byte(WA) > byte(WB)", "byte(WA) - byte(WB) + 255 > 255")] // becomes B-A>M
-        [TestCase("byte(WA) >= byte(WB)", "byte(WA) - byte(WB) + 255 >= 255")] // becomes B-A-1>=M
-        [TestCase("byte(WA) < byte(WB)", "byte(WA) - byte(WB) + 255 < 255")] // becomes B-A+M>M
-        [TestCase("byte(WA) <= byte(WB)", "byte(WA) - byte(WB) + 255 <= 255")] // becomes B-A+M>=M
-        [TestCase("byte(WA + 10) + 20 > byte(WB)", "byte(word(0x002345)) - byte(word(0x001234) + 10) + 255 < 275")]
-        [TestCase("byte(WA + 10) > byte(WB) - 20", "byte(word(0x002345)) - byte(word(0x001234) + 10) + 255 < 275")]
-        [TestCase("byte(WA + 10) - 20 > byte(WB)", "byte(word(0x001234) + 10) - byte(word(0x002345)) + 255 > 275")]
-        [TestCase("byte(WA + 10) > byte(WB) + 20", "byte(word(0x001234) + 10) - byte(word(0x002345)) + 255 > 275")]
-        [TestCase("word(WA) > word(WB)", "word(WA) - word(WB) + 65535 > 65535")] // different addresses (16-bit)
-        [TestCase("byte(WA) > word(WB)", "byte(WA) - word(WB) + 65535 > 65535")] // different sizes and addresses
-        [TestCase("word(WA) > byte(WB)", "word(WA) - byte(WB) + 255 > 255")] // different sizes and addresses
-        [TestCase("tbyte(WA) > tbyte(WB)", "tbyte(WA) - tbyte(WB) + 16777215 > 16777215")] // different addresses (24-bit)
-        [TestCase("byte(WA) > tbyte(WB)", "byte(WA) - tbyte(WB) + 16777215 > 16777215")] // different sizes and addresses
-        [TestCase("tbyte(WA) > word(WB)", "tbyte(WA) - word(WB) + 65535 > 65535")] // different sizes and addresses
-        [TestCase("byte(WA) > dword(WB)", "byte(WA) - dword(WB) > 0")] // no underflow adjustment for 32-bit reads
-        [TestCase("byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2)", // simple compare to prev of same address (double indirect)
-            "byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2))")]
-        [TestCase("bit(18, WA + 10) > prev(bit(18, WA + 10))", "bit2(WA + 12) > prev(bit2(WA + 12))")] // simple compare to prev of same address with offset
-        public void TestAddAddressAcrossCondition(string input, string expected)
+        [TestCase("A == 1 || B == 1", "A == 1", ConditionalOperation.And, "A == 1")]
+        [TestCase("A == 1 || B == 1", "A == 1", ConditionalOperation.Or, "A == 1 || B == 1")]
+        [TestCase("A == 1 || B == 1 || C == 1", "A == 1 || B == 1", ConditionalOperation.And, "A == 1 || B == 1")]
+        [TestCase("A == 1 || B == 1 || C == 1", "A == 1 || B == 1", ConditionalOperation.Or, "A == 1 || B == 1 || C == 1")]
+        [TestCase("A == 1 || B == 1", "A == 1 || C == 1", ConditionalOperation.And, "A == 1 || (B == 1 && C == 1)")]
+        [TestCase("A == 1 && B == 1", "A == 1", ConditionalOperation.And, "A == 1 && B == 1")]
+        [TestCase("A == 1 && B == 1", "A == 1", ConditionalOperation.Or, "A == 1")]
+        [TestCase("A == 1 && B == 1 && C == 1", "A == 1 && B == 1", ConditionalOperation.And, "A == 1 && B == 1 && C == 1")]
+        [TestCase("A == 1 && B == 1 && C == 1", "A == 1 && B == 1", ConditionalOperation.Or, "A == 1 && B == 1")]
+        [TestCase("A == 1 && B == 1", "A == 1 && C == 1", ConditionalOperation.Or, "A == 1 && (B == 1 || C == 1)")]
+        public void TestLogicalIntersect(string left, string right, ConditionalOperation op, string expected)
         {
-            input = input.Replace("WA", "word(0x1234)");
-            input = input.Replace("WB", "word(0x2345)");
+            left = ReplacePlaceholders(left);
+            var leftClause = TriggerExpressionTests.Parse<RequirementClauseExpression>(left);
 
+            right = ReplacePlaceholders(right);
+            var rightClause = TriggerExpressionTests.Parse<RequirementExpressionBase>(right);
+
+            var intersect = leftClause.LogicalIntersect(rightClause, op);
+
+            expected = ReplacePlaceholders(expected);
+            ExpressionTests.AssertAppendString(intersect, expected);
+        }
+
+        [Test]
+        public void TestNestedComplex()
+        {
+            var input = "(A == 1 && B == 1) || (A == 2 && (B == 2 || B == 3 || B == 4))";
+
+            input = ReplacePlaceholders(input);
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
 
-            expected = expected.Replace("WA", "word(0x001234)");
-            expected = expected.Replace("WB", "word(0x002345)");
-            ExpressionTests.AssertAppendString(clause, expected);
+            var expected = "1=1S0xH001234=1_0xH002345=1S0xH001234=2_O:0xH002345=2_O:0xH002345=3_0xH002345=4";
+            TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
+        }
+
+        [Test]
+        public void TestNestedComplex2()
+        {
+            var input = "(A == 1 && B == 1) || (A == 2 && ((B == 2 && C == 2) || (B == 3 && C == 3)))";
+
+            input = ReplacePlaceholders(input);
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+
+            var expected = "1=1S0xH001234=1_0xH002345=1S0xH001234=2_0xH002345=2_0xH003456=2S0xH001234=2_0xH002345=3_0xH003456=3";
+            TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
+        }
+
+        [Test]
+        public void TestNestedComplexWithOnce()
+        {
+            var input = "once(prev(A) == 0 && A == 1) && once(once(once(always_true() && B == 1) && B == 2) && B == 3)";
+
+            input = ReplacePlaceholders(input);
+
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new TriggerBuilderContext();
+
+            ExpressionBase result;
+            if (!expr.ReplaceVariables(scope, out result))
+                Assert.Fail(result.ToString());
+
+            var expected = "N:d0xH001234=0_0xH001234=1.1._N:0xH002345=1.1._N:0xH002345=2.1._0xH002345=3.1.";
+
+            var builder = new ScriptInterpreterAchievementBuilder();
+            builder.PopulateFromExpression(result);
+            builder.Optimize();
+            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
+        }
+
+
+        [Test]
+        public void TestNestedOnceChain()
+        {
+            // this is generated by a helper function used to create a forced series of
+            // sequential events in an AndNext chain:
+            //
+            //   function CreateHitTargetedAndNextChain(permutation)
+            //   {
+            //     trigger = always_true()
+            //
+            //     for condition in permutation
+            //     {
+            //       trigger = once(trigger && once(condition))
+            //     }
+            //
+            //     return trigger
+            //   }
+
+            var input = "once(once(once(always_true() && once(A == 1)) && once(A == 2)) && once(A == 3))";
+
+            input = ReplacePlaceholders(input);
+
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new TriggerBuilderContext();
+
+            ExpressionBase result;
+            if (!expr.ReplaceVariables(scope, out result))
+                Assert.Fail(result.ToString());
+
+            var expected = "N:0xH001234=1.1._N:0xH001234=2.1._0xH001234=3.1.";
+
+            var builder = new ScriptInterpreterAchievementBuilder();
+            builder.PopulateFromExpression(result);
+            builder.Optimize();
+            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestEnsureLastClauseHasNoHitCount()
+        {
+            // prev(A) should not be moved to the end; A == 4 should.
+            var input = "repeated(3, A == 4 && once(prev(A) == 0 && A == 1) && once(B == 2))";
+
+            input = ReplacePlaceholders(input);
+
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new TriggerBuilderContext();
+
+            ExpressionBase result;
+            if (!expr.ReplaceVariables(scope, out result))
+                Assert.Fail(result.ToString());
+
+            var expected = "N:d0xH001234=0_N:0xH001234=1.1._N:0xH002345=2.1._0xH001234=4.3.";
+
+            var builder = new ScriptInterpreterAchievementBuilder();
+            builder.PopulateFromExpression(result);
+            builder.Optimize();
+            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
         }
     }
 }

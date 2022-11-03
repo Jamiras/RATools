@@ -1,7 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System.Linq;
-using System.Runtime;
 
 namespace RATools.Parser.Expressions.Trigger
 {

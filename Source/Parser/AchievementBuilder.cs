@@ -2241,8 +2241,11 @@ namespace RATools.Parser
             // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
             RemoveAlwaysFalseAlts(groups);
 
-            // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
-            DenormalizeOrNexts(groups);
+            if (!forSubclause)
+            {
+                // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
+                DenormalizeOrNexts(groups);
+            }
 
             // convert back to flattened expressions
             _core.Clear();
@@ -2338,14 +2341,6 @@ namespace RATools.Parser
                             r.Type = RequirementType.ResetNextIf;
                     }
                 }
-            }
-
-            if (_alts.Count > 0)
-            {
-                // the last item cannot have its own HitCount as it will hold the HitCount for the group.
-                // if necessary, find one without a HitCount and make it the last.
-                if (_core.Count == 0)
-                    EnsureLastGroupHasNoHitCount(_alts);
             }
 
             // merge the alts into the core group as an OrNext chain. only one AndNext chain can be generated

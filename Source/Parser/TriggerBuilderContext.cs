@@ -162,7 +162,7 @@ namespace RATools.Parser
             // ensure last element of chain is an AddSource and change it to Measured
             int moveIndex = -1;
             bool hasMeasured = false;
-            for (int i = terms.Count - 1; i >=0; i--)
+            for (int i = terms.Count - 1; i >= 0; i--)
             {
                 var term = terms[i];
                 var type = term.measured.Last().Type;
@@ -184,7 +184,7 @@ namespace RATools.Parser
                     if (moveIndex == -1)
                         moveIndex = i;
                 }
-                else if (type == RequirementType.Measured || 
+                else if (type == RequirementType.Measured ||
                     term.measured.Any(r => r.Type == RequirementType.Measured))
                 {
                     hasMeasured = true;
@@ -374,7 +374,7 @@ namespace RATools.Parser
             {
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.FloatConstant:
-                    terms.Add(new Term { field = FieldFactory.CreateField(expression) }); 
+                    terms.Add(new Term { field = FieldFactory.CreateField(expression) });
                     result = null;
                     return true;
 
@@ -459,21 +459,21 @@ namespace RATools.Parser
                     break;
 
                 case ExpressionType.FunctionCall:
-                {
-                    var functionCall = (FunctionCallExpression)expression;
-                    var requirements = new List<Requirement>();
-                    var context = new ValueBuilderContext() { Trigger = requirements };
-                    var valueScope = new InterpreterScope(scope) { Context = context };
-                    var error = context.CallFunction(functionCall, valueScope);
-                    if (error != null)
                     {
-                        result = error;
-                        return false;
-                    }
+                        var functionCall = (FunctionCallExpression)expression;
+                        var requirements = new List<Requirement>();
+                        var context = new ValueBuilderContext() { Trigger = requirements };
+                        var valueScope = new InterpreterScope(scope) { Context = context };
+                        var error = context.CallFunction(functionCall, valueScope);
+                        if (error != null)
+                        {
+                            result = error;
+                            return false;
+                        }
 
-                    SetImpliedMeasuredTarget(requirements);
-                    return ProcessMeasuredValue(requirements, expression, terms, out result);
-                }
+                        SetImpliedMeasuredTarget(requirements);
+                        return ProcessMeasuredValue(requirements, expression, terms, out result);
+                    }
 
                 case ExpressionType.Conditional:
                     var conditionalExpression = expression as ConditionalExpression;
@@ -719,6 +719,35 @@ namespace RATools.Parser
 
             return achievement.SerializeRequirements();
         }
+    }
+
+    internal class AchievementBuilderContext : TriggerBuilderContext
+    {
+        public AchievementBuilderContext(AchievementBuilder builder)
+        {
+            Achievement = builder;
+            Trigger = Achievement.CoreRequirements;
+        }
+
+        public AchievementBuilderContext()
+            : this(new AchievementBuilder())
+        {
+        }
+
+        public AchievementBuilder Achievement { get; private set; }
+
+        public void BeginAlt()
+        {
+            Trigger = new List<Requirement>();
+            Achievement.AlternateRequirements.Add(Trigger);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="TriggerBuilderContext"/> for building a subclause to be used in a once/repeated/tally
+    /// </summary>
+    internal class TallyBuilderContext : TriggerBuilderContext
+    {
     }
 
     internal class ValueBuilderContext : TriggerBuilderContext

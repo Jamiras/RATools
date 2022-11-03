@@ -40,12 +40,15 @@ namespace RATools.Tests.Parser
             input = input.Replace("C", "byte(0x00000C)");
 
             var achievement = CreateAchievement(input);
-            achievement.Optimize();
+            achievement.OptimizeForSubClause();
 
             var result = achievement.RequirementsDebugString;
             result = result.Replace("byte(0x00000A)", "A");
             result = result.Replace("byte(0x00000B)", "B");
             result = result.Replace("byte(0x00000C)", "C");
+
+            while (result[0] == '(' && result.IndexOf(')') == result.Length - 1)
+                result = result.Substring(1, result.Length - 2);
 
             if (expected == "ignore")
             {

@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,15 +27,25 @@ namespace RATools.Parser.Functions
             }
             else
             {
-                conditions.Add(expression);
+                var requirementClause = expression as RequirementClauseExpression;
+                if (requirementClause != null && requirementClause.Operation == op)
+                {
+                    foreach (var clause in requirementClause.Conditions)
+                        SplitConditions(conditions, clause, op);
+                }
+                else
+                {
+                    conditions.Add(expression);
+                }
             }
         }
 
-        protected bool SplitConditions(InterpreterScope scope, ConditionalExpression condition,
-            ConditionalOperation joiningOperation, out ExpressionBase result)
+        protected bool SplitConditions(InterpreterScope scope, ExpressionBase condition,
+            ConditionalOperation conditionOperation, ConditionalOperation joiningOperation,
+            out ExpressionBase result)
         {
             var conditions = new List<ExpressionBase>();
-            SplitConditions(conditions, condition, condition.Operation);
+            SplitConditions(conditions, condition, conditionOperation);
 
             ExpressionBase newChain = null;
             for (int i = 0; i < conditions.Count; i++)
@@ -67,10 +78,12 @@ namespace RATools.Parser.Functions
                 else if (wrap)
                     newChain = new ConditionalExpression(newChain, joiningOperation, result);
                 else
-                    newChain = new ConditionalExpression(newChain, condition.Operation, result);
+                    newChain = new ConditionalExpression(newChain, conditionOperation, result);
             }
 
-            result = newChain;
+            if (!newChain.ReplaceVariables(scope, out result))
+                return false;
+
             CopyLocation(result);
             return true;
         }

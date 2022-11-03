@@ -32,7 +32,8 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (comparison is not RequirementClauseExpression)
+            var condition = comparison as RequirementConditionExpression;
+            if (condition == null)
                 return base.ReplaceVariables(scope, out result);
 
             result = AddHitCount(comparison, count, scope);
@@ -64,7 +65,7 @@ namespace RATools.Parser.Functions
                     return new ErrorExpression("Unbounded count is only supported in measured value expressions", count);
             }
 
-            var requirement = comparison as RequirementClauseExpression;
+            var requirement = comparison as RequirementConditionExpression;
             if (requirement == null)
                 return new ErrorExpression(Name.Name + " can ony be applied to requirement clauses", this);
         
@@ -103,11 +104,12 @@ namespace RATools.Parser.Functions
             ErrorExpression error;
 
             var condition = comparison as ConditionalExpression;
-            if (condition != null && condition.Operation == ConditionalOperation.And)
+            if (condition != null)
             {
                 // extract never() conditions from And sequence and build a ResetNextIf clause
                 var nonNeverExpressions = new List<ExpressionBase>();
                 FunctionCallExpression neverExpression = null;
+                ExpressionBase lastNonHitTargetCondition = null;
 
                 foreach (var clause in condition.Conditions)
                 {
@@ -135,35 +137,84 @@ namespace RATools.Parser.Functions
                     }
                     else
                     {
+                        if (!RequirementClauseExpression.HasHitTarget(clause))
+                            lastNonHitTargetCondition = clause;
+
                         nonNeverExpressions.Add(clause);
                     }
                 }
 
                 if (neverExpression != null && nonNeverExpressions.Count > 0)
                 {
-                    // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
-                    // from optimizing out the ResetIf
-                    var nestedContext = new TriggerBuilderContext();
-                    nestedContext.Trigger = new List<Requirement>();
-                    var innerScope = new InterpreterScope(scope);
-                    innerScope.Context = nestedContext;
-
-                    error = BuildTriggerCondition(nestedContext, innerScope, neverExpression);
-                    if (error != null)
+                    if (condition.Operation == ConditionalOperation.And)
                     {
-                        neverExpression.Parameters.First().CopyLocation(error);
-                        return error;
-                    }
+                        // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
+                        // from optimizing out the ResetIf
+                        var nestedContext = new TriggerBuilderContext();
+                        nestedContext.Trigger = new List<Requirement>();
+                        var innerScope = new InterpreterScope(scope);
+                        innerScope.Context = nestedContext;
 
-                    nestedContext.LastRequirement.Type = RequirementType.ResetNextIf;
-                    foreach (var requirement in nestedContext.Trigger)
+                        error = BuildTriggerCondition(nestedContext, innerScope, neverExpression);
+                        if (error != null)
+                        {
+                            neverExpression.Parameters.First().CopyLocation(error);
+                            return error;
+                        }
+
+                        nestedContext.LastRequirement.Type = RequirementType.ResetNextIf;
+                        foreach (var requirement in nestedContext.Trigger)
+                        {
+                            if (requirement.Type == RequirementType.ResetIf)
+                                requirement.Type = RequirementType.OrNext;
+                            context.Trigger.Add(requirement);
+                        }
+
+                        comparison = new ConditionalExpression(ConditionalOperation.And, nonNeverExpressions);
+                    }
+                    else
                     {
-                        if (requirement.Type == RequirementType.ResetIf)
-                            requirement.Type = RequirementType.OrNext;
-                        context.Trigger.Add(requirement);
+                        nonNeverExpressions.Clear();
+                        nonNeverExpressions.AddRange(condition.Conditions);
                     }
+                }
 
+                if (lastNonHitTargetCondition == null)
+                {
+                    if (condition.Operation == ConditionalOperation.And)
+                        return MergeHitCounts(context, scope, count, comparison);
+
+                    return WrapInTally(context, scope, count, comparison);
+                }
+
+                if (!ReferenceEquals(nonNeverExpressions.Last(), lastNonHitTargetCondition))
+                {
+                    nonNeverExpressions.Remove(lastNonHitTargetCondition);
+                    nonNeverExpressions.Add(lastNonHitTargetCondition);
                     comparison = new ConditionalExpression(ConditionalOperation.And, nonNeverExpressions);
+                }
+            }
+            else
+            {
+                var clause = comparison as RequirementClauseExpression;
+                if (clause != null)
+                {
+                    comparison = clause.Optimize(new TallyBuilderContext());
+
+                    clause = comparison as RequirementClauseExpression;
+                    if (clause != null)
+                    {
+                        var rearranged = clause.EnsureLastConditionHasNoHitTarget();
+                        if (rearranged == null)
+                        {
+                            if (clause.Operation == ConditionalOperation.And)
+                                return MergeHitCounts(context, scope, count, clause);
+
+                            return WrapInTally(context, scope, count, clause);
+                        }
+
+                        comparison = rearranged;
+                    }
                 }
             }
 
@@ -172,6 +223,34 @@ namespace RATools.Parser.Functions
                 return error;
 
             return AssignHitCount(context, scope, count, Name.Name);
+        }
+
+        private ErrorExpression MergeHitCounts(TriggerBuilderContext context,
+            InterpreterScope scope, IntegerConstantExpression count, ExpressionBase comparison)
+        {
+            var error = BuildTriggerCondition(context, scope, comparison);
+            if (error != null)
+                return error;
+
+            // once(once(A)) => once(A)
+            // repeated(3, repeated(2, A)) => repeated(6, A)
+            // once(A && once(B)) => A && once(B)
+            // once(once(A) && once(B)) => once(A) && once(B)
+            context.LastRequirement.HitCount *= (uint)count.Value;
+            return null;
+        }
+
+        private static ErrorExpression WrapInTally(TriggerBuilderContext context,
+            InterpreterScope scope, IntegerConstantExpression count, ExpressionBase comparison)
+        {
+            var tally = new FunctionCallExpression("tally", new ExpressionBase[]
+            {
+                count,
+                comparison,
+                new AlwaysFalseExpression()
+            });
+
+            return new TallyFunction().BuildTrigger(context, scope, tally);
         }
 
         protected static ErrorExpression AssignHitCount(TriggerBuilderContext context, InterpreterScope scope, IntegerConstantExpression count, string functionName)
