@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -72,6 +73,51 @@ namespace RATools.Parser.Expressions.Trigger
             return (that != null && that.Behavior == Behavior && that.Condition == Condition);
         }
 
+        public bool CanBeEliminatedByInverting
+        {
+            get { return Behavior == RequirementType.ResetIf || Behavior == RequirementType.PauseIf; }
+        }
+
+        public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
+        {
+            var optimized = Condition.Optimize(context);
+
+            if (Behavior == RequirementType.ResetIf || Behavior == RequirementType.PauseIf)
+            {
+                // invert logic for any never() or unless() subclauses
+                var behavioral = optimized as BehavioralRequirementExpression;
+                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
+                {
+                    // never(never(A)) => never(!A)
+                    // never(unless(A)) => never(!A)
+                    // unless(never(A)) => unless(!A)
+                    // unless(unless(A)) => unless(!A)
+                    return new BehavioralRequirementExpression
+                    {
+                        Behavior = Behavior,
+                        Condition = behavioral.Condition.InvertLogic(),
+                        Location = Location
+                    };
+                }
+
+                var clause = optimized as RequirementClauseExpression;
+                if (clause != null)
+                    optimized = clause.InvertResetsAndPauses();
+            }
+
+            if (!ReferenceEquals(Condition, optimized))
+            {
+                return new BehavioralRequirementExpression
+                {
+                    Behavior = Behavior,
+                    Condition = optimized,
+                    Location = Location,
+                };
+            }
+
+            return base.Optimize(context);
+        }
+
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             var reqClause = Condition as RequirementClauseExpression;
@@ -83,20 +129,9 @@ namespace RATools.Parser.Expressions.Trigger
                     if (reqClause != null && reqClause.Operation == ConditionalOperation.And)
                     {
                         // trigger_when(A && B) -> trigger_when(A) && trigger_when(B)
-                        error = Condition.BuildSubclauseTrigger(context, ConditionalOperation.And, Behavior);
+                        return Condition.BuildSubclauseTrigger(context, ConditionalOperation.And, Behavior);
                     }
-                    else
-                    {
-                        error = Condition.BuildSubclauseTrigger(context);
-                    }
-
-                    //if (error != null && error.Message.Contains("too complex"))
-                    //{
-                    //    // trigger_when(A || B) can be split into alt1:trigger_when(A) and alt2:trigger_when(B)
-                    //    if (DistributeConditionAcrossAlts(context, ref error))
-                    //        return null;
-                    //}
-                    break;
+                    goto default;
 
                 case RequirementType.ResetIf:
                 case RequirementType.PauseIf:
@@ -104,8 +139,7 @@ namespace RATools.Parser.Expressions.Trigger
                     {
                         // never(A || B) -> never(A) && never(B)
                         // unless(A || B) -> unless(A) && unless(B)
-                        error = Condition.BuildSubclauseTrigger(context, ConditionalOperation.Or, Behavior);
-                        break;
+                        return Condition.BuildSubclauseTrigger(context, ConditionalOperation.Or, Behavior);
                     }
                     goto default;
 
@@ -117,51 +151,12 @@ namespace RATools.Parser.Expressions.Trigger
             if (error != null)
                 return error;
 
+            if (context.LastRequirement.Type != RequirementType.None)
+                return new ErrorExpression("Cannot apply '" + GetFunctionName(Behavior) + "' to condition already flagged with " + context.LastRequirement.Type);
+
             context.LastRequirement.Type = Behavior;
 
             return null;
-        }
-
-        private bool DistributeConditionAcrossAlts(TriggerBuilderContext context, ref ErrorExpression error)
-        {
-            //var achievementContext = context as AchievementBuilderContext;
-            //if (achievementContext.Achievement.AlternateRequirements.Count == 0) // no alts yet
-            //{
-            //    var clause = Condition as RequirementClauseExpression;
-            //    if (clause != null && clause.Operation == ConditionalOperation.Or)
-            //    {
-            //        foreach (var condition in clause.Conditions)
-            //        {
-            //            var alt = new List<Requirement>();
-            //            var subclauseContext = new TriggerBuilderContext { Trigger = alt };
-            //            error = condition.BuildSubclauseTrigger(subclauseContext);
-            //            if (error != null)
-            //                return false;
-
-            //            alt[alt.Count - 1].Type = Behavior;
-            //            achievementContext.Groups.Add(alt);
-            //        }
-
-            //        return true;
-            //    }
-            //}
-
-            return false;
-        }
-
-        public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
-        {
-            var optimized = Condition.Optimize(context);
-            if (!ReferenceEquals(Condition, optimized))
-            {
-                return new BehavioralRequirementExpression
-                {
-                    Behavior = Behavior,
-                    Condition = optimized
-                };
-            }
-
-            return base.Optimize(context);
         }
 
         public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
@@ -169,7 +164,14 @@ namespace RATools.Parser.Expressions.Trigger
             var thatBehavior = that as BehavioralRequirementExpression;
             if (thatBehavior != null && thatBehavior.Behavior == Behavior)
             {
-                var intersect = Condition.LogicalIntersect(thatBehavior.Condition, condition);
+                RequirementExpressionBase intersect;
+                if (Behavior == RequirementType.Trigger)
+                    intersect = Condition.LogicalIntersect(thatBehavior.Condition, condition);
+                else if (condition == ConditionalOperation.And)
+                    intersect = Condition.LogicalIntersect(thatBehavior.Condition, ConditionalOperation.Or);
+                else
+                    intersect = Condition.LogicalIntersect(thatBehavior.Condition, ConditionalOperation.And);
+
                 if (intersect == null)
                     return null;
 
@@ -178,6 +180,32 @@ namespace RATools.Parser.Expressions.Trigger
                 if (ReferenceEquals(intersect, thatBehavior.Condition))
                     return that;
             }
+
+            if (Behavior == RequirementType.Trigger)
+            {
+                // when the same clause is used inside and outside a trigger, the achievement will
+                // become true in the same frame where the challenge indicator is shown.
+                // assume the user is duplicating logic from another clause explicitly to show the
+                // challenge indicator and discard the non-trigger logic
+                //
+                //     trigger_when(A > 2) && A > 2  => trigger_when(A > 2)
+                //
+                // this could also apply if the outside clause was more restrictive than the inside
+                // clause, but don't automatically collapse that as it's probably a logical error 
+                // rather than an intentional decision.
+                if (Condition == that)
+                    return this;
+            }
+            else
+            {
+                var inverted = that.InvertLogic();
+                if (inverted == Condition)
+                {
+                    // never(A == X) && A != X  =>  never(A == X)
+                    return this;
+                }
+            }
+
 
             return base.LogicalIntersect(that, condition);
         }

@@ -139,5 +139,27 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         {
             Assert.That(SerializeAchievement(expression), Is.EqualTo(expected));
         }
+
+        public static void AssertLogicalIntersect(string left, string right, ConditionalOperation condition, string expected)
+        {
+            left = ExpressionTests.ReplacePlaceholders(left);
+            var leftClause = Parse<RequirementExpressionBase>(left);
+
+            right = ExpressionTests.ReplacePlaceholders(right);
+            var rightClause = Parse<RequirementExpressionBase>(right);
+
+            var intersect = leftClause.LogicalIntersect(rightClause, condition);
+
+            if (expected == null)
+            {
+                Assert.That(intersect, Is.Null);
+            }
+            else
+            {
+                Assert.That(intersect, Is.Not.Null, "intersect failed");
+                expected = ExpressionTests.ReplacePlaceholders(expected);
+                ExpressionTests.AssertAppendString(intersect, expected);
+            }
+        }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
@@ -161,7 +162,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            if (joinBehavior != RequirementType.None)
+            if (joinBehavior == RequirementType.AndNext || joinBehavior == RequirementType.OrNext)
             {
                 // one complex clause can be joined to as many non-complex clauses as desired
                 // as long as it's the first in the chain. if there are multiple, they can't
@@ -399,34 +400,6 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null)
                 return null;
 
-            //if (Operation == ConditionalOperation.Or)
-            //{
-            //    BehavioralRequirementExpression firstReset = null;
-            //    bool hasNonReset = false;
-            //    foreach (var condition in _conditions)
-            //    {
-            //        var behavioral = condition as BehavioralRequirementExpression;
-            //        if (behavioral != null && behavioral.Behavior == RequirementType.ResetIf)
-            //            firstReset = behavioral;
-            //        else
-            //            hasNonReset = true;
-            //    }
-
-            //    if (firstReset != null)
-            //    {
-            //        // OR'd ResetIfs are designated to be put into alts. subclauses can't have alts
-
-            //        // ResetIf(A) || B => assume B has a PauseIf that's being protected from the ResetIf
-            //        // we can't use an alt to segregate that, so generate an error
-            //        if (hasNonReset)
-            //            return new ErrorExpression("never not allowed in OR subclause", firstReset);
-
-            //        // ResetIf(A) || ResetIf(B)  =>  ResetIf(A) && ResetIf(B)
-            //        // all conditions are ResetIfs, so they can be joined via ANDs in the subclause
-            //        return BuildTrigger(subclauseContext, _conditions, RequirementType.None);
-            //    }
-            //}
-
             var achievementContext = new AchievementBuilderContext();
             ErrorExpression error;
 
@@ -440,6 +413,11 @@ namespace RATools.Parser.Expressions.Trigger
                     splitBehavior = (Operation == ConditionalOperation.Or) ? RequirementType.OrNext : RequirementType.AndNext;
 
                 error = BuildTrigger(achievementContext, _conditions, splitBehavior);
+                if (error != null)
+                    return error;
+
+                if (splitBehavior != RequirementType.None && Operation == splitCondition && achievementContext.LastRequirement.Type == RequirementType.None)
+                    achievementContext.LastRequirement.Type = splitBehavior;
             }
 
             if (error != null)
@@ -980,15 +958,42 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
+        /// <summary>
+        /// Returns <c>true</c> if any subclause in the provided expression has a hit target.
+        /// </summary>
         internal static bool HasHitTarget(ExpressionBase expression)
         {
             var condition = expression as TalliedRequirementExpression;
             if (condition != null)
                 return (condition.HitTarget != 0);
 
-            var functionCall = expression as FunctionCallExpression;
-            if (functionCall != null)
-                return (functionCall.FunctionName.Name == "once" || functionCall.FunctionName.Name == "repeated");
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return clause.Conditions.Any(c => HasHitTarget(c));
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return HasHitTarget(behavioral.Condition);
+
+            return false;
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if all subclauses in the provided expression have a hit target.
+        /// </summary>
+        internal static bool AllClausesHaveHitTargets(ExpressionBase expression)
+        {
+            var condition = expression as TalliedRequirementExpression;
+            if (condition != null)
+                return (condition.HitTarget != 0);
+
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return clause.Conditions.All(c => AllClausesHaveHitTargets(c));
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return AllClausesHaveHitTargets(behavioral.Condition);
 
             return false;
         }
@@ -1034,6 +1039,33 @@ namespace RATools.Parser.Expressions.Trigger
                 default:
                     throw new NotImplementedException();
             }
+        }
+
+        /// <summary>
+        /// Returns an expression where any 'never(A)'s have been converted to '!A's
+        /// </summary>
+        /// <remarks>May return the original expression if nothing needed to be converted</remarks>
+        public RequirementClauseExpression InvertResetsAndPauses()
+        {
+            if (!Conditions.OfType<BehavioralRequirementExpression>().Any(c => c.CanBeEliminatedByInverting))
+                return this;
+
+            var newConditions = new List<ExpressionBase>(_conditions.Count);
+            foreach (var condition in _conditions)
+            {
+                var behavioral = condition as BehavioralRequirementExpression;
+                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
+                    newConditions.Add(behavioral.Condition.InvertLogic());
+                else
+                    newConditions.Add(condition);
+            }
+
+            return new RequirementClauseExpression
+            {
+                Operation = Operation,
+                _conditions = newConditions,
+                Location = Location
+            };
         }
     }
 }

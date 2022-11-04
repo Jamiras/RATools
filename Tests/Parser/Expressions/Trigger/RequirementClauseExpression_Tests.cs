@@ -1,11 +1,9 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Windows;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
 {
@@ -28,18 +26,22 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4", "O:0xH001234=3_0xH002345=4")]
         [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4 && byte(0x003456) == 5", "0xH001234=3_0xH002345=4_0xH003456=5")]
         [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4 || byte(0x003456) == 5", "O:0xH001234=3_O:0xH002345=4_0xH003456=5")]
+        [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
             TriggerExpressionTests.AssertSerialize(clause, expected);
         }
 
-        private static string ReplacePlaceholders(string input)
+        [Test]
+        [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000",
+                  "1=1S0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // no parentheses - && ties first condition to second, add always_true core
+        [TestCase("byte(0x000028) == 12 && (word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)",
+                  "0xH000028=12S0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // parenthesis ensure first condition separate from alts
+        public void TestBuildAchievement(string input, string expected)
         {
-            input = input.Replace("A", "byte(0x001234)");
-            input = input.Replace("B", "byte(0x002345)");
-            input = input.Replace("C", "byte(0x003456)");
-            return input;
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
         }
 
         [Test]
@@ -63,11 +65,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A > 1 && B == 1 && A == 3", "A == 3 && B == 1")]
         public void TestOptimize(string input, string expected)
         {
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
             var optimized = clause.Optimize(new TriggerBuilderContext());
 
-            expected = ReplacePlaceholders(expected);
+            expected = ExpressionTests.ReplacePlaceholders(expected);
             ExpressionTests.AssertAppendString(optimized, expected);
         }
 
@@ -84,16 +86,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A == 1 && B == 1", "A == 1 && C == 1", ConditionalOperation.Or, "A == 1 && (B == 1 || C == 1)")]
         public void TestLogicalIntersect(string left, string right, ConditionalOperation op, string expected)
         {
-            left = ReplacePlaceholders(left);
-            var leftClause = TriggerExpressionTests.Parse<RequirementClauseExpression>(left);
-
-            right = ReplacePlaceholders(right);
-            var rightClause = TriggerExpressionTests.Parse<RequirementExpressionBase>(right);
-
-            var intersect = leftClause.LogicalIntersect(rightClause, op);
-
-            expected = ReplacePlaceholders(expected);
-            ExpressionTests.AssertAppendString(intersect, expected);
+            TriggerExpressionTests.AssertLogicalIntersect(left, right, op, expected);
         }
 
         [Test]
@@ -101,10 +94,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         {
             var input = "(A == 1 && B == 1) || (A == 2 && (B == 2 || B == 3 || B == 4))";
 
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
 
-            var expected = "1=1S0xH001234=1_0xH002345=1S0xH001234=2_O:0xH002345=2_O:0xH002345=3_0xH002345=4";
+            var expected = "1=1S0xH000001=1_0xH000002=1S0xH000001=2_O:0xH000002=2_O:0xH000002=3_0xH000002=4";
             TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
         }
 
@@ -113,10 +106,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         {
             var input = "(A == 1 && B == 1) || (A == 2 && ((B == 2 && C == 2) || (B == 3 && C == 3)))";
 
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
 
-            var expected = "1=1S0xH001234=1_0xH002345=1S0xH001234=2_0xH002345=2_0xH003456=2S0xH001234=2_0xH002345=3_0xH003456=3";
+            var expected = "1=1S0xH000001=1_0xH000002=1S0xH000001=2_0xH000002=2_0xH000003=2S0xH000001=2_0xH000002=3_0xH000003=3";
             TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
         }
 
@@ -125,7 +118,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         {
             var input = "once(prev(A) == 0 && A == 1) && once(once(once(always_true() && B == 1) && B == 2) && B == 3)";
 
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
 
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
@@ -137,14 +130,13 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             if (!expr.ReplaceVariables(scope, out result))
                 Assert.Fail(result.ToString());
 
-            var expected = "N:d0xH001234=0_0xH001234=1.1._N:0xH002345=1.1._N:0xH002345=2.1._0xH002345=3.1.";
+            var expected = "N:d0xH000001=0_0xH000001=1.1._N:0xH000002=1.1._N:0xH000002=2.1._0xH000002=3.1.";
 
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);
             builder.Optimize();
             Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
         }
-
 
         [Test]
         public void TestNestedOnceChain()
@@ -166,7 +158,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
             var input = "once(once(once(always_true() && once(A == 1)) && once(A == 2)) && once(A == 3))";
 
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
 
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
@@ -178,7 +170,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             if (!expr.ReplaceVariables(scope, out result))
                 Assert.Fail(result.ToString());
 
-            var expected = "N:0xH001234=1.1._N:0xH001234=2.1._0xH001234=3.1.";
+            var expected = "N:0xH000001=1.1._N:0xH000001=2.1._0xH000001=3.1.";
 
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);
@@ -192,7 +184,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             // prev(A) should not be moved to the end; A == 4 should.
             var input = "repeated(3, A == 4 && once(prev(A) == 0 && A == 1) && once(B == 2))";
 
-            input = ReplacePlaceholders(input);
+            input = ExpressionTests.ReplacePlaceholders(input);
 
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
@@ -204,7 +196,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             if (!expr.ReplaceVariables(scope, out result))
                 Assert.Fail(result.ToString());
 
-            var expected = "N:d0xH001234=0_N:0xH001234=1.1._N:0xH002345=2.1._0xH001234=4.3.";
+            var expected = "N:d0xH000001=0_N:0xH000001=1.1._N:0xH000002=2.1._0xH000001=4.3.";
 
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);

@@ -157,11 +157,8 @@ namespace RATools.Parser
                 case ExpressionType.Requirement:
                     var clause = expression as RequirementConditionExpression;
                     if (clause != null)
-                    {
-                        if (clause.Behavior != RequirementType.None)
-                            return false;
                         return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
-                    }
+
                     var tallied = expression as TalliedRequirementExpression;
                     if (tallied != null)
                     {
@@ -173,6 +170,9 @@ namespace RATools.Parser
                                 return false;
                         }
                     }
+
+                    if (expression is BehavioralRequirementExpression)
+                        return false;
 
                     return true;
 

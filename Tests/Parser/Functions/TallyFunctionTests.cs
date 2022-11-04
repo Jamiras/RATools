@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Tests.Parser.Expressions;
@@ -87,6 +88,16 @@ namespace RATools.Tests.Parser.Functions
             var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);
             var optimized = clause.Optimize(new TriggerBuilderContext());
             ExpressionTests.AssertAppendString(optimized, expected);
+        }
+
+        [Test]
+        [TestCase("once(A > 1)", "once(A > 2)", ConditionalOperation.And, "once(A > 1)")]
+        [TestCase("repeated(3, A > 1)", "repeated(3, A > 2)", ConditionalOperation.And, "repeated(3, A > 1)")] // same hit target, keep more restrictive clause
+        [TestCase("repeated(3, A > 1)", "repeated(2, A > 2)", ConditionalOperation.And, "repeated(2, A > 1)")] // keep more restrictive if hit target is higher
+        [TestCase("repeated(3, A > 1)", "repeated(4, A > 2)", ConditionalOperation.And, null)]                 // can't keep more restrictive if hit target is lower
+        public void TestLogicalIntersect(string left, string right, ConditionalOperation op, string expected)
+        {
+            TriggerExpressionTests.AssertLogicalIntersect(left, right, op, expected);
         }
 
         [Test]

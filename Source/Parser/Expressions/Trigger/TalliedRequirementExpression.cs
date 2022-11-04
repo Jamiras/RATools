@@ -148,125 +148,6 @@ namespace RATools.Parser.Expressions.Trigger
                 CompareRequirements(_resetConditions, that._resetConditions));
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
-        {
-            if (HitTarget == 0 && context is not ValueBuilderContext)
-                return new ErrorExpression("Unbounded count is only supported in measured value expressions", this);
-
-            ErrorExpression error;
-
-            var sortedConditions = new List<ExpressionBase>(Conditions);
-            int i = sortedConditions.Count - 1;
-            for (; i >= 0; i--)
-            {
-                var behaviorRequirement = sortedConditions[i] as BehavioralRequirementExpression;
-                if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)
-                    continue;
-
-                if (!RequirementClauseExpression.HasHitTarget(sortedConditions[i]))
-                    break;
-            }
-
-            bool needsAlwaysFalse = false;
-            if (i == -1)
-            {
-                // nothing could be moved, need an always_false clause
-                needsAlwaysFalse = true;
-            }
-            else if (i < sortedConditions.Count - 1)
-            {
-                var condition = sortedConditions[i];
-                sortedConditions.RemoveAt(i);
-                sortedConditions.Add(condition);
-            }
-
-            bool hasAddHits = false;
-            var lastCondition = sortedConditions.LastOrDefault();
-            foreach (var condition in sortedConditions)
-            {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return new ErrorExpression("Cannot count " + condition.Type, condition);
-
-                // reset conditions have to be inserted before each tallied condition and the last condition
-                var tallied = condition as TalliedRequirementExpression;
-                if (tallied != null || ReferenceEquals(condition, lastCondition))
-                {
-                    error = BuildResetClause(context);
-                    if (error != null)
-                        return error;
-                }
-
-                var reqClause = expr as RequirementClauseExpression;
-                if (reqClause != null)
-                {
-                    var reordered = reqClause.EnsureLastConditionHasNoHitTarget();
-                    if (reordered == null)
-                    {
-                        // could not find a subclause without a hit count
-                        // dump the subclause and append an always_false() to hold the total hit count
-                        error = expr.BuildSubclauseTrigger(context);
-                        if (error != null)
-                            return error;
-
-                        context.LastRequirement.Type = RequirementType.AddHits;
-                        expr = new AlwaysFalseExpression();
-                    }
-                    else
-                    {
-                        expr = reordered;
-                    }
-                }
-
-                error = expr.BuildSubclauseTrigger(context);
-                if (error != null)
-                    return error;
-
-                var behaviorRequirement = condition as BehavioralRequirementExpression;
-                if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)
-                {
-                    Debug.Assert(context.LastRequirement.Type == RequirementType.SubHits);
-                }
-                else
-                {
-                    context.LastRequirement.Type = RequirementType.AddHits;
-                    hasAddHits = true;
-                }
-            }
-
-            if (!hasAddHits)
-                return new ErrorExpression("tally requires at least one non-deducted item", this);
-
-            if (needsAlwaysFalse)
-            {
-                // always add an always false clause if SubHits are present, or if we couldn't
-                // find an AddHits clause without a hit target.
-                context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-            }
-
-            context.LastRequirement.Type = RequirementType.None;
-            context.LastRequirement.HitCount = HitTarget;
-            return null;
-        }
-
-        private ErrorExpression BuildResetClause(TriggerBuilderContext context)
-        {
-            foreach (var condition in ResetConditions)
-            {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return new ErrorExpression("Cannot count " + condition.Type, condition);
-
-                var error = expr.BuildSubclauseTrigger(context);
-                if (error != null)
-                    return error;
-
-                context.LastRequirement.Type = RequirementType.ResetNextIf;
-            }
-
-            return null;
-        }
-
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
             bool updated = false;
@@ -289,7 +170,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
 
                 var behavioral = optimized as BehavioralRequirementExpression;
-                if (behavioral != null && behavioral.Behavior == RequirementType.SubHits && 
+                if (behavioral != null && behavioral.Behavior == RequirementType.SubHits &&
                     behavioral.Condition is AlwaysFalseExpression)
                 {
                     updated = true;
@@ -320,6 +201,19 @@ namespace RATools.Parser.Expressions.Trigger
                 newResetConditions.Add(optimized);
             }
 
+            if (newResetConditions.Count == 0 && newConditions.Count == 1)
+            {
+                var nestedTally = newConditions[0] as TalliedRequirementExpression;
+                if (nestedTally != null)
+                {
+                    // once(once(A)) => once(A)   repeated(3, repeated(2, A)) => repeated(6, A)
+                    var clone = nestedTally.Clone();
+                    clone.HitTarget *= HitTarget;
+                    CopyLocation(clone);
+                    return clone;
+                }
+            }
+
             if (updated)
             {
                 return new TalliedRequirementExpression
@@ -331,6 +225,218 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return base.Optimize(context);
+        }
+
+        public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
+        {
+            if (HitTarget == 0 && context is not ValueBuilderContext)
+                return new ErrorExpression("Unbounded count is only supported in measured value expressions", this);
+
+            ErrorExpression error;
+
+            var sortedConditions = new List<ExpressionBase>(Conditions);
+            int i = sortedConditions.Count - 1;
+            for (; i >= 0; i--)
+            {
+                var behaviorRequirement = sortedConditions[i] as BehavioralRequirementExpression;
+                if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)
+                    continue;
+
+                if (!RequirementClauseExpression.AllClausesHaveHitTargets(sortedConditions[i]))
+                    break;
+            }
+
+            bool needsAlwaysFalse = false;
+            if (i == -1)
+            {
+                if (HitTarget == 1 && sortedConditions.Count == 1)
+                {
+                    // once(once(A) && repeated(3, B))  =>  once(A) && repeated(3, B)
+                    var clause = sortedConditions[0] as RequirementClauseExpression;
+                    if (clause != null && clause.Operation == ConditionalOperation.And &&
+                        clause.Conditions.All(c => c is TalliedRequirementExpression))
+                    {
+                        return clause.BuildSubclauseTrigger(context);
+                    }
+                }
+
+                // nothing could be moved, need an always_false clause
+                needsAlwaysFalse = true;
+            }
+            else if (i < sortedConditions.Count - 1)
+            {
+                var condition = sortedConditions[i];
+                sortedConditions.RemoveAt(i);
+                sortedConditions.Add(condition);
+            }
+
+            bool hasAddHits = false;
+            var lastCondition = sortedConditions.LastOrDefault();
+            foreach (var condition in sortedConditions)
+            {
+                var expr = condition as RequirementExpressionBase;
+                if (expr == null)
+                    return new ErrorExpression("Cannot count " + condition.Type, condition);
+
+                // reset conditions have to be inserted before each tallied condition and the last condition
+                if (_resetConditions != null)
+                {
+                    var tallied = condition as TalliedRequirementExpression;
+                    if (tallied != null || ReferenceEquals(condition, lastCondition))
+                    {
+                        error = BuildResetClause(context);
+                        if (error != null)
+                            return error;
+                    }
+                }
+
+                var reqClause = expr as RequirementClauseExpression;
+                if (reqClause != null)
+                {
+                    var reordered = reqClause.EnsureLastConditionHasNoHitTarget();
+                    if (reordered == null)
+                    {
+                        // could not find a subclause without a hit count
+                        // dump the subclause and append an always_false() to hold the total hit count
+                        error = expr.BuildSubclauseTrigger(context);
+                        if (error != null)
+                            return error;
+
+                        if (ReferenceEquals(expr, lastCondition))
+                            needsAlwaysFalse = false;
+
+                        context.LastRequirement.Type = RequirementType.AddHits;
+                        expr = new AlwaysFalseExpression();
+                    }
+                    else
+                    {
+                        expr = reordered;
+                    }
+                }
+
+                error = expr.BuildSubclauseTrigger(context);
+                if (error != null)
+                    return error;
+
+                var behaviorRequirement = condition as BehavioralRequirementExpression;
+                if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)
+                {
+                    Debug.Assert(context.LastRequirement.Type == RequirementType.SubHits);
+                }
+                else
+                {
+                    // if there was an explicit always_true() in the clause, it will likely have been
+                    // optimized out. if the preceding item has a hitcount, add it back for the new hitcount
+                    if (context.LastRequirement.HitCount > 0)
+                    {
+                        var clause = expr as RequirementClauseExpression;
+                        if (clause != null && clause.Operation == ConditionalOperation.And && clause.Conditions.Last() is AlwaysTrueExpression)
+                        {
+                            context.LastRequirement.Type = RequirementType.AndNext;
+                            context.Trigger.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                        }
+                    }
+
+                    context.LastRequirement.Type = RequirementType.AddHits;
+                    hasAddHits = true;
+                }
+            }
+
+            if (!hasAddHits)
+                return new ErrorExpression("tally requires at least one non-deducted item", this);
+
+            if (needsAlwaysFalse)
+            {
+                // always add an always false clause if SubHits are present,
+                // or if we couldn't find an AddHits clause without a hit target.
+                context.Trigger.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+            }
+
+            context.LastRequirement.Type = RequirementType.None;
+            context.LastRequirement.HitCount = HitTarget;
+
+            return null;
+        }
+
+        private ErrorExpression BuildResetClause(TriggerBuilderContext context)
+        {
+            foreach (var condition in ResetConditions)
+            {
+                var expr = condition as RequirementExpressionBase;
+                if (expr == null)
+                    return new ErrorExpression("Cannot count " + condition.Type, condition);
+
+                var error = expr.BuildSubclauseTrigger(context);
+                if (error != null)
+                    return error;
+
+                context.LastRequirement.Type = RequirementType.ResetNextIf;
+            }
+
+            return null;
+        }
+
+        public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
+        {
+            if (_conditions == null)
+                return null;
+
+            var thatTallied = that as TalliedRequirementExpression;
+            if (thatTallied == null)
+                return null;
+
+            if (_conditions.Count == 1 && thatTallied._conditions.Count == 1)
+            {
+                var leftExpression = _conditions[0] as RequirementExpressionBase;
+                var rightExpression = thatTallied._conditions[0] as RequirementExpressionBase;
+                if (leftExpression == null || rightExpression == null)
+                    return null;
+
+                var intersect = leftExpression.LogicalIntersect(rightExpression, ConditionalOperation.Or);
+                if (intersect == null)
+                    return null;
+
+                if (thatTallied.HitTarget == HitTarget)
+                {
+                    if (ReferenceEquals(intersect, leftExpression))
+                        return this;
+                    if (ReferenceEquals(intersect, rightExpression))
+                        return that;
+
+                    return new TalliedRequirementExpression
+                    {
+                        HitTarget = HitTarget,
+                        _conditions = new List<ExpressionBase> { intersect },
+                        Location = Location,
+                    };
+                }
+
+                if (ReferenceEquals(intersect, leftExpression) && HitTarget > thatTallied.HitTarget)
+                {
+                    return new TalliedRequirementExpression
+                    {
+                        HitTarget = thatTallied.HitTarget,
+                        _conditions = new List<ExpressionBase> { leftExpression },
+                        Location = Location,
+                    };
+                }
+
+                if (ReferenceEquals(intersect, rightExpression) && HitTarget < thatTallied.HitTarget)
+                {
+                    return new TalliedRequirementExpression
+                    {
+                        HitTarget = HitTarget,
+                        _conditions = new List<ExpressionBase> { rightExpression },
+                        Location = Location,
+                    };
+                }
+            }
+            else
+            {
+                // TODO: tallied
+            }
+
+            return base.LogicalIntersect(that, condition);
         }
     }
 }

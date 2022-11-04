@@ -16,13 +16,11 @@ namespace RATools.Parser.Expressions.Trigger
         public RequirementConditionExpression(RequirementConditionExpression source)
             : this()
         {
-            Behavior = source.Behavior;
             Left = Clone(source.Left);
             Comparison = source.Comparison;
             Right = Clone(source.Right);
         }
 
-        public RequirementType Behavior { get; set; }
         public ExpressionBase Left { get; set; }
         public ComparisonOperation Comparison { get; set; }
         public ExpressionBase Right { get; set; }
@@ -71,7 +69,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var that = obj as RequirementConditionExpression;
             return (that != null && Comparison == that.Comparison &&
-                Behavior == that.Behavior && Right == that.Right && Left == that.Left);
+                Right == that.Right && Left == that.Left);
         }
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
@@ -296,12 +294,8 @@ namespace RATools.Parser.Expressions.Trigger
                 return (thatClause != null) ? thatClause.LogicalIntersect(this, condition) : null;
             }
 
-            if (Behavior != thatCondition.Behavior || Left != thatCondition.Left)
+            if (Left != thatCondition.Left)
                 return null;
-
-            //// cannot merge if either condition has an infinite hit target
-            //if (HitTarget != thatCondition.HitTarget && (HitTarget == 0 || thatCondition.HitTarget == 0))
-            //    return null;
 
             var leftField = CreateField(Right);
             var rightField = CreateField(thatCondition.Right);
@@ -321,22 +315,10 @@ namespace RATools.Parser.Expressions.Trigger
                     return new AlwaysTrueExpression();
 
                 if (merged.Key == RequirementOperator.Divide)
-                {
-                    // these are allowed to conflict with each other
-                    //if (HitTarget > 0)
-                    //    return null;
-                    if (Behavior == RequirementType.PauseIf)
-                        return null;
-                    if (Behavior == RequirementType.ResetIf)
-                        return null;
-
                     return new AlwaysFalseExpression();
-                }
 
                 var result = new RequirementConditionExpression
                 {
-                    Behavior = Behavior,
-                    //HitTarget = Math.Max(HitTarget, thatCondition.HitTarget),
                     Left = Left,
                     Comparison = ConvertToComparisonOperation(merged.Key),
                 };

@@ -58,10 +58,24 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("measured(byte(0x1234) + 22 >= 100)", "A:22_M:0xH001234>=100")] // raw measurements include adjustment as a starting value (target in unchanged)
         [TestCase("measured(byte(0x1234) + 22 >= 100, format=\"percent\")", "G:0xH001234>=78")] // percent measurements factor out the adjustment
         [TestCase("measured(tally(2, byte(0x1234) == 120, byte(0x1234) == 126))", "C:0xH001234=120_M:0xH001234=126.2.")]
+        [TestCase("measured(bitcount(0x1234) == 8)", "M:0xK001234=8")] // should not be optimized to byte=255
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
             TriggerExpressionTests.AssertSerialize(clause, expected);
+        }
+
+        [Test]
+        [TestCase("measured(byte(0x1234))", "M:0xH001234")]
+        [TestCase("measured(byte(0x1234) * 2)", "M:0xH001234*2")]
+        [TestCase("measured(byte(0x1234) / 2)", "M:0xH001234/2")]
+        [TestCase("measured(byte(word(0x1234) + 16))", "I:0x 001234_M:0xH000010")]
+        [TestCase("measured(repeated(0, byte(0x1234) == 5))", "M:0xH001234=5")]
+        [TestCase("measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))", "C:0xH001234=20_M:0xH001234=67")]
+        public void TestBuildValue(string input, string expected)
+        {
+            var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
+            TriggerExpressionTests.AssertSerializeValue(clause, expected);
         }
 
         [Test]
@@ -81,14 +95,6 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
-        public void TestRepeatedZeroInValue()
-        {
-            var input = "measured(repeated(0, byte(0x1234) == 20))";
-            var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
-            TriggerExpressionTests.AssertSerializeValue(clause, "M:0xH001234=20");
-        }
-
-        [Test]
         public void TestComparisonFormatUnknown()
         {
             TriggerExpressionTests.AssertParseError(
@@ -102,14 +108,6 @@ namespace RATools.Tests.Parser.Functions
             TriggerExpressionTests.AssertBuildTriggerError(
                 "measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))",
                 "Unbounded count is only supported in measured value expressions");
-        }
-
-        [Test]
-        public void TestTallyZeroInValue()
-        {
-            var input = "measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))";
-            var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
-            TriggerExpressionTests.AssertSerializeValue(clause, "C:0xH001234=20_M:0xH001234=67");
         }
     }
 }

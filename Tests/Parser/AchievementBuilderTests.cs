@@ -228,57 +228,6 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
-        [TestCase("bit6(0x00627E) == 1", "0xS00627e=1")]
-        [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
-        [TestCase("prior(bitcount(0x00627E)) == 0", "p0xK00627e=0")]
-        [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
-        [TestCase("byte(0x000028) == 3", "0xH000028=3")]
-        [TestCase("3 == byte(0x000028)", "0xH000028=3")] // prefer constants on right
-        [TestCase("high4(0x00616A) == 8", "0xU00616a=8")]
-        [TestCase("word(0x000042) == 5786", "0x 000042=5786")]
-        [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000",
-                  "1=1S0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // no parentheses - && ties first condition to second, add always_true core
-        [TestCase("byte(0x000028) == 12 && (word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)",
-                  "0xH000028=12S0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // parenthesis ensure first condition separate from alts
-        [TestCase("once(byte(0x000440) == 140)", "0xH000440=140.1.")]
-        [TestCase("never(byte(0x000440) == 0)", "R:0xH000440=0")]
-        [TestCase("unless(byte(0x000440) == 0)", "P:0xH000440=0")]
-        [TestCase("tally(4, byte(0x1234) == 56, byte(0x1234) == 67)", "C:0xH001234=56_0xH001234=67.4.")]
-        [TestCase("repeated(4, byte(0x1234) == 56 || byte(0x2345) == 67)", "O:0xH001234=56_0xH002345=67.4.")]
-        [TestCase("dword(0x1234) == 12345678 * 30 / 60", "0xX001234=6172839")]
-        [TestCase("byte(0x1234) * 4 + byte(0x2345) == 6", "A:0xH001234*4_0xH002345=6")]
-        [TestCase("byte(0x1234) / 4 + byte(0x2345) == 6", "A:0xH001234/4_0xH002345=6")]
-        [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "A:0xH001234=0_B:d0xH001234=0_0xH002345=6")]
-        [TestCase("once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_0xO20770f=0.1.")]
-        [TestCase("never(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_R:0xO20770f=0")]
-        [TestCase("never(once(byte(0x1234) == 1) && repeated(12, always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
-        [TestCase("never(repeated(12, once(byte(0x1234) == 1) && always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
-        [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
-        [TestCase("float(0x1111) == 3.14", "fF001111=f3.14")]
-        [TestCase("prev(float(0x1111)) > 3.14", "dfF001111>f3.14")]
-        [TestCase("float(0x1111) < prev(float(0x1111))", "fF001111<dfF001111")]
-        [TestCase("mbf32(0x2345) == -0.5", "fM002345=f-0.5")]
-        [TestCase("never(float(0x1111) == 2.0)", "R:fF001111=f2.0")]
-        [TestCase("measured(byte(0x1234) < 40)", "M:0xH001234<40")]
-        [TestCase("measured(repeated(20, byte(0x1234) == 40))", "M:0xH001234=40.20.")]
-        [TestCase("measured(byte(0x1234) < 40, format=\"percent\")", "G:0xH001234<40")]
-        [TestCase("byte(0x1234) & 7 == 1", "A:0xH001234&7_0=1")]
-        [TestCase("word(byte(0x1234) & 7) == 1", "I:0xH001234&7_0x 000000=1")]
-        [TestCase("word((byte(0x1234) & 7) + 17) == 1", "I:0xH001234&7_0x 000011=1")]
-        [TestCase("dword((dword(0x12345) & 0x1ffffff) + 0xff7f6255) == 60", "I:0xX012345&33554431_0xXff7f6255=60")]
-        [TestCase("once(prev(byte(0x1234)) == byte(0x2345) - 1)", "A:1=0_d0xH001234=0xH002345.1.")]
-        public void TestSerializeRequirements(string input, string expected)
-        {
-            // verify serialization of the builder
-            var achievement = CreateAchievement(input);
-            Assert.That(achievement.SerializeRequirements(), Is.EqualTo(expected));
-
-            // convert to actual achievement and verify serialization of that
-            var cheev = achievement.ToAchievement();
-            Assert.That(AchievementBuilder.SerializeRequirements(cheev), Is.EqualTo(expected));
-        }
-
-        [Test]
         public void TestAreRequirementsSameExact()
         {
             var achievement1 = CreateAchievement("byte(0x001234) == 1 && byte(0x005678) == 78");
