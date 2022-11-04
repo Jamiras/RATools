@@ -81,6 +81,14 @@ namespace RATools.Parser.Expressions.Trigger
             });
         }
 
+        public void AddResetCondition(RequirementExpressionBase condition)
+        {
+            if (_resetConditions == null)
+                _resetConditions = new List<ExpressionBase>();
+
+            _resetConditions.Add(condition);
+        }
+
         ExpressionBase ICloneableExpression.Clone()
         {
             return Clone();
@@ -140,54 +148,12 @@ namespace RATools.Parser.Expressions.Trigger
                 CompareRequirements(_resetConditions, that._resetConditions));
         }
 
-        private static ErrorExpression CheckForUnsupported(ExpressionBase requirement)
-        {
-            //switch (requirement.Type)
-            //{
-            //    case ExpressionType.RequirementClause:
-            //        foreach (var condition in ((RequirementClauseExpression)requirement).Conditions)
-            //        {
-            //            var error = CheckForUnsupported(condition);
-            //            if (error != null)
-            //                return error;
-            //        }
-            //        break;
-
-            //    case ExpressionType.TalliedRequirement:
-            //        return new ErrorExpression("tally not allowed in subclause", requirement);
-
-            //    case ExpressionType.MeasuredRequirement:
-            //        return new ErrorExpression("measured not allowed in subclause", requirement);
-
-            //    case ExpressionType.BehavioralRequirement:
-            //        switch (((BehavioralRequirementExpression)requirement).Behavior)
-            //        {
-            //            case RequirementType.ResetIf:
-            //                return new ErrorExpression("never not allowed in subclause", requirement);
-            //        }
-            //        break;
-            //}
-
-            return null;
-        }
-
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             if (HitTarget == 0 && context is not ValueBuilderContext)
                 return new ErrorExpression("Unbounded count is only supported in measured value expressions", this);
 
-            foreach (var condition in ResetConditions)
-            {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return new ErrorExpression("Cannot count " + condition.Type, condition);
-
-                var error = expr.BuildSubclauseTrigger(context);
-                if (error != null)
-                    return error;
-
-                context.LastRequirement.Type = RequirementType.ResetNextIf;
-            }
+            ErrorExpression error;
 
             var sortedConditions = new List<ExpressionBase>(Conditions);
             int i = sortedConditions.Count - 1;
@@ -215,15 +181,21 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             bool hasAddHits = false;
+            var lastCondition = sortedConditions.Last();
             foreach (var condition in sortedConditions)
             {
-                var error = CheckForUnsupported(condition);
-                if (error != null)
-                    return error;
-
                 var expr = condition as RequirementExpressionBase;
                 if (expr == null)
                     return new ErrorExpression("Cannot count " + condition.Type, condition);
+
+                // reset conditions have to be inserted before each tallied condition and the last condition
+                var tallied = condition as TalliedRequirementExpression;
+                if (tallied != null || ReferenceEquals(condition, lastCondition))
+                {
+                    error = BuildResetClause(context);
+                    if (error != null)
+                        return error;
+                }
 
                 var reqClause = expr as RequirementClauseExpression;
                 if (reqClause != null)
@@ -274,6 +246,24 @@ namespace RATools.Parser.Expressions.Trigger
 
             context.LastRequirement.Type = RequirementType.None;
             context.LastRequirement.HitCount = HitTarget;
+            return null;
+        }
+
+        private ErrorExpression BuildResetClause(TriggerBuilderContext context)
+        {
+            foreach (var condition in ResetConditions)
+            {
+                var expr = condition as RequirementExpressionBase;
+                if (expr == null)
+                    return new ErrorExpression("Cannot count " + condition.Type, condition);
+
+                var error = expr.BuildSubclauseTrigger(context);
+                if (error != null)
+                    return error;
+
+                context.LastRequirement.Type = RequirementType.ResetNextIf;
+            }
+
             return null;
         }
 
