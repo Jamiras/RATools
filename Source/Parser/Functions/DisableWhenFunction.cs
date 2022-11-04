@@ -34,17 +34,17 @@ namespace RATools.Parser.Functions
             }
 
             var until = GetParameter(scope, "until", out result);
-            if (comparison == null)
+            if (until == null)
                 return false;
 
             var untilExpression = until as RequirementExpressionBase;
             if (untilExpression == null)
             {
-                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                result = new ErrorExpression("until did not evaluate to a valid comparison", until);
                 return false;
             }
 
-            result = new DisableWhenExpression() { Condition = expression, Until = untilExpression };
+            result = new DisableWhenRequirementExpression() { Condition = expression, Until = untilExpression };
             CopyLocation(result);
             return true;
         }

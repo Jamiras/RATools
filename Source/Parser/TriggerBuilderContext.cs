@@ -515,7 +515,7 @@ namespace RATools.Parser
                     if (triggerExpression != null)
                     {
                         var requirements = new List<Requirement>();
-                        var context = new TriggerBuilderContext() { Trigger = requirements };
+                        var context = new ValueBuilderContext() { Trigger = requirements };
                         var error = triggerExpression.BuildTrigger(context);
                         if (error != null)
                         {

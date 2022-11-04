@@ -1,107 +1,84 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class MeasuredFunction : FlagConditionFunction
+    internal class MeasuredFunction : FunctionDefinitionExpression
     {
         public MeasuredFunction()
-            : base("measured", RequirementType.Measured)
+            : base("measured")
         {
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
             Parameters.Add(new VariableDefinitionExpression("when"));
             Parameters.Add(new VariableDefinitionExpression("format"));
 
-            DefaultParameters["when"] = AlwaysTrueFunction.CreateAlwaysTrueFunctionCall();
+            DefaultParameters["when"] = new AlwaysTrueExpression();
             DefaultParameters["format"] = new StringConstantExpression("raw");
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var measuredScope = new InterpreterScope(scope) { Context = functionCall };
-            var error = base.BuildTrigger(context, measuredScope, functionCall);
-            if (error != null)
-                return error;
-
-            ExpressionBase result;
-            var format = functionCall.Parameters.ElementAt(2);
-            if (!format.ReplaceVariables(scope, out result))
-                return (ErrorExpression)result;
-
-            StringConstantExpression formatStr = result as StringConstantExpression;
-            if (formatStr == null)
-                return new ErrorExpression("format is not a string", format);
-
-            if (formatStr.Value != "raw")
-            {
-                if (scope.GetContext<ValueBuilderContext>() != null)
-                    return new ErrorExpression("Value fields only support raw measured values", format);
-
-                if (formatStr.Value == "percent")
-                    context.LastRequirement.Type = RequirementType.MeasuredPercent;
-                else
-                    return new ErrorExpression("Unknown format: " + formatStr.Value, format);
-            }
-
-            var when = functionCall.Parameters.ElementAt(1);
-
-            var builder = new ScriptInterpreterAchievementBuilder();
-            if (!TriggerBuilderContext.ProcessAchievementConditions(builder, when, scope, out result))
-                return new ErrorExpression("when did not evaluate to a valid comparison", when) { InnerError = (ErrorExpression)result };
-
-            error = builder.CollapseForSubClause();
-            if (error != null)
-                return error;
-
-            if (builder.CoreRequirements.Count != 1 || builder.CoreRequirements.First().Evaluate() != true)
-            {
-                bool hasHitCount = builder.CoreRequirements.Last().HitCount != 0;
-                foreach (var requirement in builder.CoreRequirements)
-                {
-                    if (requirement.Type == RequirementType.None)
-                        requirement.Type = RequirementType.MeasuredIf;
-                    else if (requirement.Type == RequirementType.AndNext && !hasHitCount)
-                        requirement.Type = RequirementType.MeasuredIf;
-
-                    context.Trigger.Add(requirement);
-                }
-            }
-
-            return null;
+            return Evaluate(scope, out result);
         }
 
-        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            bool seenLogicalJoin = false;
-            foreach (var requirement in builder.CoreRequirements)
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
+
+            var expression = comparison as RequirementExpressionBase;
+            if (expression == null)
             {
-                switch (requirement.Type)
+                var memoryValue = comparison as MemoryValueExpression;
+                if (memoryValue == null)
                 {
-                    case RequirementType.AndNext:
-                    case RequirementType.OrNext:
-                        seenLogicalJoin = true;
-                        break;
-
-                    case RequirementType.AddHits:
-                    case RequirementType.SubHits:
-                    case RequirementType.ResetNextIf:
-                        seenLogicalJoin = false;
-                        break;
-
-                    default:
-                        if (seenLogicalJoin && !requirement.IsCombining)
-                        {
-                            if (requirement.HitCount == 0 && requirement == builder.CoreRequirements.Last())
-                                return new ErrorExpression("measured comparison can only have one logical clause");
-                        }
-
-                        seenLogicalJoin = false;
-                        break;
+                    var upconvert = comparison as IUpconvertibleExpression;
+                    if (upconvert != null)
+                        memoryValue = upconvert.UpconvertTo(ExpressionType.MemoryValue) as MemoryValueExpression;
+    
+                    if (memoryValue == null)
+                    {
+                        result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                        return false;
+                    }
                 }
+
+                expression = new MeasuredRequirementExpression.MemoryValueWrapper(memoryValue);
+                memoryValue.CopyLocation(expression);
             }
 
-            return base.ModifyRequirements(builder);
+            var when = GetParameter(scope, "when", out result);
+            if (when == null)
+                return false;
+
+            var whenExpression = when as RequirementExpressionBase;
+            if (whenExpression == null)
+            {
+                result = new ErrorExpression("when did not evaluate to a valid comparison", when);
+                return false;
+            }
+
+            var formatStr = GetStringParameter(scope, "format", out result);
+            if (formatStr == null)
+                return false;
+
+            RequirementType format = RequirementType.Measured;
+            if (formatStr.Value == "percent")
+            {
+                format = RequirementType.MeasuredPercent;
+            }
+            else if (formatStr.Value != "raw")
+            {
+                result = new ErrorExpression("Unknown format: " + formatStr.Value, formatStr);
+                return false;
+            }
+
+            result = new MeasuredRequirementExpression() { Condition = expression, When = whenExpression, Format = format };
+            CopyLocation(result);
+            return true;
         }
     }
 }

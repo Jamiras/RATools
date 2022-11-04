@@ -23,7 +23,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (!RepeatedFunction.CanBeTallied(comparison, out result))
+            if (!RepeatedFunction.CanBeTallied(comparison, true, out result))
                 return false;
 
             var tally = new TalliedRequirementExpression { HitTarget = 1 };

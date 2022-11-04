@@ -1,13 +1,8 @@
-﻿using Jamiras.Components;
-using NUnit.Framework;
-using RATools.Data;
+﻿using NUnit.Framework;
 using RATools.Parser;
-using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
-using RATools.Tests.Parser.Expressions.Trigger;
 using RATools.Tests.Parser.Expressions;
-using System.Collections.Generic;
+using RATools.Tests.Parser.Expressions.Trigger;
 using System.Linq;
 
 namespace RATools.Tests.Parser.Functions
@@ -32,7 +27,7 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("disable_when(repeated(6, byte(0x001234) == 5))")]
         public void TestAppendString(string input)
         {
-            var clause = TriggerExpressionTests.Parse<DisableWhenExpression>(input);
+            var clause = TriggerExpressionTests.Parse<DisableWhenRequirementExpression>(input);
             ExpressionTests.AssertAppendString(clause, input);
         }
 
@@ -47,7 +42,7 @@ namespace RATools.Tests.Parser.Functions
             "Z:0xH001234=1_C:0xH001234=56.1._Z:0xH001234=1_C:0xH001236=54.2._Z:0xH001234=1_P:0xH001235=55.3.")] // ResetNextIf has to proceed each clause of tally
         public void TestBuildTrigger(string input, string expected)
         {
-            var clause = TriggerExpressionTests.Parse<DisableWhenExpression>(input);
+            var clause = TriggerExpressionTests.Parse<DisableWhenRequirementExpression>(input);
             TriggerExpressionTests.AssertSerialize(clause, expected);
         }
     }

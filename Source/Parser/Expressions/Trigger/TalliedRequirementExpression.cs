@@ -181,7 +181,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             bool hasAddHits = false;
-            var lastCondition = sortedConditions.Last();
+            var lastCondition = sortedConditions.LastOrDefault();
             foreach (var condition in sortedConditions)
             {
                 var expr = condition as RequirementExpressionBase;

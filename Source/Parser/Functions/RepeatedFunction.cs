@@ -25,7 +25,7 @@ namespace RATools.Parser.Functions
             if (count == null)
                 return false;
 
-            if (count.Value <= 0)
+            if (count.Value < 0)
             {
                 result = new ErrorExpression("count must be greater than or equal to zero", count);
                 return false;
@@ -35,7 +35,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (!CanBeTallied(comparison, out result))
+            if (!CanBeTallied(comparison, true, out result))
                 return false;
 
             var tally = new TalliedRequirementExpression { HitTarget = (uint)count.Value };
@@ -46,14 +46,14 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public static bool CanBeTallied(ExpressionBase comparison, out ExpressionBase result)
+        public static bool CanBeTallied(ExpressionBase comparison, bool allowNever, out ExpressionBase result)
         {
             var clause = comparison as RequirementClauseExpression;
             if (clause != null)
             {
                 foreach (var condition in clause.Conditions)
                 {
-                    if (!CanBeTallied(condition, out result))
+                    if (!CanBeTallied(condition, allowNever, out result))
                         return false;
                 }
 
@@ -69,7 +69,7 @@ namespace RATools.Parser.Functions
                 return true;
             }
 
-            string functionName = "unknown";
+            string functionName = null;
 
             var tallied = comparison as TalliedRequirementExpression;
             if (tallied != null)
@@ -85,9 +85,24 @@ namespace RATools.Parser.Functions
 
             var behavioral = comparison as BehavioralRequirementExpression;
             if (behavioral != null)
-                functionName = BehavioralRequirementExpression.GetFunctionName(behavioral.Behavior);
+            {
+                if (behavioral.Behavior == Data.RequirementType.ResetIf && allowNever)
+                {
+                    result = null;
+                    return true;
+                }
 
-            result = new ErrorExpression(functionName + " not allowed in subclause", comparison);
+                functionName = BehavioralRequirementExpression.GetFunctionName(behavioral.Behavior);
+            }
+
+            if (comparison is MeasuredRequirementExpression)
+                functionName = "measured";
+
+            if (functionName != null)
+                result = new ErrorExpression(functionName + " not allowed in subclause", comparison);
+            else
+                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+
             return false;
         }
 

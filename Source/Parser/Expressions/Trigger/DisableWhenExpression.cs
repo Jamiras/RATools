@@ -6,15 +6,15 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class DisableWhenExpression : RequirementExpressionBase,
+    internal class DisableWhenRequirementExpression : RequirementExpressionBase,
         ICloneableExpression
     {
-        public DisableWhenExpression()
+        public DisableWhenRequirementExpression()
             : base()
         {
         }
 
-        public DisableWhenExpression(DisableWhenExpression source)
+        public DisableWhenRequirementExpression(DisableWhenRequirementExpression source)
         {
             Condition = source.Condition;
             Until = source.Until;
@@ -28,9 +28,9 @@ namespace RATools.Parser.Expressions.Trigger
             return Clone();
         }
 
-        public new DisableWhenExpression Clone()
+        public new DisableWhenRequirementExpression Clone()
         {
-            return new DisableWhenExpression(this);
+            return new DisableWhenRequirementExpression(this);
         }
 
         internal override void AppendString(StringBuilder builder)
@@ -53,7 +53,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as DisableWhenExpression;
+            var that = obj as DisableWhenRequirementExpression;
             return (that != null && Condition == that.Condition && Until == that.Until);
         }
 
@@ -69,7 +69,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (updated)
             {
-                var optimized = new DisableWhenExpression
+                var optimized = new DisableWhenRequirementExpression
                 {
                     Condition = conditionOptimized,
                     Until = untilOptimized
@@ -95,7 +95,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // do so using the reset clause of a new TalliedRequirementExpression
                     var newTally = tallied.Clone();
                     newTally.AddResetCondition(Until);
-                    var newDisableWhen = new DisableWhenExpression 
+                    var newDisableWhen = new DisableWhenRequirementExpression 
                     {
                         Condition = newTally, 
                         Until = new AlwaysFalseExpression() 

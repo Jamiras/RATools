@@ -154,8 +154,7 @@ namespace RATools.Tests.Parser.Functions
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234) * 10 + byte(0x2345), format=\"percent\"))",
                 "1:1 leaderboard call failed\r\n" +
-                "- 1:80 measured call failed\r\n" +
-                "- 1:130 Value fields only support raw measured values");
+                "- 1:80 Value fields only support raw measured values");
         }
 
         [Test]
