@@ -3,6 +3,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Linq;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser.Functions
 {
@@ -36,14 +37,43 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
+            if (!CreateTallyExpression(comparison, (uint)count.Value, out result))
+                return false;
+
+            CopyLocation(result);
+            return true;
+        }
+
+        internal static bool CreateTallyExpression(ExpressionBase comparison, uint count, out ExpressionBase result)
+        {
             if (!CanBeTallied(comparison, RequirementType.ResetIf, out result))
                 return false;
 
-            var tally = new TalliedRequirementExpression { HitTarget = (uint)count.Value };
-            tally.AddTalliedCondition(comparison);
+            var tally = new TalliedRequirementExpression { HitTarget = count };
+
+            var reqClause = comparison as RequirementClauseExpression;
+            if (reqClause != null && reqClause.Operation == ConditionalOperation.And &&
+                reqClause.Conditions.OfType<BehavioralRequirementExpression>().Any(c => c.Behavior == RequirementType.ResetIf))
+            {
+                // split the reset conditions out
+                var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
+                foreach (var c in reqClause.Conditions)
+                {
+                    var behavioral = c as BehavioralRequirementExpression;
+                    if (behavioral != null && behavioral.Behavior == RequirementType.ResetIf)
+                        tally.AddResetCondition(behavioral.Condition);
+                    else
+                        newClause.AddCondition(c);
+                }
+
+                tally.AddTalliedCondition(newClause);
+            }
+            else
+            {
+                tally.AddTalliedCondition(comparison);
+            }
 
             result = tally;
-            CopyLocation(result);
             return true;
         }
 

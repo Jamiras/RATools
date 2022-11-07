@@ -49,26 +49,6 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null)
                 _conditions = new List<ExpressionBase>();
 
-            var reqClause = condition as RequirementClauseExpression;
-            if (reqClause != null && reqClause.Operation == ConditionalOperation.And &&
-                reqClause.Conditions.OfType<BehavioralRequirementExpression>().Any(c => c.Behavior == RequirementType.ResetIf))
-            {
-                if (_resetConditions == null)
-                    _resetConditions = new List<ExpressionBase>();
-
-                var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
-                foreach (var c in reqClause.Conditions)
-                {
-                    var behavioral = c as BehavioralRequirementExpression;
-                    if (behavioral != null && behavioral.Behavior == RequirementType.ResetIf)
-                        _resetConditions.Add(behavioral.Condition);
-                    else
-                        newClause.AddCondition(c);
-                }
-
-                condition = newClause;
-            }
-
             _conditions.Add(condition);
         }
 

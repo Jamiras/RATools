@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Threading;
 
 namespace RATools.Parser.Expressions.Trigger
 {
@@ -419,7 +420,33 @@ namespace RATools.Parser.Expressions.Trigger
                 if (splitBehavior == RequirementType.None && Operation != splitCondition)
                     splitBehavior = (Operation == ConditionalOperation.Or) ? RequirementType.OrNext : RequirementType.AndNext;
 
-                error = BuildTrigger(achievementContext, _conditions, splitBehavior);
+                var resetRequirements = new List<ExpressionBase>();
+                var conditions = new List<ExpressionBase>(_conditions.Count);
+                foreach (var condition in _conditions)
+                {
+                    var behavioral = condition as BehavioralRequirementExpression;
+                    if (behavioral != null && behavioral.Behavior == RequirementType.ResetIf)
+                    {
+                        resetRequirements.Add(new BehavioralRequirementExpression
+                        {
+                            Behavior = RequirementType.ResetNextIf,
+                            Condition = behavioral.Condition
+                        });
+                    }
+                    else
+                    {
+                        conditions.Add(condition);
+                    }
+                }
+
+                if (resetRequirements.Count > 0)
+                {
+                    error = BuildTrigger(achievementContext, resetRequirements, splitBehavior);
+                    if (error != null)
+                        return error;
+                }
+
+                error = BuildTrigger(achievementContext, conditions, splitBehavior);
                 if (error != null)
                     return error;
 

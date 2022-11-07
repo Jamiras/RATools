@@ -44,6 +44,9 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementType.ResetIf:
                     return "never";
 
+                case RequirementType.ResetNextIf:
+                    return "resetnext_if";
+
                 case RequirementType.Trigger:
                     return "trigger_when";
 
@@ -82,27 +85,32 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var optimized = Condition.Optimize(context);
 
-            if (Behavior == RequirementType.ResetIf || Behavior == RequirementType.PauseIf)
+            switch (Behavior)
             {
-                // invert logic for any never() or unless() subclauses
-                var behavioral = optimized as BehavioralRequirementExpression;
-                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
-                {
-                    // never(never(A)) => never(!A)
-                    // never(unless(A)) => never(!A)
-                    // unless(never(A)) => unless(!A)
-                    // unless(unless(A)) => unless(!A)
-                    return new BehavioralRequirementExpression
+                case RequirementType.ResetIf:
+                case RequirementType.ResetNextIf:
+                case RequirementType.PauseIf:
+                    // invert logic for any never() or unless() subclauses
+                    var behavioral = optimized as BehavioralRequirementExpression;
+                    if (behavioral != null && behavioral.CanBeEliminatedByInverting)
                     {
-                        Behavior = Behavior,
-                        Condition = behavioral.Condition.InvertLogic(),
-                        Location = Location
-                    };
-                }
+                        // never(never(A)) => never(!A)
+                        // never(unless(A)) => never(!A)
+                        // unless(never(A)) => unless(!A)
+                        // unless(unless(A)) => unless(!A)
+                        return new BehavioralRequirementExpression
+                        {
+                            Behavior = Behavior,
+                            Condition = behavioral.Condition.InvertLogic(),
+                            Location = Location
+                        };
+                    }
 
-                var clause = optimized as RequirementClauseExpression;
-                if (clause != null)
-                    optimized = clause.InvertResetsAndPauses();
+                    var clause = optimized as RequirementClauseExpression;
+                    if (clause != null)
+                        optimized = clause.InvertResetsAndPauses();
+
+                    break;
             }
 
             if (!ReferenceEquals(Condition, optimized))
@@ -134,6 +142,7 @@ namespace RATools.Parser.Expressions.Trigger
                     goto default;
 
                 case RequirementType.ResetIf:
+                case RequirementType.ResetNextIf:
                 case RequirementType.PauseIf:
                     if (reqClause != null && reqClause.Operation == ConditionalOperation.Or)
                     {

@@ -24,13 +24,9 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (!RepeatedFunction.CanBeTallied(comparison, RequirementType.ResetIf, out result))
+            if (!RepeatedFunction.CreateTallyExpression(comparison, 1, out result))
                 return false;
 
-            var tally = new TalliedRequirementExpression { HitTarget = 1 };
-            tally.AddTalliedCondition(comparison);
-
-            result = tally;
             CopyLocation(result);
             return true;
         }
