@@ -608,7 +608,16 @@ namespace RATools.Parser.Expressions.Trigger
                 newRequirements.Add(optimized);
             }
 
-            updated |= FlattenClauses(newRequirements, Operation);
+            if (FlattenClauses(newRequirements, Operation))
+            {
+                updated = true;
+
+                if (alwaysFalseCondition == null)
+                    alwaysFalseCondition = newRequirements.FirstOrDefault(r => r is AlwaysFalseExpression);
+
+                if (alwaysTrueCondition == null)
+                    alwaysTrueCondition = newRequirements.FirstOrDefault(r => r is AlwaysTrueExpression);
+            }
 
             if (alwaysTrueCondition != null)
             {
