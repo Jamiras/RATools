@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -518,6 +519,19 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
+        private static bool HasBehavior(ExpressionBase expression, RequirementType behavior)
+        {
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null && behavioral.Behavior == behavior)
+                return true;
+
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return clause.Conditions.Any(c => HasBehavior(c, behavior));
+
+            return false;
+        }
+
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
             if (_conditions == null || _conditions.Count == 0)
@@ -527,6 +541,8 @@ namespace RATools.Parser.Expressions.Trigger
             var newRequirements = new List<ExpressionBase>(_conditions.Count);
             var scope = new InterpreterScope();
             bool seenHitCount = false;
+            ExpressionBase alwaysFalseCondition = null;
+            ExpressionBase alwaysTrueCondition = null;
 
             foreach (var requirement in _conditions)
             {
@@ -545,10 +561,13 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     if (Operation == ConditionalOperation.Or)
                     {
-                        newRequirements.Clear();
-                        newRequirements.Add(optimized);
-                        updated = true;
-                        break;
+                        if (alwaysTrueCondition == null)
+                        {
+                            alwaysTrueCondition = optimized;
+                            newRequirements.Add(optimized);
+                            updated = true;
+                        }
+                        continue;
                     }
 
                     if (!seenHitCount || context is not TallyBuilderContext)
@@ -561,10 +580,13 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     if (Operation == ConditionalOperation.And)
                     {
-                        newRequirements.Clear();
-                        newRequirements.Add(optimized);
-                        updated = true;
-                        break;
+                        if (alwaysFalseCondition == null)
+                        {
+                            alwaysFalseCondition = optimized;
+                            newRequirements.Add(optimized);
+                            updated = true;
+                        }
+                        continue;
                     }
 
                     if (!seenHitCount || context is not TallyBuilderContext)
@@ -580,16 +602,50 @@ namespace RATools.Parser.Expressions.Trigger
                 newRequirements.Add(optimized);
             }
 
-            if (newRequirements.Count < 100)
-                updated |= EliminateRedundantConditions(newRequirements, Operation, context);
-
             updated |= FlattenClauses(newRequirements, Operation);
 
-            if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
-                return (RequirementExpressionBase)newRequirements[0];
+            if (alwaysTrueCondition != null)
+            {
+                // this clause is always true. only keep the subclauses containing ResetIfs
+                for (int i = newRequirements.Count - 1; i >= 0; i--)
+                {
+                    if (HasBehavior(newRequirements[i], RequirementType.ResetIf))
+                        continue;
 
-            if (!updated)
-                return this;
+                    newRequirements.RemoveAt(i);
+                }
+
+                if (newRequirements.Count == 0)
+                    newRequirements.Add(alwaysTrueCondition);
+            }
+            else if (alwaysFalseCondition != null)
+            {
+                // this clause can never be true. assume it is be being used to segregate ResetIf
+                // and PauseIf conditions into an alt. discard everything but the always_false()
+                // condition and the ResetIf/PauseIf conditions.
+                for (int i = newRequirements.Count - 1; i >= 0; i--)
+                {
+                    if (HasBehavior(newRequirements[i], RequirementType.ResetIf) ||
+                        HasBehavior(newRequirements[i], RequirementType.PauseIf))
+                    {
+                        continue;
+                    }
+
+                    if (!ReferenceEquals(newRequirements[i], alwaysFalseCondition))
+                        newRequirements.RemoveAt(i);
+                }
+            }
+            else
+            {
+                if (newRequirements.Count < 100)
+                    updated |= EliminateRedundantConditions(newRequirements, Operation, context);
+
+                if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
+                    return (RequirementExpressionBase)newRequirements[0];
+
+                if (!updated)
+                    return this;
+            }
 
             var newClause = new RequirementClauseExpression { Operation = Operation };
             newClause._conditions = newRequirements;

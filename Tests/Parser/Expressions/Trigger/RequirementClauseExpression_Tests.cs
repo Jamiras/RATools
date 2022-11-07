@@ -27,6 +27,14 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4 && byte(0x003456) == 5", "0xH001234=3_0xH002345=4_0xH003456=5")]
         [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4 || byte(0x003456) == 5", "O:0xH001234=3_O:0xH002345=4_0xH003456=5")]
         [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
+        [TestCase("always_true() && byte(0x001234) == 0", "0xH001234=0")] // always_true() is redundant
+        [TestCase("always_false() && byte(0x001234) == 0", "0=1")] // always_false() makes everything else redundant
+        [TestCase("always_false() && never(byte(0x001234) == 0)", "0=1_R:0xH001234=0")] // always_false() ANDed with reset is not eliminated
+        [TestCase("always_false() && unless(byte(0x001234) == 0)", "0=1_P:0xH001234=0")] // always_false() ANDed with pause is not eliminated
+        [TestCase("always_false() || byte(0x001234) == 0", "0xH001234=0")] // always_false is redundant
+        [TestCase("always_true() || byte(0x001234) == 0", "1=1")] // always_true() makes everything else redundant
+        [TestCase("always_true() || never(byte(0x001234) == 0)", "R:0xH001234=0")] // discard always_true() when reset is kept
+        [TestCase("always_true() || unless(byte(0x001234) == 0)", "1=1")] // always_true() makes everything else redundant
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

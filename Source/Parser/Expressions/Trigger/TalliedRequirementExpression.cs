@@ -113,6 +113,16 @@ namespace RATools.Parser.Expressions.Trigger
 
                 builder.Length -= 2; // remove last ", "
                 builder.Append(')');
+
+                if (_resetConditions != null)
+                {
+                    foreach (var condition in _resetConditions)
+                    {
+                        builder.Append(" && never(");
+                        condition.AppendString(builder);
+                        builder.Append(')');
+                    }
+                }
             }
             else
             {
@@ -212,6 +222,23 @@ namespace RATools.Parser.Expressions.Trigger
                     CopyLocation(clone);
                     return clone;
                 }
+
+                var nestedBehavior = newConditions[0] as BehavioralRequirementExpression;
+                if (nestedBehavior != null)
+                {
+                    // repeated(3, never(A))  =>  never(repeated(3, A))
+                    var newTally = new TalliedRequirementExpression
+                    {
+                        HitTarget = HitTarget,
+                        _conditions = new List<ExpressionBase>() { nestedBehavior.Condition }
+                    };
+                    return new BehavioralRequirementExpression
+                    {
+                        Behavior = nestedBehavior.Behavior,
+                        Condition = newTally,
+                        Location = Location
+                    };
+                }
             }
 
             if (updated)
@@ -281,13 +308,9 @@ namespace RATools.Parser.Expressions.Trigger
                 // reset conditions have to be inserted before each tallied condition and the last condition
                 if (_resetConditions != null)
                 {
-                    var tallied = condition as TalliedRequirementExpression;
-                    if (tallied != null || ReferenceEquals(condition, lastCondition))
-                    {
-                        error = BuildResetClause(context);
-                        if (error != null)
-                            return error;
-                    }
+                    error = BuildResetClause(context);
+                    if (error != null)
+                        return error;
                 }
 
                 var reqClause = expr as RequirementClauseExpression;

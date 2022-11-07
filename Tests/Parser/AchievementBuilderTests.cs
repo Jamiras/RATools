@@ -365,8 +365,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) & byte(0x001234)", "byte(0x001234) & byte(0x001234)")] // could be simplified to just byte(0x001234)
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
-        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
-        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("never(repeated(3, always_true()))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && repeated(3, never(always_true()))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
         [TestCase("repeated(3, byte(0x001234) != byte(0x001234))", "always_false()")] // always false will never be true, regardless of how many frames it's false
         [TestCase("0 < 256", "always_true()")] // always true
         [TestCase("0 == 1", "always_false()")] // always false
@@ -375,16 +375,15 @@ namespace RATools.Tests.Parser
         [TestCase("4.56 == 4.56", "always_true()")] // always true
         [TestCase("4.56 > 4.57", "always_false()")] // always false
         [TestCase("4.56 > 4", "always_true()")] // always false
-        [TestCase("0 == 1 && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
-        [TestCase("0 == 1 && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
-        [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
-        [TestCase("1 == 1 && (1 == 2 || 1 == 3)", "always_false()")] // if all alts are false, entire trigger is false
+        [TestCase("always_false() && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
+        [TestCase("always_false() && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
+        [TestCase("always_true() && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
         [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (always_false() && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
                   "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && always_false()))")] // always_false paired with ResetIf does not eradicate the ResetIf
-        [TestCase("once(byte(0x001234) == 1) && never(0 == 1)", "once(byte(0x001234) == 1)")] // a ResetIf for a condition that can never be true is redundant
-        [TestCase("once(byte(0x001234) == 1) && unless(0 == 1)", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
-        [TestCase("once(byte(0x001234) == 1) && never(1 == 1)", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
-        [TestCase("once(byte(0x001234) == 1) && unless(1 == 1)", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
+        [TestCase("once(byte(0x001234) == 1) && never(always_false())", "once(byte(0x001234) == 1)")] // a ResetIf for a condition that can never be true is redundant
+        [TestCase("once(byte(0x001234) == 1) && unless(always_false())", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
+        [TestCase("once(byte(0x001234) == 1) && never(always_true())", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
+        [TestCase("once(byte(0x001234) == 1) && unless(always_true())", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && unless(once(byte(0x2345) == 0x2345))", "byte(0x001234) == 1")] // condition becomes always_false(), and unless(always_false()) can be eliminated
@@ -474,9 +473,9 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) == 1 && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless can be promoted because core won't be affected
                   "byte(0x001234) == 1 && once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)")]
         [TestCase("once(byte(0x001234) == 1) && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless is not promoted because of hit target
-                  "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)))")]
+                  "once(byte(0x001234) == 1) && once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)")]
         [TestCase("once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (always_false() || never(byte(0x002345) == 1))", // never should not be promoted to core containing unless
-                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 1))")]
+                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && never(byte(0x002345) == 1)")]
         public void TestOptimizePromoteCommonAltsToCore(string input, string expected)
         {
             var achievement = CreateAchievement(input);
@@ -550,9 +549,9 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "always_true()")]
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
         [TestCase("always_false() || byte(0x001234) == 2", "byte(0x001234) == 2")] // always_false group can be removed
-        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
+        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
-            "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without pauseif or resetif to be removed
+            "once(byte(0x001234) == 4) && never(byte(0x002345) == 1)")] // always_true alt causes groups without resetif to be removed
         [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0), once(byte(0x1111) == 2 && byte(0x2222) == 0))",
             "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0))")]
         public void TestOptimizeMergeDuplicateAlts(string input, string expected)
@@ -630,8 +629,8 @@ namespace RATools.Tests.Parser
         [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
         [TestCase("once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
                   "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
-        [TestCase("tally(2, once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301))",
-                  "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301))")] // always_false() inside once() is optimized out
+        [TestCase("tally(2, always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
+                  "repeated(2, word(0x001234) >= 284 && word(0x001234) <= 301)")] // always_false() inside once() is optimized out
         [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))",
                   "tally(2, (once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3)))")]
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
