@@ -671,16 +671,25 @@ namespace RATools.Parser.Expressions.Trigger
             if (alwaysTrueCondition != null)
             {
                 // this clause is always true. only keep the subclauses containing ResetIfs
+                // also need to keep the alwaysTrueCondition if all the ResetIfs are in clauses that can never be true
+                bool needsAlwaysTrueAlt = true;
                 for (int i = newRequirements.Count - 1; i >= 0; i--)
                 {
                     if (HasBehavior(newRequirements[i], RequirementType.ResetIf))
-                        continue;
+                    {
+                        var clause = newRequirements[i] as RequirementClauseExpression;
+                        if (clause == null || !clause.Conditions.Any(c => c is AlwaysFalseExpression))
+                            needsAlwaysTrueAlt = false;
 
-                    newRequirements.RemoveAt(i);
+                        continue;
+                    }
+
+                    if (!ReferenceEquals(newRequirements[i], alwaysTrueCondition))
+                        newRequirements.RemoveAt(i);
                 }
 
-                if (newRequirements.Count == 0)
-                    newRequirements.Add(alwaysTrueCondition);
+                if (!needsAlwaysTrueAlt && newRequirements.Count > 1)
+                    newRequirements.Remove(alwaysTrueCondition);
             }
             else if (alwaysFalseCondition != null)
             {

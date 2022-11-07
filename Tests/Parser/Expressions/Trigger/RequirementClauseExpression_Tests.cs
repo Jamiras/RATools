@@ -50,6 +50,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "0xH002345=5S0xH001234=1S0xH001234=2")] // alts created
         [TestCase("byte(0x002345) == 5 && __ornext(byte(0x001234) == 1 || byte(0x001234) == 2)",
                   "O:0xH001234=1_N:0xH001234=2_0xH002345=5")] // forced OrNext chain
+        [TestCase("once(byte(0x1234) == 1) && (always_true() || (always_false() && never(byte(0x2345) == 2) && unless(byte(0x3456) == 3)))",
+                  "0xH001234=1.1.S1=1S0=1_R:0xH002345=2_P:0xH003456=3")] // always_true()/always_false() forced alt groups
         public void TestBuildAchievement(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

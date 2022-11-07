@@ -366,7 +366,7 @@ namespace RATools.Tests.Parser
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
         [TestCase("never(repeated(3, always_true()))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
-        [TestCase("byte(0x001234) == 1 && repeated(3, never(always_true()))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && never(repeated(3, always_true()))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
         [TestCase("repeated(3, byte(0x001234) != byte(0x001234))", "always_false()")] // always false will never be true, regardless of how many frames it's false
         [TestCase("0 < 256", "always_true()")] // always true
         [TestCase("0 == 1", "always_false()")] // always false
@@ -382,7 +382,7 @@ namespace RATools.Tests.Parser
                   "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && always_false()))")] // always_false paired with ResetIf does not eradicate the ResetIf
         [TestCase("once(byte(0x001234) == 1) && never(always_false())", "once(byte(0x001234) == 1)")] // a ResetIf for a condition that can never be true is redundant
         [TestCase("once(byte(0x001234) == 1) && unless(always_false())", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
-        [TestCase("once(byte(0x001234) == 1) && never(always_true())", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
+        [TestCase("once(byte(0x001234) == 1) && never(always_true())", "always_false()")] // a ResetIf for a condition that is always true will never let the trigger fire
         [TestCase("once(byte(0x001234) == 1) && unless(always_true())", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
@@ -755,7 +755,8 @@ namespace RATools.Tests.Parser
         public void TestGuardedResetIfWithAlts()
         {
             var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
-                "(always_true() || (always_false() && never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
+                "(always_true() || (always_false() &&" +
+                " never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
                 "(byte(0x4567) == 1 || byte(0x004567) == 2)");
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(),

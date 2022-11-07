@@ -253,8 +253,146 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
+        private void NormalizeLimits(ref ExpressionBase expression)
+        {
+            var condition = expression as RequirementConditionExpression;
+            if (condition == null)
+                return;
+
+            var rightValue = condition.Right as IntegerConstantExpression;
+            if (rightValue == null)
+                return;
+
+            long min = 0, max = 0xFFFFFFFF;
+            long value = (long)(uint)rightValue.Value;
+
+            var memoryAccessor = condition.Left as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+            {
+                memoryAccessor.GetMinMax(out min, out max);
+            }
+            else
+            {
+                var modifiedMemoryAccessor = condition.Left as ModifiedMemoryAccessorExpression;
+                if (modifiedMemoryAccessor != null)
+                {
+                    modifiedMemoryAccessor.GetMinMax(out min, out max);
+                }
+                else
+                {
+                    var memoryValue = condition.Left as MemoryValueExpression;
+                    if (memoryValue != null)
+                        memoryValue.GetMinMax(out min, out max);
+                }
+            }
+
+            var newComparison = Comparison;
+
+            if (value < min)
+            {
+                switch (Comparison)
+                {
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.NotEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+                }
+            }
+            else if (value == min)
+            {
+                switch (Comparison)
+                {
+                    case ComparisonOperation.LessThan:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        newComparison = ComparisonOperation.Equal;
+                        break;
+
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.NotEqual:
+                        newComparison = ComparisonOperation.NotEqual;
+                        break;
+                }
+            }
+            else if (value > max)
+            {
+                switch (Comparison)
+                {
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.NotEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+                }
+            }
+            else if (value == max)
+            {
+                switch (Comparison)
+                {
+                    case ComparisonOperation.GreaterThan:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.LessThanOrEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        newComparison = ComparisonOperation.Equal;
+                        break;
+
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.NotEqual:
+                        newComparison = ComparisonOperation.NotEqual;
+                        break;
+                }
+            }
+
+            if (newComparison != Comparison)
+            {
+                expression = new RequirementConditionExpression
+                {
+                    Left = Left,
+                    Comparison = newComparison,
+                    Right = Right
+                };
+            }
+        }
+
         public ExpressionBase Normalize()
         {
+            if (Left.IsLiteralConstant && !Right.IsLiteralConstant)
+            {
+                var reversed = new RequirementConditionExpression
+                {
+                    Left = Right,
+                    Comparison = ComparisonExpression.ReverseComparisonOperation(Comparison),
+                    Right = Left
+                };
+                return reversed.Normalize();
+            }
+
             var modifiedMemoryAccessor = Left as ModifiedMemoryAccessorExpression;
             if (modifiedMemoryAccessor != null && modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.None)
             {
@@ -264,6 +402,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             var result = NormalizeBCD();
+            NormalizeLimits(ref result);
 
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);

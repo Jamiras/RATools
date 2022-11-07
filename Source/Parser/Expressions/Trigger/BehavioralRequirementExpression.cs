@@ -110,6 +110,20 @@ namespace RATools.Parser.Expressions.Trigger
                     if (clause != null)
                         optimized = clause.InvertResetsAndPauses();
 
+                    if (optimized is AlwaysFalseExpression)
+                        return new AlwaysTrueExpression();
+
+                    if (optimized is AlwaysTrueExpression)
+                        return new AlwaysFalseExpression();
+
+                    break;
+
+                case RequirementType.Trigger:
+                    if (optimized is AlwaysTrueExpression || optimized is AlwaysFalseExpression)
+                        return optimized;
+                    break;
+
+                default:
                     break;
             }
 

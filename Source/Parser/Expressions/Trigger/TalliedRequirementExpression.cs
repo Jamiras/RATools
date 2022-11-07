@@ -167,6 +167,14 @@ namespace RATools.Parser.Expressions.Trigger
                     continue;
                 }
 
+                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
+                {
+                    // never(A) => !A
+                    // unless(A) => !A
+                    optimized = behavioral.Condition.InvertLogic();
+                    updated = true;
+                }
+
                 updated |= !ReferenceEquals(condition, optimized);
                 newConditions.Add(optimized);
             }
@@ -223,6 +231,9 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (updated)
             {
+                if (newConditions.Count == 0)
+                    return new AlwaysFalseExpression();
+
                 return new TalliedRequirementExpression
                 {
                     HitTarget = HitTarget,

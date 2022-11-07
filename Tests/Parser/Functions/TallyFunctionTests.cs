@@ -82,7 +82,8 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
-        [TestCase("tally(4, always_false())", "repeated(4, always_false())")]
+        [TestCase("tally(4, always_true())", "repeated(4, always_true())")]
+        [TestCase("tally(4, always_false())", "always_false()")]
         [TestCase("tally(8, byte(0x1234) == 56, always_false(), deduct(always_false()), byte(0x1234) == 78)",
             "tally(8, byte(0x001234) == 56, byte(0x001234) == 78)")] // always_falses are ignored
         public void TestOptimize(string input, string expected)
