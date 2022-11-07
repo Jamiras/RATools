@@ -232,6 +232,8 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
+            int expansionSize = 1;
+
             var expanded = new List<ExpressionBase>();
             foreach (var subclause in clause._conditions)
             {
@@ -249,7 +251,27 @@ namespace RATools.Parser.Expressions.Trigger
                 }
                 else
                 {
+                    if (subclauseClause != null && subclauseClause is not OrNextRequirementClauseExpression)
+                        expansionSize *= subclauseClause.Conditions.Count();
+
                     expanded.Add(subclause);
+                }
+            }
+
+            if (expansionSize >= 20)
+            {
+                for (int i = 0; i < expanded.Count; i++)
+                {
+                    var subclause = expanded[i] as RequirementClauseExpression;
+                    if (subclause == null || subclause is OrNextRequirementClauseExpression)
+                        continue;
+
+                    var orNext = new OrNextRequirementClauseExpression();
+                    foreach (var c in subclause.Conditions)
+                        orNext.AddCondition(c);
+
+                    expanded[i] = orNext;
+                    expansionSize /= subclause.Conditions.Count();
                 }
             }
 
@@ -263,7 +285,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     var subclause = expanded[j];
                     var subclauseClause = subclause as RequirementClauseExpression;
-                    if (subclauseClause == null)
+                    if (subclauseClause == null || subclause is OrNextRequirementClauseExpression)
                     {
                         group.Add(subclause); // B
                     }
@@ -295,7 +317,7 @@ namespace RATools.Parser.Expressions.Trigger
                 do
                 {
                     var subclause = expanded[k] as RequirementClauseExpression;
-                    if (subclause != null)
+                    if (subclause != null && subclause is not OrNextRequirementClauseExpression)
                     {
                         indices[k]++;
                         if (indices[k] < subclause._conditions.Count)
