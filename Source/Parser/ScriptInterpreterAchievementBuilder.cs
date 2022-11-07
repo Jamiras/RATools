@@ -109,19 +109,20 @@ namespace RATools.Parser
                 return new ErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
+            var context = new TriggerBuilderContext();
             var numFlattenedClauses = flattenedClauses.Count();
             var partIndex = new int[numFlattenedClauses];
             var parts = new List<ExpressionBase>();
             do
             {
-                var andPart = flattenedClauses[numFlattenedClauses - 1][partIndex[numFlattenedClauses - 1]];
-                for (int clauseIndex = numFlattenedClauses - 2; clauseIndex >= 0; clauseIndex--)
+                var andClause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
+                for (int clauseIndex = 0; clauseIndex < numFlattenedClauses; clauseIndex++)
                 {
                     var expression = flattenedClauses[clauseIndex][partIndex[clauseIndex]];
-                    andPart = new ConditionalExpression(expression, ConditionalOperation.And, andPart);
+                    andClause.AddCondition(expression);
                 }
 
-                parts.Add(andPart);
+                parts.Add(andClause.Optimize(context));
 
                 int i = numFlattenedClauses - 1;
                 do
@@ -131,11 +132,11 @@ namespace RATools.Parser
 
                     if (i == 0)
                     {
-                        var orPart = parts[parts.Count - 1];
-                        for (i = parts.Count - 2; i >= 0; i--)
-                            orPart = new ConditionalExpression(parts[i], ConditionalOperation.Or, orPart);
+                        var orClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or };
+                        for (i = 0; i < parts.Count; i++)
+                            orClause.AddCondition(parts[i]);
 
-                        return orPart;
+                        return orClause;
                     }
 
                     partIndex[i--] = 0;
@@ -213,7 +214,7 @@ namespace RATools.Parser
                     return null;
             }
 
-            ExpressionBase result = null;
+            var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or };
             ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {
@@ -226,18 +227,10 @@ namespace RATools.Parser
                     andNextClause = reqClause;
                 }
 
-                if (result == null)
-                    result = condition;
-                else
-                    result = new ConditionalExpression(result, ConditionalOperation.Or, condition);
+                newClause.AddCondition(condition);
             }
 
-            result = new FunctionCallExpression("__ornext", new ExpressionBase[]
-            {
-                result
-            });
-
-            return result;
+            return newClause;
         }
 
         private static RequirementClauseExpression BubbleUpOrs(RequirementClauseExpression condition)

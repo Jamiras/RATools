@@ -1,11 +1,9 @@
 ﻿using RATools.Data;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -118,7 +116,7 @@ namespace RATools.Parser.Expressions.Trigger
             return BuildTrigger(context, _conditions, RequirementType.None);
         }
 
-        private static ErrorExpression BuildTrigger(TriggerBuilderContext context, 
+        protected static ErrorExpression BuildTrigger(TriggerBuilderContext context, 
             List<ExpressionBase> conditions, RequirementType joinBehavior)
         {
             // no complex subclauses, just dump them
@@ -132,9 +130,17 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var clause = condition as RequirementClauseExpression;
                 if (clause != null && clause._conditions != null)
+                {
                     complexSubclauses.Add(clause);
+
+                    // if an explicit OrNext subclause is encountered, force the AndNext join behavior
+                    if (clause is OrNextRequirementClauseExpression)
+                        joinBehavior = RequirementType.AndNext;
+                }
                 else
+                {
                     subclauses.Add(condition);
+                }
             }
 
             // if we're attempting to AND one or more OR subclauses at the top level, put them into alts
@@ -680,6 +686,11 @@ namespace RATools.Parser.Expressions.Trigger
                         {
                             requirements[j] = intersect;
                             requirements.RemoveAt(i);
+
+                            // make sure to process the intersect too
+                            if (j == i + 1)
+                                i++;
+
                             updated = true;
                             break;
                         }
@@ -744,12 +755,14 @@ namespace RATools.Parser.Expressions.Trigger
             for (int i = requirements.Count - 1; i >= 0; i--)
             {
                 var requirementI = requirements[i] as RequirementClauseExpression;
-                if (requirementI == null || requirementI.Operation != condition)
-                    continue;
+                if (requirementI != null && requirementI.Operation == condition)
+                {
+                    requirements.RemoveAt(i);
+                    for (int j = requirementI._conditions.Count - 1; j >= 0; j--)
+                        requirements.Insert(i, requirementI._conditions[j]);
 
-                requirements.RemoveAt(i);
-                for (int j = requirementI._conditions.Count - 1; j >= 0; j--)
-                    requirements.Insert(i, requirementI._conditions[j]);
+                    updated = true;
+                }
             }
 
             return updated;
@@ -1122,6 +1135,71 @@ namespace RATools.Parser.Expressions.Trigger
                 _conditions = newConditions,
                 Location = Location
             };
+        }
+
+        public class OrNextRequirementClauseExpression 
+            : RequirementClauseExpression, ICloneableExpression
+        {
+            public OrNextRequirementClauseExpression()
+                : base()
+            {
+                Operation = ConditionalOperation.Or;
+            }
+
+            public OrNextRequirementClauseExpression(OrNextRequirementClauseExpression source)
+                : base(source)
+            {
+                Operation = ConditionalOperation.Or;
+            }
+
+            ExpressionBase ICloneableExpression.Clone()
+            {
+                return Clone();
+            }
+
+            public new OrNextRequirementClauseExpression Clone()
+            {
+                return new OrNextRequirementClauseExpression(this);
+            }
+
+            internal override void AppendString(StringBuilder builder)
+            {
+                builder.Append("__ornext(");
+                base.AppendString(builder);
+                builder.Append(')');
+            }
+
+            protected override bool Equals(ExpressionBase obj)
+            {
+                return obj is OrNextRequirementClauseExpression && base.Equals(obj);
+            }
+
+            public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
+            {
+                var optimized = base.Optimize(context);
+                if (!ReferenceEquals(this, optimized))
+                {
+                    var orClause = optimized as RequirementClauseExpression;
+                    if (orClause != null && orClause.Operation == ConditionalOperation.Or)
+                    {
+                        var orNextClause = new OrNextRequirementClauseExpression();
+                        foreach (var condition in orClause.Conditions)
+                            orNextClause.AddCondition(condition);
+
+                        optimized = orNextClause;
+                    }
+                }
+
+                return optimized;
+            }
+
+            public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
+            {
+                if (_conditions == null || _conditions.Count == 0)
+                    return null;
+
+                return BuildTrigger(context, _conditions, RequirementType.OrNext);
+            }
         }
     }
 }

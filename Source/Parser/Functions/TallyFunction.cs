@@ -60,7 +60,7 @@ namespace RATools.Parser.Functions
 
             foreach (var comparison in varargs.Entries)
             {
-                if (!RepeatedFunction.CanBeTallied(comparison, false, out result))
+                if (!RepeatedFunction.CanBeTallied(comparison, RequirementType.ResetNextIf, out result))
                 {
                     var behavioral = comparison as BehavioralRequirementExpression;
                     if (behavioral == null || behavioral.Behavior != RequirementType.SubHits)
@@ -145,7 +145,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (!RepeatedFunction.CanBeTallied(comparison, false, out result))
+            if (!RepeatedFunction.CanBeTallied(comparison, RequirementType.ResetNextIf, out result))
                 return false;
 
             result = new BehavioralRequirementExpression

@@ -73,6 +73,8 @@ namespace RATools.Tests.Parser.Functions
             "C:0xH001234=56.10._D:0xH002345=99.10._0=1.21.")] // deduct and non-deduct repeated
         [TestCase("tally(22, byte(0x1234) == 56, always_true(), deduct(always_true()), byte(0x1234) == 78)",
             "C:0xH001234=56_C:1=1_D:1=1_0xH001234=78.22.")] // always_trues are not ignored
+        [TestCase("tally(23, byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3))",
+            "N:0xH002345=2_Z:0xH003456=3_0xH001234=1.23.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);

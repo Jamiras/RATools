@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Expressions;
+﻿using RATools.Data;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Linq;
@@ -35,7 +36,7 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            if (!CanBeTallied(comparison, true, out result))
+            if (!CanBeTallied(comparison, RequirementType.ResetIf, out result))
                 return false;
 
             var tally = new TalliedRequirementExpression { HitTarget = (uint)count.Value };
@@ -46,15 +47,40 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public static bool CanBeTallied(ExpressionBase comparison, bool allowNever, out ExpressionBase result)
+        public static bool CanBeTallied(ExpressionBase comparison, RequirementType allowedNever, out ExpressionBase result)
         {
             var clause = comparison as RequirementClauseExpression;
             if (clause != null)
             {
-                foreach (var condition in clause.Conditions)
+                if (clause.Operation == ConditionalOperation.And && allowedNever == RequirementType.ResetNextIf)
                 {
-                    if (!CanBeTallied(condition, allowNever, out result))
+                    bool hasReset = false;
+                    bool hasNonReset = false;
+                    foreach (var condition in clause.Conditions)
+                    {
+                        if (!CanBeTallied(condition, RequirementType.ResetIf, out result))
+                            return false;
+
+                        var behavioralReq = condition as BehavioralRequirementExpression;
+                        if (behavioralReq != null && behavioralReq.Behavior == RequirementType.ResetIf)
+                            hasReset = true;
+                        else
+                            hasNonReset = true;
+                    }
+
+                    if (hasReset && !hasNonReset)
+                    {
+                        result = new ErrorExpression("subclause must have at least one non-never expression", comparison);
                         return false;
+                    }
+                }
+                else
+                {
+                    foreach (var condition in clause.Conditions)
+                    {
+                        if (!CanBeTallied(condition, allowedNever, out result))
+                            return false;
+                    }
                 }
 
                 result = null;
@@ -86,7 +112,7 @@ namespace RATools.Parser.Functions
             var behavioral = comparison as BehavioralRequirementExpression;
             if (behavioral != null)
             {
-                if (behavioral.Behavior == Data.RequirementType.ResetIf && allowNever)
+                if (behavioral.Behavior == allowedNever)
                 {
                     result = null;
                     return true;
@@ -104,34 +130,6 @@ namespace RATools.Parser.Functions
                 result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
 
             return false;
-        }
-
-        internal class OrNextWrapperFunction : FunctionDefinitionExpression
-        {
-            public OrNextWrapperFunction()
-                : base("__ornext")
-            {
-            }
-
-            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-            {
-                var comparison = GetParameter(scope, "comparison", out result);
-                if (comparison == null)
-                    return false;
-
-                // cannot directly access FunctionDefinitionExpression.ReplaceVariables, so mimic it
-                result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { comparison });
-                CopyLocation(result);
-                return true;
-            }
-
-            //public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
-            //{
-            //    var comparison = functionCall.Parameters.ElementAt(0);
-
-            //    // last requirement hit target will implicitly be left at 0
-            //    return BuildTriggerCondition(context, scope, comparison);
-            //}
         }
     }
 }

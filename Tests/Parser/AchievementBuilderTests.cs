@@ -645,12 +645,14 @@ namespace RATools.Tests.Parser
         [Test]
         // ==== CrossMultiplyOrConditions ====
         [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
-        [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
+        [TestCase("(A || B) && (A || D)",
+                //"(A && A) || (A && D) || (B && A) || (B && D)"
+                  "A || (B && D)")] // "A || (A && D)" and "A || (B && A)" are both just "A"
         [TestCase("(A || B) && (A || C) && (B || C)",
-                  "(A && A && B) || (A && A && C) || (A && C && B) || (A && C && C) || " +
-                  "(B && A && B) || (B && A && C) || (B && C && B) || (B && C && C)")]
+                  "(A && B) || (A && C) || (A && C && B) || " +
+                  "(B && A) || (B && A && C) || (B && C)")] // multiple "A && C" and "B && C" clauses reduced
         [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
-                  "(A && B && A && C) || (A && B && B && D) || (C && D && A && C) || (C && D && B && D)")]
+                  "(A && B && C) || (A && B && D) || (C && D && A) || (C && D && B)")]
         [TestCase("(A || B || C) && (D || E || F)",
                   "(A && D) || (A && E) || (A && F) || (B && D) || (B && E) || (B && F) || (C && D) || (C && E) || (C && F)")]
         [TestCase("(A && (B || C)) && (D || E)",

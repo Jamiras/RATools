@@ -501,6 +501,32 @@ namespace RATools.Parser.Expressions
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
         }
+
+        internal class OrNextWrapperFunction : FunctionDefinitionExpression
+        {
+            public OrNextWrapperFunction()
+                : base("__ornext")
+            {
+                Parameters.Add(new VariableDefinitionExpression("comparison"));
+            }
+
+            public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+            {
+                return Evaluate(scope, out result);
+            }
+
+            public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+            {
+                var comparison = GetParameter(scope, "comparison", out result);
+                if (comparison == null)
+                    return false;
+
+                var wrapper = new RequirementClauseExpression.OrNextRequirementClauseExpression();
+                wrapper.AddCondition(comparison);
+                result = wrapper;
+                return true;
+            }
+        }
     }
 
     /// <summary>

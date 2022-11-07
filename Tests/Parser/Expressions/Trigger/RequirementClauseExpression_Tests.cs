@@ -46,6 +46,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "1=1S0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // no parentheses - && ties first condition to second, add always_true core
         [TestCase("byte(0x000028) == 12 && (word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)",
                   "0xH000028=12S0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // parenthesis ensure first condition separate from alts
+        [TestCase("byte(0x002345) == 5 && (byte(0x001234) == 1 || byte(0x001234) == 2)",
+                  "0xH002345=5S0xH001234=1S0xH001234=2")] // alts created
+        [TestCase("byte(0x002345) == 5 && __ornext(byte(0x001234) == 1 || byte(0x001234) == 2)",
+                  "O:0xH001234=1_N:0xH001234=2_0xH002345=5")] // forced OrNext chain
         public void TestBuildAchievement(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
