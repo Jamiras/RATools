@@ -62,7 +62,12 @@ namespace RATools.Parser.Expressions.Trigger
 
             builder.Append(' ');
 
-            Right.AppendString(builder);
+            // special handling: comparisons use unsigned values
+            var rightInteger = Right as IntegerConstantExpression;
+            if (rightInteger != null && rightInteger.Value < 0)
+                builder.Append((uint)rightInteger.Value);
+            else
+                Right.AppendString(builder);
         }
 
         protected override bool Equals(ExpressionBase obj)
@@ -323,8 +328,29 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
 
                     case ComparisonOperation.GreaterThan:
+                        if (max == min + 1)
+                        {
+                            // bitX(A) > 0  =>  bitX(A) == 1
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)max);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.GreaterThan;
+                        }
+                        break;
+
                     case ComparisonOperation.NotEqual:
-                        newComparison = ComparisonOperation.NotEqual;
+                        if (max == min + 1)
+                        {
+                            // bitX(A) != 0  =>  bitX(A) == 1
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)max);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.NotEqual;
+                        }
                         break;
                 }
             }
@@ -363,22 +389,41 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
 
                     case ComparisonOperation.LessThan:
-                        newComparison = ComparisonOperation.LessThan;
+                        if (max == min + 1)
+                        {
+                            // bitX(A) < 1  =>  bitX(A) == 0
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)min);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.LessThan;
+                        }
                         break;
 
                     case ComparisonOperation.NotEqual:
-                        newComparison = ComparisonOperation.NotEqual;
+                        if (max == min + 1)
+                        {
+                            // bitX(A) != 1  =>  bitX(A) == 0
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)min);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.NotEqual;
+                        }
                         break;
                 }
             }
 
-            if (newComparison != Comparison)
+            if (newComparison != Comparison || !ReferenceEquals(rightValue, condition.Right))
             {
                 expression = new RequirementConditionExpression
                 {
                     Left = Left,
                     Comparison = newComparison,
-                    Right = Right
+                    Right = rightValue,
+                    Location = condition.Location
                 };
             }
         }
