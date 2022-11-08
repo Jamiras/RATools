@@ -84,6 +84,7 @@ namespace RATools.Parser.Functions
                 });
             }
 
+            newClause.Location = clause.Location;
             return newClause;
         }
     }

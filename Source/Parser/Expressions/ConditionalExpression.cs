@@ -521,7 +521,7 @@ namespace RATools.Parser.Expressions
                 if (comparison == null)
                     return false;
 
-                var wrapper = new RequirementClauseExpression.OrNextRequirementClauseExpression();
+                var wrapper = new RequirementClauseExpression.OrNextRequirementClauseExpression() { Location = comparison.Location };
                 wrapper.AddCondition(comparison);
                 result = wrapper;
                 return true;

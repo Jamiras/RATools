@@ -97,7 +97,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             // so the inner clause will retain its ResetIf. to prevent a discrepency with
             // the 'never(never(A) == X)' test where the logic is inverted, generate an error.
             var input = "never(never(byte(0x1234) == 56 && once(byte(0x2345) == 67)))";
-            TriggerExpressionTests.AssertBuildTriggerError(input, "Cannot apply 'never' to condition already flagged with ResetIf");
+            TriggerExpressionTests.AssertBuildTriggerError(input, "Cannot apply never to condition already flagged with never");
         }
 
         [Test]

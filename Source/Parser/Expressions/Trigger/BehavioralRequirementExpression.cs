@@ -1,8 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -176,7 +174,21 @@ namespace RATools.Parser.Expressions.Trigger
                 return error;
 
             if (context.LastRequirement.Type != RequirementType.None)
-                return new ErrorExpression("Cannot apply '" + GetFunctionName(Behavior) + "' to condition already flagged with " + context.LastRequirement.Type);
+            {
+                switch (Behavior)
+                {
+                    case RequirementType.Trigger:
+                        // trigger_when(trigger_when(A)) => trigger_when(A)
+                        if (context.LastRequirement.Type == RequirementType.Trigger)
+                            break;
+
+                        goto default;
+
+                    default:
+                        return new ErrorExpression("Cannot apply " + GetFunctionName(Behavior) +
+                            " to condition already flagged with " + GetFunctionName(context.LastRequirement.Type), this);
+                }
+            }
 
             context.LastRequirement.Type = Behavior;
 

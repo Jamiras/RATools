@@ -115,7 +115,11 @@ namespace RATools.Parser
             var parts = new List<ExpressionBase>();
             do
             {
-                var andClause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
+                var andClause = new RequirementClauseExpression
+                { 
+                    Operation = ConditionalOperation.And,
+                    Location = flattenedClauses[0][partIndex[0]].Location
+                };
                 for (int clauseIndex = 0; clauseIndex < numFlattenedClauses; clauseIndex++)
                 {
                     var expression = flattenedClauses[clauseIndex][partIndex[clauseIndex]];
@@ -132,7 +136,11 @@ namespace RATools.Parser
 
                     if (i == 0)
                     {
-                        var orClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or };
+                        var orClause = new RequirementClauseExpression
+                        {
+                            Operation = ConditionalOperation.Or,
+                            Location = parts[0].Location
+                        };
                         for (i = 0; i < parts.Count; i++)
                             orClause.AddCondition(parts[i]);
 
@@ -214,7 +222,11 @@ namespace RATools.Parser
                     return null;
             }
 
-            var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or };
+            var newClause = new RequirementClauseExpression
+            {
+                Operation = ConditionalOperation.Or,
+                Location = clause[0].Location
+            };
             ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {

@@ -248,10 +248,12 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (leftHasBCD && rightHasBCD)
             {
-                return new RequirementConditionExpression(this)
+                return new RequirementConditionExpression()
                 {
                     Left = newLeft,
+                    Comparison = Comparison,
                     Right = newRight,
+                    Location = Location,
                 };
             }
 
@@ -540,6 +542,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             ExpressionBase result = condition;
             NormalizeLimits(ref result);
+            result.Location = Location;
             return (result as RequirementExpressionBase) ?? condition;
         }
     }

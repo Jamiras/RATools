@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading;
+using System.Windows.Markup.Localizer;
 
 namespace RATools.Parser.Expressions.Trigger
 {
@@ -117,7 +117,7 @@ namespace RATools.Parser.Expressions.Trigger
             return BuildTrigger(context, _conditions, RequirementType.None);
         }
 
-        protected static ErrorExpression BuildTrigger(TriggerBuilderContext context, 
+        private ErrorExpression BuildTrigger(TriggerBuilderContext context, 
             List<ExpressionBase> conditions, RequirementType joinBehavior)
         {
             // no complex subclauses, just dump them
@@ -131,48 +131,49 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var clause = condition as RequirementClauseExpression;
                 if (clause != null && clause._conditions != null)
-                {
                     complexSubclauses.Add(clause);
-
-                    // if an explicit OrNext subclause is encountered, force the AndNext join behavior
-                    if (clause is OrNextRequirementClauseExpression)
-                        joinBehavior = RequirementType.AndNext;
-                }
                 else
-                {
                     subclauses.Add(condition);
-                }
             }
 
             // if we're attempting to AND one or more OR subclauses at the top level, put them into alts
             if (joinBehavior == RequirementType.None && complexSubclauses.All(c => c.Operation == ConditionalOperation.Or))
             {
-                var achievementContext = context as AchievementBuilderContext;
-                if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
+                if (complexSubclauses.Count == 1 && complexSubclauses[0] is OrNextRequirementClauseExpression)
                 {
-                    BubbleUpOrs(complexSubclauses);
-
-                    var altsNeeded = 1;
-                    if (complexSubclauses.Count > 1)
+                    // single explicit OrNext should be joined to any other conditions via AndNext
+                    joinBehavior = RequirementType.AndNext;
+                }
+                else
+                {
+                    // no explicit OrNexts. if building an achievement, put the ORs into alts
+                    var achievementContext = context as AchievementBuilderContext;
+                    if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
                     {
-                        foreach (var subclause in complexSubclauses)
-                            altsNeeded *= subclause._conditions.Count;
-                    }
+                        BubbleUpOrs(complexSubclauses);
 
-                    if (altsNeeded < 20)
-                    {
-                        var error = AppendSubclauses(context, subclauses, joinBehavior);
-                        if (error != null)
-                            return error;
-
-                        if (complexSubclauses.Count == 1)
+                        var altsNeeded = 1;
+                        if (complexSubclauses.Count > 1)
                         {
-                            var clause = complexSubclauses[0] as RequirementClauseExpression;
-                            if (clause != null && clause.Operation == ConditionalOperation.Or)
-                                return clause.BuildAlts(achievementContext);
+                            foreach (var subclause in complexSubclauses)
+                                altsNeeded *= subclause._conditions.Count;
                         }
 
-                        return CrossMultiplyOrs(achievementContext, complexSubclauses);
+                        if (altsNeeded < 20)
+                        {
+                            var error = AppendSubclauses(context, subclauses, joinBehavior);
+                            if (error != null)
+                                return error;
+
+                            if (complexSubclauses.Count == 1)
+                            {
+                                var clause = complexSubclauses[0];
+                                if (clause.Operation == ConditionalOperation.Or)
+                                    return clause.BuildAlts(achievementContext);
+                            }
+
+                            return CrossMultiplyOrs(achievementContext, complexSubclauses);
+                        }
                     }
                 }
             }
@@ -183,7 +184,7 @@ namespace RATools.Parser.Expressions.Trigger
                 // as long as it's the first in the chain. if there are multiple, they can't
                 // be joined.
                 if (complexSubclauses.Count > 1)
-                    return new ErrorExpression("Cannot logically join multiple subclauses");
+                    return new ErrorExpression("Cannot logically join multiple subclauses", this);
 
                 subclauses.Insert(0, complexSubclauses[0]);
                 return AppendSubclauses(context, subclauses, joinBehavior);
@@ -296,7 +297,7 @@ namespace RATools.Parser.Expressions.Trigger
                     if (subclause == null || subclause is OrNextRequirementClauseExpression)
                         continue;
 
-                    var orNext = new OrNextRequirementClauseExpression();
+                    var orNext = new OrNextRequirementClauseExpression { Location = subclause.Location };
                     foreach (var c in subclause.Conditions)
                         orNext.AddCondition(c);
 
@@ -340,7 +341,8 @@ namespace RATools.Parser.Expressions.Trigger
                 newSubclause.AddCondition(new RequirementClauseExpression
                 {
                     _conditions = group,
-                    Operation = ConditionalOperation.And
+                    Operation = ConditionalOperation.And,
+                    Location = group[0].Location
                 });
 
                 k = indices.Length - 1;
@@ -373,7 +375,12 @@ namespace RATools.Parser.Expressions.Trigger
                 if (joinBehavior != RequirementType.None)
                 {
                     if (context.LastRequirement.Type != RequirementType.None)
-                        return new ErrorExpression("Cannot apply " + joinBehavior + " to condition already flagged with " + context.LastRequirement.Type);
+                    {
+                        return new ErrorExpression("Cannot apply " +
+                            BehavioralRequirementExpression.GetFunctionName(joinBehavior) +
+                            " to condition already flagged with " +
+                            BehavioralRequirementExpression.GetFunctionName(context.LastRequirement.Type), subclauses[i]);
+                    }
 
                     context.LastRequirement.Type = joinBehavior;
                 }
@@ -383,7 +390,7 @@ namespace RATools.Parser.Expressions.Trigger
             return BuildSubclauseTrigger(lastClause, context);
         }
 
-        private static ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
+        private ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
             List<RequirementClauseExpression> subclauses)
         {
             ErrorExpression error;
@@ -482,7 +489,8 @@ namespace RATools.Parser.Expressions.Trigger
                         resetRequirements.Add(new BehavioralRequirementExpression
                         {
                             Behavior = RequirementType.ResetNextIf,
-                            Condition = behavioral.Condition
+                            Condition = behavioral.Condition,
+                            Location = behavioral.Location
                         });
                     }
                     else
@@ -565,6 +573,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             // (A || (B && (C || D)))  =>  (A || (B && C) || (B && D))
             var newClause = new RequirementClauseExpression() { Operation = ConditionalOperation.Or };
+            newClause.Location = Location;
             foreach (var condition in Conditions)
                 BubbleUpOrs(newClause, condition);
 
@@ -1221,6 +1230,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
+            clause.Location = Location;
             return clause;
         }
 
@@ -1320,7 +1330,7 @@ namespace RATools.Parser.Expressions.Trigger
                     var orClause = optimized as RequirementClauseExpression;
                     if (orClause != null && orClause.Operation == ConditionalOperation.Or)
                     {
-                        var orNextClause = new OrNextRequirementClauseExpression();
+                        var orNextClause = new OrNextRequirementClauseExpression { Location = orClause.Location };
                         foreach (var condition in orClause.Conditions)
                             orNextClause.AddCondition(condition);
 

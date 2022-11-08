@@ -196,7 +196,10 @@ namespace RATools.Parser.Expressions
                         Right = comparison.Right,
                     };
                     result = requirement.Normalize();
-                    return (result is not ErrorExpression);
+                    if (result is ErrorExpression)
+                        return false;
+                    result.Location = Location;
+                    return true;
             }
 
             switch (comparison.Right.Type)
@@ -211,7 +214,10 @@ namespace RATools.Parser.Expressions
                         Right = comparison.Left,
                     };
                     result = requirement.Normalize();
-                    return (result is not ErrorExpression);
+                    if (result is ErrorExpression)
+                        return false;
+                    result.Location = Location;
+                    return true;
             }
 
             // if the result is unchanged, prevent reprocessing the source and return it
