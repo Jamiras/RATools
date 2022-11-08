@@ -363,6 +363,9 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
 
                     case ComparisonOperation.LessThan:
+                        newComparison = ComparisonOperation.LessThan;
+                        break;
+
                     case ComparisonOperation.NotEqual:
                         newComparison = ComparisonOperation.NotEqual;
                         break;

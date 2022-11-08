@@ -258,6 +258,29 @@ namespace RATools.Parser.Expressions.Trigger
                 }
                 else
                 {
+                    var requirement = subclause as RequirementExpressionBase;
+                    if (requirement != null)
+                    {
+                        bool foundIntersect = false;
+                        for (int i = 0; i < expanded.Count; i++)
+                        {
+                            var requirementI = expanded[i] as RequirementExpressionBase;
+                            if (requirementI != null)
+                            {
+                                var intersect = requirement.LogicalIntersect(requirementI, ConditionalOperation.And);
+                                if (intersect != null)
+                                {
+                                    expanded[i] = intersect;
+                                    foundIntersect = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (foundIntersect)
+                            continue;
+                    }
+
                     if (subclauseClause != null && subclauseClause is not OrNextRequirementClauseExpression)
                         expansionSize *= subclauseClause.Conditions.Count();
 
