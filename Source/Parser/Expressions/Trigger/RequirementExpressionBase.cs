@@ -125,6 +125,16 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         /// <summary>
+        /// Returns an expression where any 'never(A)'s have been converted to '!A's
+        /// </summary>
+        /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
+        /// <remarks>May return the original expression if nothing needed to be converted</remarks>
+        public virtual RequirementExpressionBase InvertResetsAndPauses()
+        {
+            return this;
+        }
+
+        /// <summary>
         /// Returns an expression that represents the logical intersection of this expression and
         /// <paramref name="that"> expression, when they are <paramref name="condition"/>ed together.
         /// </summary>

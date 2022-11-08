@@ -258,7 +258,7 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
-        private void NormalizeLimits(ref ExpressionBase expression)
+        private static void NormalizeLimits(ref ExpressionBase expression)
         {
             var condition = expression as RequirementConditionExpression;
             if (condition == null)
@@ -291,11 +291,11 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            var newComparison = Comparison;
+            var newComparison = condition.Comparison;
 
             if (value < min)
             {
-                switch (Comparison)
+                switch (condition.Comparison)
                 {
                     case ComparisonOperation.LessThan:
                     case ComparisonOperation.LessThanOrEqual:
@@ -312,7 +312,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else if (value == min)
             {
-                switch (Comparison)
+                switch (condition.Comparison)
                 {
                     case ComparisonOperation.LessThan:
                         expression = new AlwaysFalseExpression();
@@ -356,7 +356,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else if (value > max)
             {
-                switch (Comparison)
+                switch (condition.Comparison)
                 {
                     case ComparisonOperation.GreaterThan:
                     case ComparisonOperation.GreaterThanOrEqual:
@@ -373,7 +373,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else if (value == max)
             {
-                switch (Comparison)
+                switch (condition.Comparison)
                 {
                     case ComparisonOperation.GreaterThan:
                         expression = new AlwaysFalseExpression();
@@ -416,11 +416,11 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            if (newComparison != Comparison || !ReferenceEquals(rightValue, condition.Right))
+            if (newComparison != condition.Comparison || !ReferenceEquals(rightValue, condition.Right))
             {
                 expression = new RequirementConditionExpression
                 {
-                    Left = Left,
+                    Left = condition.Left,
                     Comparison = newComparison,
                     Right = rightValue,
                     Location = condition.Location
@@ -537,7 +537,10 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var condition = Clone();
             condition.Comparison = ComparisonExpression.GetOppositeComparisonOperation(condition.Comparison);
-            return condition;
+
+            ExpressionBase result = condition;
+            NormalizeLimits(ref result);
+            return (result as RequirementExpressionBase) ?? condition;
         }
     }
 }

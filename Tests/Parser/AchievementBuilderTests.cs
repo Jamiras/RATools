@@ -473,9 +473,9 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) == 1 && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless can be promoted because core won't be affected
                   "byte(0x001234) == 1 && once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)")]
         [TestCase("once(byte(0x001234) == 1) && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless is not promoted because of hit target
-                  "once(byte(0x001234) == 1) && once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)")]
+                  "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)))")]
         [TestCase("once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (always_false() || never(byte(0x002345) == 1))", // never should not be promoted to core containing unless
-                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && never(byte(0x002345) == 1)")]
+                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 1))")]
         public void TestOptimizePromoteCommonAltsToCore(string input, string expected)
         {
             var achievement = CreateAchievement(input);

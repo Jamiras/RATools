@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -81,6 +82,24 @@ namespace RATools.Parser.Expressions.Trigger
             get { return Behavior == RequirementType.ResetIf || Behavior == RequirementType.PauseIf; }
         }
 
+        /// <summary>
+        /// Returns an expression where any 'never(A)'s have been converted to '!A's
+        /// </summary>
+        /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
+        /// <remarks>May return the original expression if nothing needed to be converted</remarks>
+        public override RequirementExpressionBase InvertResetsAndPauses()
+        {
+            switch (Behavior)
+            {
+                case RequirementType.ResetIf:
+                case RequirementType.PauseIf:
+                    return Condition.InvertLogic();
+
+                default:
+                    return this;
+            }
+        }
+
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
             var optimized = Condition.Optimize(context);
@@ -90,25 +109,7 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementType.ResetIf:
                 case RequirementType.ResetNextIf:
                 case RequirementType.PauseIf:
-                    // invert logic for any never() or unless() subclauses
-                    var behavioral = optimized as BehavioralRequirementExpression;
-                    if (behavioral != null && behavioral.CanBeEliminatedByInverting)
-                    {
-                        // never(never(A)) => never(!A)
-                        // never(unless(A)) => never(!A)
-                        // unless(never(A)) => unless(!A)
-                        // unless(unless(A)) => unless(!A)
-                        return new BehavioralRequirementExpression
-                        {
-                            Behavior = Behavior,
-                            Condition = behavioral.Condition.InvertLogic(),
-                            Location = Location
-                        };
-                    }
-
-                    var clause = optimized as RequirementClauseExpression;
-                    if (clause != null)
-                        optimized = clause.InvertResetsAndPauses();
+                    optimized = optimized.InvertResetsAndPauses();
 
                     if (optimized is AlwaysFalseExpression)
                         return new AlwaysTrueExpression();

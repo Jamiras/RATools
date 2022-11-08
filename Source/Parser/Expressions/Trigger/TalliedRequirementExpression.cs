@@ -167,12 +167,13 @@ namespace RATools.Parser.Expressions.Trigger
                     continue;
                 }
 
-                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
+                // only invert if it's an singular behavioral clause
+                if (behavioral != null)
                 {
                     // never(A) => !A
                     // unless(A) => !A
-                    optimized = behavioral.Condition.InvertLogic();
-                    updated = true;
+                    optimized = behavioral.InvertResetsAndPauses() ?? behavioral;
+                    updated |= !ReferenceEquals(behavioral, optimized);
                 }
 
                 updated |= !ReferenceEquals(condition, optimized);
@@ -388,6 +389,34 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Returns an expression where any 'never(A)'s have been converted to '!A's
+        /// </summary>
+        /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
+        /// <remarks>May return the original expression if nothing needed to be converted</remarks>
+        public override RequirementExpressionBase InvertResetsAndPauses()
+        {
+            if (_conditions != null && _conditions.Count == 1)
+            {
+                var expr = _conditions[0] as RequirementExpressionBase;
+                if (expr != null)
+                {
+                    var inverted = expr.InvertResetsAndPauses();
+                    if (!ReferenceEquals(inverted, expr))
+                    {
+                        return new TalliedRequirementExpression
+                        {
+                            HitTarget = HitTarget,
+                            _conditions = new List<ExpressionBase> { inverted },
+                            Location = this.Location
+                        };
+                    }
+                }
+            }
+
+            return base.InvertResetsAndPauses();
         }
 
         public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)

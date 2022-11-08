@@ -529,8 +529,6 @@ namespace RATools.Parser.Expressions.Trigger
         private static bool NeedAltsForOr(IEnumerable<ExpressionBase> conditions)
         {
             bool seenAndNext = false;
-            //bool seenReset = false;
-            //bool seenNonReset = false;
             foreach (var condition in conditions)
             {
                 var clause = condition as RequirementClauseExpression;
@@ -542,19 +540,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                     seenAndNext = (clause.Operation == ConditionalOperation.And);
                 }
-                //else
-                //{
-                //    var behavior = condition as BehavioralRequirementExpression;
-                //    if (behavior != null && behavior.Behavior == RequirementType.ResetIf)
-                //        seenReset = true;
-                //    else
-                //        seenNonReset = true;
-                //}
             }
-
-            // ResetIf(A) || B => assume B has a PauseIf that's being separated from the ResetIf
-            //if (seenReset && seenNonReset)
-            //    return true;
 
             return false;
         }
@@ -566,12 +552,25 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var condition in Conditions)
                 BubbleUpOrs(newClause, condition);
 
+            newClause._conditions.RemoveAll(c => c is AlwaysFalseExpression);
+            if (newClause._conditions.Count == 1)
+            {
+                var requirement = newClause._conditions[0] as RequirementExpressionBase;
+                if (requirement != null && context.Achievement.AlternateRequirements.Count == 0)
+                {
+                    if (!context.Achievement.CoreRequirements.Any(r => r.Type == RequirementType.PauseIf) &&
+                        !HasBehavior(requirement, RequirementType.PauseIf))
+                    {
+                        // singular alt group can be appended to the core if it doesn't have
+                        // any Pauses and the core doesn't have any Pauses
+                        return requirement.BuildSubclauseTrigger(context);
+                    }
+                }
+            }
+
             var triggerContext = new TriggerBuilderContext();
             foreach (var condition in newClause.Conditions)
             {
-                if (condition is AlwaysFalseExpression)
-                    continue;
-
                 context.BeginAlt();
                 triggerContext.Trigger = context.Trigger;
 
@@ -758,13 +757,13 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 if (newRequirements.Count < 100)
                     updated |= EliminateRedundantConditions(newRequirements, Operation, context);
-
-                if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
-                    return (RequirementExpressionBase)newRequirements[0];
-
-                if (!updated)
-                    return this;
             }
+
+            if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
+                return (RequirementExpressionBase)newRequirements[0];
+
+            if (!updated)
+                return this;
 
             var newClause = new RequirementClauseExpression { Operation = Operation };
             newClause._conditions = newRequirements;
@@ -1227,21 +1226,28 @@ namespace RATools.Parser.Expressions.Trigger
         /// <summary>
         /// Returns an expression where any 'never(A)'s have been converted to '!A's
         /// </summary>
+        /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
         /// <remarks>May return the original expression if nothing needed to be converted</remarks>
-        public RequirementClauseExpression InvertResetsAndPauses()
+        public override RequirementExpressionBase InvertResetsAndPauses()
         {
-            if (!Conditions.OfType<BehavioralRequirementExpression>().Any(c => c.CanBeEliminatedByInverting))
-                return this;
-
+            bool updated = false;
             var newConditions = new List<ExpressionBase>(_conditions.Count);
             foreach (var condition in _conditions)
             {
-                var behavioral = condition as BehavioralRequirementExpression;
-                if (behavioral != null && behavioral.CanBeEliminatedByInverting)
-                    newConditions.Add(behavioral.Condition.InvertLogic());
-                else
-                    newConditions.Add(condition);
+                var expr = condition as RequirementExpressionBase;
+                if (expr == null)
+                    return null;
+
+                var inverted = expr.InvertResetsAndPauses();
+                if (inverted == null)
+                    return null;
+
+                newConditions.Add(inverted);
+                updated |= !ReferenceEquals(inverted, expr);
             }
+
+            if (!updated)
+                return this;
 
             return new RequirementClauseExpression
             {
