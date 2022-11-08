@@ -532,6 +532,22 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var condition in conditions)
             {
                 var clause = condition as RequirementClauseExpression;
+                if (clause == null)
+                {
+                    var behavior = condition as BehavioralRequirementExpression;
+                    if (behavior != null)
+                        clause = behavior.Condition as RequirementClauseExpression;
+
+                    var tallied = condition as TalliedRequirementExpression;
+                    if (tallied != null)
+                    {
+                        if (NeedAltsForOr(tallied.Conditions))
+                            return true;
+
+                        clause = tallied.Conditions.FirstOrDefault() as RequirementClauseExpression;
+                    }
+                }
+
                 if (clause != null)
                 {
                     // if more than one AND is present, we need to use alts
@@ -563,7 +579,9 @@ namespace RATools.Parser.Expressions.Trigger
                     {
                         // singular alt group can be appended to the core if it doesn't have
                         // any Pauses and the core doesn't have any Pauses
-                        return requirement.BuildSubclauseTrigger(context);
+                        var subclause = requirement as RequirementClauseExpression;
+                        if (subclause == null || !NeedAltsForOr(subclause.Conditions))
+                            return requirement.BuildSubclauseTrigger(context);
                     }
                 }
             }
