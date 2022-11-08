@@ -165,6 +165,13 @@ namespace RATools.Parser.Expressions.Trigger
                         if (error != null)
                             return error;
 
+                        if (complexSubclauses.Count == 1)
+                        {
+                            var clause = complexSubclauses[0] as RequirementClauseExpression;
+                            if (clause != null && clause.Operation == ConditionalOperation.Or)
+                                return clause.BuildAlts(achievementContext);
+                        }
+
                         return CrossMultiplyOrs(achievementContext, complexSubclauses);
                     }
                 }
@@ -539,6 +546,9 @@ namespace RATools.Parser.Expressions.Trigger
             var triggerContext = new TriggerBuilderContext();
             foreach (var condition in newClause.Conditions)
             {
+                if (condition is AlwaysFalseExpression)
+                    continue;
+
                 context.BeginAlt();
                 triggerContext.Trigger = context.Trigger;
 
@@ -644,10 +654,13 @@ namespace RATools.Parser.Expressions.Trigger
                         continue;
                     }
 
-                    if (!seenHitCount || context is not TallyBuilderContext)
+                    if (context is not AchievementBuilderContext)
                     {
-                        updated = true;
-                        continue;
+                        if (!seenHitCount || context is not TallyBuilderContext)
+                        {
+                            updated = true;
+                            continue;
+                        }
                     }
                 }
 
@@ -678,8 +691,18 @@ namespace RATools.Parser.Expressions.Trigger
                     if (HasBehavior(newRequirements[i], RequirementType.ResetIf))
                     {
                         var clause = newRequirements[i] as RequirementClauseExpression;
-                        if (clause == null || !clause.Conditions.Any(c => c is AlwaysFalseExpression))
+                        if (clause == null)
+                        {
+                            // not a clause, expect singular Reset condition
+                            Debug.Assert(newRequirements[i] is BehavioralRequirementExpression);
                             needsAlwaysTrueAlt = false;
+                        }
+                        else if (!clause.Conditions.Any(c => c is AlwaysFalseExpression))
+                        {
+                            // clause is implicitly true. if it can't be paused, it can serve as the required alt
+                            if (!HasBehavior(newRequirements[i], RequirementType.PauseIf))
+                                needsAlwaysTrueAlt = false;
+                        }
 
                         continue;
                     }
@@ -788,7 +811,8 @@ namespace RATools.Parser.Expressions.Trigger
                         return true;
                     }
 
-                    if (context is not TallyBuilderContext)
+                    if (context is not TallyBuilderContext &&
+                        context is not AchievementBuilderContext)
                     {
                         requirements.RemoveAt(i);
                         updated = true;
