@@ -483,8 +483,20 @@ namespace RATools.Parser.Expressions.Trigger
                 return (thatClause != null) ? thatClause.LogicalIntersect(this, condition) : null;
             }
 
-            if (Left != thatCondition.Left)
-                return null;
+            if (Left.Type == thatCondition.Left.Type)
+            {
+                if (Left != thatCondition.Left)
+                    return null;
+            }
+            else
+            {
+                var leftUpconvert = Left as IUpconvertibleExpression;
+                var leftConverted = (leftUpconvert != null) ? leftUpconvert.UpconvertTo(ExpressionType.MemoryValue) : Left;
+                var rightUpconvert = thatCondition.Left as IUpconvertibleExpression;
+                var rightConverted = (rightUpconvert != null) ? rightUpconvert.UpconvertTo(ExpressionType.MemoryValue) : thatCondition.Left;
+                if (leftConverted != rightConverted)
+                    return null;
+            }
 
             var leftField = CreateField(Right);
             var rightField = CreateField(thatCondition.Right);

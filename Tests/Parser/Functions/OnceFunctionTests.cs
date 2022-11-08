@@ -35,6 +35,7 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("once(byte(0x1234) == 56 || byte(0x2345) == 67)", "O:0xH001234=56_0xH002345=67.1.")]
         [TestCase("once(prev(byte(0x1234)) == byte(0x2345) - 1)", "A:1=0_d0xH001234=0xH002345.1.")]
         [TestCase("once(never(byte(0x001234) == 1))", "0xH001234!=1.1.")]
+        [TestCase("once(byte(0x1234) != 0 && byte(0x1234) == 5)", "0xH001234=5.1.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);
