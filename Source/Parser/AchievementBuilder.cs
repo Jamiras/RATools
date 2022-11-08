@@ -2044,6 +2044,7 @@ namespace RATools.Parser
             RequirementEx resetNextIf = null;
             var resetNextIfClauses = new List<RequirementEx>();
             var resetNextIsForPause = false;
+            var canExtract = true;
             foreach (var group in groups)
             {
                 foreach (var requirementEx in group)
@@ -2058,12 +2059,20 @@ namespace RATools.Parser
                             var requirement = requirementEx.Requirements[i];
                             if (requirement.Type == RequirementType.ResetNextIf)
                             {
-                                hasResetNextIf = true;
-
                                 var subclause = new RequirementEx();
                                 int j = FindResetNextIfStart(requirementEx.Requirements, i);
                                 for (int k = j; k <= i; k++)
                                     subclause.Requirements.Add(requirementEx.Requirements[k]);
+
+                                subclause.Requirements.Last().Type = RequirementType.ResetIf;
+                                if (group.Any(reqEx => reqEx == subclause))
+                                {
+                                    requirementEx.Requirements.RemoveRange(j, i - j + 1);
+                                    continue;
+                                }
+                                subclause.Requirements.Last().Type = RequirementType.ResetNextIf;
+
+                                hasResetNextIf = true;
 
                                 if (resetNextIf == null)
                                 {
@@ -2072,14 +2081,18 @@ namespace RATools.Parser
                                 else if (resetNextIf != subclause)
                                 {
                                     // can only extract ResetNextIf if it's identical
-                                    return;
+                                    canExtract = false;
+                                    continue;
                                 }
                             }
                         }
 
                         // hit target on non-ResetNextIf clause, can't extract the ResetNextIf (if we even find one)
                         if (!hasResetNextIf)
-                            return;
+                        {
+                            canExtract = false;
+                            continue;
+                        }
 
                         resetNextIfClauses.Add(requirementEx);
 
@@ -2089,7 +2102,7 @@ namespace RATools.Parser
             }
 
             // did not find a ResetNextIf
-            if (resetNextIf == null)
+            if (!canExtract || resetNextIf == null)
                 return;
 
             // remove the common clause from each complex clause
