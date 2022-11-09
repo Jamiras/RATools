@@ -659,6 +659,14 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null || _conditions.Count == 0)
                 return this;
 
+            var achievementContext = context as AchievementBuilderContext;
+            if (achievementContext != null && !achievementContext.HasPauseIf && achievementContext.Achievement.AlternateRequirements.Count == 0)
+            {
+                achievementContext.HasPauseIf = achievementContext.Achievement.CoreRequirements.Any(r => r.Type == RequirementType.PauseIf);
+                if (!achievementContext.HasPauseIf)
+                    achievementContext.HasPauseIf = HasBehavior(this, RequirementType.PauseIf);
+            }
+
             bool updated = false;
             var newRequirements = new List<ExpressionBase>(_conditions.Count);
             var scope = new InterpreterScope();
@@ -769,7 +777,17 @@ namespace RATools.Parser.Expressions.Trigger
                 }
 
                 if (!needsAlwaysTrueAlt && newRequirements.Count > 1)
-                    newRequirements.Remove(alwaysTrueCondition);
+                {
+                    if (newRequirements.Count == 2 && achievementContext != null && achievementContext.HasPauseIf)
+                    {
+                        // if there's a pause in the core group, this reset is probably be being segregated.
+                        // keep the always_true() so the reset doesn't get appended to the core group.
+                    }
+                    else
+                    {
+                        newRequirements.Remove(alwaysTrueCondition);
+                    }
+                }
             }
             else if (alwaysFalseCondition != null)
             {

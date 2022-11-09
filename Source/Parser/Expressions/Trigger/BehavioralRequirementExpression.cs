@@ -53,7 +53,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return "deduct";
 
                 default:
-                    return null;
+                    return behavior.ToString();
             }
         }
 

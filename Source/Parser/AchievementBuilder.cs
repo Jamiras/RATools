@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -2416,7 +2417,7 @@ namespace RATools.Parser
             foreach (var alt in _alts)
             {
                 if (alt.Last().Type != RequirementType.None)
-                    return new ErrorExpression(alt.Last().Type + " modifier not allowed in subclause");
+                    return new ErrorExpression(BehavioralRequirementExpression.GetFunctionName(alt.Last().Type) + " not allowed in subclause");
 
                 alt.Last().Type = RequirementType.OrNext;
 

@@ -58,6 +58,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "0xH001234=1.1.S1=1S0=1_R:0xH002345=2_P:0xH003456=3")] // always_true()/always_false() forced alt groups
         [TestCase("once(byte(0x1234) == 1) && (always_true() || (never(byte(0x2345) == 2) && unless(byte(0x3456) == 3)))",
                   "0xH001234=1.1.S1=1SR:0xH002345=2_P:0xH003456=3")] // always_true()/unless forced alt groups
+        [TestCase("unless(byte(0x3456) == 3) && once(byte(0x1234) == 1) && (always_true() || never(byte(0x2345) == 2))",
+                  "P:0xH003456=3_0xH001234=1.1.S1=1SR:0xH002345=2")] // always_true()/unless forced alt groups
         public void TestBuildAchievement(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

@@ -551,7 +551,7 @@ namespace RATools.Tests.Parser
         [TestCase("always_false() || byte(0x001234) == 2", "byte(0x001234) == 2")] // always_false group can be removed
         [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
-            "once(byte(0x001234) == 4) && never(byte(0x002345) == 1)")] // always_true alt causes groups without resetif to be removed
+            "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without resetif to be removed
         [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0), once(byte(0x1111) == 2 && byte(0x2222) == 0))",
             "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0))")]
         public void TestOptimizeMergeDuplicateAlts(string input, string expected)

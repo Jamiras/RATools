@@ -490,12 +490,18 @@ namespace RATools.Parser
         {
             var context = new TriggerBuilderContext { Trigger = CoreRequirements };
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = context };
+            ErrorExpression error;
 
             ExpressionBase result;
             if (!expression.ReplaceVariables(scope, out result))
-                return ((ErrorExpression)result).Message;
+            {
+                error = (ErrorExpression)result;
+                if (error.InnerError != null)
+                    return error.InnermostError.Message;
 
-            ErrorExpression error;
+                return error.Message;
+            }
+
             if (!PopulateFromExpression(result, scope, out error))
                 return error.Message;
 

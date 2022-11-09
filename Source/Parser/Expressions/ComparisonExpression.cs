@@ -194,6 +194,7 @@ namespace RATools.Parser.Expressions
                         Left = comparison.Left,
                         Comparison = comparison.Operation,
                         Right = comparison.Right,
+                        Location = Location
                     };
                     result = requirement.Normalize();
                     if (result is ErrorExpression)
@@ -212,6 +213,7 @@ namespace RATools.Parser.Expressions
                         Left = comparison.Right,
                         Comparison = ReverseComparisonOperation(comparison.Operation),
                         Right = comparison.Left,
+                        Location = Location
                     };
                     result = requirement.Normalize();
                     if (result is ErrorExpression)

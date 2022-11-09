@@ -739,6 +739,8 @@ namespace RATools.Parser
 
         public AchievementBuilder Achievement { get; private set; }
 
+        public bool HasPauseIf { get; set; }
+
         public void BeginAlt()
         {
             Trigger = new List<Requirement>();
