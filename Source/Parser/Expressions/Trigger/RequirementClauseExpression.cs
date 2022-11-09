@@ -1233,6 +1233,23 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
+        internal static bool LastClauseHasHitTarget(ExpressionBase expression)
+        {
+            var condition = expression as TalliedRequirementExpression;
+            if (condition != null)
+                return (condition.HitTarget != 0);
+
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return LastClauseHasHitTarget(clause.Conditions.LastOrDefault());
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return LastClauseHasHitTarget(behavioral.Condition);
+
+            return false;
+        }
+
         public override RequirementExpressionBase InvertLogic()
         {
             var clause = new RequirementClauseExpression();

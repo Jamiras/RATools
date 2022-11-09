@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Views;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -289,8 +290,48 @@ namespace RATools.Parser.Expressions.Trigger
                 sortedConditions.Add(condition);
             }
 
+            if (sortedConditions.Count == 1)
+            {
+                // once() or repeated(). try to rearrange the clauses in the condition so
+                // the last clause doesn't have a hit target and can be used to hold the total
+                var reqClause = sortedConditions[0] as RequirementClauseExpression;
+                if (reqClause != null)
+                {
+                    var reordered = reqClause.EnsureLastConditionHasNoHitTarget();
+                    if (reordered != null)
+                    {
+                        sortedConditions[0] = reordered;
+                    }
+                    else
+                    {
+                        // could not find a subclause without a hit count, we'll need
+                        // an always_false() to hold the total
+                        needsAlwaysFalse = true;
+                    }
+                }
+            }
+            else
+            {
+                // if this is a tally(), we aren't going to reorder the requirements within
+                // the individual clauses. look for a clause that doesn't have a hit target,
+                // and move it to the end. otherwise, use an always_false() for the total.
+                bool found = false;
+                for (i = sortedConditions.Count - 1; i >= 0; i--)
+                {
+                    var condition = sortedConditions[i];
+                    if (!RequirementClauseExpression.LastClauseHasHitTarget(condition))
+                    {
+                        sortedConditions.RemoveAt(i);
+                        sortedConditions.Add(condition);
+                        found = true;
+                        break;
+                    }
+                }
+
+                needsAlwaysFalse |= !found;
+            }
+
             bool hasAddHits = false;
-            var lastCondition = sortedConditions.LastOrDefault();
             foreach (var condition in sortedConditions)
             {
                 var expr = condition as RequirementExpressionBase;
@@ -303,30 +344,6 @@ namespace RATools.Parser.Expressions.Trigger
                     error = BuildResetClause(context);
                     if (error != null)
                         return error;
-                }
-
-                var reqClause = expr as RequirementClauseExpression;
-                if (reqClause != null)
-                {
-                    var reordered = reqClause.EnsureLastConditionHasNoHitTarget();
-                    if (reordered == null)
-                    {
-                        // could not find a subclause without a hit count
-                        // dump the subclause and append an always_false() to hold the total hit count
-                        error = expr.BuildSubclauseTrigger(context);
-                        if (error != null)
-                            return error;
-
-                        if (ReferenceEquals(expr, lastCondition))
-                            needsAlwaysFalse = false;
-
-                        context.LastRequirement.Type = RequirementType.AddHits;
-                        expr = new AlwaysFalseExpression();
-                    }
-                    else
-                    {
-                        expr = reordered;
-                    }
                 }
 
                 error = expr.BuildSubclauseTrigger(context);
