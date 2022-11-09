@@ -590,7 +590,15 @@ namespace RATools.Parser.Expressions.Trigger
                         // any Pauses and the core doesn't have any Pauses
                         var subclause = requirement as RequirementClauseExpression;
                         if (subclause == null || !NeedAltsForOr(subclause.Conditions))
-                            return requirement.BuildSubclauseTrigger(context);
+                        {
+                            if (requirement is TalliedRequirementExpression ||
+                                requirement is BehavioralRequirementExpression)
+                            {
+                                return requirement.BuildSubclauseTrigger(context);
+                            }
+
+                            return requirement.BuildTrigger(context);
+                        }
                     }
                 }
             }
