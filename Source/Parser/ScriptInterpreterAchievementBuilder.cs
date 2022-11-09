@@ -52,7 +52,7 @@ namespace RATools.Parser
             }
         }
 
-        private static ExpressionBase CrossMultiplyOrConditions(List<ExpressionBase> orConditions)
+        private static ExpressionBase CrossMultiplyOrConditions(List<ExpressionBase> orConditions, List<ExpressionBase> andConditions = null)
         {
             // This creates a combinatorial collection from one or more collections of OR'd conditions.
             // Redundancies will be optimized out later.
@@ -91,18 +91,31 @@ namespace RATools.Parser
 
             if (expansionSize >= 20)
             {
-                foreach (var flattened in flattenedClauses)
+                int insertAt = (andConditions != null) ? andConditions.Count : 0;
+                for (int i = flattenedClauses.Count -1; i >= 0; i--)
                 {
+                    var flattened = flattenedClauses[i];
                     var orNextChain = BuildOrNextChain(flattened);
                     if (orNextChain != null)
                     {
                         expansionSize /= flattened.Count();
 
-                        flattened.Clear();
-                        flattened.Add(orNextChain);
+                        if (andConditions != null)
+                        {
+                            flattenedClauses.RemoveAt(i);
+                            andConditions.Insert(insertAt, orNextChain);
+                        }
+                        else
+                        {
+                            flattened.Clear();
+                            flattened.Add(orNextChain);
+                        }
                     }
                 }
             }
+
+            if (flattenedClauses.Count == 0)
+                return null;
 
             const int MAX_EXPANSION_SIZE = 10000;
             if (expansionSize > MAX_EXPANSION_SIZE)
@@ -222,11 +235,7 @@ namespace RATools.Parser
                     return null;
             }
 
-            var newClause = new RequirementClauseExpression
-            {
-                Operation = ConditionalOperation.Or,
-                Location = clause[0].Location
-            };
+            var newClause = new RequirementClauseExpression.OrNextRequirementClauseExpression { Location = clause[0].Location };
             ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {
@@ -429,15 +438,18 @@ namespace RATools.Parser
 
             if (orConditions.Count() > 1)
             {
-                var altPart = CrossMultiplyOrConditions(orConditions);
-                if (altPart.Type == ExpressionType.Error)
+                var altPart = CrossMultiplyOrConditions(orConditions, andedConditions);
+                if (altPart != null)
                 {
-                    expression.CopyLocation(altPart);
-                    error = (ErrorExpression)altPart;
-                    return false;
-                }
+                    if (altPart.Type == ExpressionType.Error)
+                    {
+                        expression.CopyLocation(altPart);
+                        error = (ErrorExpression)altPart;
+                        return false;
+                    }
 
-                andedConditions.Add(altPart);
+                    andedConditions.Add(altPart);
+                }
             }
             else if (orConditions.Count() == 1)
             {

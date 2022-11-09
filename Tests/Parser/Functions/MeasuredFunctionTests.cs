@@ -54,7 +54,8 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("measured(byte(0x001234 + word(0x002345)) == 5)", "I:0x 002345_M:0xH001234=5")]
         [TestCase("measured(repeated(10, byte(0x001234) == 5 && byte(0x002345) == 6)",
             "N:0xH001234=5_M:0xH002345=6.10.")]
-        [TestCase("measured(300 - byte(0x1234) >= 100", "B:0xH001234_M:300>=100")]
+        [TestCase("measured(6 - byte(0x1234) == 6)", "B:0xH001234_M:6=6")]
+        [TestCase("measured(300 - byte(0x1234) >= 100)", "B:0xH001234_M:300>=100")]
         [TestCase("measured(byte(0x1234) + 22 >= 100)", "A:22_M:0xH001234>=100")] // raw measurements include adjustment as a starting value (target in unchanged)
         [TestCase("measured(byte(0x1234) + 22 >= 100, format=\"percent\")", "G:0xH001234>=78")] // percent measurements factor out the adjustment
         [TestCase("measured(tally(2, byte(0x1234) == 120, byte(0x1234) == 126))", "C:0xH001234=120_M:0xH001234=126.2.")]
