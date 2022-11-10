@@ -813,6 +813,10 @@ namespace RATools.Parser
                 requirement.Operator = Requirement.GetReversedRequirementOperator(requirement.Operator);
             }
 
+            // comparing float to integer - integer will be cast to float, so don't enforce integer limits
+            if (requirement.Left.IsFloat)
+                return null;
+
             if (requirement.Right.Value == 0)
             {
                 switch (requirement.Operator)

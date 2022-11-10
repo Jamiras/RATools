@@ -1,4 +1,4 @@
-﻿using Jamiras.Components;
+using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser;
 using RATools.Parser.Expressions;

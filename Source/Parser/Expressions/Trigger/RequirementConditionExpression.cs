@@ -270,6 +270,9 @@ namespace RATools.Parser.Expressions.Trigger
             if (rightValue == null)
                 return;
 
+            if (MemoryValueExpression.HasFloat(condition.Left))
+                return;
+
             long min = 0, max = 0xFFFFFFFF;
             long value = (long)(uint)rightValue.Value;
 
