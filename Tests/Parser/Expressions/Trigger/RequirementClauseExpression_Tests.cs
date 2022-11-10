@@ -49,7 +49,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x002345) == 5 && (byte(0x001234) == 1 || byte(0x001234) == 2)",
                   "0xH002345=5S0xH001234=1S0xH001234=2")] // alts created
         [TestCase("byte(0x002345) == 5 && __ornext(byte(0x001234) == 1 || byte(0x001234) == 2)",
-                  "O:0xH001234=1_N:0xH001234=2_0xH002345=5")] // forced OrNext chain
+                  "0xH002345=5_O:0xH001234=1_0xH001234=2")] // forced OrNext chain
         [TestCase("once(byte(0x1234) == 1) && (always_false() || never(byte(0x2345) == 1))",
                   "0xH001234=1.1._R:0xH002345=1")] // ResetIf can be collapsed into the main group
         [TestCase("once(byte(0x1234) == 1) && unless(byte(0x1234) == 2) && (always_false() || never(byte(0x2345) == 1))",

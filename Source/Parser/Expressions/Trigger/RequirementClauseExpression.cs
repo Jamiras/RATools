@@ -131,10 +131,21 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var clause = condition as RequirementClauseExpression;
                 if (clause != null && clause._conditions != null)
-                    complexSubclauses.Add(clause);
+                {
+                    if (clause is OrNextRequirementClauseExpression && joinBehavior == RequirementType.None)
+                        subclauses.Add(condition);
+                    else
+                        complexSubclauses.Add(clause);
+                }
                 else
+                {
                     subclauses.Add(condition);
+                }
             }
+
+            // only complex subclauses were empty or OrNexts, just dump everything
+            if (complexSubclauses.Count == 0)
+                return AppendSubclauses(context, conditions, joinBehavior);
 
             // if we're attempting to AND one or more OR subclauses at the top level, put them into alts
             if (joinBehavior == RequirementType.None && complexSubclauses.All(c => c.Operation == ConditionalOperation.Or))
@@ -665,11 +676,18 @@ namespace RATools.Parser.Expressions.Trigger
                 return this;
 
             var achievementContext = context as AchievementBuilderContext;
-            if (achievementContext != null && !achievementContext.HasPauseIf && achievementContext.Achievement.AlternateRequirements.Count == 0)
+            if (achievementContext != null && achievementContext.HasPauseIf == null)
             {
-                achievementContext.HasPauseIf = achievementContext.Achievement.CoreRequirements.Any(r => r.Type == RequirementType.PauseIf);
-                if (!achievementContext.HasPauseIf)
-                    achievementContext.HasPauseIf = HasBehavior(this, RequirementType.PauseIf);
+                if (achievementContext.Achievement.AlternateRequirements.Count == 0)
+                {
+                    achievementContext.HasPauseIf = achievementContext.Achievement.CoreRequirements.Any(r => r.Type == RequirementType.PauseIf);
+                    if (achievementContext.HasPauseIf == false)
+                        achievementContext.HasPauseIf = HasBehavior(this, RequirementType.PauseIf);
+                }
+                else
+                {
+                    achievementContext.HasPauseIf = false;
+                }
             }
 
             bool updated = false;
@@ -744,11 +762,14 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 updated = true;
 
-                if (alwaysFalseCondition == null)
-                    alwaysFalseCondition = newRequirements.FirstOrDefault(r => r is AlwaysFalseExpression);
+                if (Operation == ConditionalOperation.And)
+                {
+                    if (alwaysFalseCondition == null)
+                        alwaysFalseCondition = newRequirements.FirstOrDefault(r => r is AlwaysFalseExpression);
 
-                if (alwaysTrueCondition == null)
-                    alwaysTrueCondition = newRequirements.FirstOrDefault(r => r is AlwaysTrueExpression);
+                    if (alwaysTrueCondition == null)
+                        alwaysTrueCondition = newRequirements.FirstOrDefault(r => r is AlwaysTrueExpression);
+                }
             }
 
             if (alwaysTrueCondition != null)
@@ -783,7 +804,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 if (!needsAlwaysTrueAlt && newRequirements.Count > 1)
                 {
-                    if (newRequirements.Count == 2 && achievementContext != null && achievementContext.HasPauseIf)
+                    if (newRequirements.Count == 2 && achievementContext != null && achievementContext.HasPauseIf == true)
                     {
                         // if there's a pause in the core group, this reset is probably be being segregated.
                         // keep the always_true() so the reset doesn't get appended to the core group.

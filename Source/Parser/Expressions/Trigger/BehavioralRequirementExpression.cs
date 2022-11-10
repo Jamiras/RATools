@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
@@ -161,7 +162,19 @@ namespace RATools.Parser.Expressions.Trigger
                     {
                         // never(A || B) -> never(A) && never(B)
                         // unless(A || B) -> unless(A) && unless(B)
-                        return Condition.BuildSubclauseTrigger(context, ConditionalOperation.Or, Behavior);
+                        foreach (var condition in reqClause.Conditions.OfType<RequirementExpressionBase>())
+                        {
+                            if (condition is AlwaysFalseExpression)
+                                continue;
+
+                            error = condition.BuildSubclauseTrigger(context);
+                            if (error != null)
+                                return error;
+
+                            context.LastRequirement.Type = Behavior;
+                        }
+
+                        return null;
                     }
                     goto default;
 
