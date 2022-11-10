@@ -311,6 +311,9 @@ namespace RATools.Parser.Expressions.Trigger
                     if (subclause == null || subclause is OrNextRequirementClauseExpression)
                         continue;
 
+                    if (HasMultipleComplexSubclauses(subclause))
+                        continue;
+
                     var orNext = new OrNextRequirementClauseExpression { Location = subclause.Location };
                     foreach (var c in subclause.Conditions)
                         orNext.AddCondition(c);
@@ -375,6 +378,40 @@ namespace RATools.Parser.Expressions.Trigger
             } while (k >= 0);
 
             return true;
+        }
+
+        private static bool HasMultipleComplexSubclauses(RequirementClauseExpression clause)
+        {
+            bool hasComplexSubclause = false;
+            foreach (var condition in clause.Conditions.OfType<RequirementExpressionBase>())
+            {
+                if (HasComplexSubclause(condition))
+                {
+                    if (hasComplexSubclause)
+                        return true;
+
+                    hasComplexSubclause = true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasComplexSubclause(RequirementExpressionBase expression)
+        {
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return clause.Conditions.Count() > 1;
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return HasComplexSubclause(behavioral.Condition);
+
+            var tallied = expression as TalliedRequirementExpression;
+            if (tallied != null)
+                return tallied.Conditions.OfType<RequirementExpressionBase>().Any(c => HasComplexSubclause(c));
+
+            return false;
         }
 
         private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
@@ -517,7 +554,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 if (resetRequirements.Count > 0)
                 {
-                    error = BuildTrigger(achievementContext, resetRequirements, splitBehavior);
+                    error = BuildTrigger(achievementContext, resetRequirements, RequirementType.None);
                     if (error != null)
                         return error;
                 }
@@ -1394,11 +1431,26 @@ namespace RATools.Parser.Expressions.Trigger
             public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
             {
                 var optimized = base.Optimize(context);
+                var orClause = optimized as RequirementClauseExpression;
+                if (orClause != null && orClause.Operation == ConditionalOperation.Or)
+                {
+                    if (orClause._conditions.Any(c => c is AlwaysFalseExpression))
+                    {
+                        var orNextClause = new OrNextRequirementClauseExpression { Location = orClause.Location };
+                        foreach (var condition in orClause.Conditions.Where(c => c is not AlwaysFalseExpression))
+                            orNextClause.AddCondition(condition);
+
+                        if (orNextClause._conditions.Count == 1)
+                            return (orNextClause._conditions[0] as RequirementExpressionBase) ?? orNextClause;
+
+                        return orNextClause;
+                    }
+                }
+
                 if (!ReferenceEquals(this, optimized))
                 {
-                    var orClause = optimized as RequirementClauseExpression;
                     if (orClause != null && orClause.Operation == ConditionalOperation.Or)
-                    {
+                    { 
                         var orNextClause = new OrNextRequirementClauseExpression { Location = orClause.Location };
                         foreach (var condition in orClause.Conditions)
                             orNextClause.AddCondition(condition);
