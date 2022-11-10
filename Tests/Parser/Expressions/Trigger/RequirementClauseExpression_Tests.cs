@@ -85,6 +85,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A == 1 && B == 1 && A == 1", "A == 1 && B == 1")]
         [TestCase("A == 1 && B == 1 && A == 3", "always_false()")]
         [TestCase("A > 1 && B == 1 && A == 3", "A == 3 && B == 1")]
+        [TestCase("(A == 1 && B == 1) || (A == 1 && B == 2) || (A == 1 && B == 3)", "A == 1 && (B == 1 || B == 2 || B == 3)")]
+        [TestCase("(A == 1 || B != 1) && (A == 1 || B != 2) && (A == 1 || B != 3)", "A == 1 || (B != 1 && B != 2 && B != 3)")]
         public void TestOptimize(string input, string expected)
         {
             input = ExpressionTests.ReplacePlaceholders(input);

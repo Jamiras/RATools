@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Windows.Markup.Localizer;
 
 namespace RATools.Parser.Expressions.Trigger
 {
     internal class RequirementClauseExpression : RequirementExpressionBase,
         ICloneableExpression
     {
+        private static readonly int PreferAltsThreshold = 20;
+
         public RequirementClauseExpression()
             : base()
         {
@@ -162,29 +163,20 @@ namespace RATools.Parser.Expressions.Trigger
                     if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
                     {
                         BubbleUpOrs(complexSubclauses);
+                        CheckExpansionThreshold(complexSubclauses);
 
-                        var altsNeeded = 1;
-                        if (complexSubclauses.Count > 1)
+                        var error = AppendSubclauses(context, subclauses, joinBehavior);
+                        if (error != null)
+                            return error;
+
+                        if (complexSubclauses.Count == 1)
                         {
-                            foreach (var subclause in complexSubclauses)
-                                altsNeeded *= subclause._conditions.Count;
+                            var clause = complexSubclauses[0];
+                            if (clause.Operation == ConditionalOperation.Or)
+                                return clause.BuildAlts(achievementContext);
                         }
 
-                        if (altsNeeded < 20)
-                        {
-                            var error = AppendSubclauses(context, subclauses, joinBehavior);
-                            if (error != null)
-                                return error;
-
-                            if (complexSubclauses.Count == 1)
-                            {
-                                var clause = complexSubclauses[0];
-                                if (clause.Operation == ConditionalOperation.Or)
-                                    return clause.BuildAlts(achievementContext);
-                            }
-
-                            return CrossMultiplyOrs(achievementContext, complexSubclauses);
-                        }
+                        return CrossMultiplyOrs(achievementContext, complexSubclauses);
                     }
                 }
             }
@@ -254,8 +246,6 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            int expansionSize = 1;
-
             var expanded = new List<ExpressionBase>();
             foreach (var subclause in clause._conditions)
             {
@@ -296,32 +286,11 @@ namespace RATools.Parser.Expressions.Trigger
                             continue;
                     }
 
-                    if (subclauseClause != null && subclauseClause is not OrNextRequirementClauseExpression)
-                        expansionSize *= subclauseClause.Conditions.Count();
-
                     expanded.Add(subclause);
                 }
             }
 
-            if (expansionSize >= 20)
-            {
-                for (int i = 0; i < expanded.Count; i++)
-                {
-                    var subclause = expanded[i] as RequirementClauseExpression;
-                    if (subclause == null || subclause is OrNextRequirementClauseExpression)
-                        continue;
-
-                    if (HasMultipleComplexSubclauses(subclause))
-                        continue;
-
-                    var orNext = new OrNextRequirementClauseExpression { Location = subclause.Location };
-                    foreach (var c in subclause.Conditions)
-                        orNext.AddCondition(c);
-
-                    expanded[i] = orNext;
-                    expansionSize /= subclause.Conditions.Count();
-                }
-            }
+            CheckExpansionThreshold(expanded);
 
             // clause = (B && (C || D)) => (B && C) || (B && D)
             var indices = new int[expanded.Count];
@@ -378,6 +347,34 @@ namespace RATools.Parser.Expressions.Trigger
             } while (k >= 0);
 
             return true;
+        }
+
+        private static void CheckExpansionThreshold<T>(List<T> clauses)
+            where T : ExpressionBase
+        {
+            long expansionSize = 1;
+            foreach (var subclause in clauses.OfType<RequirementClauseExpression>())
+                expansionSize *= subclause._conditions.Count;
+
+            if (expansionSize >= PreferAltsThreshold)
+            {
+                for (int i = 0; i < clauses.Count; i++)
+                {
+                    var subclause = clauses[i] as RequirementClauseExpression;
+                    if (subclause == null || subclause is OrNextRequirementClauseExpression)
+                        continue;
+
+                    if (HasMultipleComplexSubclauses(subclause))
+                        continue;
+
+                    var orNext = new OrNextRequirementClauseExpression { Location = subclause.Location };
+                    foreach (var c in subclause.Conditions)
+                        orNext.AddCondition(c);
+
+                    clauses[i] = orNext as T;
+                    expansionSize /= subclause.Conditions.Count();
+                }
+            }
         }
 
         private static bool HasMultipleComplexSubclauses(RequirementClauseExpression clause)
@@ -878,6 +875,13 @@ namespace RATools.Parser.Expressions.Trigger
             if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
                 return (RequirementExpressionBase)newRequirements[0];
 
+            if (newRequirements.Count > 1 && newRequirements.All(r => r is RequirementClauseExpression))
+            {
+                var rebalanced = RebalanceSubclauses(newRequirements.OfType<RequirementClauseExpression>().ToList(), context, Operation);
+                if (rebalanced != null)
+                    return rebalanced;
+            }
+
             if (!updated)
                 return this;
 
@@ -995,6 +999,93 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return updated;
+        }
+
+        /// <summary>
+        /// attempts to move common clauses out of complex subclauses to create something that can be turned into an AndNext/OrNext chain
+        /// </summary>
+        private static RequirementClauseExpression RebalanceSubclauses(List<RequirementClauseExpression> subclauses,
+            TriggerBuilderContext context, ConditionalOperation operation)
+        {
+            var subclauseSize = subclauses[0]._conditions.Count;
+            for (int i = 1; i < subclauses.Count; i++)
+            {
+                if (subclauses[i]._conditions.Count != subclauseSize)
+                    return null;
+
+                if (HasBehavior(subclauses[i], RequirementType.PauseIf))
+                    return null;
+
+                if (HasBehavior(subclauses[i], RequirementType.ResetIf))
+                    return null;
+            }
+
+            var newClause = new RequirementClauseExpression
+            {
+                Operation = (operation == ConditionalOperation.And) ? ConditionalOperation.Or : ConditionalOperation.And
+            };
+
+            bool hasUnshared = false;
+            for (int i = 0; i < subclauseSize; i++)
+            {
+                bool shared = true;
+                var search = subclauses[0]._conditions[i];
+                for (int j = 1; j < subclauses.Count; j++)
+                {
+                    if (!subclauses[j]._conditions.Any(c => c == search))
+                    {
+                        shared = false;
+                        break;
+                    }
+                }
+
+                if (shared)
+                {
+                    newClause.AddCondition(search);
+                }
+                else
+                {
+                    if (hasUnshared)
+                        return null;
+
+                    hasUnshared = true;
+                }
+            }
+
+            Debug.Assert(newClause._conditions.Count == subclauseSize - 1);
+
+            RequirementExpressionBase intersected = null;
+            int intersectIndex = -1;
+            var newSubclause = new RequirementClauseExpression { Operation = operation };
+            foreach (var subclause in subclauses)
+            {
+                foreach (var condition in subclause._conditions)
+                {
+                    if (!newClause.Conditions.Any(c => c == condition))
+                    {
+                        newSubclause.AddCondition(condition);
+
+                        if (intersectIndex == -1)
+                        {
+                            intersected = (RequirementExpressionBase)condition;
+                            intersectIndex = subclause._conditions.IndexOf(condition);
+                        }
+                        else if (intersected != null)
+                        {
+                            intersected = ((RequirementExpressionBase)condition).LogicalIntersect(intersected, operation);
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            if (intersected != null)
+                newClause._conditions.Insert(intersectIndex, intersected);
+            else
+                newClause.AddCondition(newSubclause.Optimize(context));
+
+            return newClause;
         }
 
         public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
