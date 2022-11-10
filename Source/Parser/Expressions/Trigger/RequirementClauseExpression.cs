@@ -208,24 +208,27 @@ namespace RATools.Parser.Expressions.Trigger
 
                 var newSubclause = new RequirementClauseExpression
                 {
-                    Operation = complexSubclauses[i].Operation
+                    Operation = complexSubclause.Operation,
+                    Location = complexSubclause.Location
                 };
 
+                bool updated = false;
                 foreach (var condition in complexSubclause._conditions)
-                    BubbleUpOrs(newSubclause, condition);
+                    updated |= BubbleUpOrs(newSubclause, condition);
 
-                complexSubclauses[i] = newSubclause;
+                if (updated)
+                    complexSubclauses[i] = newSubclause;
             }
         }
 
-        private static void BubbleUpOrs(RequirementClauseExpression newSubclause, ExpressionBase condition)
+        private static bool BubbleUpOrs(RequirementClauseExpression newSubclause, ExpressionBase condition)
         {
             var clause = condition as RequirementClauseExpression;
             if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
             {
                 // no subclauses, nothing to bubble up
                 newSubclause.AddCondition(condition);
-                return;
+                return false;
             }
 
             if (clause._conditions.Count == 2 && clause._conditions.Any(c => c is RequirementConditionExpression))
@@ -236,7 +239,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // only two subclauses. one is just a single condition, and the other is made
                     // up entirely of single conditions. they can be joined using AndNext/OrNext
                     newSubclause.AddCondition(condition);
-                    return;
+                    return false;
                 }
             }
 
@@ -359,6 +362,8 @@ namespace RATools.Parser.Expressions.Trigger
                     indices[k--] = 0;
                 } while (k >= 0);
             } while (k >= 0);
+
+            return true;
         }
 
         private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
