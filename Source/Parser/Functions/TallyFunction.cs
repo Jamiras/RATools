@@ -1,27 +1,38 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class TallyFunction : RepeatedFunction
+    internal class TallyFunction : FunctionDefinitionExpression
     {
         public TallyFunction()
             : base("tally")
         {
-            Parameters.Clear();
             Parameters.Add(new VariableDefinitionExpression("count"));
             Parameters.Add(new VariableDefinitionExpression("..."));
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
+            return Evaluate(scope, out result);
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
             var count = GetIntegerParameter(scope, "count", out result);
             if (count == null)
                 return false;
 
+            if (count.Value < 0)
+            {
+                result = new ErrorExpression("count must be greater than or equal to zero", count);
+                return false;
+            }
+                
             var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
             if (varargs == null)
             {
@@ -47,111 +58,69 @@ namespace RATools.Parser.Functions
                     varargs = arrayExpression;
             }
 
+            foreach (var comparison in varargs.Entries)
+            {
+                if (!RepeatedFunction.CanBeTallied(comparison, RequirementType.ResetNextIf, out result))
+                {
+                    var behavioral = comparison as BehavioralRequirementExpression;
+                    if (behavioral == null || behavioral.Behavior != RequirementType.SubHits)
+                        return false;
+                }
+            }
+
             var tallyScope = new InterpreterScope(scope);
             tallyScope.Context = this;
 
-            foreach (var entry in varargs.Entries)
-            {
-                if (!entry.ReplaceVariables(tallyScope, out result))
-                    return false;
+            if (!BuildTalliedRequirementExpression((uint)count.Value, varargs, tallyScope, out result))
+                return false;
 
-                parameters.Add(result);
-            }
-
-            result = new FunctionCallExpression(Name.Name, parameters.ToArray());
             CopyLocation(result);
             return true;
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public static bool BuildTalliedRequirementExpression(uint count, ArrayExpression varargs, InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase result;
-            int addHitsClauses = 0;
-            int subHitsClauses = 0;
+            var tallyResult = new TalliedRequirementExpression { HitTarget = count };
 
-            var requirements = new List<ICollection<Requirement>>();
-            for (int i = 1; i < functionCall.Parameters.Count; ++i)
+            foreach (var entry in varargs.Entries)
             {
-                var condition = functionCall.Parameters.ElementAt(i);
+                if (!entry.ReplaceVariables(scope, out result))
+                    return false;
 
-                // expression that can never be true cannot accumulate hits to be added or subtracted from the tally
-                ErrorExpression error;
-                var conditionRequirements = new List<Requirement>();
-                var nestedContext = new TriggerBuilderContext() { Trigger = conditionRequirements };
-                var modifier = RequirementType.AddHits;
-
-                var funcCall = condition as FunctionCallExpression;
-                if (funcCall != null && funcCall.FunctionName.Name == "deduct")
+                var functionCall = result as FunctionCallExpression;
+                if (functionCall != null && functionCall.FunctionName.Name == "deduct")
                 {
-                    var deductScope = funcCall.GetParameters(scope.GetFunction(funcCall.FunctionName.Name), scope, out result);
-                    if (deductScope == null)
-                        return (ErrorExpression)result;
-
-                    condition = deductScope.GetVariable("comparison");
-
-                    if (condition.IsTrue(deductScope, out error) == false)
-                        continue;
-
-                    modifier = RequirementType.SubHits;
-                    ++subHitsClauses;
+                    var requirement = functionCall.Parameters.First() as RequirementExpressionBase;
+                    if (requirement == null)
+                    {
+                        result = new ErrorExpression("Cannot tally " + functionCall.Parameters.First().Type, functionCall.Parameters.First());
+                        return false;
+                    }
+                    tallyResult.AddDeductedCondition(requirement);
                 }
                 else
                 {
-                    if (condition.IsTrue(scope, out error) == false)
-                        continue;
-
-                    ++addHitsClauses;
+                    var requirement = result as RequirementExpressionBase;
+                    if (requirement == null)
+                    {
+                        result = new ErrorExpression("Cannot tally " + result.Type, result);
+                        return false;
+                    }
+                    tallyResult.AddTalliedCondition(requirement);
                 }
-
-                if (error == null)
-                {
-                    // define a new scope with a nested context to prevent TriggerBuilderContext.ProcessAchievementConditions
-                    // from optimizing out the ResetIf
-                    var innerScope = new InterpreterScope(scope);
-                    innerScope.Context = nestedContext;
-                    error = BuildTriggerCondition(nestedContext, innerScope, condition, true);
-                }
-                if (error != null)
-                    return error;
-
-                conditionRequirements.Last().Type = modifier;
-                requirements.Add(conditionRequirements);
             }
 
-            // at least one condition has to be incrementing the tally
-            if (addHitsClauses == 0)
-                return new ErrorExpression("tally requires at least one non-deducted item", functionCall);
-
-            // if there's any SubHits clauses, add a dummy clause for the final count, regardless of whether
-            // the AddHits clauses have hit targets.
-            if (subHitsClauses > 0)
-                requirements.Add(new Requirement[] { AlwaysFalseFunction.CreateAlwaysFalseRequirement() });
-
-            // the last item cannot have its own HitCount as it will hold the HitCount for the group.
-            // if necessary, find one without a HitCount and make it the last.
-            AchievementBuilder.EnsureLastGroupHasNoHitCount(requirements);
-
-            // load the requirements into the trigger
-            foreach (var requirement in requirements)
-            {
-                foreach (var clause in requirement)
-                    context.Trigger.Add(clause);
-            }
-
-            // the last item of each clause was set to AddHits, change the absolute last back to None
-            context.LastRequirement.Type = RequirementType.None;
-
-            // set the target hitcount
-            var count = (IntegerConstantExpression)functionCall.Parameters.First();
-            return AssignHitCount(context, scope, count, Name.Name);
+            result = tallyResult;
+            return true;
         }
     }
 
-    internal class DeductFunction : ComparisonModificationFunction
+    internal class DeductFunction : FunctionDefinitionExpression
     {
         public DeductFunction()
             : base("deduct")
         {
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
@@ -167,22 +136,26 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            return base.ReplaceVariables(scope, out result);
+            return Evaluate(scope, out result);
         }
 
-        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
-            foreach (var requirementEx in requirementsEx)
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
+
+            if (!RepeatedFunction.CanBeTallied(comparison, RequirementType.ResetNextIf, out result))
+                return false;
+
+            result = new BehavioralRequirementExpression
             {
-                var lastCondition = requirementEx.Requirements.Last();
-                if (lastCondition.Type != RequirementType.None)
-                    return new ErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
+                Behavior = RequirementType.SubHits,
+                Condition = (RequirementExpressionBase)comparison
+            };
 
-                lastCondition.Type = RequirementType.SubHits;
-            }
-
-            return null;
+            CopyLocation(result);
+            return true;
         }
     }
 }

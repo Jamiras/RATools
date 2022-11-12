@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
@@ -1822,83 +1823,32 @@ namespace RATools.Parser
 
                 // ignore complex conditions (AddAddress, AndNext, etc)
                 if (requirementEx.Requirements.Count != 1)
-                    continue;
-
-                // can only merge equality comparisons (bit0=0, bit1=1, etc)
-                var requirement = requirementEx.Requirements[0];
-                if (requirement.Operator != RequirementOperator.Equal)
-                    continue;
-                if (!requirement.Left.IsMemoryReference || requirement.Right.Type != FieldType.Value)
-                    continue;
-
-                // cannot merge unless all hit counts are the same
-                if (requirement.HitCount != 0)
-                    continue;
-
-                // cannot merge if logic is attached to the condition
-                if (requirement.Type != RequirementType.None)
-                    continue;
-
-                var bitReference = BitReferences.Find(references, requirement.Left.Value, requirement.Left.Type);
-                switch (requirement.Left.Size)
                 {
-                    case FieldSize.Bit0:
-                        bitReference.flags |= 0x01;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x01;
-                        break;
-                    case FieldSize.Bit1:
-                        bitReference.flags |= 0x02;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x02;
-                        break;
-                    case FieldSize.Bit2:
-                        bitReference.flags |= 0x04;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x04;
-                        break;
-                    case FieldSize.Bit3:
-                        bitReference.flags |= 0x08;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x08;
-                        break;
-                    case FieldSize.Bit4:
-                        bitReference.flags |= 0x10;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x10;
-                        break;
-                    case FieldSize.Bit5:
-                        bitReference.flags |= 0x20;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x20;
-                        break;
-                    case FieldSize.Bit6:
-                        bitReference.flags |= 0x40;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x40;
-                        break;
-                    case FieldSize.Bit7:
-                        bitReference.flags |= 0x80;
-                        if (requirement.Right.Value != 0)
-                            bitReference.value |= 0x80;
-                        break;
-                    case FieldSize.LowNibble:
-                        bitReference.flags |= 0x0F;
-                        bitReference.value |= (ushort)(requirement.Right.Value & 0x0F);
-                        break;
-                    case FieldSize.HighNibble:
-                        bitReference.flags |= 0xF0;
-                        bitReference.value |= (ushort)((requirement.Right.Value & 0x0F) << 4);
-                        break;
-                    case FieldSize.Byte:
-                        bitReference.flags |= 0xFF;
-                        bitReference.value |= (ushort)(requirement.Right.Value & 0xFF);
-                        break;
-                    default:
+                    // if it's a chain of AndNexts, treat it as if it were a bunch of individual conditions
+                    bool canExpand = true;
+                    for (int i = 0; i < requirementEx.Requirements.Count - 1; i++)
+                    {
+                        var req = requirementEx.Requirements[i];
+                        if (req.Type != RequirementType.AndNext || req.HitCount != 0)
+                        {
+                            canExpand = false;
+                            break;
+                        }
+                    }
+
+                    if (!canExpand)
+                        continue;
+
+                    MergeBits(requirementEx);
+                    if (requirementEx.Requirements.Count > 1)
                         continue;
                 }
 
-                bitReference.requirements.Add(requirement);
+                var requirement = requirementEx.Requirements[0];
+
+                // cannot merge if logic is attached to the condition
+                if (requirement.Type == RequirementType.None)
+                    AddBitReferences(references, requirement);
             }
 
             foreach (var bitReference in references)
@@ -1910,6 +1860,114 @@ namespace RATools.Parser
                 else if ((bitReference.flags & 0xF0) == 0xF0)
                     MergeBits(group, bitReference, FieldSize.HighNibble);
             }
+        }
+
+        private static void MergeBits(RequirementEx group)
+        {
+            var behavior = group.Requirements.Last().Type;
+            var container = new List<RequirementEx>();
+            var references = new List<BitReferences>();
+            foreach (var requirement in group.Requirements)
+            {
+                var reqEx = new RequirementEx();
+                reqEx.Requirements.Add(requirement);
+                container.Add(reqEx);
+
+                AddBitReferences(references, requirement);
+            }
+
+            foreach (var bitReference in references)
+            {
+                if ((bitReference.flags & 0xFF) == 0xFF)
+                    MergeBits(container, bitReference, FieldSize.Byte);
+                else if ((bitReference.flags & 0x0F) == 0x0F)
+                    MergeBits(container, bitReference, FieldSize.LowNibble);
+                else if ((bitReference.flags & 0xF0) == 0xF0)
+                    MergeBits(container, bitReference, FieldSize.HighNibble);
+            }
+
+            if (container.Count != group.Requirements.Count)
+            {
+                group.Requirements.Clear();
+                foreach (var reqEx in container)
+                    group.Requirements.Add(reqEx.Requirements.First());
+
+                group.Requirements.Last().Type = behavior;
+            }
+        }
+
+        private static void AddBitReferences(List<BitReferences> references, Requirement requirement)
+        {
+            // can only merge equality comparisons (bit0=0, bit1=1, etc)
+            if (requirement.Operator != RequirementOperator.Equal)
+                return;
+            if (!requirement.Left.IsMemoryReference || requirement.Right.Type != FieldType.Value)
+                return;
+
+            // cannot merge unless all hit counts are the same
+            if (requirement.HitCount != 0)
+                return;
+
+            var bitReference = BitReferences.Find(references, requirement.Left.Value, requirement.Left.Type);
+            switch (requirement.Left.Size)
+            {
+                case FieldSize.Bit0:
+                    bitReference.flags |= 0x01;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x01;
+                    break;
+                case FieldSize.Bit1:
+                    bitReference.flags |= 0x02;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x02;
+                    break;
+                case FieldSize.Bit2:
+                    bitReference.flags |= 0x04;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x04;
+                    break;
+                case FieldSize.Bit3:
+                    bitReference.flags |= 0x08;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x08;
+                    break;
+                case FieldSize.Bit4:
+                    bitReference.flags |= 0x10;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x10;
+                    break;
+                case FieldSize.Bit5:
+                    bitReference.flags |= 0x20;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x20;
+                    break;
+                case FieldSize.Bit6:
+                    bitReference.flags |= 0x40;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x40;
+                    break;
+                case FieldSize.Bit7:
+                    bitReference.flags |= 0x80;
+                    if (requirement.Right.Value != 0)
+                        bitReference.value |= 0x80;
+                    break;
+                case FieldSize.LowNibble:
+                    bitReference.flags |= 0x0F;
+                    bitReference.value |= (ushort)(requirement.Right.Value & 0x0F);
+                    break;
+                case FieldSize.HighNibble:
+                    bitReference.flags |= 0xF0;
+                    bitReference.value |= (ushort)((requirement.Right.Value & 0x0F) << 4);
+                    break;
+                case FieldSize.Byte:
+                    bitReference.flags |= 0xFF;
+                    bitReference.value |= (ushort)(requirement.Right.Value & 0xFF);
+                    break;
+                default:
+                    return;
+            }
+
+            bitReference.requirements.Add(requirement);
         }
 
         private static void MergeBits(IList<RequirementEx> group, BitReferences bitReference, FieldSize newSize)
@@ -2048,6 +2106,7 @@ namespace RATools.Parser
             RequirementEx resetNextIf = null;
             var resetNextIfClauses = new List<RequirementEx>();
             var resetNextIsForPause = false;
+            var canExtract = true;
             foreach (var group in groups)
             {
                 foreach (var requirementEx in group)
@@ -2062,12 +2121,21 @@ namespace RATools.Parser
                             var requirement = requirementEx.Requirements[i];
                             if (requirement.Type == RequirementType.ResetNextIf)
                             {
-                                hasResetNextIf = true;
-
                                 var subclause = new RequirementEx();
                                 int j = FindResetNextIfStart(requirementEx.Requirements, i);
                                 for (int k = j; k <= i; k++)
                                     subclause.Requirements.Add(requirementEx.Requirements[k]);
+
+                                Debug.Assert(j < requirementEx.Requirements.Count - 1);
+                                subclause.Requirements.Last().Type = RequirementType.ResetIf;
+                                if (group.Any(reqEx => reqEx == subclause))
+                                {
+                                    requirementEx.Requirements.RemoveRange(j, i - j + 1);
+                                    continue;
+                                }
+                                subclause.Requirements.Last().Type = RequirementType.ResetNextIf;
+
+                                hasResetNextIf = true;
 
                                 if (resetNextIf == null)
                                 {
@@ -2076,14 +2144,18 @@ namespace RATools.Parser
                                 else if (resetNextIf != subclause)
                                 {
                                     // can only extract ResetNextIf if it's identical
-                                    return;
+                                    canExtract = false;
+                                    continue;
                                 }
                             }
                         }
 
                         // hit target on non-ResetNextIf clause, can't extract the ResetNextIf (if we even find one)
                         if (!hasResetNextIf)
-                            return;
+                        {
+                            canExtract = false;
+                            continue;
+                        }
 
                         resetNextIfClauses.Add(requirementEx);
 
@@ -2093,7 +2165,7 @@ namespace RATools.Parser
             }
 
             // did not find a ResetNextIf
-            if (resetNextIf == null)
+            if (!canExtract || resetNextIf == null)
                 return;
 
             // remove the common clause from each complex clause
@@ -2349,7 +2421,7 @@ namespace RATools.Parser
             foreach (var alt in _alts)
             {
                 if (alt.Last().Type != RequirementType.None)
-                    return new ErrorExpression(alt.Last().Type + " modifier not allowed in subclause");
+                    return new ErrorExpression(BehavioralRequirementExpression.GetFunctionName(alt.Last().Type) + " not allowed in subclause");
 
                 alt.Last().Type = RequirementType.OrNext;
 

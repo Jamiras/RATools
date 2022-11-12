@@ -1236,7 +1236,8 @@ namespace RATools.Parser.Expressions.Trigger
             if (lastIndex == -1)
             {
                 // no unmodified AddSource items, append a item with value 0
-                memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
+                if (context is not ValueBuilderContext)
+                    memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
             }
             else if (lastIndex != memoryAccessors.Count - 1)
             {

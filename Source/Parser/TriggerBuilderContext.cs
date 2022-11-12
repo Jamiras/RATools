@@ -3,7 +3,6 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -515,7 +514,7 @@ namespace RATools.Parser
                     if (triggerExpression != null)
                     {
                         var requirements = new List<Requirement>();
-                        var context = new TriggerBuilderContext() { Trigger = requirements };
+                        var context = new ValueBuilderContext() { Trigger = requirements };
                         var error = triggerExpression.BuildTrigger(context);
                         if (error != null)
                         {
@@ -523,6 +522,7 @@ namespace RATools.Parser
                             return false;
                         }
 
+                        SetImpliedMeasuredTarget(requirements);
                         return ProcessMeasuredValue(requirements, expression, terms, out result);
                     }
                     break;
@@ -652,7 +652,10 @@ namespace RATools.Parser
                 return ReplaceVariables(scope, out result);
             }
 
-            public abstract ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall);
+            public virtual ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+            {
+                return new ErrorExpression("Not implemented", functionCall);
+            }
         }
 
         public ErrorExpression CallFunction(FunctionCallExpression functionCall, InterpreterScope scope)
@@ -735,6 +738,8 @@ namespace RATools.Parser
         }
 
         public AchievementBuilder Achievement { get; private set; }
+
+        public bool? HasPauseIf { get; set; }
 
         public void BeginAlt()
         {

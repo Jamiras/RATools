@@ -2,105 +2,90 @@
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal abstract class FlagConditionFunction : ComparisonModificationFunction
+    internal class FlagConditionFunction : FunctionDefinitionExpression
     {
         public FlagConditionFunction(string name, RequirementType type)
             : base(name)
         {
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
+
             _type = type;
         }
 
         private readonly RequirementType _type;
 
-        private static void SplitConditions(List<ExpressionBase> conditions, ExpressionBase expression, ConditionalOperation op)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var condition = expression as ConditionalExpression;
-            if (condition != null && condition.Operation == op)
-            {
-                foreach (var clause in condition.Conditions)
-                    SplitConditions(conditions, clause, op);
-            }
-            else
-            {
-                var requirementClause = expression as RequirementClauseExpression;
-                if (requirementClause != null && requirementClause.Operation == op)
-                {
-                    foreach (var clause in requirementClause.Conditions)
-                        SplitConditions(conditions, clause, op);
-                }
-                else
-                {
-                    conditions.Add(expression);
-                }
-            }
+            return Evaluate(scope, out result);
         }
 
-        protected bool SplitConditions(InterpreterScope scope, ExpressionBase condition,
-            ConditionalOperation conditionOperation, ConditionalOperation joiningOperation,
-            out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var conditions = new List<ExpressionBase>();
-            SplitConditions(conditions, condition, conditionOperation);
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
 
-            ExpressionBase newChain = null;
-            for (int i = 0; i < conditions.Count; i++)
+            var expression = comparison as RequirementExpressionBase;
+            if (expression == null)
             {
-                if (!conditions[i].ReplaceVariables(scope, out result))
-                    return false;
-
-                bool wrap = true;
-                var functionCallExpression = result as FunctionCallExpression;
-                if (functionCallExpression != null)
-                {
-                    var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
-                    if (functionDefinition is FlagConditionFunction)
-                        wrap = false;
-                }
-
-                if (wrap)
-                {
-                    // no need to force a logical unit when provided as a parameter.
-                    // allows ReplaceVariables to further separate it if necessary.
-                    result.IsLogicalUnit = false;
-
-                    result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { result });
-                    if (!result.ReplaceVariables(scope, out result))
-                        return false;
-                }
-
-                if (newChain == null)
-                    newChain = result;
-                else if (wrap)
-                    newChain = new ConditionalExpression(newChain, joiningOperation, result);
-                else
-                    newChain = new ConditionalExpression(newChain, conditionOperation, result);
+                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                return false;
             }
 
-            if (!newChain.ReplaceVariables(scope, out result))
-                return false;
+            var clause = comparison as RequirementClauseExpression;
+            if (clause != null && clause.Operation == ConditionalOperation.Or)
+            {
+                if (clause.Conditions.OfType<RequirementClauseExpression>().Count(c => c.Conditions.Count() > 1) > 1)
+                {
+                    // if there's more than one complex subclause, split into separate clauses
+                    if (_type == RequirementType.Trigger)
+                    {
+                        // trigger_when(A || B) => trigger_when(A) || trigger_when(B)
+                        result = SplitClause(clause, ConditionalOperation.Or, _type);
+                    }
+                    else
+                    {
+                        // never(A || B) => never(A) && never(B)
+                        // unless(A || B) => unless(A) && unless(B)
+                        result = SplitClause(clause, ConditionalOperation.And, _type);
+                    }
+
+                    CopyLocation(result);
+                    return true;
+                }
+            }
+
+            result = new BehavioralRequirementExpression
+            {
+                Behavior = _type,
+                Condition = (RequirementExpressionBase)comparison,
+            };
 
             CopyLocation(result);
             return true;
         }
 
-        protected override ErrorExpression ModifyRequirements(AchievementBuilder builder)
+        private static RequirementClauseExpression SplitClause(RequirementClauseExpression clause, ConditionalOperation operation, RequirementType type)
         {
-            var requirementsEx = RequirementEx.Combine(builder.CoreRequirements);
-            foreach (var requirementEx in requirementsEx)
+            var newClause = new RequirementClauseExpression { Operation = operation };
+            foreach (var condition in clause.Conditions)
             {
-                var lastCondition = requirementEx.Requirements.Last();
-                if (lastCondition.Type != RequirementType.None)
-                    return new ErrorExpression(string.Format("Cannot apply '{0}' to condition already flagged with {1}", Name.Name, lastCondition.Type));
+                var expr = (RequirementExpressionBase)condition;
 
-                lastCondition.Type = _type;
+                newClause.AddCondition(new BehavioralRequirementExpression
+                {
+                    Behavior = type,
+                    Condition = expr,
+                    Location = expr.Location
+                });
             }
 
-            return null;
+            newClause.Location = clause.Location;
+            return newClause;
         }
     }
 }

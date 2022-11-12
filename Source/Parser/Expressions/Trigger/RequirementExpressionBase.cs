@@ -1,7 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace RATools.Parser.Expressions.Trigger
 {
@@ -122,6 +121,16 @@ namespace RATools.Parser.Expressions.Trigger
         public virtual RequirementExpressionBase InvertLogic()
         {
             return null;
+        }
+
+        /// <summary>
+        /// Returns an expression where any 'never(A)'s have been converted to '!A's
+        /// </summary>
+        /// <returns>New requirement, or <c>null</c> if the requirement cannot be inverted.</returns>
+        /// <remarks>May return the original expression if nothing needed to be converted</remarks>
+        public virtual RequirementExpressionBase InvertResetsAndPauses()
+        {
+            return this;
         }
 
         /// <summary>

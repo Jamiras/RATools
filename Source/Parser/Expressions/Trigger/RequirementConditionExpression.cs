@@ -1,7 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -18,19 +16,14 @@ namespace RATools.Parser.Expressions.Trigger
         public RequirementConditionExpression(RequirementConditionExpression source)
             : this()
         {
-            Behavior = source.Behavior;
             Left = Clone(source.Left);
             Comparison = source.Comparison;
             Right = Clone(source.Right);
-            HitTarget = source.HitTarget;
         }
 
-        public RequirementType Behavior { get; set; }
         public ExpressionBase Left { get; set; }
         public ComparisonOperation Comparison { get; set; }
         public ExpressionBase Right { get; set; }
-
-        public uint HitTarget { get; set; }
 
         ExpressionBase ICloneableExpression.Clone()
         {
@@ -53,14 +46,6 @@ namespace RATools.Parser.Expressions.Trigger
 
         internal override void AppendString(StringBuilder builder)
         {
-            if (HitTarget > 0)
-            {
-                if (HitTarget == 1)
-                    builder.Append("once(");
-                else
-                    builder.AppendFormat("repeated({0}, ", HitTarget);
-            }
-
             Left.AppendString(builder);
 
             builder.Append(' ');
@@ -77,17 +62,19 @@ namespace RATools.Parser.Expressions.Trigger
 
             builder.Append(' ');
 
-            Right.AppendString(builder);
-
-            if (HitTarget > 0)
-                builder.Append(')');
+            // special handling: comparisons use unsigned values
+            var rightInteger = Right as IntegerConstantExpression;
+            if (rightInteger != null && rightInteger.Value < 0)
+                builder.Append((uint)rightInteger.Value);
+            else
+                Right.AppendString(builder);
         }
 
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as RequirementConditionExpression;
-            return (that != null && Comparison == that.Comparison && HitTarget == that.HitTarget &&
-                Behavior == that.Behavior && Right == that.Right && Left == that.Left);
+            return (that != null && Comparison == that.Comparison &&
+                Right == that.Right && Left == that.Left);
         }
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
@@ -137,7 +124,6 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type), Right);
 
             lastRequirement.Operator = ConvertToRequirementOperator(Comparison);
-            lastRequirement.HitCount = HitTarget;
             return null;
         }
 
@@ -262,18 +248,204 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (leftHasBCD && rightHasBCD)
             {
-                return new RequirementConditionExpression(this)
+                return new RequirementConditionExpression()
                 {
                     Left = newLeft,
+                    Comparison = Comparison,
                     Right = newRight,
+                    Location = Location,
                 };
             }
 
             return this;
         }
 
+        private static void NormalizeLimits(ref ExpressionBase expression)
+        {
+            var condition = expression as RequirementConditionExpression;
+            if (condition == null)
+                return;
+
+            var rightValue = condition.Right as IntegerConstantExpression;
+            if (rightValue == null)
+                return;
+
+            if (MemoryValueExpression.HasFloat(condition.Left))
+                return;
+
+            long min = 0, max = 0xFFFFFFFF;
+            long value = (long)(uint)rightValue.Value;
+
+            var memoryAccessor = condition.Left as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+            {
+                memoryAccessor.GetMinMax(out min, out max);
+            }
+            else
+            {
+                var modifiedMemoryAccessor = condition.Left as ModifiedMemoryAccessorExpression;
+                if (modifiedMemoryAccessor != null)
+                {
+                    modifiedMemoryAccessor.GetMinMax(out min, out max);
+                }
+                else
+                {
+                    var memoryValue = condition.Left as MemoryValueExpression;
+                    if (memoryValue != null)
+                        memoryValue.GetMinMax(out min, out max);
+                }
+            }
+
+            var newComparison = condition.Comparison;
+
+            if (value < min)
+            {
+                switch (condition.Comparison)
+                {
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.NotEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+                }
+            }
+            else if (value == min)
+            {
+                switch (condition.Comparison)
+                {
+                    case ComparisonOperation.LessThan:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThanOrEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        newComparison = ComparisonOperation.Equal;
+                        break;
+
+                    case ComparisonOperation.GreaterThan:
+                        if (max == min + 1)
+                        {
+                            // bitX(A) > 0  =>  bitX(A) == 1
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)max);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.GreaterThan;
+                        }
+                        break;
+
+                    case ComparisonOperation.NotEqual:
+                        if (max == min + 1)
+                        {
+                            // bitX(A) != 0  =>  bitX(A) == 1
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)max);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.NotEqual;
+                        }
+                        break;
+                }
+            }
+            else if (value > max)
+            {
+                switch (condition.Comparison)
+                {
+                    case ComparisonOperation.GreaterThan:
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.LessThan:
+                    case ComparisonOperation.LessThanOrEqual:
+                    case ComparisonOperation.NotEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+                }
+            }
+            else if (value == max)
+            {
+                switch (condition.Comparison)
+                {
+                    case ComparisonOperation.GreaterThan:
+                        expression = new AlwaysFalseExpression();
+                        return;
+
+                    case ComparisonOperation.LessThanOrEqual:
+                        expression = new AlwaysTrueExpression();
+                        return;
+
+                    case ComparisonOperation.GreaterThanOrEqual:
+                    case ComparisonOperation.Equal:
+                        newComparison = ComparisonOperation.Equal;
+                        break;
+
+                    case ComparisonOperation.LessThan:
+                        if (max == min + 1)
+                        {
+                            // bitX(A) < 1  =>  bitX(A) == 0
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)min);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.LessThan;
+                        }
+                        break;
+
+                    case ComparisonOperation.NotEqual:
+                        if (max == min + 1)
+                        {
+                            // bitX(A) != 1  =>  bitX(A) == 0
+                            newComparison = ComparisonOperation.Equal;
+                            rightValue = new IntegerConstantExpression((int)min);
+                        }
+                        else
+                        {
+                            newComparison = ComparisonOperation.NotEqual;
+                        }
+                        break;
+                }
+            }
+
+            if (newComparison != condition.Comparison || !ReferenceEquals(rightValue, condition.Right))
+            {
+                expression = new RequirementConditionExpression
+                {
+                    Left = condition.Left,
+                    Comparison = newComparison,
+                    Right = rightValue,
+                    Location = condition.Location
+                };
+            }
+        }
+
         public ExpressionBase Normalize()
         {
+            if (Left.IsLiteralConstant && !Right.IsLiteralConstant)
+            {
+                var reversed = new RequirementConditionExpression
+                {
+                    Left = Right,
+                    Comparison = ComparisonExpression.ReverseComparisonOperation(Comparison),
+                    Right = Left
+                };
+                return reversed.Normalize();
+            }
+
             var modifiedMemoryAccessor = Left as ModifiedMemoryAccessorExpression;
             if (modifiedMemoryAccessor != null && modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.None)
             {
@@ -283,6 +455,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             var result = NormalizeBCD();
+            NormalizeLimits(ref result);
 
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);
@@ -313,12 +486,20 @@ namespace RATools.Parser.Expressions.Trigger
                 return (thatClause != null) ? thatClause.LogicalIntersect(this, condition) : null;
             }
 
-            if (Behavior != thatCondition.Behavior || Left != thatCondition.Left)
-                return null;
-
-            // cannot merge if either condition has an infinite hit target
-            if (HitTarget != thatCondition.HitTarget && (HitTarget == 0 || thatCondition.HitTarget == 0))
-                return null;
+            if (Left.Type == thatCondition.Left.Type)
+            {
+                if (Left != thatCondition.Left)
+                    return null;
+            }
+            else
+            {
+                var leftUpconvert = Left as IUpconvertibleExpression;
+                var leftConverted = (leftUpconvert != null) ? leftUpconvert.UpconvertTo(ExpressionType.MemoryValue) : Left;
+                var rightUpconvert = thatCondition.Left as IUpconvertibleExpression;
+                var rightConverted = (rightUpconvert != null) ? rightUpconvert.UpconvertTo(ExpressionType.MemoryValue) : thatCondition.Left;
+                if (leftConverted != rightConverted)
+                    return null;
+            }
 
             var leftField = CreateField(Right);
             var rightField = CreateField(thatCondition.Right);
@@ -326,26 +507,6 @@ namespace RATools.Parser.Expressions.Trigger
                 return null;
             if (leftField.IsMemoryReference && (leftField.Value != rightField.Value || leftField.Size != rightField.Size))
                 return null; // reading different addresses or different sizes
-
-            //var leftEx = new RequirementEx();
-            //leftEx.Requirements.Add(new Requirement
-            //{
-            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
-            //    Operator = ConvertToRequirementOperator(Comparison),
-            //    Right = leftField,
-            //    HitCount = HitTarget
-            //});
-
-            //var rightEx = new RequirementEx();
-            //rightEx.Requirements.Add(new Requirement
-            //{
-            //    Left = new Field { Type = FieldType.MemoryAddress, Size = FieldSize.DWord, Value = 0x1234 },
-            //    Operator = ConvertToRequirementOperator(thatClause.Comparison),
-            //    Right = rightField,
-            //    HitCount = thatClause.HitTarget
-            //});
-
-            //var mergedEx = RequirementMerger.MergeRequirements(leftEx, rightEx, condition);
 
             var leftCondition = ConvertToRequirementOperator(Comparison);
             var rightCondition = ConvertToRequirementOperator(thatCondition.Comparison);
@@ -358,22 +519,10 @@ namespace RATools.Parser.Expressions.Trigger
                     return new AlwaysTrueExpression();
 
                 if (merged.Key == RequirementOperator.Divide)
-                {
-                    // these are allowed to conflict with each other
-                    if (HitTarget > 0)
-                        return null;
-                    if (Behavior == RequirementType.PauseIf)
-                        return null;
-                    if (Behavior == RequirementType.ResetIf)
-                        return null;
-
                     return new AlwaysFalseExpression();
-                }
 
                 var result = new RequirementConditionExpression
                 {
-                    Behavior = Behavior,
-                    HitTarget = Math.Max(HitTarget, thatCondition.HitTarget),
                     Left = Left,
                     Comparison = ConvertToComparisonOperation(merged.Key),
                 };
@@ -390,9 +539,9 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
                 }
 
-                if (result.Comparison == Comparison && result.Right == Right && result.HitTarget == HitTarget)
+                if (result.Comparison == Comparison && result.Right == Right)
                     return this;
-                if (result.Comparison == thatCondition.Comparison && result.Right == thatCondition.Right && result.HitTarget == thatCondition.HitTarget)
+                if (result.Comparison == thatCondition.Comparison && result.Right == thatCondition.Right)
                     return thatCondition;
 
                 return result;
@@ -405,7 +554,11 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var condition = Clone();
             condition.Comparison = ComparisonExpression.GetOppositeComparisonOperation(condition.Comparison);
-            return condition;
+
+            ExpressionBase result = condition;
+            NormalizeLimits(ref result);
+            result.Location = Location;
+            return (result as RequirementExpressionBase) ?? condition;
         }
     }
 }

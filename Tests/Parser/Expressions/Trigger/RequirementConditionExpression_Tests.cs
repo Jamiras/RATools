@@ -12,8 +12,6 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("low4(word(0x001234)) < 5")]
         [TestCase("word(dword(0x002345) + 4660) >= 500")]
         [TestCase("byte(0x001234) > prev(byte(0x001234))")]
-        [TestCase("once(dword(0x001234) <= 10000)")]
-        [TestCase("repeated(6, word(0x001234) > 100)")]
         public void TestAppendString(string input)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -22,15 +20,32 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         
         [Test]
         [TestCase("byte(0x001234) == 3", "0xH001234=3")]
+        [TestCase("3 == byte(0x001234)", "0xH001234=3")] // prefer constants on right
+        [TestCase("bit6(0x00627E) == 1", "0xS00627e=1")]
+        [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
+        [TestCase("high4(0x00616A) == 8", "0xU00616a=8")]
+        [TestCase("word(0x000042) == 5786", "0x 000042=5786")]
+        [TestCase("prior(bitcount(0x00627E)) == 0", "p0xK00627e=0")]
         [TestCase("low4(word(0x001234)) < 5", "I:0x 001234_0xL000000<5")]
         [TestCase("word(dword(0x002345) + 4660) >= 500", "I:0xX002345_0x 001234>=500")]
         [TestCase("byte(0x001234) > prev(byte(0x001234))", "0xH001234>d0xH001234")]
         [TestCase("low4(word(0x001234)) > prior(low4(word(0x001234)))", "I:0x 001234_0xL000000>p0xL000000")]
-        [TestCase("once(dword(0x001234) <= 10000)", "0xX001234<=10000.1.")]
-        [TestCase("repeated(6, word(0x001234) > 100)", "0x 001234>100.6.")]
         [TestCase("byte(0x001234) * byte(0x002345) == 3", "A:0xH001234*0xH002345_0=3")]
         [TestCase("byte(0x001234) / byte(0x002345) == 3", "A:0xH001234/0xH002345_0=3")]
         [TestCase("byte(0x001234) & 7 == 3", "A:0xH001234&7_0=3")]
+        [TestCase("dword(0x1234) == 12345678 * 30 / 60", "0xX001234=6172839")]
+        [TestCase("byte(0x1234) * 4 + byte(0x2345) == 6", "A:0xH001234*4_0xH002345=6")]
+        [TestCase("byte(0x1234) / 4 + byte(0x2345) == 6", "A:0xH001234/4_0xH002345=6")]
+        [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "A:0xH001234=0_B:d0xH001234=0_0xH002345=6")]
+        [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
+        [TestCase("float(0x1111) == 3.14", "fF001111=f3.14")]
+        [TestCase("prev(float(0x1111)) > 3.14", "dfF001111>f3.14")]
+        [TestCase("float(0x1111) < prev(float(0x1111))", "fF001111<dfF001111")]
+        [TestCase("mbf32(0x2345) == -0.5", "fM002345=f-0.5")]
+        [TestCase("byte(0x1234) & 7 == 1", "A:0xH001234&7_0=1")]
+        [TestCase("word(byte(0x1234) & 7) == 1", "I:0xH001234&7_0x 000000=1")]
+        [TestCase("word((byte(0x1234) & 7) + 17) == 1", "I:0xH001234&7_0x 000011=1")]
+        [TestCase("dword((dword(0x12345) & 0x1ffffff) + 0xff7f6255) == 60", "I:0xX012345&33554431_0xXff7f6255=60")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -38,9 +53,63 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
+        [TestCase("byte(0x001234) == 0", "byte(0x001234) == 0")]
+        [TestCase("byte(0x001234) != 0","byte(0x001234) != 0")]
+        [TestCase("byte(0x001234) < 0", "always_false()")]
+        [TestCase("byte(0x001234) <= 0", "byte(0x001234) == 0")]
+        [TestCase("byte(0x001234) > 0", "byte(0x001234) > 0")]
+        [TestCase("byte(0x001234) >= 0", "always_true()")]
+        [TestCase("byte(0x001234) == 255", "byte(0x001234) == 255")]
+        [TestCase("byte(0x001234) != 255", "byte(0x001234) != 255")]
+        [TestCase("byte(0x001234) < 255", "byte(0x001234) < 255")]
+        [TestCase("byte(0x001234) <= 255", "always_true()")]
+        [TestCase("byte(0x001234) > 255", "always_false()")]
+        [TestCase("byte(0x001234) >= 255", "byte(0x001234) == 255")]
+        [TestCase("word(0x001234) == 65535", "word(0x001234) == 65535")]
+        [TestCase("word(0x001234) != 65535", "word(0x001234) != 65535")]
+        [TestCase("word(0x001234) < 65535", "word(0x001234) < 65535")]
+        [TestCase("word(0x001234) <= 65535", "always_true()")]
+        [TestCase("word(0x001234) > 65535", "always_false()")]
+        [TestCase("word(0x001234) >= 65535", "word(0x001234) == 65535")]
+        [TestCase("tbyte(0x001234) == 16777215", "tbyte(0x001234) == 16777215")]
+        [TestCase("tbyte(0x001234) != 16777215", "tbyte(0x001234) != 16777215")]
+        [TestCase("tbyte(0x001234) < 16777215", "tbyte(0x001234) < 16777215")]
+        [TestCase("tbyte(0x001234) <= 16777215", "always_true()")]
+        [TestCase("tbyte(0x001234) > 16777215", "always_false()")]
+        [TestCase("tbyte(0x001234) >= 16777215", "tbyte(0x001234) == 16777215")]
+        [TestCase("dword(0x001234) == 4294967295", "dword(0x001234) == 4294967295")]
+        [TestCase("dword(0x001234) != 4294967295", "dword(0x001234) != 4294967295")]
+        [TestCase("dword(0x001234) < 4294967295", "dword(0x001234) < 4294967295")]
+        [TestCase("dword(0x001234) <= 4294967295", "always_true()")]
+        [TestCase("dword(0x001234) > 4294967295", "always_false()")]
+        [TestCase("dword(0x001234) >= 4294967295", "dword(0x001234) == 4294967295")]
+        [TestCase("bit3(0x001234) == 0", "bit3(0x001234) == 0")]
+        [TestCase("bit3(0x001234) != 0", "bit3(0x001234) == 1")]
+        [TestCase("bit3(0x001234) < 0", "always_false()")]
+        [TestCase("bit3(0x001234) <= 0", "bit3(0x001234) == 0")]
+        [TestCase("bit3(0x001234) > 0", "bit3(0x001234) == 1")]
+        [TestCase("bit3(0x001234) >= 0", "always_true()")]
+        [TestCase("bit5(0x001234) == 1", "bit5(0x001234) == 1")]
+        [TestCase("bit5(0x001234) != 1", "bit5(0x001234) == 0")]
+        [TestCase("bit5(0x001234) < 1", "bit5(0x001234) == 0")]
+        [TestCase("bit5(0x001234) <= 1", "always_true()")]
+        [TestCase("bit5(0x001234) > 1", "always_false()")]
+        [TestCase("bit5(0x001234) >= 1", "bit5(0x001234) == 1")]
+        public void TestNormalizeLimits(string input, string expected)
+        {
+            var result = TriggerExpressionTests.Parse(input);
+
+            var condition = result as RequirementConditionExpression;
+            if (condition != null)
+                result = condition.Normalize();
+
+            ExpressionTests.AssertAppendString(result, expected);
+        }
+
+        [Test]
         // bcd should be factored out
         [TestCase("bcd(byte(1)) == 24", ExpressionType.Requirement, "byte(0x000001) == 36")]
-        [TestCase("prev(bcd(byte(1))) == 150", ExpressionType.Requirement, "prev(byte(0x000001)) == 336")]
+        [TestCase("prev(bcd(byte(1))) == 15", ExpressionType.Requirement, "prev(byte(0x000001)) == 21")]
         [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", ExpressionType.Requirement, "byte(0x000001) != prev(byte(0x000001))")]
         // bcd cannot be factored out
         [TestCase("byte(1) != bcd(byte(2))", ExpressionType.Requirement, "byte(0x000001) != bcd(byte(0x000002))")]

@@ -40,7 +40,7 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
-        public static string ReplacePlaceholders(string input)
+        public static string ReplacePlaceholders(string input, bool sizePrefixes = false)
         {
             var builder = new StringBuilder();
             var size = FieldSize.Byte;
@@ -56,10 +56,14 @@ namespace RATools.Tests.Parser.Expressions
                     builder.AppendFormat("{0}(0x{1:X6})", Field.GetSizeFunction(size), (uint)(c - 'A') + 1);
                     size = FieldSize.Byte; // reset to default size
                 }
-                else
+                else if (sizePrefixes)
                 {
                     // lowercase letter is size prefix (i.e. u = upper, o = bit2)
                     size = Field.Deserialize(Tokenizer.CreateTokenizer(string.Format("0x{0}0", c))).Size;
+                }
+                else
+                {
+                    builder.Append(c);
                 }
             }
 

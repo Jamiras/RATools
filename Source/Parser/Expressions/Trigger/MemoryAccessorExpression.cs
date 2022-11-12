@@ -381,6 +381,12 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
+        public void GetMinMax(out long min, out long max)
+        {
+            min = 0;
+            max = Field.GetMaxValue(Field.Size);
+        }
+
         /// <summary>
         /// Attempts to create a new expression from the current expression without loss of data.
         /// </summary>

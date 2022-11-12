@@ -354,9 +354,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("bit1(0x000001) + bit2(0x000001) < bit3(0x000001) + bit4(0x000001) + 1",
                   "bit1(0x000001) + bit2(0x000001) - bit3(0x000001) - bit4(0x000001) + 2 < 3", // underflow of 2 calculated
                   "A:2=0_A:0xN000001=0_B:0xP000001=0_B:0xQ000001=0_0xO000001<3")]
-        [TestCase("bit1(0x000001) + bit2(0x000001) + 3 > bit3(0x000001) + bit4(0x000001) + 5",
-                  "bit1(0x000001) + bit2(0x000001) - bit3(0x000001) - bit4(0x000001) + 2 > 4", // constants merged, then underflow of 2 applied
-                  "A:2=0_A:0xN000001=0_B:0xP000001=0_B:0xQ000001=0_0xO000001>4")]
+        [TestCase("bit1(0x000001) + bit2(0x000001) + 1 > bit3(0x000001) + bit4(0x000001) + 2",
+                  "bit1(0x000001) + bit2(0x000001) - bit3(0x000001) - bit4(0x000001) + 2 > 3", // constants merged, then underflow of 2 applied
+                  "A:2=0_A:0xN000001=0_B:0xP000001=0_B:0xQ000001=0_0xO000001>3")]
         [TestCase("bit1(0x000001) + bit2(0x000001) - bit3(0x000001) - bit4(0x000001) < 1",
                   "bit1(0x000001) + bit2(0x000001) - bit3(0x000001) - bit4(0x000001) + 2 < 3", // underflow of 2 calculated
                   "A:2=0_A:0xN000001=0_B:0xP000001=0_B:0xQ000001=0_0xO000001<3")]
