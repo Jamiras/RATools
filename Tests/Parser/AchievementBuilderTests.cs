@@ -228,57 +228,6 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
-        [TestCase("bit6(0x00627E) == 1", "0xS00627e=1")]
-        [TestCase("prev(bit6(0x00627E)) == 0", "d0xS00627e=0")]
-        [TestCase("prior(bitcount(0x00627E)) == 0", "p0xK00627e=0")]
-        [TestCase("bit6(0x00627E) == 1 && prev(bit6(0x00627E)) == 0", "0xS00627e=1_d0xS00627e=0")]
-        [TestCase("byte(0x000028) == 3", "0xH000028=3")]
-        [TestCase("3 == byte(0x000028)", "0xH000028=3")] // prefer constants on right
-        [TestCase("high4(0x00616A) == 8", "0xU00616a=8")]
-        [TestCase("word(0x000042) == 5786", "0x 000042=5786")]
-        [TestCase("byte(0x000028) == 12 && word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000",
-                  "1=1S0xH000028=12_0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // no parentheses - && ties first condition to second, add always_true core
-        [TestCase("byte(0x000028) == 12 && (word(0x000042) == 25959 || byte(0x0062AF) != 0 || word(0x0062AD) >= 10000)",
-                  "0xH000028=12S0x 000042=25959S0xH0062af!=0S0x 0062ad>=10000")] // parenthesis ensure first condition separate from alts
-        [TestCase("once(byte(0x000440) == 140)", "0xH000440=140.1.")]
-        [TestCase("never(byte(0x000440) == 0)", "R:0xH000440=0")]
-        [TestCase("unless(byte(0x000440) == 0)", "P:0xH000440=0")]
-        [TestCase("tally(4, byte(0x1234) == 56, byte(0x1234) == 67)", "C:0xH001234=56_0xH001234=67.4.")]
-        [TestCase("repeated(4, byte(0x1234) == 56 || byte(0x2345) == 67)", "O:0xH001234=56_0xH002345=67.4.")]
-        [TestCase("dword(0x1234) == 12345678 * 30 / 60", "0xX001234=6172839")]
-        [TestCase("byte(0x1234) * 4 + byte(0x2345) == 6", "A:0xH001234*4_0xH002345=6")]
-        [TestCase("byte(0x1234) / 4 + byte(0x2345) == 6", "A:0xH001234/4_0xH002345=6")]
-        [TestCase("byte(0x1234) - prev(byte(0x1234)) + byte(0x2345) == 6", "A:0xH001234=0_B:d0xH001234=0_0xH002345=6")]
-        [TestCase("once(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_0xO20770f=0.1.")]
-        [TestCase("never(bit1(0x20770F) == 0 && bit2(0x20770F) == 0)", "N:0xN20770f=0_R:0xO20770f=0")]
-        [TestCase("never(once(byte(0x1234) == 1) && repeated(12, always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
-        [TestCase("never(repeated(12, once(byte(0x1234) == 1) && always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
-        [TestCase("byte(word(0x1111)) - prev(byte(word(0x1111))) > 1", "A:1_I:0x 001111_d0xH000000<0xH000000")]
-        [TestCase("float(0x1111) == 3.14", "fF001111=f3.14")]
-        [TestCase("prev(float(0x1111)) > 3.14", "dfF001111>f3.14")]
-        [TestCase("float(0x1111) < prev(float(0x1111))", "fF001111<dfF001111")]
-        [TestCase("mbf32(0x2345) == -0.5", "fM002345=f-0.5")]
-        [TestCase("never(float(0x1111) == 2.0)", "R:fF001111=f2.0")]
-        [TestCase("measured(byte(0x1234) < 40)", "M:0xH001234<40")]
-        [TestCase("measured(repeated(20, byte(0x1234) == 40))", "M:0xH001234=40.20.")]
-        [TestCase("measured(byte(0x1234) < 40, format=\"percent\")", "G:0xH001234<40")]
-        [TestCase("byte(0x1234) & 7 == 1", "A:0xH001234&7_0=1")]
-        [TestCase("word(byte(0x1234) & 7) == 1", "I:0xH001234&7_0x 000000=1")]
-        [TestCase("word((byte(0x1234) & 7) + 17) == 1", "I:0xH001234&7_0x 000011=1")]
-        [TestCase("dword((dword(0x12345) & 0x1ffffff) + 0xff7f6255) == 60", "I:0xX012345&33554431_0xXff7f6255=60")]
-        [TestCase("once(prev(byte(0x1234)) == byte(0x2345) - 1)", "A:1=0_d0xH001234=0xH002345.1.")]
-        public void TestSerializeRequirements(string input, string expected)
-        {
-            // verify serialization of the builder
-            var achievement = CreateAchievement(input);
-            Assert.That(achievement.SerializeRequirements(), Is.EqualTo(expected));
-
-            // convert to actual achievement and verify serialization of that
-            var cheev = achievement.ToAchievement();
-            Assert.That(AchievementBuilder.SerializeRequirements(cheev), Is.EqualTo(expected));
-        }
-
-        [Test]
         public void TestAreRequirementsSameExact()
         {
             var achievement1 = CreateAchievement("byte(0x001234) == 1 && byte(0x005678) == 78");
@@ -416,8 +365,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) & byte(0x001234)", "byte(0x001234) & byte(0x001234)")] // could be simplified to just byte(0x001234)
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
-        [TestCase("never(repeated(3, 1 == 1))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
-        [TestCase("byte(0x001234) == 1 && repeated(3, never(1 == 1))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("never(repeated(3, always_true()))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
+        [TestCase("byte(0x001234) == 1 && never(repeated(3, always_true()))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
         [TestCase("repeated(3, byte(0x001234) != byte(0x001234))", "always_false()")] // always false will never be true, regardless of how many frames it's false
         [TestCase("0 < 256", "always_true()")] // always true
         [TestCase("0 == 1", "always_false()")] // always false
@@ -426,19 +375,20 @@ namespace RATools.Tests.Parser
         [TestCase("4.56 == 4.56", "always_true()")] // always true
         [TestCase("4.56 > 4.57", "always_false()")] // always false
         [TestCase("4.56 > 4", "always_true()")] // always false
-        [TestCase("0 == 1 && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
-        [TestCase("0 == 1 && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
-        [TestCase("1 == 1 && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
-        [TestCase("1 == 1 && (1 == 2 || 1 == 3)", "always_false()")] // if all alts are false, entire trigger is false
+        [TestCase("always_false() && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
+        [TestCase("always_false() && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
+        [TestCase("always_true() && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
         [TestCase("once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (always_false() && never(byte(0x001234) == 1) && byte(0x001235) == 2))",
                   "once(byte(0x004567) == 2) && (byte(0x002345) == 3 || (never(byte(0x001234) == 1) && always_false()))")] // always_false paired with ResetIf does not eradicate the ResetIf
-        [TestCase("once(byte(0x001234) == 1) && never(0 == 1)", "once(byte(0x001234) == 1)")] // a ResetIf for a condition that can never be true is redundant
-        [TestCase("once(byte(0x001234) == 1) && unless(0 == 1)", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
-        [TestCase("once(byte(0x001234) == 1) && never(1 == 1)", "never(always_true())")] // a ResetIf for a condition that is always true will never let the trigger fire
-        [TestCase("once(byte(0x001234) == 1) && unless(1 == 1)", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
+        [TestCase("once(byte(0x001234) == 1) && never(always_false())", "once(byte(0x001234) == 1)")] // a ResetIf for a condition that can never be true is redundant
+        [TestCase("once(byte(0x001234) == 1) && unless(always_false())", "once(byte(0x001234) == 1)")] // a PauseIf for a condition that can never be true is redundant
+        [TestCase("once(byte(0x001234) == 1) && never(always_true())", "always_false()")] // a ResetIf for a condition that is always true will never let the trigger fire
+        [TestCase("once(byte(0x001234) == 1) && unless(always_true())", "always_false()")] // a PauseIf for a condition that is always true will prevent the trigger from firing
         [TestCase("once(byte(0x001234) == 1) && never(once(bit2(0x1234) == 255))", "once(byte(0x001234) == 1)")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && never(byte(0x2345) > 0x2345)", "byte(0x001234) == 1")] // condition becomes always_false(), and never(always_false()) can be eliminated
         [TestCase("byte(0x001234) == 1 && unless(once(byte(0x2345) == 0x2345))", "byte(0x001234) == 1")] // condition becomes always_false(), and unless(always_false()) can be eliminated
+        [TestCase("float(0x001234) < 0.0", "float(0x001234) < 0.0")]
+        [TestCase("float(0x001234) < 0", "float(0x001234) < 0")]
         public void TestOptimizeNormalizeComparisons(string input, string expected)
         {
             var achievement = CreateAchievement(input);
@@ -601,9 +551,9 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) >= 2 || byte(0x001234) <= 2", "always_true()")]
         [TestCase("always_false() || byte(0x001234) == 2 || byte(0x001234) == 3", "byte(0x001234) == 2 || byte(0x001234) == 3")] // always_false group can be removed
         [TestCase("always_false() || byte(0x001234) == 2", "byte(0x001234) == 2")] // always_false group can be removed
-        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a pauseif or resetif
+        [TestCase("always_true() || byte(0x001234) == 2 || byte(0x001234) == 3", "always_true()")] // always_true group causes other groups to be ignored if they don't have a resetif
         [TestCase("always_true() || byte(0x001234) == 2 || (byte(0x001234) == 3 && unless(byte(0x002345) == 1)) || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))",
-            "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without pauseif or resetif to be removed
+            "always_true() || (once(byte(0x001234) == 4) && never(byte(0x002345) == 1))")] // always_true alt causes groups without resetif to be removed
         [TestCase("tally(2, once(byte(0x1111) == 1 && byte(0x2222) == 0), once(byte(0x1111) == 2 && byte(0x2222) == 0))",
             "tally(2, once(byte(0x001111) == 1 && byte(0x002222) == 0), once(byte(0x001111) == 2 && byte(0x002222) == 0))")]
         public void TestOptimizeMergeDuplicateAlts(string input, string expected)
@@ -681,8 +631,8 @@ namespace RATools.Tests.Parser
         [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
         [TestCase("once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
                   "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
-        [TestCase("tally(2, once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301))",
-                  "tally(2, once(word(0x001234) >= 284 && word(0x001234) <= 301))")] // always_false() inside once() is optimized out
+        [TestCase("tally(2, always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
+                  "repeated(2, word(0x001234) >= 284 && word(0x001234) <= 301)")] // always_false() inside once() is optimized out
         [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))",
                   "tally(2, (once(byte(0x001234) == 1) || once(byte(0x001234) == 2) || once(byte(0x001234) == 3)))")]
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
@@ -697,12 +647,14 @@ namespace RATools.Tests.Parser
         [Test]
         // ==== CrossMultiplyOrConditions ====
         [TestCase("(A || B) && (C || D)", "(A && C) || (A && D) || (B && C) || (B && D)")]
-        [TestCase("(A || B) && (A || D)", "(A && A) || (A && D) || (B && A) || (B && D)")]
+        [TestCase("(A || B) && (A || D)",
+                //"(A && A) || (A && D) || (B && A) || (B && D)"
+                  "A || (B && D)")] // "A || (A && D)" and "A || (B && A)" are both just "A"
         [TestCase("(A || B) && (A || C) && (B || C)",
-                  "(A && A && B) || (A && A && C) || (A && C && B) || (A && C && C) || " +
-                  "(B && A && B) || (B && A && C) || (B && C && B) || (B && C && C)")]
+                  "(A && B) || (A && C) || (A && C && B) || " +
+                  "(B && A) || (B && A && C) || (B && C)")] // multiple "A && C" and "B && C" clauses reduced
         [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
-                  "(A && B && A && C) || (A && B && B && D) || (C && D && A && C) || (C && D && B && D)")]
+                  "(A && B && C) || (A && B && D) || (C && D && A) || (C && D && B)")]
         [TestCase("(A || B || C) && (D || E || F)",
                   "(A && D) || (A && E) || (A && F) || (B && D) || (B && E) || (B && F) || (C && D) || (C && E) || (C && F)")]
         [TestCase("(A && (B || C)) && (D || E)",
@@ -805,7 +757,8 @@ namespace RATools.Tests.Parser
         public void TestGuardedResetIfWithAlts()
         {
             var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
-                "(always_true() || (always_false() && never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
+                "(always_true() || (always_false() &&" +
+                " never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
                 "(byte(0x4567) == 1 || byte(0x004567) == 2)");
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(),

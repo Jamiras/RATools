@@ -52,7 +52,7 @@ namespace RATools.Parser
             }
         }
 
-        private static ExpressionBase CrossMultiplyOrConditions(List<ExpressionBase> orConditions)
+        private static ExpressionBase CrossMultiplyOrConditions(List<ExpressionBase> orConditions, List<ExpressionBase> andConditions = null)
         {
             // This creates a combinatorial collection from one or more collections of OR'd conditions.
             // Redundancies will be optimized out later.
@@ -91,37 +91,55 @@ namespace RATools.Parser
 
             if (expansionSize >= 20)
             {
-                foreach (var flattened in flattenedClauses)
+                int insertAt = (andConditions != null) ? andConditions.Count : 0;
+                for (int i = flattenedClauses.Count -1; i >= 0; i--)
                 {
+                    var flattened = flattenedClauses[i];
                     var orNextChain = BuildOrNextChain(flattened);
                     if (orNextChain != null)
                     {
                         expansionSize /= flattened.Count();
 
-                        flattened.Clear();
-                        flattened.Add(orNextChain);
+                        if (andConditions != null)
+                        {
+                            flattenedClauses.RemoveAt(i);
+                            andConditions.Insert(insertAt, orNextChain);
+                        }
+                        else
+                        {
+                            flattened.Clear();
+                            flattened.Add(orNextChain);
+                        }
                     }
                 }
             }
+
+            if (flattenedClauses.Count == 0)
+                return null;
 
             const int MAX_EXPANSION_SIZE = 10000;
             if (expansionSize > MAX_EXPANSION_SIZE)
                 return new ErrorExpression(String.Format("Expansion of complex clause would result in {0} alt groups (exceeds {1} limit)", expansionSize, MAX_EXPANSION_SIZE));
 
             // then, create an alt group for every possible combination of items from each of the flattened lists
+            var context = new TriggerBuilderContext();
             var numFlattenedClauses = flattenedClauses.Count();
             var partIndex = new int[numFlattenedClauses];
             var parts = new List<ExpressionBase>();
             do
             {
-                var andPart = flattenedClauses[numFlattenedClauses - 1][partIndex[numFlattenedClauses - 1]];
-                for (int clauseIndex = numFlattenedClauses - 2; clauseIndex >= 0; clauseIndex--)
+                var andClause = new RequirementClauseExpression
+                { 
+                    Operation = ConditionalOperation.And,
+                    Location = flattenedClauses[0][partIndex[0]].Location
+                };
+                for (int clauseIndex = 0; clauseIndex < numFlattenedClauses; clauseIndex++)
                 {
                     var expression = flattenedClauses[clauseIndex][partIndex[clauseIndex]];
-                    andPart = new ConditionalExpression(expression, ConditionalOperation.And, andPart);
+                    andClause.AddCondition(expression);
                 }
 
-                parts.Add(andPart);
+                parts.Add(andClause.Optimize(context));
 
                 int i = numFlattenedClauses - 1;
                 do
@@ -131,11 +149,15 @@ namespace RATools.Parser
 
                     if (i == 0)
                     {
-                        var orPart = parts[parts.Count - 1];
-                        for (i = parts.Count - 2; i >= 0; i--)
-                            orPart = new ConditionalExpression(parts[i], ConditionalOperation.Or, orPart);
+                        var orClause = new RequirementClauseExpression
+                        {
+                            Operation = ConditionalOperation.Or,
+                            Location = parts[0].Location
+                        };
+                        for (i = 0; i < parts.Count; i++)
+                            orClause.AddCondition(parts[i]);
 
-                        return orPart;
+                        return orClause;
                     }
 
                     partIndex[i--] = 0;
@@ -157,11 +179,22 @@ namespace RATools.Parser
                 case ExpressionType.Requirement:
                     var clause = expression as RequirementConditionExpression;
                     if (clause != null)
-                    {
-                        if (clause.HitTarget > 0 || clause.Behavior != RequirementType.None)
-                            return false;
                         return IsValidInOrNextChain(clause.Left) && IsValidInOrNextChain(clause.Right);
+
+                    var tallied = expression as TalliedRequirementExpression;
+                    if (tallied != null)
+                    {
+                        if (tallied.HitTarget > 0)
+                            return false;
+                        foreach (var condition in tallied.Conditions)
+                        {
+                            if (!IsValidInOrNextChain(condition))
+                                return false;
+                        }
                     }
+
+                    if (expression is BehavioralRequirementExpression)
+                        return false;
 
                     return true;
 
@@ -202,7 +235,7 @@ namespace RATools.Parser
                     return null;
             }
 
-            ExpressionBase result = null;
+            var newClause = new RequirementClauseExpression.OrNextRequirementClauseExpression { Location = clause[0].Location };
             ExpressionBase andNextClause = null;
             foreach (var condition in clause)
             {
@@ -215,18 +248,10 @@ namespace RATools.Parser
                     andNextClause = reqClause;
                 }
 
-                if (result == null)
-                    result = condition;
-                else
-                    result = new ConditionalExpression(result, ConditionalOperation.Or, condition);
+                newClause.AddCondition(condition);
             }
 
-            result = new FunctionCallExpression("__ornext", new ExpressionBase[]
-            {
-                result
-            });
-
-            return result;
+            return newClause;
         }
 
         private static RequirementClauseExpression BubbleUpOrs(RequirementClauseExpression condition)
@@ -413,15 +438,18 @@ namespace RATools.Parser
 
             if (orConditions.Count() > 1)
             {
-                var altPart = CrossMultiplyOrConditions(orConditions);
-                if (altPart.Type == ExpressionType.Error)
+                var altPart = CrossMultiplyOrConditions(orConditions, andedConditions);
+                if (altPart != null)
                 {
-                    expression.CopyLocation(altPart);
-                    error = (ErrorExpression)altPart;
-                    return false;
-                }
+                    if (altPart.Type == ExpressionType.Error)
+                    {
+                        expression.CopyLocation(altPart);
+                        error = (ErrorExpression)altPart;
+                        return false;
+                    }
 
-                andedConditions.Add(altPart);
+                    andedConditions.Add(altPart);
+                }
             }
             else if (orConditions.Count() == 1)
             {
@@ -462,12 +490,18 @@ namespace RATools.Parser
         {
             var context = new TriggerBuilderContext { Trigger = CoreRequirements };
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = context };
+            ErrorExpression error;
 
             ExpressionBase result;
             if (!expression.ReplaceVariables(scope, out result))
-                return ((ErrorExpression)result).Message;
+            {
+                error = (ErrorExpression)result;
+                if (error.InnerError != null)
+                    return error.InnermostError.Message;
 
-            ErrorExpression error;
+                return error.Message;
+            }
+
             if (!PopulateFromExpression(result, scope, out error))
                 return error.Message;
 

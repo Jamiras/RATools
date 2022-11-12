@@ -28,7 +28,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             {
                 var error = result as ErrorExpression;
                 if (error != null && error.InnerError != null)
-                    Assert.Fail(error.InnerError.ToString());
+                    Assert.Fail(error.InnermostError.ToString());
 
                 Assert.Fail(result.ToString());
             }
@@ -138,6 +138,28 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         public static void AssertSerializeAchievement(ITriggerExpression expression, string expected)
         {
             Assert.That(SerializeAchievement(expression), Is.EqualTo(expected));
+        }
+
+        public static void AssertLogicalIntersect(string left, string right, ConditionalOperation condition, string expected)
+        {
+            left = ExpressionTests.ReplacePlaceholders(left);
+            var leftClause = Parse<RequirementExpressionBase>(left);
+
+            right = ExpressionTests.ReplacePlaceholders(right);
+            var rightClause = Parse<RequirementExpressionBase>(right);
+
+            var intersect = leftClause.LogicalIntersect(rightClause, condition);
+
+            if (expected == null)
+            {
+                Assert.That(intersect, Is.Null);
+            }
+            else
+            {
+                Assert.That(intersect, Is.Not.Null, "intersect failed");
+                expected = ExpressionTests.ReplacePlaceholders(expected);
+                ExpressionTests.AssertAppendString(intersect, expected);
+            }
         }
     }
 }

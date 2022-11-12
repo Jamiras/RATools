@@ -256,7 +256,7 @@ namespace RATools.Parser
                         case RequirementOperator.Equal:
                         case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.Equal;
                         case RequirementOperator.LessThanOrEqual: return RequirementOperator.LessThanOrEqual;
-                        case RequirementOperator.GreaterThan: return RequirementOperator.None;
+                        case RequirementOperator.GreaterThan: return RequirementOperator.Divide; // None
                         default: break;
                     }
                     break;
@@ -269,7 +269,7 @@ namespace RATools.Parser
                         case RequirementOperator.Equal:
                         case RequirementOperator.LessThanOrEqual: return RequirementOperator.Equal;
                         case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
-                        case RequirementOperator.LessThan: return RequirementOperator.None;
+                        case RequirementOperator.LessThan: return RequirementOperator.Divide; // None
                         default: break;
                     }
                     break;
@@ -277,7 +277,7 @@ namespace RATools.Parser
                 case RequirementOperator.NotEqual:
                     switch (right)
                     {
-                        case RequirementOperator.Equal: return RequirementOperator.None;
+                        case RequirementOperator.Equal: return RequirementOperator.Divide; // None
                         case RequirementOperator.NotEqual: return RequirementOperator.NotEqual;
                         case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.GreaterThan;
                         case RequirementOperator.LessThanOrEqual: return RequirementOperator.LessThan;
@@ -295,7 +295,7 @@ namespace RATools.Parser
                         case RequirementOperator.Equal: return RequirementOperator.Equal;
                         case RequirementOperator.GreaterThan:
                         case RequirementOperator.LessThan:
-                        case RequirementOperator.NotEqual: return RequirementOperator.None;
+                        case RequirementOperator.NotEqual: return RequirementOperator.Divide; // None
                         default: break;
                     }
                     break;
@@ -308,7 +308,7 @@ namespace RATools.Parser
                         case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.GreaterThan;
                         case RequirementOperator.LessThan:
                         case RequirementOperator.LessThanOrEqual:
-                        case RequirementOperator.Equal: return RequirementOperator.None;
+                        case RequirementOperator.Equal: return RequirementOperator.Divide; // None
                         default: break;
                     }
                     break;
@@ -321,7 +321,7 @@ namespace RATools.Parser
                         case RequirementOperator.LessThanOrEqual: return RequirementOperator.LessThan;
                         case RequirementOperator.GreaterThan:
                         case RequirementOperator.GreaterThanOrEqual:
-                        case RequirementOperator.Equal: return RequirementOperator.None;
+                        case RequirementOperator.Equal: return RequirementOperator.Divide; // None
                         default: break;
                     }
                     break;
@@ -529,6 +529,11 @@ namespace RATools.Parser
                         merged = AlwaysTrueFunction.CreateAlwaysTrueRequirement();
                         moreRestrictive = MoreRestrictiveRequirement.Everything;
                     }
+                    else if (mergedOperator == RequirementOperator.Divide)
+                    {
+                        merged = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
+                        moreRestrictive = MoreRestrictiveRequirement.Conflict;
+                    }
                     else if (mergedOperator != RequirementOperator.None)
                     {
                         merged = MergeRequirements(left, right, MoreRestrictiveRequirement.Same);
@@ -540,11 +545,6 @@ namespace RATools.Parser
                             moreRestrictive = MoreRestrictiveRequirement.Right;
                         else
                             moreRestrictive = MoreRestrictiveRequirement.LeftMergeOperator;
-                    }
-                    else if (condition == ConditionalOperation.And)
-                    {
-                        merged = AlwaysFalseFunction.CreateAlwaysFalseRequirement();
-                        moreRestrictive = MoreRestrictiveRequirement.Conflict;
                     }
                 }
             }

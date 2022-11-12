@@ -1,99 +1,52 @@
-﻿using RATools.Data;
-using RATools.Parser.Expressions;
+﻿using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace RATools.Parser.Functions
 {
-    internal class DisableWhenFunction : FlagConditionFunction
+    internal class DisableWhenFunction : FunctionDefinitionExpression
     {
         public DisableWhenFunction()
-            : base("disable_when", RequirementType.PauseIf)
+            : base("disable_when")
         {
+            Parameters.Add(new VariableDefinitionExpression("comparison"));
             Parameters.Add(new VariableDefinitionExpression("until"));
 
-            DefaultParameters["until"] = AlwaysFalseFunction.CreateAlwaysFalseFunctionCall();
+            DefaultParameters["until"] = new AlwaysFalseExpression();
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (!base.ReplaceVariables(scope, out result))
-                return false;
-
-            var func = result as FunctionCallExpression;
-            if (func == null)
-                return true;
-
-            var until = GetParameter(scope, "until", out result);
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { func.Parameters.First(), until });
-            CopyLocation(result);
-
-            return true;
+            return Evaluate(scope, out result);
         }
 
-        public override ErrorExpression BuildTrigger(TriggerBuilderContext context, InterpreterScope scope, FunctionCallExpression functionCall)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var until = functionCall.Parameters.ElementAt(1);
+            var comparison = GetParameter(scope, "comparison", out result);
+            if (comparison == null)
+                return false;
 
-            // build the reset next clause
-            var builder = new ScriptInterpreterAchievementBuilder();
-            ExpressionBase result;
-            if (!TriggerBuilderContext.ProcessAchievementConditions(builder, until, scope, out result))
-                return new ErrorExpression("until did not evaluate to a valid comparison", until) { InnerError = (ErrorExpression)result };
-
-            var error = builder.CollapseForSubClause();
-            if (error != null)
-                return new ErrorExpression(error.Message, until);
-
-            var resetNextClause = new List<Requirement>();
-            if (builder.CoreRequirements.Count > 0 && builder.CoreRequirements.First().Evaluate() != false)
+            var expression = comparison as RequirementExpressionBase;
+            if (expression == null)
             {
-                foreach (var requirement in builder.CoreRequirements)
-                {
-                    if (requirement.Type == RequirementType.None)
-                        requirement.Type = RequirementType.AndNext;
-
-                    resetNextClause.Add(requirement);
-                }
-
-                resetNextClause.Last().Type = RequirementType.ResetNextIf;
+                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                return false;
             }
 
-            // build the when clause
-            var whenContext = new TriggerBuilderContext { Trigger = new List<Requirement>() };
-            error = base.BuildTrigger(whenContext, scope, functionCall);
-            if (error != null)
-                return error;
+            var until = GetParameter(scope, "until", out result);
+            if (until == null)
+                return false;
 
-            // 'reset next' clause first
-            foreach (var resetRequirement in resetNextClause)
-                context.Trigger.Add(resetRequirement);
-
-            // then 'when' clause. make sure to insert the 'reset next' clause after each addhits/subhits
-            // as they break up the 'reset next' scope.
-            foreach (var whenRequirement in whenContext.Trigger)
+            var untilExpression = until as RequirementExpressionBase;
+            if (untilExpression == null)
             {
-                context.Trigger.Add(whenRequirement);
-
-                switch (whenRequirement.Type)
-                {
-                    case RequirementType.AddHits:
-                    case RequirementType.SubHits:
-                        foreach (var resetRequirement in resetNextClause)
-                            context.Trigger.Add(resetRequirement);
-                        break;
-
-                    default:
-                        break;
-                }
+                result = new ErrorExpression("until did not evaluate to a valid comparison", until);
+                return false;
             }
 
-            // disable_when is a pause lock - if a hitcount was not specified assume the first hit is enough
-            if (context.LastRequirement.HitCount == 0)
-                context.LastRequirement.HitCount = 1;
-
-            return null;
+            result = new DisableWhenRequirementExpression() { Condition = expression, Until = untilExpression };
+            CopyLocation(result);
+            return true;
         }
     }
 }

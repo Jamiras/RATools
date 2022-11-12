@@ -104,9 +104,9 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new RepeatedFunction());
                 _globalScope.AddFunction(new TallyFunction());
                 _globalScope.AddFunction(new DeductFunction());
-                _globalScope.AddFunction(new NeverFunction());
-                _globalScope.AddFunction(new UnlessFunction());
-                _globalScope.AddFunction(new TriggerWhenFunction());
+                _globalScope.AddFunction(new FlagConditionFunction("never", RequirementType.ResetIf));
+                _globalScope.AddFunction(new FlagConditionFunction("unless", RequirementType.PauseIf));
+                _globalScope.AddFunction(new FlagConditionFunction("trigger_when", RequirementType.Trigger));
                 _globalScope.AddFunction(new MeasuredFunction());
                 _globalScope.AddFunction(new DisableWhenFunction());
 
@@ -136,7 +136,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new ArrayPopFunction());
                 _globalScope.AddFunction(new ArrayMapFunction());
 
-                _globalScope.AddFunction(new RepeatedFunction.OrNextWrapperFunction());
+                _globalScope.AddFunction(new ConditionalExpression.OrNextWrapperFunction());
             }
 
             return _globalScope;
