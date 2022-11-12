@@ -249,7 +249,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             ErrorExpression error;
 
-            var sortedConditions = new List<ExpressionBase>(Conditions);
+            var sortedConditions = new List<RequirementExpressionBase>(Conditions);
             int i = sortedConditions.Count - 1;
             for (; i >= 0; i--)
             {

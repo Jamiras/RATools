@@ -451,7 +451,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     var subclause = subclauses[i]._conditions[indices[i]];
                     var clause = subclause as RequirementClauseExpression;
-                    if (clause != null)
+                    if (clause != null && clause is not OrNextRequirementClauseExpression)
                         error = BuildTrigger(triggerContext, clause._conditions, RequirementType.None);
                     else
                         error = subclause.BuildSubclauseTrigger(triggerContext);
@@ -463,9 +463,12 @@ namespace RATools.Parser.Expressions.Trigger
                 var j = indices.Length - 1;
                 do
                 {
-                    indices[j]++;
-                    if (indices[j] < subclauses[j]._conditions.Count)
-                        break;
+                    if (subclauses[j] is not OrNextRequirementClauseExpression)
+                    {
+                        indices[j]++;
+                        if (indices[j] < subclauses[j]._conditions.Count)
+                            break;
+                    }
 
                     if (j == 0)
                         return null;
@@ -1282,7 +1285,7 @@ namespace RATools.Parser.Expressions.Trigger
         /// <summary>
         /// Returns <c>true</c> if any subclause in the provided expression has a hit target.
         /// </summary>
-        internal static bool HasHitTarget(ExpressionBase expression)
+        internal static bool HasHitTarget(RequirementExpressionBase expression)
         {
             var condition = expression as TalliedRequirementExpression;
             if (condition != null)
@@ -1302,7 +1305,7 @@ namespace RATools.Parser.Expressions.Trigger
         /// <summary>
         /// Returns <c>true</c> if all subclauses in the provided expression have a hit target.
         /// </summary>
-        internal static bool AllClausesHaveHitTargets(ExpressionBase expression)
+        internal static bool AllClausesHaveHitTargets(RequirementExpressionBase expression)
         {
             var condition = expression as TalliedRequirementExpression;
             if (condition != null)
@@ -1319,7 +1322,7 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        internal static bool LastClauseHasHitTarget(ExpressionBase expression)
+        internal static bool LastClauseHasHitTarget(RequirementExpressionBase expression)
         {
             var condition = expression as TalliedRequirementExpression;
             if (condition != null)
