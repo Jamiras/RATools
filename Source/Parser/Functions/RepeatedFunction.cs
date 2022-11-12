@@ -33,7 +33,7 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            var comparison = GetParameter(scope, "comparison", out result);
+            var comparison = GetRequirementParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
 
@@ -44,7 +44,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        internal static bool CreateTallyExpression(ExpressionBase comparison, uint count, out ExpressionBase result)
+        internal static bool CreateTallyExpression(RequirementExpressionBase comparison, uint count, out ExpressionBase result)
         {
             if (!CanBeTallied(comparison, RequirementType.ResetIf, out result))
                 return false;

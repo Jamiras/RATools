@@ -58,7 +58,7 @@ namespace RATools.Parser.Expressions.Trigger
             return (RequirementExpressionBase)((ICloneableExpression)this).Clone();
         }
 
-        protected static bool CompareRequirements(List<ExpressionBase> left, List<ExpressionBase> right)
+        protected static bool CompareRequirements(List<RequirementExpressionBase> left, List<RequirementExpressionBase> right)
         {
             if (left == null)
                 return (right == null);

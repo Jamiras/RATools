@@ -25,7 +25,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (source._conditions != null)
             {
-                _conditions = new List<ExpressionBase>();
+                _conditions = new List<RequirementExpressionBase>();
                 foreach (var clause in source._conditions)
                     _conditions.Add(clause);
             }
@@ -33,17 +33,17 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ConditionalOperation Operation { get; set; }
 
-        public IEnumerable<ExpressionBase> Conditions
+        public IEnumerable<RequirementExpressionBase> Conditions
         {
-            get { return _conditions ?? Enumerable.Empty<ExpressionBase>(); }
+            get { return _conditions ?? Enumerable.Empty<RequirementExpressionBase>(); }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected List<ExpressionBase> _conditions;
+        protected List<RequirementExpressionBase> _conditions;
 
-        public void AddCondition(ExpressionBase condition)
+        public void AddCondition(RequirementExpressionBase condition)
         {
             if (_conditions == null)
-                _conditions = new List<ExpressionBase>();
+                _conditions = new List<RequirementExpressionBase>();
 
             _conditions.Add(condition);
         }
@@ -119,7 +119,7 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         private ErrorExpression BuildTrigger(TriggerBuilderContext context, 
-            List<ExpressionBase> conditions, RequirementType joinBehavior)
+            List<RequirementExpressionBase> conditions, RequirementType joinBehavior)
         {
             // no complex subclauses, just dump them
             if (!conditions.OfType<RequirementClauseExpression>().Any())
@@ -127,7 +127,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             // separate into complex and non-complex
             var complexSubclauses = new List<RequirementClauseExpression>();
-            var subclauses = new List<ExpressionBase>();
+            var subclauses = new List<RequirementExpressionBase>();
             foreach (var condition in conditions)
             {
                 var clause = condition as RequirementClauseExpression;
@@ -224,7 +224,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
-        private static bool BubbleUpOrs(RequirementClauseExpression newSubclause, ExpressionBase condition)
+        private static bool BubbleUpOrs(RequirementClauseExpression newSubclause, RequirementExpressionBase condition)
         {
             var clause = condition as RequirementClauseExpression;
             if (clause == null || !clause.Conditions.Any(c => c is RequirementClauseExpression))
@@ -246,7 +246,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            var expanded = new List<ExpressionBase>();
+            var expanded = new List<RequirementExpressionBase>();
             foreach (var subclause in clause._conditions)
             {
                 var subclauseClause = subclause as RequirementClauseExpression;
@@ -263,28 +263,24 @@ namespace RATools.Parser.Expressions.Trigger
                 }
                 else
                 {
-                    var requirement = subclause as RequirementExpressionBase;
-                    if (requirement != null)
+                    bool foundIntersect = false;
+                    for (int i = 0; i < expanded.Count; i++)
                     {
-                        bool foundIntersect = false;
-                        for (int i = 0; i < expanded.Count; i++)
+                        var requirementI = expanded[i];
+                        if (requirementI != null)
                         {
-                            var requirementI = expanded[i] as RequirementExpressionBase;
-                            if (requirementI != null)
+                            var intersect = subclause.LogicalIntersect(requirementI, ConditionalOperation.And);
+                            if (intersect != null)
                             {
-                                var intersect = requirement.LogicalIntersect(requirementI, ConditionalOperation.And);
-                                if (intersect != null)
-                                {
-                                    expanded[i] = intersect;
-                                    foundIntersect = true;
-                                    break;
-                                }
+                                expanded[i] = intersect;
+                                foundIntersect = true;
+                                break;
                             }
                         }
-
-                        if (foundIntersect)
-                            continue;
                     }
+
+                    if (foundIntersect)
+                        continue;
 
                     expanded.Add(subclause);
                 }
@@ -297,7 +293,7 @@ namespace RATools.Parser.Expressions.Trigger
             int k;
             do
             {
-                var group = new List<ExpressionBase>();
+                var group = new List<RequirementExpressionBase>();
                 for (int j = 0; j < indices.Length; j++)
                 {
                     var subclause = expanded[j];
@@ -411,14 +407,14 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<ExpressionBase> subclauses, RequirementType joinBehavior)
+        private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<RequirementExpressionBase> subclauses, RequirementType joinBehavior)
         {
             if (subclauses.Count == 0)
                 return null;
 
             for (int i = 0; i < subclauses.Count - 1; i++)
             {
-                var error = BuildSubclauseTrigger(subclauses[i], context);
+                var error = subclauses[i].BuildSubclauseTrigger(context);
                 if (error != null)
                     return error;
 
@@ -437,7 +433,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             var lastClause = subclauses.Last();
-            return BuildSubclauseTrigger(lastClause, context);
+            return lastClause.BuildSubclauseTrigger(context);
         }
 
         private ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
@@ -458,7 +454,7 @@ namespace RATools.Parser.Expressions.Trigger
                     if (clause != null)
                         error = BuildTrigger(triggerContext, clause._conditions, RequirementType.None);
                     else
-                        error = BuildSubclauseTrigger(subclause, triggerContext);
+                        error = subclause.BuildSubclauseTrigger(triggerContext);
 
                     if (error != null)
                         return error;
@@ -479,38 +475,6 @@ namespace RATools.Parser.Expressions.Trigger
             } while (true);
         }
 
-        private static ErrorExpression BuildSubclauseTrigger(ExpressionBase expression, TriggerBuilderContext context)
-        {
-            var requirement = expression as RequirementExpressionBase;
-            if (requirement != null)
-                return requirement.BuildSubclauseTrigger(context);
-
-            var trigger = expression as ITriggerExpression;
-            if (trigger != null)
-            {
-                var builder = new AchievementBuilder();
-                var subclauseContext = new TriggerBuilderContext { Trigger = builder.CoreRequirements };
-                var error = trigger.BuildTrigger(subclauseContext);
-                if (error != null)
-                    return error;
-
-                var errorMessage = builder.OptimizeForSubClause();
-                if (errorMessage != null)
-                    return new ErrorExpression(errorMessage, expression);
-
-                error = builder.CollapseForSubClause();
-                if (error != null)
-                    return error;
-
-                foreach (var c in builder.CoreRequirements)
-                    context.Trigger.Add(c);
-
-                return null;
-            }
-
-            return new ErrorExpression("Cannot build trigger from " + expression.Type);
-        }
-
         public override ErrorExpression BuildSubclauseTrigger(TriggerBuilderContext subclauseContext,
             ConditionalOperation splitCondition, RequirementType splitBehavior)
         {
@@ -529,8 +493,8 @@ namespace RATools.Parser.Expressions.Trigger
                 if (splitBehavior == RequirementType.None && Operation != splitCondition)
                     splitBehavior = (Operation == ConditionalOperation.Or) ? RequirementType.OrNext : RequirementType.AndNext;
 
-                var resetRequirements = new List<ExpressionBase>();
-                var conditions = new List<ExpressionBase>(_conditions.Count);
+                var resetRequirements = new List<RequirementExpressionBase>();
+                var conditions = new List<RequirementExpressionBase>(_conditions.Count);
                 foreach (var condition in _conditions)
                 {
                     var behavioral = condition as BehavioralRequirementExpression;
@@ -630,8 +594,8 @@ namespace RATools.Parser.Expressions.Trigger
             newClause._conditions.RemoveAll(c => c is AlwaysFalseExpression);
             if (newClause._conditions.Count == 1)
             {
-                var requirement = newClause._conditions[0] as RequirementExpressionBase;
-                if (requirement != null && context.Achievement.AlternateRequirements.Count == 0)
+                var requirement = newClause._conditions[0];
+                if (context.Achievement.AlternateRequirements.Count == 0)
                 {
                     if (!context.Achievement.CoreRequirements.Any(r => r.Type == RequirementType.PauseIf) &&
                         !HasBehavior(requirement, RequirementType.PauseIf))
@@ -669,22 +633,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
                 else
                 {
-                    var conditional = condition as ConditionalExpression;
-                    if (conditional != null)
-                    {
-                        var builder = new ScriptInterpreterAchievementBuilder();
-                        var scope = new InterpreterScope();
-
-                        ErrorExpression error;
-                        if (!builder.PopulateFromExpression(conditional, scope, out error))
-                            return error;
-
-                        if (builder.AlternateRequirements.Count > 0)
-                            return new ErrorExpression("Oops", conditional);
-
-                        foreach (var subclauseRequirement in builder.CoreRequirements)
-                            context.Trigger.Add(subclauseRequirement);
-                    }
+                    return new ErrorExpression("Oops", condition);
                 }
             }
 
@@ -725,22 +674,16 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             bool updated = false;
-            var newRequirements = new List<ExpressionBase>(_conditions.Count);
+            var newRequirements = new List<RequirementExpressionBase>(_conditions.Count);
             var scope = new InterpreterScope();
             bool seenHitCount = false;
-            ExpressionBase alwaysFalseCondition = null;
-            ExpressionBase alwaysTrueCondition = null;
+            RequirementExpressionBase alwaysFalseCondition = null;
+            RequirementExpressionBase alwaysTrueCondition = null;
 
             foreach (var requirement in _conditions)
             {
-                var optimized = requirement;
-
-                var requirementExpression = requirement as RequirementExpressionBase;
-                if (requirementExpression != null)
-                {
-                    optimized = requirementExpression.Optimize(context);
-                    updated |= !ReferenceEquals(optimized, requirement);
-                }
+                var optimized = requirement.Optimize(context) ?? requirement;
+                updated |= !ReferenceEquals(optimized, requirement);
 
                 ErrorExpression error;
                 var result = optimized.IsTrue(scope, out error);
@@ -891,7 +834,7 @@ namespace RATools.Parser.Expressions.Trigger
             return newClause;
         }
 
-        private static bool EliminateRedundantConditions(IList<ExpressionBase> requirements,
+        private static bool EliminateRedundantConditions(IList<RequirementExpressionBase> requirements,
             ConditionalOperation condition, TriggerBuilderContext context)
         {
             bool updated = false;
@@ -909,11 +852,7 @@ namespace RATools.Parser.Expressions.Trigger
                         if (i == j)
                             continue;
 
-                        var requirementJ = requirements[j] as RequirementExpressionBase;
-                        if (requirementJ == null)
-                            continue;
-
-                        var intersect = requirementJ.LogicalIntersect(conditionI, condition);
+                        var intersect = requirements[j].LogicalIntersect(conditionI, condition);
                         if (intersect != null)
                         {
                             requirements[j] = intersect;
@@ -982,7 +921,7 @@ namespace RATools.Parser.Expressions.Trigger
             return updated;
         }
 
-        private static bool FlattenClauses(IList<ExpressionBase> requirements, ConditionalOperation condition)
+        private static bool FlattenClauses(IList<RequirementExpressionBase> requirements, ConditionalOperation condition)
         {
             bool updated = false;
             for (int i = requirements.Count - 1; i >= 0; i--)
@@ -1103,8 +1042,8 @@ namespace RATools.Parser.Expressions.Trigger
                     return thatClause.LogicalIntersect(this, condition);
 
                 // ASSERT: _conditions.Count >= thatClause._conditions.Count;
-                var sharedConditions = new List<ExpressionBase>(_conditions.Count);
-                var unsharedConditions = new List<ExpressionBase>();
+                var sharedConditions = new List<RequirementExpressionBase>(_conditions.Count);
+                var unsharedConditions = new List<RequirementExpressionBase>();
                 bool updated = false;
 
                 for (int i = 0; i < _conditions.Count; i++)
@@ -1139,30 +1078,23 @@ namespace RATools.Parser.Expressions.Trigger
                 // second pass - if there's a single unmatched item, try to merge it
                 if (unsharedConditions.Count == 1)
                 {
-                    var unsharedExpr = unsharedConditions[0] as RequirementExpressionBase;
-                    if (unsharedExpr != null)
+                    var unsharedExpr = unsharedConditions[0];
+                    for (int i = 0; i < sharedConditions.Count; i++)
                     {
-                        for (int i = 0; i < sharedConditions.Count; i++)
+                        if (sharedConditions[i] != null)
+                            continue;
+
+                        var merged = _conditions[i].LogicalIntersect(unsharedExpr, condition);
+                        if (merged != null)
                         {
-                            if (sharedConditions[i] != null)
-                                continue;
-
-                            var exprI = _conditions[i] as RequirementExpressionBase;
-                            if (exprI != null)
-                            {
-                                var merged = exprI.LogicalIntersect(unsharedExpr, condition);
-                                if (merged != null)
-                                {
-                                    sharedConditions[i] = merged;
-                                    unsharedConditions.Clear();
-                                    updated = true;
-                                    break;
-                                }
-                            }
-
-                            if (unsharedConditions.Count == 0)
-                                break;
+                            sharedConditions[i] = merged;
+                            unsharedConditions.Clear();
+                            updated = true;
+                            break;
                         }
+
+                        if (unsharedConditions.Count == 0)
+                            break;
                     }
                 }
 
@@ -1193,7 +1125,7 @@ namespace RATools.Parser.Expressions.Trigger
                     //    A = sharedConditions.Where( ! null )
                     //    B = conditions.Where(sharedCondition == null)
                     //    C = unsharedConditions
-                    var bConditions = new List<ExpressionBase>();
+                    var bConditions = new List<RequirementExpressionBase>();
                     for (int i = 0; i < sharedConditions.Count; i++)
                     {
                         if (sharedConditions[i] == null)
@@ -1208,7 +1140,7 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                     else
                     {
-                        ExpressionBase b, c;
+                        RequirementExpressionBase b, c;
                         sharedConditions.RemoveAll(c => c == null);
 
                         if (unsharedConditions.Count > 1)
@@ -1240,7 +1172,7 @@ namespace RATools.Parser.Expressions.Trigger
                         var bOrC = new RequirementClauseExpression
                         {
                             Operation = (Operation == ConditionalOperation.And) ? ConditionalOperation.Or : ConditionalOperation.And,
-                            _conditions = new List<ExpressionBase>() { b, c }
+                            _conditions = new List<RequirementExpressionBase>() { b, c }
                         };
 
                         var a = new RequirementClauseExpression { Operation = Operation };
@@ -1412,14 +1344,10 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (_conditions != null)
             {
-                clause._conditions = new List<ExpressionBase>();
+                clause._conditions = new List<RequirementExpressionBase>();
                 foreach (var condition in _conditions)
                 {
-                    var requirement = condition as RequirementExpressionBase;
-                    if (requirement == null)
-                        return null;
-
-                    var inverted = requirement.InvertLogic();
+                    var inverted = condition.InvertLogic();
                     if (inverted == null)
                         return null;
 
@@ -1456,19 +1384,15 @@ namespace RATools.Parser.Expressions.Trigger
         public override RequirementExpressionBase InvertResetsAndPauses()
         {
             bool updated = false;
-            var newConditions = new List<ExpressionBase>(_conditions.Count);
+            var newConditions = new List<RequirementExpressionBase>(_conditions.Count);
             foreach (var condition in _conditions)
             {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return null;
-
-                var inverted = expr.InvertResetsAndPauses();
+                var inverted = condition.InvertResetsAndPauses();
                 if (inverted == null)
                     return null;
 
+                updated |= !ReferenceEquals(inverted, condition);
                 newConditions.Add(inverted);
-                updated |= !ReferenceEquals(inverted, expr);
             }
 
             if (!updated)
@@ -1532,7 +1456,7 @@ namespace RATools.Parser.Expressions.Trigger
                             orNextClause.AddCondition(condition);
 
                         if (orNextClause._conditions.Count == 1)
-                            return (orNextClause._conditions[0] as RequirementExpressionBase) ?? orNextClause;
+                            return orNextClause._conditions[0];
 
                         return orNextClause;
                     }

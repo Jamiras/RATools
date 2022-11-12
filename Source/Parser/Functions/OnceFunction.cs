@@ -1,6 +1,4 @@
-﻿using RATools.Data;
-using RATools.Parser.Expressions;
-using RATools.Parser.Expressions.Trigger;
+﻿using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
@@ -20,7 +18,7 @@ namespace RATools.Parser.Functions
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var comparison = GetParameter(scope, "comparison", out result);
+            var comparison = GetRequirementParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
 

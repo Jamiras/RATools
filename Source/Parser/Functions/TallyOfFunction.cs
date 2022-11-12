@@ -23,7 +23,19 @@ namespace RATools.Parser.Functions
             if (!base.ReplaceVariables(scope, out result))
                 return false;
 
-            result = new FunctionCallExpression("tally", new ExpressionBase[] { count, result });
+            var array = result as ArrayExpression;
+            if (array == null)
+            {
+                result = new ErrorExpression("Expansion of parameters did not generate an array", this);
+                return false;
+            }
+
+            var tallyScope = new InterpreterScope(scope);
+            tallyScope.Context = this;
+
+            if (!TallyFunction.BuildTalliedRequirementExpression((uint)count.Value, array, tallyScope, out result))
+                return false;
+
             CopyLocation(result);
             return true;
         }

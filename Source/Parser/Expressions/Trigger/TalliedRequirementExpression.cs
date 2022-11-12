@@ -1,7 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using RATools.Views;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,33 +21,29 @@ namespace RATools.Parser.Expressions.Trigger
             HitTarget = source.HitTarget;
 
             if (source._conditions != null)
-            {
-                _conditions = new List<ExpressionBase>();
-                foreach (var condition in source._conditions)
-                    _conditions.Add(condition);
-            }
+                _conditions = new List<RequirementExpressionBase>(source._conditions);
         }
 
         public uint HitTarget { get; set; }
 
-        public IEnumerable<ExpressionBase> Conditions
+        public IEnumerable<RequirementExpressionBase> Conditions
         {
-            get { return _conditions ?? Enumerable.Empty<ExpressionBase>(); }
+            get { return _conditions ?? Enumerable.Empty<RequirementExpressionBase>(); }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected List<ExpressionBase> _conditions;
+        protected List<RequirementExpressionBase> _conditions;
 
-        public IEnumerable<ExpressionBase> ResetConditions
+        public IEnumerable<RequirementExpressionBase> ResetConditions
         {
-            get { return _resetConditions ?? Enumerable.Empty<ExpressionBase>(); }
+            get { return _resetConditions ?? Enumerable.Empty<RequirementExpressionBase>(); }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected List<ExpressionBase> _resetConditions;
+        protected List<RequirementExpressionBase> _resetConditions;
 
-        public void AddTalliedCondition(ExpressionBase condition)
+        public void AddTalliedCondition(RequirementExpressionBase condition)
         {
             if (_conditions == null)
-                _conditions = new List<ExpressionBase>();
+                _conditions = new List<RequirementExpressionBase>();
 
             _conditions.Add(condition);
         }
@@ -65,7 +60,7 @@ namespace RATools.Parser.Expressions.Trigger
         public void AddResetCondition(RequirementExpressionBase condition)
         {
             if (_resetConditions == null)
-                _resetConditions = new List<ExpressionBase>();
+                _resetConditions = new List<RequirementExpressionBase>();
 
             _resetConditions.Add(condition);
         }
@@ -142,7 +137,7 @@ namespace RATools.Parser.Expressions.Trigger
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
             bool updated = false;
-            var newConditions = new List<ExpressionBase>();
+            var newConditions = new List<RequirementExpressionBase>();
 
             var tallyContext = new TallyBuilderContext();
             foreach (var condition in Conditions)
@@ -181,7 +176,7 @@ namespace RATools.Parser.Expressions.Trigger
                 newConditions.Add(optimized);
             }
 
-            var newResetConditions = new List<ExpressionBase>();
+            var newResetConditions = new List<RequirementExpressionBase>();
             foreach (var condition in ResetConditions)
             {
                 var optimized = condition;
@@ -220,7 +215,7 @@ namespace RATools.Parser.Expressions.Trigger
                     var newTally = new TalliedRequirementExpression
                     {
                         HitTarget = HitTarget,
-                        _conditions = new List<ExpressionBase>() { nestedBehavior.Condition }
+                        _conditions = new List<RequirementExpressionBase>() { nestedBehavior.Condition }
                     };
                     return new BehavioralRequirementExpression
                     {
@@ -426,7 +421,7 @@ namespace RATools.Parser.Expressions.Trigger
                         return new TalliedRequirementExpression
                         {
                             HitTarget = HitTarget,
-                            _conditions = new List<ExpressionBase> { inverted },
+                            _conditions = new List<RequirementExpressionBase> { inverted },
                             Location = this.Location
                         };
                     }
@@ -466,7 +461,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return new TalliedRequirementExpression
                     {
                         HitTarget = HitTarget,
-                        _conditions = new List<ExpressionBase> { intersect },
+                        _conditions = new List<RequirementExpressionBase> { intersect },
                         Location = Location,
                     };
                 }
@@ -476,7 +471,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return new TalliedRequirementExpression
                     {
                         HitTarget = thatTallied.HitTarget,
-                        _conditions = new List<ExpressionBase> { leftExpression },
+                        _conditions = new List<RequirementExpressionBase> { leftExpression },
                         Location = Location,
                     };
                 }
@@ -486,7 +481,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return new TalliedRequirementExpression
                     {
                         HitTarget = HitTarget,
-                        _conditions = new List<ExpressionBase> { rightExpression },
+                        _conditions = new List<RequirementExpressionBase> { rightExpression },
                         Location = Location,
                     };
                 }

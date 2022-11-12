@@ -517,7 +517,7 @@ namespace RATools.Parser.Expressions
 
             public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
             {
-                var comparison = GetParameter(scope, "comparison", out result);
+                var comparison = GetRequirementParameter(scope, "comparison", out result);
                 if (comparison == null)
                     return false;
 

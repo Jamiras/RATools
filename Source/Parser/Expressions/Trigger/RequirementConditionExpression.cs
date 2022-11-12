@@ -16,9 +16,9 @@ namespace RATools.Parser.Expressions.Trigger
         public RequirementConditionExpression(RequirementConditionExpression source)
             : this()
         {
-            Left = Clone(source.Left);
+            Left = source.Left;
             Comparison = source.Comparison;
-            Right = Clone(source.Right);
+            Right = source.Right;
         }
 
         public ExpressionBase Left { get; set; }
@@ -33,15 +33,6 @@ namespace RATools.Parser.Expressions.Trigger
         public new RequirementConditionExpression Clone()
         {
             return new RequirementConditionExpression(this);
-        }
-        
-        private static ExpressionBase Clone(ExpressionBase expr)
-        {
-            var cloneable = expr as ICloneableExpression;
-            if (cloneable != null)
-                return cloneable.Clone();
-
-            return expr;
         }
 
         internal override void AppendString(StringBuilder builder)
@@ -199,7 +190,7 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private ExpressionBase NormalizeBCD()
+        private RequirementExpressionBase NormalizeBCD()
         {
             ExpressionBase newLeft;
             ExpressionBase newRight;
@@ -220,10 +211,10 @@ namespace RATools.Parser.Expressions.Trigger
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.LessThan:
                         case ComparisonOperation.LessThanOrEqual:
-                            return new BooleanConstantExpression(true);
+                            return new AlwaysTrueExpression();
 
                         default:
-                            return new BooleanConstantExpression(false);
+                            return new AlwaysFalseExpression();
                     }
                 }
             }
@@ -238,10 +229,10 @@ namespace RATools.Parser.Expressions.Trigger
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.GreaterThan:
                         case ComparisonOperation.GreaterThanOrEqual:
-                            return new BooleanConstantExpression(true);
+                            return new AlwaysTrueExpression();
 
                         default:
-                            return new BooleanConstantExpression(false);
+                            return new AlwaysFalseExpression();
                     }
                 }
             }
@@ -260,7 +251,7 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
-        private static void NormalizeLimits(ref ExpressionBase expression)
+        private static void NormalizeLimits(ref RequirementExpressionBase expression)
         {
             var condition = expression as RequirementConditionExpression;
             if (condition == null)
@@ -555,10 +546,10 @@ namespace RATools.Parser.Expressions.Trigger
             var condition = Clone();
             condition.Comparison = ComparisonExpression.GetOppositeComparisonOperation(condition.Comparison);
 
-            ExpressionBase result = condition;
+            RequirementExpressionBase result = condition;
             NormalizeLimits(ref result);
             result.Location = Location;
-            return (result as RequirementExpressionBase) ?? condition;
+            return result;
         }
     }
 }

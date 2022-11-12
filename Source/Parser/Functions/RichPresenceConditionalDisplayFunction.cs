@@ -15,7 +15,7 @@ namespace RATools.Parser.Functions
 
         protected override bool SetDisplayString(RichPresenceBuilder richPresence, string displayString, InterpreterScope scope, out ExpressionBase result)
         {
-            var expression = GetParameter(scope, "condition", out result);
+            var expression = GetRequirementParameter(scope, "condition", out result);
             if (expression == null)
                 return false;
 

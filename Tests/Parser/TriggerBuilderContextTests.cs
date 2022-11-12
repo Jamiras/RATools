@@ -2,8 +2,10 @@
 using NUnit.Framework;
 using RATools.Parser;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using RATools.Tests.Data;
+using RATools.Tests.Parser.Expressions;
 
 namespace RATools.Tests.Parser
 {
@@ -15,12 +17,12 @@ namespace RATools.Tests.Parser
             return ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
         }
 
-        [TestCase("0 == 1", "0=1")]
+        [TestCase("always_false()", "0=1")]
         [TestCase("byte(0x1234) == 10", "0xH001234=10")]
         [TestCase("byte(0x1234) > byte(0x2345)", "0xH001234>0xH002345")]
         [TestCase("byte(0x1234) / byte(0x2345) < 10", "A:0xH001234/0xH002345_0<10")]
         [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/0xH002345_0<f0.8")]
-        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "Cannot generate condition using both Multiply and Divide")]
+        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "expression is not a requirement")]
         public void TestGetConditionString(string input, string expected)
         {
             ExpressionBase error;
@@ -35,7 +37,7 @@ namespace RATools.Tests.Parser
             var result = TriggerBuilderContext.GetConditionString(processed, scope, out error);
             if (error != null)
             {
-                Assert.That(((ErrorExpression)error).InnermostError.Message, Is.EqualTo(expected));
+                ExpressionTests.AssertError(error, expected);
             }
             else
             {
@@ -54,6 +56,8 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234) * -10", "0xH001234*-10")]
         [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
         [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
+        [TestCase("byte(0x1234) * 10.0 / 3", "0xH001234*3.333333")]
+        [TestCase("byte(0x1234) * 10 / 3.0", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) + 10", "0xH001234_v10")]
         [TestCase("byte(0x1234) - 10", "0xH001234_v-10")]
         [TestCase("10 - byte(0x1234)", "0xH001234*-1_v10")]
@@ -69,7 +73,7 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x1234) * 2 + 1", "0xH001234*2_v1")]
         [TestCase("byte(0x1234) * 2 - 1", "0xH001234*2_v-1")]
         [TestCase("byte(0x1234) * 256 + byte(0x2345) + 1", "0xH001234*256_0xH002345_v1")]
-        [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
+        [TestCase("(byte(0x1234) / (2 * 20)) * 100.0", "0xH001234*2.5")]
         [TestCase("byte(0x1234) * byte(0x2345)", "M:0xH001234*0xH002345")]
         [TestCase("byte(0x1234) / byte(0x2345)", "M:0xH001234/0xH002345")]
         [TestCase("byte(0x1234 + byte(0x2345))", "I:0xH002345_M:0xH001234")]
@@ -104,12 +108,12 @@ namespace RATools.Tests.Parser
 
         [Test]
         [TestCase("byte(0x1234) / 10", "0xH001234*0.1")]
-        [TestCase("byte(0x1234) * 10 / 3", "0xH001234*3.333333")]
+        [TestCase("byte(0x1234) * 10.0 / 3", "0xH001234*3.333333")]
         [TestCase("(byte(0) + byte(1)) / 10", "0xH000000*0.1_0xH000001*0.1")]
         [TestCase("byte(0x1234) * 2.0", "0xH001234*2")]
         [TestCase("byte(0x1234) / 2", "0xH001234*0.5")]
         [TestCase("byte(0x1234) * 2 / 100", "0xH001234*0.02")]
-        [TestCase("(byte(0x1234) / (2 * 20)) * 100", "0xH001234*2.5")]
+        [TestCase("(byte(0x1234) / (2 * 20)) * 100.0", "0xH001234*2.5")]
         public void TestGetValueStringCulture(string input, string expected)
         {
             using (var cultureOverride = new CultureOverride("fr-FR"))

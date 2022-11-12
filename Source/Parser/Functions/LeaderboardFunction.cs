@@ -92,7 +92,7 @@ namespace RATools.Parser.Functions
 
         private string ProcessTrigger(InterpreterScope scope, string parameter, out ExpressionBase result)
         {
-            var expression = GetParameter(scope, parameter, out result);
+            var expression = GetRequirementParameter(scope, parameter, out result);
             if (expression == null)
                 return null;
 

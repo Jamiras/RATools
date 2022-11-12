@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -351,6 +352,33 @@ namespace RATools.Parser.Expressions
             return functionDefinition;
         }
 
+        /// <summary>
+        /// Gets the requriement parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected RequirementExpressionBase GetRequirementParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as RequirementExpressionBase;
+            if (typedParameter == null)
+            {
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null)
+                    parameter = originalParameter;
+
+                parseError = new ErrorExpression(name + " is not a requirement", parameter);
+                return null;
+            }
+
+            parseError = null;
+            return typedParameter;
+        }
 
         /// <summary>
         /// Creates an <see cref="InterpreterScope"/> with all variables required for the function call.

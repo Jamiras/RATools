@@ -474,42 +474,7 @@ namespace RATools.Parser
                         return ProcessMeasuredValue(requirements, expression, terms, out result);
                     }
 
-                case ExpressionType.Conditional:
-                    var conditionalExpression = expression as ConditionalExpression;
-                    if (conditionalExpression != null)
-                    {
-                        var valueScope = new InterpreterScope(scope) { Context = new ValueBuilderContext() };
-
-                        ErrorExpression parseError;
-                        var achievement = new ScriptInterpreterAchievementBuilder();
-                        if (!achievement.PopulateFromExpression(expression, valueScope, out parseError))
-                        {
-                            result = parseError;
-                            return false;
-                        }
-
-                        SetImpliedMeasuredTarget(achievement.CoreRequirements);
-                        foreach (var alt in achievement.AlternateRequirements)
-                            SetImpliedMeasuredTarget(alt);
-
-                        var message = achievement.Optimize();
-                        if (message != null)
-                        {
-                            result = new ErrorExpression(message, expression);
-                            return false;
-                        }
-
-                        if (achievement.AlternateRequirements.Any())
-                        {
-                            result = new ErrorExpression("Alt groups not supported in value expression", expression);
-                            return false;
-                        }
-
-                        return ProcessMeasuredValue(achievement.CoreRequirements, expression, terms, out result);
-                    }
-                    break;
-
-                default:
+                case ExpressionType.Requirement:
                     var triggerExpression = expression as ITriggerExpression;
                     if (triggerExpression != null)
                     {
@@ -683,7 +648,8 @@ namespace RATools.Parser
         /// <param name="scope">The scope.</param>
         /// <param name="result">[out] The error if not successful.</param>
         /// <returns><c>true</c> if successful, <c>false</c> if not.</returns>
-        public static bool ProcessAchievementConditions(ScriptInterpreterAchievementBuilder achievement, ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
+        public static bool ProcessAchievementConditions(ScriptInterpreterAchievementBuilder achievement,
+            RequirementExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
             ErrorExpression parseError;
             if (!achievement.PopulateFromExpression(expression, scope, out parseError))
@@ -716,8 +682,15 @@ namespace RATools.Parser
         /// <returns><c>true</c> if successful, <c>false</c> if not.</returns>
         public static string GetConditionString(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
+            var requirement = expression as RequirementExpressionBase;
+            if (requirement == null)
+            {
+                result = new ErrorExpression("expression is not a requirement", expression);
+                return null;
+            }
+
             var achievement = new ScriptInterpreterAchievementBuilder();
-            if (!ProcessAchievementConditions(achievement, expression, scope, out result))
+            if (!ProcessAchievementConditions(achievement, requirement, scope, out result))
                 return null;
 
             return achievement.SerializeRequirements();
