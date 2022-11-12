@@ -25,13 +25,10 @@ namespace RATools.ViewModels
                   ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools"),
                   ServiceRepository.Instance.FindService<IFileSystemService>())
         {
-            Resources = new ResourceContainer();
-
-            Script = new ScriptViewModel(this);
-            SelectedEditor = Script;
+            InitializeForUI();
         }
 
-        protected GameViewModel(int gameId, string title,
+        internal GameViewModel(int gameId, string title,
             ILogger logger, IFileSystemService fileSystemService)
         {
             /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
@@ -57,6 +54,14 @@ namespace RATools.ViewModels
         protected readonly List<Leaderboard> _publishedLeaderboards;
         protected RichPresence _publishedRichPresence;
         protected LocalAssets _localAssets;
+
+        public void InitializeForUI()
+        {
+            Resources = new ResourceContainer();
+
+            Script = new ScriptViewModel(this);
+            SelectedEditor = Script;
+        }
 
         private class NavigationItem
         {

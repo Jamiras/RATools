@@ -3,9 +3,13 @@ using Jamiras.Services;
 using Moq;
 using NUnit.Framework;
 using RATools.Parser;
+using RATools.Services;
+using RATools.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
+using static RATools.ViewModels.NewScriptDialogViewModel;
 
 namespace RATools.Tests.Parser.Regression
 {
@@ -21,7 +25,7 @@ namespace RATools.Tests.Parser.Regression
             {
                 if (regressionDir == null)
                 {
-                    var dir = Path.GetDirectoryName(typeof(RegressionTestFactory).Assembly.Location);
+                    var dir = Path.GetDirectoryName(typeof(RegressionTestScriptFactory).Assembly.Location);
                     do
                     {
                         var parent = Directory.GetParent(dir);
@@ -46,16 +50,19 @@ namespace RATools.Tests.Parser.Regression
             }
         }
 
-        static void GetFiles(List<string> files, string dir)
+        static void GetScriptFiles(List<string> files, string dir)
         {
-            foreach (var file in Directory.EnumerateFiles(dir, "*.rascript"))
-                files.Add(file);
+            if (Directory.Exists(dir))
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, "*.rascript"))
+                    files.Add(file);
 
-            foreach (var subdir in Directory.EnumerateDirectories(dir))
-                GetFiles(files, Path.Combine(dir, subdir));
+                foreach (var subdir in Directory.EnumerateDirectories(dir))
+                    GetScriptFiles(files, Path.Combine(dir, subdir));
+            }
         }
 
-        class RegressionTestFactory
+        class RegressionTestScriptFactory
         {
             public static IEnumerable<string[]> Files
             {
@@ -69,7 +76,7 @@ namespace RATools.Tests.Parser.Regression
                     else
                     {
                         var files = new List<string>();
-                        GetFiles(files, Path.Combine(dir, "scripts"));
+                        GetScriptFiles(files, Path.Combine(dir, "scripts"));
 
                         if (!dir.EndsWith("\\"))
                             dir += "\\";
@@ -91,8 +98,8 @@ namespace RATools.Tests.Parser.Regression
         }
 
         [Test]
-        [TestCaseSource(typeof(RegressionTestFactory), "Files")]
-        public void RegressionTest(string scriptFileName, string scriptPath)
+        [TestCaseSource(typeof(RegressionTestScriptFactory), "Files")]
+        public void ScriptTest(string scriptFileName, string scriptPath)
         {
             if (scriptFileName == NoScriptsError)
                 return;
@@ -127,7 +134,7 @@ namespace RATools.Tests.Parser.Regression
                 ++i;
             }
 
-            expectedFileName = Path.Combine(RegressionDir, "results",  expectedFileName + ".txt");
+            expectedFileName = Path.Combine(RegressionDir, "results", expectedFileName + ".txt");
             var outputFileName = Path.ChangeExtension(expectedFileName, ".updated.txt");
 
             var interpreter = new AchievementScriptInterpreter();
@@ -187,6 +194,11 @@ namespace RATools.Tests.Parser.Regression
                 Assert.IsTrue(File.Exists(expectedFileName), expectedFileName + " not found");
             }
 
+            AssertFileContents(outputFileName, expectedFileName);
+        }
+
+        private static void AssertFileContents(string outputFileName, string expectedFileName)
+        {
             var expectedFileContents = File.ReadAllText(expectedFileName);
             var outputFileContents = File.ReadAllText(outputFileName);
 
@@ -228,6 +240,91 @@ namespace RATools.Tests.Parser.Regression
 
             // file matched, delete temporary file
             File.Delete(outputFileName);
+        }
+
+        static void GetCacheFiles(List<string> files, string dir)
+        {
+            if (Directory.Exists(dir))
+            {
+                foreach (var file in Directory.EnumerateFiles(dir, "*.json"))
+                {
+                    if (!file.Contains("-Notes"))
+                        files.Add(file);
+                }
+            }
+        }
+
+        class RegressionTestDumpFactory
+        {
+            public static IEnumerable<string[]> Files
+            {
+                get
+                {
+                    var dir = RegressionDir;
+                    if (dir == NoScriptsError)
+                    {
+                        yield return new string[] { NoScriptsError };
+                    }
+                    else
+                    {
+                        var files = new List<string>();
+                        GetCacheFiles(files, Path.Combine(dir, "dumps", "RACache", "Data"));
+
+                        foreach (var file in files)
+                        {
+                            yield return new string[]
+                            {
+                                Path.GetFileNameWithoutExtension(file)
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        [Test]
+        [TestCaseSource(typeof(RegressionTestDumpFactory), "Files")]
+        public void DumpTest(string patchDataFileName)
+        {
+            if (patchDataFileName == NoScriptsError)
+                return;
+
+            var baseDir = Path.Combine(RegressionDir, "dumps");
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.EmulatorDirectories).Returns(new string[] { baseDir });
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
+            var mockDialogService = new Mock<IDialogService>();
+
+            var mockLogger = new Mock<ILogger>();
+
+            var mockFileSystem = new Mock<IFileSystemService>();
+            mockFileSystem.Setup(s => s.FileExists(It.IsAny<string>())).Returns((string p) => File.Exists(p));
+            mockFileSystem.Setup(s => s.OpenFile(It.IsAny<string>(), OpenFileMode.Read)).
+                Returns((string p, OpenFileMode m) => File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read));
+
+            var vmNewScript = new NewScriptDialogViewModel(mockSettings.Object, 
+                mockDialogService.Object, mockLogger.Object, mockFileSystem.Object);
+            vmNewScript.GameId.Value = int.Parse(patchDataFileName);
+            vmNewScript.SearchCommand.Execute();
+
+            vmNewScript.SelectedCodeNotesFilter = CodeNoteFilter.ForSelectedAssets;
+            vmNewScript.SelectedFunctionNameStyle = FunctionNameStyle.SnakeCase;
+            vmNewScript.SelectedNoteDump = NoteDump.All;
+            vmNewScript.CheckAllCommand.Execute();
+
+            var expectedFileName = Path.Combine(baseDir, vmNewScript.GameId.Value + ".rascript");
+            var outputFileName = Path.ChangeExtension(expectedFileName, ".updated.rascript");
+
+            using (var file = File.Open(outputFileName, FileMode.Create))
+                vmNewScript.Dump(file);
+
+            Assert.IsTrue(File.Exists(expectedFileName), expectedFileName + " not found");
+            AssertFileContents(outputFileName, expectedFileName);
+
+            ServiceRepository.Reset();
         }
     }
 }
