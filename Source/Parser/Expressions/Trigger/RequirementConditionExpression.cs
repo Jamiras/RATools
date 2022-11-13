@@ -474,7 +474,14 @@ namespace RATools.Parser.Expressions.Trigger
             if (thatCondition == null)
             {
                 var thatClause = that as RequirementClauseExpression;
-                return (thatClause != null) ? thatClause.LogicalIntersect(this, condition) : null;
+                if (thatClause != null)
+                    return thatClause.LogicalIntersect(this, condition);
+
+                var thatBehavior = that as BehavioralRequirementExpression;
+                if (thatBehavior != null)
+                    return thatBehavior.LogicalIntersect(this, condition);
+
+                return null;
             }
 
             if (Left.Type == thatCondition.Left.Type)

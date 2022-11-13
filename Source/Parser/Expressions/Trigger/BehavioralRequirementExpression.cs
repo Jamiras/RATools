@@ -255,7 +255,6 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-
             return base.LogicalIntersect(that, condition);
         }
     }

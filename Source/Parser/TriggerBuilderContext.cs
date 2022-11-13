@@ -651,10 +651,12 @@ namespace RATools.Parser
         public static bool ProcessAchievementConditions(ScriptInterpreterAchievementBuilder achievement,
             RequirementExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
-            ErrorExpression parseError;
-            if (!achievement.PopulateFromExpression(expression, scope, out parseError))
+            var context = new AchievementBuilderContext(achievement);
+
+            var error = ((ITriggerExpression)expression).BuildTrigger(context);
+            if (error != null)
             {
-                result = parseError;
+                result = error;
                 return false;
             }
 

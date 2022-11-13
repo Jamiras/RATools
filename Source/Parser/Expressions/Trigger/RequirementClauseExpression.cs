@@ -162,12 +162,15 @@ namespace RATools.Parser.Expressions.Trigger
                     var achievementContext = context as AchievementBuilderContext;
                     if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
                     {
-                        BubbleUpOrs(complexSubclauses);
+                        BubbleUpOrs(subclauses, complexSubclauses, achievementContext);
                         CheckExpansionThreshold(complexSubclauses);
 
                         var error = AppendSubclauses(context, subclauses, joinBehavior);
                         if (error != null)
                             return error;
+
+                        if (complexSubclauses.Count == 0)
+                            return null;
 
                         if (complexSubclauses.Count == 1)
                         {
@@ -197,7 +200,8 @@ namespace RATools.Parser.Expressions.Trigger
             return AppendSubclauses(context, conditions, joinBehavior);
         }
 
-        private static void BubbleUpOrs(List<RequirementClauseExpression> complexSubclauses)
+        private static void BubbleUpOrs(List<RequirementExpressionBase> subclauses,
+            List<RequirementClauseExpression> complexSubclauses, AchievementBuilderContext achievementContext)
         {
             // ASSERT: all subclauses are complex ORs
             // If one of them is an AND with nested ORs, we have to expand it
@@ -221,6 +225,52 @@ namespace RATools.Parser.Expressions.Trigger
 
                 if (updated)
                     complexSubclauses[i] = newSubclause;
+            }
+
+            if (complexSubclauses.Any(c => c._conditions.Count(r => r is not AlwaysFalseExpression) > 1))
+            {
+                bool updated = false;
+                var simplifiedSubclauses = new List<RequirementExpressionBase>();
+                var newComplexSubclauses = new List<RequirementClauseExpression>();
+                for (int i = 0; i < complexSubclauses.Count; i++)
+                {
+                    var subclause = complexSubclauses[i];
+                    var newConditions = new List<RequirementExpressionBase>(subclause._conditions.Where(r => r is not AlwaysFalseExpression));
+                    if (newConditions.Count == 1)
+                    {
+                        var clause = newConditions[0] as RequirementClauseExpression;
+                        if (clause != null && clause.Operation == ConditionalOperation.And)
+                            simplifiedSubclauses.AddRange(clause.Conditions);
+                        else
+                            simplifiedSubclauses.Add(newConditions[0]);
+
+                        updated = true;
+                    }
+                    else if (newConditions.Count != subclause._conditions.Count)
+                    {
+                        newComplexSubclauses.Add(new RequirementClauseExpression
+                        {
+                            Operation = ConditionalOperation.Or,
+                            _conditions = newConditions
+                        });
+
+                        updated = true;
+                    }
+                    else
+                    {
+                        newComplexSubclauses.Add(subclause);
+                    }
+                }
+
+                if (updated)
+                {
+                    if (newComplexSubclauses.Count != 0 || achievementContext.HasPauseIf != false)
+                    {
+                        subclauses.AddRange(simplifiedSubclauses);
+                        complexSubclauses.Clear();
+                        complexSubclauses.AddRange(newComplexSubclauses);
+                    }
+                }
             }
         }
 
@@ -286,7 +336,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            CheckExpansionThreshold(expanded);
+            //CheckExpansionThreshold(expanded, null);
 
             // clause = (B && (C || D)) => (B && C) || (B && D)
             var indices = new int[expanded.Count];
@@ -345,19 +395,22 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
-        private static void CheckExpansionThreshold<T>(List<T> clauses)
-            where T : ExpressionBase
+        private static void CheckExpansionThreshold(List<RequirementClauseExpression> complexSubclauses)
         {
             long expansionSize = 1;
-            foreach (var subclause in clauses.OfType<RequirementClauseExpression>())
+            foreach (var subclause in complexSubclauses.OfType<RequirementClauseExpression>())
                 expansionSize *= subclause._conditions.Count;
 
             if (expansionSize >= PreferAltsThreshold)
             {
-                for (int i = 0; i < clauses.Count; i++)
+                for (int i = 0; i < complexSubclauses.Count; i++)
                 {
-                    var subclause = clauses[i] as RequirementClauseExpression;
+                    var subclause = complexSubclauses[i] as RequirementClauseExpression;
                     if (subclause == null || subclause is OrNextRequirementClauseExpression)
+                        continue;
+
+                    // can't wrap __ornext() around clause being used to segregate alt group
+                    if (subclause.Conditions.Any(c => c is AlwaysFalseExpression))
                         continue;
 
                     if (HasMultipleComplexSubclauses(subclause))
@@ -367,7 +420,7 @@ namespace RATools.Parser.Expressions.Trigger
                     foreach (var c in subclause.Conditions)
                         orNext.AddCondition(c);
 
-                    clauses[i] = orNext as T;
+                    complexSubclauses[i] = orNext;
                     expansionSize /= subclause.Conditions.Count();
                 }
             }
@@ -407,58 +460,102 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, List<RequirementExpressionBase> subclauses, RequirementType joinBehavior)
+        private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, IEnumerable<RequirementExpressionBase> subclauses, RequirementType joinBehavior)
         {
-            if (subclauses.Count == 0)
+            var lastClause = subclauses.LastOrDefault();
+            if (lastClause == null)
                 return null;
 
-            for (int i = 0; i < subclauses.Count - 1; i++)
+            foreach (var subclause in subclauses)
             {
-                var error = subclauses[i].BuildSubclauseTrigger(context);
+                var error = subclause.BuildSubclauseTrigger(context);
                 if (error != null)
                     return error;
 
-                if (joinBehavior != RequirementType.None)
+                if (joinBehavior != RequirementType.None && !ReferenceEquals(subclause, lastClause))
                 {
                     if (context.LastRequirement.Type != RequirementType.None)
                     {
                         return new ErrorExpression("Cannot apply " +
                             BehavioralRequirementExpression.GetFunctionName(joinBehavior) +
                             " to condition already flagged with " +
-                            BehavioralRequirementExpression.GetFunctionName(context.LastRequirement.Type), subclauses[i]);
+                            BehavioralRequirementExpression.GetFunctionName(context.LastRequirement.Type), subclause);
                     }
 
                     context.LastRequirement.Type = joinBehavior;
                 }
             }
 
-            var lastClause = subclauses.Last();
-            return lastClause.BuildSubclauseTrigger(context);
+            return null;
         }
 
-        private ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
+        private static ErrorExpression CrossMultiplyOrs(AchievementBuilderContext context,
             List<RequirementClauseExpression> subclauses)
         {
-            ErrorExpression error;
+            if (subclauses.All(c => c is OrNextRequirementClauseExpression))
+                return AppendSubclauses(context, subclauses, RequirementType.None);
+
             var triggerContext = new TriggerBuilderContext();
+            var alts = new RequirementClauseExpression
+            {
+                Operation = ConditionalOperation.Or,
+                _conditions = new List<RequirementExpressionBase>()
+            };
+
             var indices = new int[subclauses.Count];
             do
             {
-                context.BeginAlt();
-                triggerContext.Trigger = context.Trigger;
+                var alt = new RequirementClauseExpression { Operation = ConditionalOperation.And };
 
                 for (int i = 0; i < indices.Length; i++)
                 {
+                    if (subclauses[i] is OrNextRequirementClauseExpression)
+                    {
+                        alt.AddCondition(subclauses[i]);
+                        continue;
+                    }
+
                     var subclause = subclauses[i]._conditions[indices[i]];
                     var clause = subclause as RequirementClauseExpression;
-                    if (clause != null && clause is not OrNextRequirementClauseExpression)
-                        error = BuildTrigger(triggerContext, clause._conditions, RequirementType.None);
+                    if (clause != null && clause.Operation == ConditionalOperation.And)
+                    {
+                        foreach (var condition in clause.Conditions)
+                            alt.AddCondition(condition);
+                    }
                     else
-                        error = subclause.BuildSubclauseTrigger(triggerContext);
-
-                    if (error != null)
-                        return error;
+                    {
+                        alt.AddCondition(subclause);
+                    }
                 }
+
+                var optimized = alt.Optimize(triggerContext);
+                var optimizedClause = optimized as RequirementClauseExpression;
+                var optimizedConditions = (optimizedClause != null) ? optimizedClause._conditions : new List<RequirementExpressionBase>() { optimized };
+
+                int intersectIndex = -1;
+                for (int i = alts._conditions.Count - 1; i >= 0; i--)
+                {
+                    var altI = alts._conditions[i];
+                    var altIClause = altI as RequirementClauseExpression;
+                    var altIConditions = (altIClause != null) ? altIClause._conditions : new List<RequirementExpressionBase>() { altI };
+
+                    var intersect = LogicalIntersect(altIConditions, optimizedConditions, 
+                        ConditionalOperation.And, ConditionalOperation.Or, false);
+                    if (intersect != null)
+                    {
+                        if (intersectIndex != -1)
+                            alts._conditions.RemoveAt(intersectIndex);
+
+                        intersectIndex = i;
+                        alts._conditions[i] = intersect;
+
+                        optimizedClause = intersect as RequirementClauseExpression;
+                        optimizedConditions = (optimizedClause != null) ? optimizedClause._conditions : new List<RequirementExpressionBase>() { intersect };
+                    }
+                }
+
+                if (intersectIndex == -1)
+                    alts.AddCondition(optimized);
 
                 var j = indices.Length - 1;
                 do
@@ -471,7 +568,19 @@ namespace RATools.Parser.Expressions.Trigger
                     }
 
                     if (j == 0)
+                    {
+                        foreach (var condition in alts.Conditions)
+                        {
+                            context.BeginAlt();
+                            triggerContext.Trigger = context.Trigger;
+
+                            var error = condition.BuildTrigger(triggerContext);
+                            if (error != null)
+                                return error;
+                        }
+
                         return null;
+                    }
 
                     indices[j--] = 0;
                 } while (true);
@@ -818,8 +927,8 @@ namespace RATools.Parser.Expressions.Trigger
                     updated |= EliminateRedundantConditions(newRequirements, Operation, context);
             }
 
-            if (newRequirements.Count == 1 && newRequirements[0] is RequirementExpressionBase)
-                return (RequirementExpressionBase)newRequirements[0];
+            if (newRequirements.Count == 1)
+                return newRequirements[0];
 
             if (newRequirements.Count > 1 && newRequirements.All(r => r is RequirementClauseExpression))
             {
@@ -846,24 +955,33 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var requirementI = requirements[i];
 
-                var conditionI = requirementI as RequirementConditionExpression;
-                if (conditionI != null)
+                if (requirementI is RequirementConditionExpression ||
+                    requirementI is BehavioralRequirementExpression)
                 {
                     // singular condition, see if it can be handled by any of the other conditions
-                    for (int j = 0; j < requirements.Count - 1; j++)
+                    for (int j = 0; j < requirements.Count - 1; j++) // TODO: j < i?
                     {
                         if (i == j)
                             continue;
 
-                        var intersect = requirements[j].LogicalIntersect(conditionI, condition);
+                        var intersect = requirements[j].LogicalIntersect(requirementI, condition);
                         if (intersect != null)
                         {
-                            requirements[j] = intersect;
-                            requirements.RemoveAt(i);
+                            if (ReferenceEquals(requirementI, intersect))
+                            {
+                                // latter item encompasses sooner item, discard the sooner item
+                                requirements.RemoveAt(j);
+                            }
+                            else
+                            {
+                                // put the intersect in the sooner place, and discard the latter item
+                                requirements[j] = intersect;
+                                requirements.RemoveAt(i);
 
-                            // make sure to process the intersect too
-                            if (j == i + 1)
-                                i++;
+                                // make sure to process the intersect too
+                                if (j == i + 1)
+                                    i++;
+                            }
 
                             updated = true;
                             break;
@@ -1009,12 +1127,12 @@ namespace RATools.Parser.Expressions.Trigger
 
                         if (intersectIndex == -1)
                         {
-                            intersected = (RequirementExpressionBase)condition;
+                            intersected = condition;
                             intersectIndex = subclause._conditions.IndexOf(condition);
                         }
                         else if (intersected != null)
                         {
-                            intersected = ((RequirementExpressionBase)condition).LogicalIntersect(intersected, operation);
+                            intersected = condition.LogicalIntersect(intersected, operation);
                         }
 
                         break;
@@ -1041,153 +1159,7 @@ namespace RATools.Parser.Expressions.Trigger
                 if (_conditions == null || thatClause._conditions == null)
                     return null;
 
-                if (thatClause._conditions.Count > _conditions.Count)
-                    return thatClause.LogicalIntersect(this, condition);
-
-                // ASSERT: _conditions.Count >= thatClause._conditions.Count;
-                var sharedConditions = new List<RequirementExpressionBase>(_conditions.Count);
-                var unsharedConditions = new List<RequirementExpressionBase>();
-                bool updated = false;
-
-                for (int i = 0; i < _conditions.Count; i++)
-                    sharedConditions.Add(null);
-
-                // both sides use the same set of addresses, see if their logics can be combined
-                // (A || B || C) && (A || B) => (A || B)
-                // (A || B || C) || (A || B) => (A || B || C)
-                // (A && B && C) && (A && B) => (A && B && C)
-                // (A && B && C) || (A && B) => (A && B)
-                // (A && B) || (A && C) => A && (B || C)
-
-                // first pass - look for exact matches
-                foreach (var thatCondition in thatClause.Conditions)
-                {
-                    var found = false;
-                    for (int i = 0; i < sharedConditions.Count; i++)
-                    {
-                        if (sharedConditions[i] == null && thatCondition == _conditions[i])
-                        {
-                            sharedConditions[i] = _conditions[i];
-                            updated = true;
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (!found)
-                        unsharedConditions.Add(thatCondition);
-                }
-
-                // second pass - if there's a single unmatched item, try to merge it
-                if (unsharedConditions.Count == 1)
-                {
-                    var unsharedExpr = unsharedConditions[0];
-                    for (int i = 0; i < sharedConditions.Count; i++)
-                    {
-                        if (sharedConditions[i] != null)
-                            continue;
-
-                        var merged = _conditions[i].LogicalIntersect(unsharedExpr, condition);
-                        if (merged != null)
-                        {
-                            sharedConditions[i] = merged;
-                            unsharedConditions.Clear();
-                            updated = true;
-                            break;
-                        }
-
-                        if (unsharedConditions.Count == 0)
-                            break;
-                    }
-                }
-
-                // if no expressions were merged, we're done
-                if (!updated)
-                    return null;
-
-                if (unsharedConditions.Count == 0)
-                {
-                    if (condition == Operation)
-                    {
-                        // if all items were matched, copy over the remaining items from this
-                        for (int i = 0; i < sharedConditions.Count; i++)
-                        {
-                            if (sharedConditions[i] == null)
-                                sharedConditions[i] = _conditions[i];
-                        }
-                    }
-                    else
-                    {
-                        sharedConditions.RemoveAll(c => c == null);
-                    }
-                }
-                else
-                {
-                    //   (A && B) || (A && C) => A && (B || C)
-                    //   (A || B) && (A || C) => A || (B && C)
-                    //    A = sharedConditions.Where( ! null )
-                    //    B = conditions.Where(sharedCondition == null)
-                    //    C = unsharedConditions
-                    var bConditions = new List<RequirementExpressionBase>();
-                    for (int i = 0; i < sharedConditions.Count; i++)
-                    {
-                        if (sharedConditions[i] == null)
-                            bConditions.Add(_conditions[i]);
-                    }
-
-                    if (bConditions.Count == 0)
-                    {
-                        // if all items were matched, copy over the remaining items from that
-                        sharedConditions.AddRange(unsharedConditions);
-                        updated = true;
-                    }
-                    else
-                    {
-                        RequirementExpressionBase b, c;
-                        sharedConditions.RemoveAll(c => c == null);
-
-                        if (unsharedConditions.Count > 1)
-                        {
-                            c = new RequirementClauseExpression
-                            {
-                                Operation = Operation,
-                                _conditions = unsharedConditions
-                            };
-                        }
-                        else
-                        {
-                            c = unsharedConditions[0];
-                        }
-
-                        if (bConditions.Count > 1)
-                        {
-                            b = new RequirementClauseExpression
-                            {
-                                Operation = Operation,
-                                _conditions = bConditions
-                            };
-                        }
-                        else
-                        {
-                            b = bConditions[0];
-                        }
-
-                        var bOrC = new RequirementClauseExpression
-                        {
-                            Operation = (Operation == ConditionalOperation.And) ? ConditionalOperation.Or : ConditionalOperation.And,
-                            _conditions = new List<RequirementExpressionBase>() { b, c }
-                        };
-
-                        var a = new RequirementClauseExpression { Operation = Operation };
-                        a._conditions = sharedConditions;
-                        a._conditions.Add(bOrC);
-                        return a;
-                    }
-                }
-
-                var newClause = new RequirementClauseExpression { Operation = Operation };
-                newClause._conditions = sharedConditions;
-                return newClause;
+                return LogicalIntersect(_conditions, thatClause._conditions, Operation, condition, true);
             }
 
             if (_conditions.OfType<RequirementExpressionBase>().Any(c => c == that))
@@ -1200,6 +1172,170 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return base.LogicalIntersect(that, condition);
+        }
+
+        private static RequirementExpressionBase LogicalIntersect(
+            List<RequirementExpressionBase> thisConditions,
+            List<RequirementExpressionBase> thatConditions,
+            ConditionalOperation operation,
+            ConditionalOperation intersectCondition,
+            bool allowSubclause)
+        {
+            // ensures thisConditions has at least as many items as thatConditions
+            if (thatConditions.Count > thisConditions.Count)
+            {
+                var temp = thatConditions;
+                thatConditions = thisConditions;
+                thisConditions = temp;
+            }
+
+            var sharedConditions = new List<RequirementExpressionBase>(thisConditions.Count);
+            var unsharedConditions = new List<RequirementExpressionBase>();
+            bool updated = false;
+
+            for (int i = 0; i < thisConditions.Count; i++)
+                sharedConditions.Add(null);
+
+            // both sides use the same set of addresses, see if their logics can be combined
+            // (A || B || C) && (A || B) => (A || B)
+            // (A || B || C) || (A || B) => (A || B || C)
+            // (A && B && C) && (A && B) => (A && B && C)
+            // (A && B && C) || (A && B) => (A && B)
+            // (A && B) || (A && C) => A && (B || C)
+
+            // first pass - look for exact matches
+            foreach (var thatCondition in thatConditions)
+            {
+                var found = false;
+                for (int i = 0; i < sharedConditions.Count; i++)
+                {
+                    if (sharedConditions[i] == null && thatCondition == thisConditions[i])
+                    {
+                        sharedConditions[i] = thisConditions[i];
+                        updated = true;
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                    unsharedConditions.Add(thatCondition);
+            }
+
+            // second pass - if there's a single unmatched item, try to merge it
+            if (unsharedConditions.Count == 1 && thisConditions.Count == thatConditions.Count)
+            {
+                var unsharedExpr = unsharedConditions[0];
+                for (int i = 0; i < sharedConditions.Count; i++)
+                {
+                    if (sharedConditions[i] != null)
+                        continue;
+
+                    var merged = thisConditions[i].LogicalIntersect(unsharedExpr, intersectCondition);
+                    if (merged != null)
+                    {
+                        sharedConditions[i] = merged;
+                        unsharedConditions.Clear();
+                        updated = true;
+                        break;
+                    }
+
+                    if (unsharedConditions.Count == 0)
+                        break;
+                }
+            }
+
+            // if no expressions were merged, we're done
+            if (!updated)
+                return null;
+
+            if (unsharedConditions.Count == 0)
+            {
+                if (intersectCondition == operation)
+                {
+                    // if all items were matched, copy over the remaining items from this
+                    for (int i = 0; i < sharedConditions.Count; i++)
+                    {
+                        if (sharedConditions[i] == null)
+                            sharedConditions[i] = thisConditions[i];
+                    }
+                }
+                else
+                {
+                    sharedConditions.RemoveAll(c => c == null);
+                }
+            }
+            else if (!allowSubclause)
+            {
+                return null;
+            }
+            else
+            {
+                //   (A && B) || (A && C) => A && (B || C)
+                //   (A || B) && (A || C) => A || (B && C)
+                //    A = sharedConditions.Where( ! null )
+                //    B = conditions.Where(sharedCondition == null)
+                //    C = unsharedConditions
+                var bConditions = new List<RequirementExpressionBase>();
+                for (int i = 0; i < sharedConditions.Count; i++)
+                {
+                    if (sharedConditions[i] == null)
+                        bConditions.Add(thisConditions[i]);
+                }
+
+                if (bConditions.Count == 0)
+                {
+                    // if all items were matched, copy over the remaining items from that
+                    sharedConditions.AddRange(unsharedConditions);
+                    updated = true;
+                }
+                else
+                {
+                    RequirementExpressionBase b, c;
+                    sharedConditions.RemoveAll(c => c == null);
+
+                    if (unsharedConditions.Count > 1)
+                    {
+                        c = new RequirementClauseExpression
+                        {
+                            Operation = operation,
+                            _conditions = unsharedConditions
+                        };
+                    }
+                    else
+                    {
+                        c = unsharedConditions[0];
+                    }
+
+                    if (bConditions.Count > 1)
+                    {
+                        b = new RequirementClauseExpression
+                        {
+                            Operation = operation,
+                            _conditions = bConditions
+                        };
+                    }
+                    else
+                    {
+                        b = bConditions[0];
+                    }
+
+                    var bOrC = new RequirementClauseExpression
+                    {
+                        Operation = (operation == ConditionalOperation.And) ? ConditionalOperation.Or : ConditionalOperation.And,
+                        _conditions = new List<RequirementExpressionBase>() { b, c }
+                    };
+
+                    var a = new RequirementClauseExpression { Operation = operation };
+                    a._conditions = sharedConditions;
+                    a._conditions.Add(bOrC);
+                    return a;
+                }
+            }
+
+            var newClause = new RequirementClauseExpression { Operation = operation };
+            newClause._conditions = sharedConditions;
+            return newClause;
         }
 
         /// <summary>
