@@ -59,7 +59,7 @@ namespace RATools.Parser.Functions
             if (stringExpression != null && !string.IsNullOrEmpty(stringExpression.Value))
                 achievement.IsDumped = true;
 
-            var trigger = GetParameter(scope, "trigger", out result);
+            var trigger = GetRequirementParameter(scope, "trigger", out result);
             if (trigger == null)
                 return false;
 

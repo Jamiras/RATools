@@ -321,10 +321,13 @@ namespace RATools.Tests.Parser.Regression
             using (var file = File.Open(outputFileName, FileMode.Create))
                 vmNewScript.Dump(file);
 
+            ServiceRepository.Reset();
+
             Assert.IsTrue(File.Exists(expectedFileName), expectedFileName + " not found");
             AssertFileContents(outputFileName, expectedFileName);
 
-            ServiceRepository.Reset();
+            // file matched, delete temporary file
+            File.Delete(outputFileName);
         }
     }
 }

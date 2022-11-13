@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
 using System.Linq;
 using System.Text;
 
@@ -215,12 +216,13 @@ namespace RATools.Parser.Expressions.Trigger
 
                 field = FieldFactory.CreateField(right);
                 if (field.Type == FieldType.None)
-                    return new MathematicExpression(this, operation, right);
+                    return new ErrorExpression("Could not create condition from " + right.Type);
             }
 
             var newModifyingOperator = GetModifyingOperator(operation);
             if (newModifyingOperator == RequirementOperator.None)
             {
+                // operator could not be turned into a conditional operator
                 if (operation == MathematicOperation.Modulus)
                 {
                     if ((field.Type == FieldType.Value && field.Value == 1) ||
@@ -240,7 +242,7 @@ namespace RATools.Parser.Expressions.Trigger
                         return new ErrorExpression("Cannot modulus using a runtime value");
                 }
 
-                return new MathematicExpression(this, operation, right);
+                return new ErrorExpression("Cannot combine " + Type + " and " + right.Type + " using " + operation);
             }
 
             switch (ModifyingOperator)
@@ -291,8 +293,12 @@ namespace RATools.Parser.Expressions.Trigger
                                     field = FieldFactory.ApplyMathematic(field, RequirementOperator.Divide, Modifier);
                                     break;
                                 }
+
+                                // remainder after dividing, don't do it
+                                goto default;
                             }
                         }
+
                         goto default;
                     }
                     else
@@ -309,6 +315,7 @@ namespace RATools.Parser.Expressions.Trigger
                     break;
 
                 default:
+                    // return a MathematicExpression for now, it may get reduced in a comparison normalization
                     return new MathematicExpression(this, operation, right);
             }
 

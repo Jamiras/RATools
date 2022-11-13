@@ -360,21 +360,11 @@ namespace RATools.Tests.Parser
         [TestCase("byte(0x001234) < byte(0x001234)", "always_false()")] // never true
         [TestCase("byte(0x001234) >= byte(0x001234)", "always_true()")] // always true
         [TestCase("byte(0x001234) > byte(0x001234)", "always_false()")] // never true
-        [TestCase("byte(0x001234) / byte(0x001234)", "byte(0x001234) / byte(0x001234)")] // indeterminant - 0 or 1
-        [TestCase("byte(0x001234) * byte(0x001234)", "byte(0x001234) * byte(0x001234)")] // cannot be simplified
-        [TestCase("byte(0x001234) & byte(0x001234)", "byte(0x001234) & byte(0x001234)")] // could be simplified to just byte(0x001234)
         [TestCase("once(byte(0x001234) == byte(0x001234))", "always_true()")] // always true
         [TestCase("repeated(3, byte(0x001234) == byte(0x001234))", "repeated(3, always_true())")] // always true, but ignored for two frames
         [TestCase("never(repeated(3, always_true()))", "never(repeated(3, always_true()))")] // always true, but ignored for two frames
         [TestCase("byte(0x001234) == 1 && never(repeated(3, always_true()))", "byte(0x001234) == 1 && never(repeated(3, always_true()))")] // always true, but ignored for two frames
         [TestCase("repeated(3, byte(0x001234) != byte(0x001234))", "always_false()")] // always false will never be true, regardless of how many frames it's false
-        [TestCase("0 < 256", "always_true()")] // always true
-        [TestCase("0 == 1", "always_false()")] // always false
-        [TestCase("1 == 1", "always_true()")] // always true
-        [TestCase("3 > 6", "always_false()")] // always false
-        [TestCase("4.56 == 4.56", "always_true()")] // always true
-        [TestCase("4.56 > 4.57", "always_false()")] // always false
-        [TestCase("4.56 > 4", "always_true()")] // always false
         [TestCase("always_false() && byte(0x001234) == 1", "always_false()")] // always false and anything is always false
         [TestCase("always_false() && (byte(0x001234) == 1 || byte(0x001234) == 2)", "always_false()")] // always false and anything is always false
         [TestCase("always_true() && byte(0x001234) == 1", "byte(0x001234) == 1")] // always true and anything is the anything clause
@@ -628,7 +618,7 @@ namespace RATools.Tests.Parser
 
         [TestCase("byte(0x001234) == 1 && ((low4(0x004567) == 1 && high4(0x004567) >= 12) || (low4(0x004567) == 9 && high4(0x004567) >= 12) || (low4(0x004567) == 1 && high4(0x004567) >= 13))",
                   "byte(0x001234) == 1 && high4(0x004567) >= 12 && (low4(0x004567) == 1 || low4(0x004567) == 9)")] // alts 1 + 3 can be merged together, then the high4 extracted
-        [TestCase("0 == 1 && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
+        [TestCase("always_false() && never(byte(0x001234) == 1)", "always_false()")] // ResetIf without available HitCount inverted, then can be eliminated by always false
         [TestCase("once(always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
                   "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
         [TestCase("tally(2, always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
@@ -651,8 +641,8 @@ namespace RATools.Tests.Parser
                 //"(A && A) || (A && D) || (B && A) || (B && D)"
                   "A || (B && D)")] // "A || (A && D)" and "A || (B && A)" are both just "A"
         [TestCase("(A || B) && (A || C) && (B || C)",
-                  "(A && B) || (A && C) || (A && C && B) || " +
-                  "(B && A) || (B && A && C) || (B && C)")] // multiple "A && C" and "B && C" clauses reduced
+                //"(A && B) || (A && C) || (A && C && B) || (A && C) || (B && A) || (B && A && C) || (B && C) || (B && C) 
+                  "(A && B) || (A && C) || (B && C)")] // three part clauses reduce to two parts, and those are repeated
         [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
                   "(A && B && C) || (A && B && D) || (C && D && A) || (C && D && B)")]
         [TestCase("(A || B || C) && (D || E || F)",
@@ -713,17 +703,23 @@ namespace RATools.Tests.Parser
         public void TestNotAlwaysFalseChain()
         {
             var achievement = CreateAchievement("!(always_false() || byte(0x1234) == 2 || byte(0x1234) == 5)");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("always_true() && byte(0x001234) != 2 && byte(0x001234) != 5"));
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(0x001234) != 2 && byte(0x001234) != 5"));
         }
 
         [Test]
         public void TestMemoryReferenceWithoutComparison()
         {
-            CreateAchievement("byte(0x1234)", "Incomplete trigger condition");
-            CreateAchievement("byte(0x1234) && byte(0x2345) == 1", "Incomplete trigger condition");
-            CreateAchievement("byte(0x1234) == 1 && byte(0x2345)", "Incomplete trigger condition");
-            CreateAchievement("byte(0x1234) || byte(0x2345) == 1", "Incomplete trigger condition");
-            CreateAchievement("byte(0x1234) == 1 || byte(0x2345)", "Incomplete trigger condition");
+            CreateAchievement("byte(0x1234)", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) && byte(0x2345) == 1", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) == 1 && byte(0x2345)", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) || byte(0x2345) == 1", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) == 1 || byte(0x2345)", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) * 2", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) * byte(0x1234)", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) / 2", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) / byte(0x1234)", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) & 15", "expression is not a requirement expression");
+            CreateAchievement("byte(0x1234) & byte(0x1234)", "expression is not a requirement expression");
         }
 
         [Test]

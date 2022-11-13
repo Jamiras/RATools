@@ -108,25 +108,25 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         // bcd should be factored out
-        [TestCase("bcd(byte(1)) == 24", ExpressionType.Requirement, "byte(0x000001) == 36")]
-        [TestCase("prev(bcd(byte(1))) == 15", ExpressionType.Requirement, "prev(byte(0x000001)) == 21")]
-        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", ExpressionType.Requirement, "byte(0x000001) != prev(byte(0x000001))")]
+        [TestCase("bcd(byte(1)) == 24", "byte(0x000001) == 36")]
+        [TestCase("prev(bcd(byte(1))) == 15", "prev(byte(0x000001)) == 21")]
+        [TestCase("bcd(byte(1)) != prev(bcd(byte(1)))", "byte(0x000001) != prev(byte(0x000001))")]
         // bcd cannot be factored out
-        [TestCase("byte(1) != bcd(byte(2))", ExpressionType.Requirement, "byte(0x000001) != bcd(byte(0x000002))")]
+        [TestCase("byte(1) != bcd(byte(2))", "byte(0x000001) != bcd(byte(0x000002))")]
         // bcd representation of 100M doesn't fit in 32-bits
-        [TestCase("bcd(dword(1)) == 100000000", ExpressionType.BooleanConstant, "false")]
-        [TestCase("bcd(dword(1)) != 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) < 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) <= 100000000", ExpressionType.BooleanConstant, "true")]
-        [TestCase("bcd(dword(1)) > 100000000", ExpressionType.BooleanConstant, "false")]
-        [TestCase("bcd(dword(1)) >= 100000000", ExpressionType.BooleanConstant, "false")]
-        public void TestNormalizeBCD(string input, ExpressionType expectedType, string expected)
+        [TestCase("bcd(dword(1)) == 100000000", "always_false()")]
+        [TestCase("bcd(dword(1)) != 100000000", "always_true()")]
+        [TestCase("bcd(dword(1)) < 100000000", "always_true()")]
+        [TestCase("bcd(dword(1)) <= 100000000", "always_true()")]
+        [TestCase("bcd(dword(1)) > 100000000", "always_false()")]
+        [TestCase("bcd(dword(1)) >= 100000000", "always_false()")]
+        public void TestNormalizeBCD(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);
-            Assert.That(result.Type, Is.EqualTo(expectedType));
 
-            if (expectedType == ExpressionType.Requirement)
-                result = ((RequirementConditionExpression)result).Normalize();
+            var condition = result as RequirementConditionExpression;
+            if (condition != null)
+                result = condition.Normalize();
 
             ExpressionTests.AssertAppendString(result, expected);
         }

@@ -25,16 +25,9 @@ namespace RATools.Parser.Functions
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var comparison = GetParameter(scope, "comparison", out result);
+            var comparison = GetRequirementParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
-
-            var expression = comparison as RequirementExpressionBase;
-            if (expression == null)
-            {
-                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
-                return false;
-            }
 
             var clause = comparison as RequirementClauseExpression;
             if (clause != null && clause.Operation == ConditionalOperation.Or)
@@ -62,7 +55,7 @@ namespace RATools.Parser.Functions
             result = new BehavioralRequirementExpression
             {
                 Behavior = _type,
-                Condition = (RequirementExpressionBase)comparison,
+                Condition = comparison,
             };
 
             CopyLocation(result);
