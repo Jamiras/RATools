@@ -641,8 +641,8 @@ namespace RATools.Tests.Parser
                 //"(A && A) || (A && D) || (B && A) || (B && D)"
                   "A || (B && D)")] // "A || (A && D)" and "A || (B && A)" are both just "A"
         [TestCase("(A || B) && (A || C) && (B || C)",
-                  "(A && B) || (A && C) || (A && C && B) || " +
-                  "(B && A) || (B && A && C) || (B && C)")] // multiple "A && C" and "B && C" clauses reduced
+                //"(A && B) || (A && C) || (A && C && B) || (A && C) || (B && A) || (B && A && C) || (B && C) || (B && C) 
+                  "(A && B) || (A && C) || (B && C)")] // three part clauses reduce to two parts, and those are repeated
         [TestCase("((A && B) || (C && D)) && ((A && C) || (B && D))",
                   "(A && B && C) || (A && B && D) || (C && D && A) || (C && D && B)")]
         [TestCase("(A || B || C) && (D || E || F)",
@@ -703,7 +703,7 @@ namespace RATools.Tests.Parser
         public void TestNotAlwaysFalseChain()
         {
             var achievement = CreateAchievement("!(always_false() || byte(0x1234) == 2 || byte(0x1234) == 5)");
-            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("always_true() && byte(0x001234) != 2 && byte(0x001234) != 5"));
+            Assert.That(achievement.RequirementsDebugString, Is.EqualTo("byte(0x001234) != 2 && byte(0x001234) != 5"));
         }
 
         [Test]
