@@ -336,8 +336,6 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            //CheckExpansionThreshold(expanded, null);
-
             // clause = (B && (C || D)) => (B && C) || (B && D)
             var indices = new int[expanded.Count];
             int k;
@@ -959,11 +957,8 @@ namespace RATools.Parser.Expressions.Trigger
                     requirementI is BehavioralRequirementExpression)
                 {
                     // singular condition, see if it can be handled by any of the other conditions
-                    for (int j = 0; j < requirements.Count - 1; j++) // TODO: j < i?
+                    for (int j = 0; j < i; j++)
                     {
-                        if (i == j)
-                            continue;
-
                         var intersect = requirements[j].LogicalIntersect(requirementI, condition);
                         if (intersect != null)
                         {

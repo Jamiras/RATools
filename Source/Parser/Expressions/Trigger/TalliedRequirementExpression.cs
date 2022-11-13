@@ -142,11 +142,7 @@ namespace RATools.Parser.Expressions.Trigger
             var tallyContext = new TallyBuilderContext();
             foreach (var condition in Conditions)
             {
-                var optimized = condition;
-
-                var expr = condition as RequirementExpressionBase;
-                if (expr != null)
-                    optimized = expr.Optimize(tallyContext);
+                var optimized = condition.Optimize(tallyContext);
 
                 // always false conditions cannot capture hits. no reason to include them in the trigger
                 if (optimized is AlwaysFalseExpression)
@@ -179,11 +175,7 @@ namespace RATools.Parser.Expressions.Trigger
             var newResetConditions = new List<RequirementExpressionBase>();
             foreach (var condition in ResetConditions)
             {
-                var optimized = condition;
-
-                var expr = condition as RequirementExpressionBase;
-                if (expr != null)
-                    optimized = expr.Optimize(context);
+                var optimized = condition.Optimize(context);
 
                 // always false conditions cannot capture hits. no reason to include them in the trigger
                 if (optimized is AlwaysFalseExpression)
@@ -329,10 +321,6 @@ namespace RATools.Parser.Expressions.Trigger
             bool hasAddHits = false;
             foreach (var condition in sortedConditions)
             {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return new ErrorExpression("Cannot count " + condition.Type, condition);
-
                 // reset conditions have to be inserted before each tallied condition and the last condition
                 if (_resetConditions != null)
                 {
@@ -341,7 +329,7 @@ namespace RATools.Parser.Expressions.Trigger
                         return error;
                 }
 
-                error = expr.BuildSubclauseTrigger(context);
+                error = condition.BuildSubclauseTrigger(context);
                 if (error != null)
                     return error;
 
@@ -356,7 +344,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // optimized out. if the preceding item has a hitcount, add it back for the new hitcount
                     if (context.LastRequirement.HitCount > 0)
                     {
-                        var clause = expr as RequirementClauseExpression;
+                        var clause = condition as RequirementClauseExpression;
                         if (clause != null && clause.Operation == ConditionalOperation.And && clause.Conditions.Last() is AlwaysTrueExpression)
                         {
                             context.LastRequirement.Type = RequirementType.AndNext;
@@ -389,11 +377,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             foreach (var condition in ResetConditions)
             {
-                var expr = condition as RequirementExpressionBase;
-                if (expr == null)
-                    return new ErrorExpression("Cannot count " + condition.Type, condition);
-
-                var error = expr.BuildSubclauseTrigger(context);
+                var error = condition.BuildSubclauseTrigger(context);
                 if (error != null)
                     return error;
 
@@ -412,19 +396,16 @@ namespace RATools.Parser.Expressions.Trigger
         {
             if (_conditions != null && _conditions.Count == 1)
             {
-                var expr = _conditions[0] as RequirementExpressionBase;
-                if (expr != null)
+                var expr = _conditions[0];
+                var inverted = expr.InvertResetsAndPauses();
+                if (!ReferenceEquals(inverted, expr))
                 {
-                    var inverted = expr.InvertResetsAndPauses();
-                    if (!ReferenceEquals(inverted, expr))
+                    return new TalliedRequirementExpression
                     {
-                        return new TalliedRequirementExpression
-                        {
-                            HitTarget = HitTarget,
-                            _conditions = new List<RequirementExpressionBase> { inverted },
-                            Location = this.Location
-                        };
-                    }
+                        HitTarget = HitTarget,
+                        _conditions = new List<RequirementExpressionBase> { inverted },
+                        Location = Location
+                    };
                 }
             }
 
@@ -442,10 +423,8 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (_conditions.Count == 1 && thatTallied._conditions.Count == 1)
             {
-                var leftExpression = _conditions[0] as RequirementExpressionBase;
-                var rightExpression = thatTallied._conditions[0] as RequirementExpressionBase;
-                if (leftExpression == null || rightExpression == null)
-                    return null;
+                var leftExpression = _conditions[0];
+                var rightExpression = thatTallied._conditions[0];
 
                 var intersect = leftExpression.LogicalIntersect(rightExpression, ConditionalOperation.Or);
                 if (intersect == null)
