@@ -681,7 +681,7 @@ namespace RATools.Tests.Parser
         public void TestRichPresenceValueDivide()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) / 4))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234*0.25) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(M:0xH001234/4) here\r\n"));
         }
 
         [Test]

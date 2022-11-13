@@ -1015,41 +1015,20 @@ namespace RATools.Parser.Expressions.Trigger
 
         private static bool IsZero(ExpressionBase expression)
         {
-            var integerConstant = expression as IntegerConstantExpression;
-            if (integerConstant != null)
-                return integerConstant.Value == 0;
-
-            var floatConstant = expression as FloatConstantExpression;
-            if (floatConstant != null)
-                return floatConstant.Value == 0.0;
-
-            return false;
+            var numericConstant = expression as INumericConstantExpression;
+            return (numericConstant != null) ? numericConstant.IsZero : false;
         }
 
         private static bool IsNegative(ExpressionBase expression)
         {
-            var integerConstant = expression as IntegerConstantExpression;
-            if (integerConstant != null)
-                return integerConstant.Value < 0;
-
-            var floatConstant = expression as FloatConstantExpression;
-            if (floatConstant != null)
-                return floatConstant.Value < 0.0;
-
-            return false;
+            var numericConstant = expression as INumericConstantExpression;
+            return (numericConstant != null) ? numericConstant.IsNegative : false;
         }
 
         private static bool IsPositive(ExpressionBase expression)
         {
-            var integerConstant = expression as IntegerConstantExpression;
-            if (integerConstant != null)
-                return integerConstant.Value > 0;
-
-            var floatConstant = expression as FloatConstantExpression;
-            if (floatConstant != null)
-                return floatConstant.Value > 0.0;
-
-            return false;
+            var numericConstant = expression as INumericConstantExpression;
+            return (numericConstant != null) ? numericConstant.IsPositive : false;
         }
 
         private bool MemoryAccessorsMatch(MemoryValueExpression that)

@@ -730,31 +730,6 @@ namespace RATools.Parser
             return rightRequirements.Count == 0;
         }
 
-        internal static Field CreateFieldFromExpression(ExpressionBase expression)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.IntegerConstant:
-                    return new Field
-                    {
-                        Size = FieldSize.DWord,
-                        Type = FieldType.Value,
-                        Value = (uint)((IntegerConstantExpression)expression).Value
-                    };
-
-                case ExpressionType.FloatConstant:
-                    return new Field
-                    {
-                        Size = FieldSize.Float,
-                        Type = FieldType.Float,
-                        Float = ((FloatConstantExpression)expression).Value
-                    };
-
-                default:
-                    return new Field();
-            }
-        }
-
         // ==== Optimize helpers ====
 
         private static bool? NormalizeComparisonMax(Requirement requirement, uint max)

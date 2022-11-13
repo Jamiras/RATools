@@ -45,9 +45,14 @@ namespace RATools.Parser
             if (!ProcessValueExpression(expression, scope, terms, out result))
                 return null;
 
-            terms.RemoveAll(t => t.multiplier == 0.0);
+            terms.RemoveAll(t => t.Multiplier == 0.0f);
 
+            // explicitly measured value should use measured format
             if (terms.Any(t => t.measured != null))
+                return BuildMeasuredValueString(terms);
+
+            // if multiplier can be represented by integer division, use measured format
+            if (terms.Any(t => (t.Multiplier % 1.0f) != 0.0f && ((1.0f / t.Multiplier) % 1.0f) == 0.0f))
                 return BuildMeasuredValueString(terms);
 
             return BuildNonMeasuredValueString(terms);
@@ -62,6 +67,8 @@ namespace RATools.Parser
                 if (builder.Length > 0)
                     builder.Append('_');
 
+                var multiplier = term.Multiplier;
+
                 switch (term.field.Type)
                 {
                     case FieldType.Value:
@@ -73,8 +80,8 @@ namespace RATools.Parser
                         }
 
                         builder.Append('v');
-                        var value = term.field.Value * term.multiplier;
-                        if ((value % 1) == 0)
+                        var value = term.field.Value * multiplier;
+                        if ((value % 1.0f) == 0)
                         {
                             // value is a whole number, just output it
                             builder.Append((int)value);
@@ -90,14 +97,14 @@ namespace RATools.Parser
 
                     default:
                         term.field.Serialize(builder);
-                        if (term.multiplier != 1.0)
+                        if (multiplier != 1.0f)
                         {
                             builder.Append('*');
 
-                            if ((term.multiplier % 1) == 0)
+                            if ((multiplier % 1.0f) == 0)
                             {
                                 // value is a whole number, just output it
-                                builder.Append((int)(uint)term.multiplier);
+                                builder.Append((int)(uint)multiplier);
                             }
                             else
                             {
@@ -121,28 +128,30 @@ namespace RATools.Parser
                 if (term.measured != null)
                     continue;
 
+                var multiplier = term.Multiplier;
+
                 var requirement = new Requirement { Left = term.field };
-                if (term.multiplier < 0)
+                if (multiplier < 0.0f)
                 {
                     requirement.Type = RequirementType.SubSource;
-                    term.multiplier = -term.multiplier;
+                    multiplier = -multiplier;
                 }
                 else
                 {
                     requirement.Type = RequirementType.AddSource;
                 }
 
-                if (term.multiplier != 1)
+                if (multiplier != 1.0f)
                 {
-                    if ((term.multiplier % 1) == 0)
+                    if ((multiplier % 1.0f) == 0)
                     {
                         requirement.Operator = RequirementOperator.Multiply;
-                        requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)term.multiplier };
+                        requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)multiplier };
                     }
                     else
                     {
-                        var inverse = 1.0 / term.multiplier;
-                        if ((inverse % 1) == 0)
+                        var inverse = 1.0f / multiplier;
+                        if ((inverse % 1.0f) == 0)
                         {
                             requirement.Operator = RequirementOperator.Divide;
                             requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)inverse };
@@ -150,7 +159,7 @@ namespace RATools.Parser
                         else
                         {
                             requirement.Operator = RequirementOperator.Multiply;
-                            requirement.Right = new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = (float)term.multiplier };
+                            requirement.Right = new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = (float)multiplier };
                         }
                     }
                 }
@@ -221,12 +230,35 @@ namespace RATools.Parser
             return AchievementBuilder.SerializeRequirements(requirements, Enumerable.Empty<IEnumerable<Requirement>>());
         }
 
-        [DebuggerDisplay("{field} * {multiplier}")]
+        [DebuggerDisplay("{field} * {Multiplier}")]
         private class Term
         {
+            public Term()
+            {
+                multiplier = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = 1 };
+            }
+
             public Field field;
             public IEnumerable<Requirement> measured;
-            public double multiplier = 1.0;
+            public Field multiplier;
+
+            public float Multiplier
+            {
+                get
+                {
+                    switch (multiplier.Type)
+                    {
+                        default:
+                            return 1.0f;
+
+                        case FieldType.Value:
+                            return (int)multiplier.Value;
+
+                        case FieldType.Float:
+                            return multiplier.Float;
+                    }
+                }
+            }
         }
 
         private static ExpressionBase WrapInMeasured(ExpressionBase expression)
@@ -241,42 +273,23 @@ namespace RATools.Parser
 
         private static bool MergeFields(Field field, Term term, MathematicOperation operation)
         {
-            ExpressionBase right;
-            if (field.Type == FieldType.Value)
-                right = new IntegerConstantExpression((int)field.Value);
-            else if (field.Type == FieldType.Float)
-                right = new FloatConstantExpression(field.Float);
-            else
-                return false;
-
-            ExpressionBase left = null;
-            if (term.multiplier == 1.0)
+            if (term.Multiplier == 1.0f)
             {
-                if (term.field.Type == FieldType.Value)
-                    left = new IntegerConstantExpression((int)term.field.Value);
-                else if (term.field.Type == FieldType.Float)
-                    left = new FloatConstantExpression(term.field.Float);
+                term.multiplier = field;
+                return true;
             }
 
-            if (left == null)
+            if (term.multiplier.Type == FieldType.Value && field.Type == FieldType.Value)
             {
-                FloatConstantExpression floatRight;
+                // integer math
                 switch (operation)
                 {
                     case MathematicOperation.Multiply:
-                        floatRight = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
-                        if (floatRight == null)
-                            return false;
-
-                        term.multiplier *= floatRight.Value;
+                        term.multiplier.Value *= field.Value;
                         return true;
 
                     case MathematicOperation.Divide:
-                        floatRight = FloatConstantExpression.ConvertFrom(right) as FloatConstantExpression;
-                        if (floatRight == null)
-                            return false;
-
-                        term.multiplier /= floatRight.Value;
+                        term.multiplier.Value /= field.Value;
                         return true;
 
                     default:
@@ -284,9 +297,24 @@ namespace RATools.Parser
                 }
             }
 
-            var mathematicExpression = new MathematicExpression(left, operation, right);
-            term.field = AchievementBuilder.CreateFieldFromExpression(mathematicExpression.MergeOperands());
-            return true;
+            if (term.multiplier.Type == FieldType.Value)
+                term.multiplier = FieldFactory.ConvertToFloat(term.multiplier);
+            if (field.Type == FieldType.Value)
+                field = FieldFactory.ConvertToFloat(field);
+
+            switch (operation)
+            {
+                case MathematicOperation.Multiply:
+                    term.multiplier.Float *= field.Float;
+                    return true;
+
+                case MathematicOperation.Divide:
+                    term.multiplier.Float /= field.Float;
+                    return true;
+
+                default:
+                    return false;
+            }
         }
 
         private static Term ConvertToTerm(MemoryAccessorExpression memoryAccessor, out ExpressionBase error)
@@ -318,7 +346,7 @@ namespace RATools.Parser
                 if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
                 {
                     if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
-                        term.multiplier = -1.0;
+                        term.multiplier = FieldFactory.CreateField(new FloatConstantExpression(-1.0f));
 
                     return term;
                 }
@@ -332,19 +360,18 @@ namespace RATools.Parser
                 else
                 {
                     // merge the constant into the multiplier
-                    if (modifiedMemoryAccessor.Modifier.Type == FieldType.Value)
-                    {
-                        term.multiplier = modifiedMemoryAccessor.Modifier.Value;
-                    }
-                    else if (modifiedMemoryAccessor.Modifier.Type == FieldType.Float)
-                    {
-                        term.multiplier = modifiedMemoryAccessor.Modifier.Float;
-                    }
+                    term.multiplier = modifiedMemoryAccessor.Modifier;
 
                     if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.Divide)
-                        term.multiplier = 1.0 / term.multiplier;
+                    {
+                        term.multiplier = FieldFactory.ConvertToFloat(term.multiplier);
+                        term.multiplier.Float = 1.0f / term.multiplier.Float;
+                    }
+
                     if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
-                        term.multiplier = -term.multiplier;
+                    {
+                        term.multiplier = FieldFactory.NegateValue(term.multiplier);
+                    }
 
                     return term;
                 }
@@ -411,7 +438,7 @@ namespace RATools.Parser
                         if (term.field.Type == FieldType.Value && (int)term.field.Value < 0)
                         {
                             term.field.Value = (uint)(-(int)term.field.Value);
-                            term.multiplier = -term.multiplier;
+                            term.multiplier = FieldFactory.NegateValue(term.multiplier);
                         }
                         terms.Add(term);
                     }
@@ -448,7 +475,7 @@ namespace RATools.Parser
                             if (!ProcessValueExpression(mathematic.Right, scope, terms, out result))
                                 return false;
                             for (int i = numTerms; i < terms.Count; i++)
-                                terms[i].multiplier = -terms[i].multiplier;
+                                terms[i].multiplier = FieldFactory.NegateValue(terms[i].multiplier);
                             return true;
 
                         case MathematicOperation.Multiply:

@@ -1,10 +1,10 @@
-﻿using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
+﻿using RATools.Parser.Internal;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class IntegerConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
+    internal class IntegerConstantExpression : ExpressionBase,
+        IMathematicCombineExpression, IComparisonNormalizeExpression, INumericConstantExpression
     {
         public IntegerConstantExpression(int value)
             : base(ExpressionType.IntegerConstant)
@@ -31,6 +31,30 @@ namespace RATools.Parser.Expressions
         public override bool IsLiteralConstant
         {
             get { return true; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically zero
+        /// </summary>
+        public bool IsZero
+        {
+            get { return Value == 0; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically negative
+        /// </summary>
+        public bool IsNegative
+        {
+            get { return Value < 0; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically positive
+        /// </summary>
+        public bool IsPositive
+        {
+            get { return Value > 0; }
         }
 
         /// <summary>
