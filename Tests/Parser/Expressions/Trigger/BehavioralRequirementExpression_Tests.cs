@@ -72,7 +72,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             var scope = TriggerExpressionTests.CreateScope();
             scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
 
-            TriggerExpressionTests.AssertParseError(input, scope, "comparison did not evaluate to a valid comparison");
+            TriggerExpressionTests.AssertParseError(input, scope, "comparison is not a requirement");
         }
 
         [Test]

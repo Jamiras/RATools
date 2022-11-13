@@ -22,29 +22,15 @@ namespace RATools.Parser.Functions
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var comparison = GetParameter(scope, "comparison", out result);
+            var comparison = GetRequirementParameter(scope, "comparison", out result);
             if (comparison == null)
                 return false;
 
-            var expression = comparison as RequirementExpressionBase;
-            if (expression == null)
-            {
-                result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
-                return false;
-            }
-
-            var until = GetParameter(scope, "until", out result);
+            var until = GetRequirementParameter(scope, "until", out result);
             if (until == null)
                 return false;
 
-            var untilExpression = until as RequirementExpressionBase;
-            if (untilExpression == null)
-            {
-                result = new ErrorExpression("until did not evaluate to a valid comparison", until);
-                return false;
-            }
-
-            result = new DisableWhenRequirementExpression() { Condition = expression, Until = untilExpression };
+            result = new DisableWhenRequirementExpression() { Condition = comparison, Until = until };
             CopyLocation(result);
             return true;
         }

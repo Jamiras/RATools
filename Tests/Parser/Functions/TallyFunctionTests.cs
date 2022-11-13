@@ -125,6 +125,14 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
+        public void TestZeroCountAndNext()
+        {
+            TriggerExpressionTests.AssertBuildTriggerError(
+                "tally(0, byte(0x1234) == 56 && byte(0x1234) == 67)",
+                "Unbounded count is only supported in measured value expressions");
+        }
+
+        [Test]
         public void TestNegativeCount()
         {
             TriggerExpressionTests.AssertParseError(
