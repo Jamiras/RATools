@@ -1,3 +1,45 @@
+v1.10.0 - 14 Nov 2022
+* new internal representation of logic
+  - small performance boost due to not having to reevaluate on each usage
+  - allows for more optimization opportunities
+  NOTE: this causes errors to be generated for several previously allowed syntaxes:
+    * implicit `always_true()` and `always_false()` are no longer supported in logic chains. logic 
+      such as: `0=1 && never(byte(0x1234) == 3)` will now collapse to `false` as `0=1` can never be
+      true. script authors must replace the `0=1` with an `always_false()` to preserve the logic in
+      the output.
+    * `always_true()` and `always_false()` are no longer supported for leaderboard values. 
+      use `measured(repeated(0, always_true()))` and `0` instead.
+    * memory addresses can no longer be compared to `true` or `false`. Compare to `1` or `0` instead.
+    * integer division is no longer implicitly converted to floats for leaderboard values:
+      `byte(0x1234) * 3 / 2` will no longer be automatically converted to `byte(0x1234) * 1.5`.
+      use `byte(0x1234) * 3.0 / 2` for automatic conversion.
+    * calling `repeated` or `tally` with a count of 0 is no longer supported outside of a `measured`
+      clause of a value expression. Doing so implies an unbounded hit requirement which cannot be
+      reached and is equivalent to `always_false()`. Using these to generate an AndNext/OrNext chain
+      was not intended. If you absolutely want to prevent the OrNext from being converted to alt groups
+      use the `__ornext(condition)` function. If you have a valid reason for forcing an AndNext chain
+      let me know.
+    * `measured(A && B)` will now generate an error instead of just setting the Measured flag on B.
+      The actual logic it previously generated was `A && measured(B)` or `measured(repeated(0, A && B))`
+      depending on whether it was being used in a trigger expression or a value expression.
+    * `once(A && once(B))` will now keep a separate hit count for B and for the entire clause by
+      reordering the conditions or injecting an `always_false()` condition to hold the total count.
+    * `once(unless(A))` will now generate an error. use `unless(once(A))` or `disable_when(A)` instead.
+      Similarly, `unless` cannot be used inside `repeated` or `tally` clauses.
+    * `repeated(10, trigger_when(A))` will now generate an error. use `trigger_when(repeated(10, A))` instead.
+    * `repeated(10, measured(A))` will now generate an error. use `measured(repeated(10, A))` instead.
+* support for local code notes
+* add Progression analysis dialog (open from Game Stats dialog)
+* add ability to autogenerate function names in New Script dialog
+* fix "measured(bitcount(X) == 8)" being converted to "measured(byte(X) == 255)"
+* fix "measured(X + 100 > 200)" being converted to "measured(X > 100)"
+* fix "float(X) < 0" being converted to "always_false()"
+* fix never in tally clause being replaced with AndNext
+* fix Copy to Clipboard not working on Rich Presence and Leaderboard title/description
+* fix duplicating of file extension for local badge images
+* fix dumping Rich Presence with measured value in display string
+* fix viewing Rich Presence diff where lookup was removed
+
 v1.9.1 - 22 Jun 2022
 * show error when server returns non-JSON authentication error
 * improve diff logic for rich presence lookups
