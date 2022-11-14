@@ -940,12 +940,19 @@ namespace RATools.ViewModels
                         if (!Char.IsLetterOrDigit(note[bitIndex]))
                             goto case FieldSize.LowNibble;
 
-                        while (bitIndex < note.Length && note[bitIndex] != '\n' && note[bitIndex] != ',')
+                        while (bitIndex < note.Length && note[bitIndex] != '\n' && note[bitIndex] != ',' && note[bitIndex] != ';')
                             bitSuffix.Append(note[bitIndex++]);
 
                         if (bitSuffix.Length == 0)
                             goto case FieldSize.LowNibble;
 
+                        if (index == -1 && 
+                            note.StartsWith("bit", StringComparison.OrdinalIgnoreCase) ||
+                            (Char.IsDigit(note[1]) && (note[0] == 'b' || note[0] == 'B')))
+                        {
+                            // found a bit suffix, but nothing to use as a prefix. discard prefix
+                            note = "";
+                        }
                         break;
 
                     case FieldSize.LowNibble:

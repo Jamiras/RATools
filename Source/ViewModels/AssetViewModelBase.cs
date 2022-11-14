@@ -191,16 +191,20 @@ namespace RATools.ViewModels
             }
             else if (IsModified(Local, true))
             {
-                if (coreAsset != null && !IsModified(Published, false))
+                TriggerSource = "Generated";
+
+                if (coreAsset != null)
                 {
-                    if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unofficial)";
-                    else
-                        TriggerSource = "Generated (Same as Core)";
-                }
-                else
-                {
-                    TriggerSource = "Generated";
+                    bool differsFromPublished = !IsModified(Published, false);
+                    UpdateModifiedProperties(Local); // reset title/description modified properties
+
+                    if (differsFromPublished)
+                    {
+                        if (coreAsset.IsUnofficial)
+                            TriggerSource = "Generated (Same as Unofficial)";
+                        else
+                            TriggerSource = "Generated (Same as Core)";
+                    }
                 }
 
                 Other = Local;
@@ -268,11 +272,8 @@ namespace RATools.ViewModels
             }
         }
 
-        protected bool IsModified(AssetSourceViewModel assetViewModel, bool updateTriggers)
+        private bool UpdateModifiedProperties(AssetSourceViewModel assetViewModel)
         {
-            if (assetViewModel.Asset == null)
-                return false;
-
             bool isModified = false;
             if (assetViewModel.Title.Text != Generated.Title.Text)
                 IsTitleModified = isModified = true;
@@ -280,6 +281,16 @@ namespace RATools.ViewModels
                 IsDescriptionModified = isModified = true;
 
             isModified |= AreAssetSpecificPropertiesModified(assetViewModel, Generated);
+
+            return isModified;
+        }
+
+        protected bool IsModified(AssetSourceViewModel assetViewModel, bool updateTriggers)
+        {
+            if (assetViewModel.Asset == null)
+                return false;
+
+            bool isModified = UpdateModifiedProperties(assetViewModel);
 
             var compareTriggers = new List<TriggerViewModel>(assetViewModel.TriggerList);
             var triggers = new List<TriggerViewModel>();
@@ -377,17 +388,32 @@ namespace RATools.ViewModels
             get { return (ImageSource)GetValue(BadgeProperty); }
         }
 
-        internal string BadgeName { get; set; }
+        internal string BadgeName
+        {
+            get { return _badgeName; }
+            set
+            {
+                if (_badgeName != value)
+                {
+                    _badgeName = value;
+                    SetValue(BadgeProperty, BadgeProperty.DefaultValue);
+                }
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private string _badgeName;
 
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (AssetViewModelBase)model;
-            if (!String.IsNullOrEmpty(vm.Published.BadgeName))
-                return vm.Published.Badge;
-            if (!String.IsNullOrEmpty(vm.Local.BadgeName))
+            if (IsValidBadgeName(vm.Generated.BadgeName))
+                return vm.Generated.Badge;
+            if (IsValidBadgeName(vm.Local.BadgeName))
                 return vm.Local.Badge;
+            if (IsValidBadgeName(vm.Published.BadgeName))
+                return vm.Published.Badge;
 
-            if (!String.IsNullOrEmpty(vm.BadgeName))
+            if (IsValidBadgeName(vm.BadgeName))
             {
                 vm.Local.BadgeName = vm.BadgeName;
                 return vm.Local.Badge;

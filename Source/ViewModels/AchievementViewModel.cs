@@ -23,6 +23,7 @@ namespace RATools.ViewModels
         {
             base.Refresh();
 
+
             if (String.IsNullOrEmpty(BadgeName))
                 BadgeName = "00000";
         }

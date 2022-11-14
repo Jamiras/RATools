@@ -32,11 +32,22 @@ namespace RATools.ViewModels
             set
             {
                 _asset = value;
-                Id = value.Id;
-                Title.Text = value.Title;
-                Description.Text = value.Description;
-                Points.Value = value.Points;
-                BadgeName = value.BadgeName;
+                if (value != null)
+                {
+                    Id = value.Id;
+                    Title.Text = value.Title;
+                    Description.Text = value.Description;
+                    Points.Value = value.Points;
+                    BadgeName = value.BadgeName;
+                }
+                else
+                {
+                    Id = 0;
+                    Title.Text = "";
+                    Description.Text = "";
+                    Points.Value = 0;
+                    BadgeName = (string)BadgeNameProperty.DefaultValue;
+                }
 
                 if (_triggerList != null)
                 {

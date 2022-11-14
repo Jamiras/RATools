@@ -47,6 +47,7 @@ namespace RATools.Parser
         private readonly IFileSystemService _fileSystemService;
         private readonly string _filename;
         private readonly List<string> _extraLines;
+        private DateTime _lastSave;
 
         public string Version { get; private set; }
 
@@ -93,6 +94,8 @@ namespace RATools.Parser
         {
             if (_fileSystemService.FileExists(_filename))
             {
+                _lastSave = _fileSystemService.GetFileLastModified(_filename);
+
                 using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
                 {
                     Version = reader.ReadLine();
@@ -279,6 +282,129 @@ namespace RATools.Parser
             }
         }
 
+        public enum LocalAssetChange
+        {
+            None = 0,
+            Modified,
+            Added,
+            Removed
+        }
+
+        public void MergeExternalChanges(Action<AssetBase, LocalAssetChange> changeHandler)
+        {
+            var fileDate = _fileSystemService.GetFileLastModified(_filename);
+            if (fileDate - _lastSave < TimeSpan.FromSeconds(15))
+                return;
+
+            // store old values
+            var achievements = _achievements;
+            _achievements = new List<Achievement>();
+
+            var leaderboards = _leaderboards;
+            _leaderboards = new List<Leaderboard>();
+
+            var richPresence = RichPresence;
+
+            // local notes are always fully reconstructed
+            _notes.Clear();
+
+            // fetch new values
+            Read();
+
+            // merge achievements
+            for (int i = achievements.Count -1; i >= 0; i--)
+            {
+                var existingAchievement = achievements[i];
+                if (!_achievements.Any(a => a.Id == existingAchievement.Id))
+                {
+                    achievements.RemoveAt(i);
+                    changeHandler(existingAchievement, LocalAssetChange.Removed);
+                }
+            }
+
+            foreach (var externalAchievement in _achievements)
+            {
+                var achievement = achievements.FirstOrDefault(a => a.Id == externalAchievement.Id);
+                if (achievement == null)
+                {
+                    // new external achievement - probably deleted by us, but something externally changed
+                    changeHandler(externalAchievement, LocalAssetChange.Added);
+                    achievements.Add(externalAchievement);
+                }
+                else
+                {
+                    if (achievement.Points != externalAchievement.Points ||
+                        achievement.Category != externalAchievement.Category ||
+                        achievement.BadgeName != externalAchievement.BadgeName ||
+                        achievement.Title != externalAchievement.Title ||
+                        achievement.Description != externalAchievement.Description ||
+                        !achievement.AreRequirementsSame(externalAchievement))
+                    {
+                        var index = achievements.IndexOf(achievement);
+                        achievements[index] = externalAchievement;
+                        changeHandler(externalAchievement, LocalAssetChange.Modified);
+                    }
+                }
+            }
+            _achievements = achievements;
+
+            // merge leaderboards
+            for (int i = leaderboards.Count - 1; i >= 0; i--)
+            {
+                var existingLeaderboard = leaderboards[i];
+                if (!_leaderboards.Any(a => a.Id == existingLeaderboard.Id))
+                {
+                    leaderboards.RemoveAt(i);
+                    changeHandler(existingLeaderboard, LocalAssetChange.Removed);
+                }
+            }
+
+            foreach (var externalLeaderboard in _leaderboards)
+            {
+                var leaderboard = leaderboards.FirstOrDefault(a => a.Id == externalLeaderboard.Id);
+                if (leaderboard == null)
+                {
+                    // new external leaderboard
+                    changeHandler(externalLeaderboard, LocalAssetChange.Added);
+                    leaderboards.Add(externalLeaderboard);
+                }
+                else
+                {
+                    if (leaderboard.Format != externalLeaderboard.Format ||
+                        leaderboard.LowerIsBetter != externalLeaderboard.LowerIsBetter ||
+                        leaderboard.Title != externalLeaderboard.Title ||
+                        leaderboard.Description != externalLeaderboard.Description ||
+                        leaderboard.Start != externalLeaderboard.Start ||
+                        leaderboard.Submit != externalLeaderboard.Submit ||
+                        leaderboard.Cancel != externalLeaderboard.Cancel ||
+                        leaderboard.Value != externalLeaderboard.Value)
+                    {
+                        var index = leaderboards.IndexOf(leaderboard);
+                        leaderboards[index] = externalLeaderboard;
+                        changeHandler(externalLeaderboard, LocalAssetChange.Modified);
+                    }
+                }
+            }
+            _leaderboards = leaderboards;
+
+            // merge rich presence
+            if (richPresence == null)
+            {
+                if (RichPresence != null)
+                    changeHandler(richPresence, LocalAssetChange.Added);
+            }
+            else if (RichPresence == null)
+            {
+                changeHandler(richPresence, LocalAssetChange.Removed);
+            }
+            else if (RichPresence.Script != richPresence.Script)
+            {
+                richPresence.Script = RichPresence.Script;
+                RichPresence = richPresence;
+                changeHandler(richPresence, LocalAssetChange.Modified);
+            }
+        }
+
         /// <summary>
         /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
         /// </summary>
@@ -393,7 +519,7 @@ namespace RATools.Parser
             }
 
             if (_notes.Count > 0 && version < 1.1)
-                Version = "1.0.5";
+                Version = "1.1";
             else if (version > 0.30)
                 Version = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:F2}", version);
 

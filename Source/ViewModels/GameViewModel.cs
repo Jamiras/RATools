@@ -333,6 +333,18 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)
         {
+            if (_localAchievementCommitSuspendCount == 0)
+            {
+                _localAssets.MergeExternalChanges((asset, change) =>
+                {
+                    var modifiedAchievement = asset as Achievement;
+                    if (modifiedAchievement != null && modifiedAchievement.Id == achievement.Id)
+                        localAchievement = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedAchievement;
+                    else
+                        HandleLocalAssetChange(asset, change);
+                });
+            }
+
             if (achievement == null)
             {
                 _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localAchievement.Title));
@@ -365,11 +377,27 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
+            {
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { achievement });
+                LocalAchievementCount = _localAssets.Achievements.Count();
+                LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+            }
         }
 
         internal void UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, StringBuilder warning, bool validateAll)
         {
+            if (_localAchievementCommitSuspendCount == 0)
+            {
+                _localAssets.MergeExternalChanges((asset, change) =>
+                {
+                    var modifiedLeaderboard = asset as Leaderboard;
+                    if (modifiedLeaderboard != null && modifiedLeaderboard.Id == leaderboard.Id)
+                        localLeaderboard = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedLeaderboard;
+                    else
+                        HandleLocalAssetChange(asset, change);
+                });
+            }
+
             if (leaderboard == null)
             {
                 _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localLeaderboard.Title));
@@ -391,6 +419,18 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
         {
+            if (_localAchievementCommitSuspendCount == 0)
+            {
+                _localAssets.MergeExternalChanges((asset, change) =>
+                {
+                    var modifiedRichPresence = asset as RichPresence;
+                    if (modifiedRichPresence != null)
+                        localRichPresence = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedRichPresence;
+                    else
+                        HandleLocalAssetChange(asset, change);
+                });
+            }
+
             if (richPresence == null)
             {
                 _logger.WriteVerbose("Deleting local rich presence");
@@ -413,15 +453,71 @@ namespace RATools.ViewModels
         private int _localAchievementCommitSuspendCount = 0;
         internal void SuspendCommitLocalAchievements()
         {
+            if (_localAchievementCommitSuspendCount == 0)
+                _localAssets.MergeExternalChanges(HandleLocalAssetChange);
+
             ++_localAchievementCommitSuspendCount;
         }
 
         internal void ResumeCommitLocalAchievements(StringBuilder warning, List<AssetBase> assetsToValidate)
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
+            {
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, assetsToValidate);
+
+                LocalAchievementCount = _localAssets.Achievements.Count();
+                LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+            }
         }
 
+        private void HandleLocalAssetChange(AssetBase asset, LocalAssets.LocalAssetChange change)
+        {
+            var editors = (List<ViewerViewModelBase>)Editors;
+
+            var richPresence = asset as RichPresence;
+            if (richPresence != null)
+            {
+                var richPresenceViewModel = editors.OfType<RichPresenceViewModel>().FirstOrDefault();
+                if (richPresenceViewModel != null)
+                    richPresenceViewModel.Local.Asset = richPresence;
+
+                return;
+            }
+
+            switch (change)
+            {
+                case LocalAssets.LocalAssetChange.Added:
+                case LocalAssets.LocalAssetChange.Modified:
+                    MergeAchievements(editors, new[] { asset }, (vm, a) =>
+                    {
+                        vm.Local.Asset = a;
+                        vm.Refresh();
+                    });
+                    break;
+
+                case LocalAssets.LocalAssetChange.Removed:
+                    AssetViewModelBase editor = null;
+
+                    var achievement = asset as Achievement;
+                    if (achievement != null)
+                        editor = editors.OfType<AchievementViewModel>().FirstOrDefault(e => e.Id == achievement.Id);
+
+                    var leaderboard = asset as Leaderboard;
+                    if (leaderboard != null)
+                        editor = editors.OfType<LeaderboardViewModel>().FirstOrDefault(e => e.Id == leaderboard.Id);
+
+                    if (editor != null)
+                    {
+                        if (editor.Published.Asset == null && !editor.IsGenerated)
+                            editors.Remove(editor);
+                        else
+                            editor.Local.Asset = null;
+
+                        editor.Refresh();
+                    }
+                    break;
+            }
+        }
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Title", typeof(string), String.Empty);
         public string Title
