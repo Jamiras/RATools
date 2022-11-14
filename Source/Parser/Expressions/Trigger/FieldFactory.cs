@@ -115,5 +115,20 @@ namespace RATools.Parser.Expressions.Trigger
                     return new Field();
             }
         }
+
+        internal static Field NegateValue(Field source)
+        {
+            switch (source.Type)
+            {
+                case FieldType.Float:
+                    return new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = -source.Float };
+
+                case FieldType.Value:
+                    return new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)(-(int)source.Value) };
+
+                default:
+                    return new Field();
+            }
+        }
     }
 }

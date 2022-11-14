@@ -4,7 +4,8 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FloatConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
+    internal class FloatConstantExpression : ExpressionBase,
+        IMathematicCombineExpression, IComparisonNormalizeExpression, INumericConstantExpression
     {
         public FloatConstantExpression(float value)
             : base(ExpressionType.FloatConstant)
@@ -31,6 +32,30 @@ namespace RATools.Parser.Expressions
         public override bool IsLiteralConstant
         {
             get { return true; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically zero
+        /// </summary>
+        public bool IsZero
+        {
+            get { return Value == 0.0; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically negative
+        /// </summary>
+        public bool IsNegative
+        {
+            get { return Value < 0.0; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically positive
+        /// </summary>
+        public bool IsPositive
+        {
+            get { return Value > 0.0; }
         }
 
         /// <summary>
