@@ -407,7 +407,7 @@ namespace RATools.ViewModels
         {
             var vm = (AssetViewModelBase)model;
             if (IsValidBadgeName(vm.Generated.BadgeName))
-                return vm.Local.Badge;
+                return vm.Generated.Badge;
             if (IsValidBadgeName(vm.Local.BadgeName))
                 return vm.Local.Badge;
             if (IsValidBadgeName(vm.Published.BadgeName))
