@@ -23,7 +23,7 @@ namespace RATools.Parser.Functions
                 if (booleanLeft == null)
                     return new BooleanConstantExpression(booleanRight.Value);
 
-                return new BooleanConstantExpression(booleanLeft.Value && booleanRight.Value);
+                return new BooleanConstantExpression(booleanLeft.Value || booleanRight.Value);
             }
 
             right.IsLogicalUnit = true;

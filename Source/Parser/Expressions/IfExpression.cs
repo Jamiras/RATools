@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Jamiras.Components;
+﻿using Jamiras.Components;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Expressions
 {
