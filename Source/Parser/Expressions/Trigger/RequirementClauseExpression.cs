@@ -458,6 +458,42 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
+        private static bool HasOrSubclause(RequirementExpressionBase expression)
+        {
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+            {
+                if (clause.Operation == ConditionalOperation.Or)
+                    return true;
+
+                foreach (var subclause in clause.Conditions)
+                {
+                    if (HasOrSubclause(subclause))
+                        return true;
+                }
+
+                return false;
+            }
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return HasOrSubclause(behavioral.Condition);
+
+            var tallied = expression as TalliedRequirementExpression;
+            if (tallied != null)
+            {
+                foreach (var subclause in tallied.Conditions)
+                {
+                    if (HasOrSubclause(subclause))
+                        return true;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
         private static ErrorExpression AppendSubclauses(TriggerBuilderContext context, IEnumerable<RequirementExpressionBase> subclauses, RequirementType joinBehavior)
         {
             var lastClause = subclauses.LastOrDefault();
@@ -539,7 +575,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                     var intersect = LogicalIntersect(altIConditions, optimizedConditions, 
                         ConditionalOperation.And, ConditionalOperation.Or, false);
-                    if (intersect != null)
+                    if (intersect != null && !HasOrSubclause(intersect))
                     {
                         if (intersectIndex != -1)
                             alts._conditions.RemoveAt(intersectIndex);
