@@ -258,13 +258,20 @@ namespace RATools.Data
                 else
                     builder.AppendFormat("repeated({0}, ", HitCount);
 
+                bool needsParenthesis = (resetNextIf != null && andNext != null && andNext.LastIndexOf(" || ") > andNext.LastIndexOf(')'));
+                if (needsParenthesis)
+                    builder.Append('(');
+
                 AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
 
                 if (resetNextIf != null)
                 {
+                    if (needsParenthesis)
+                        builder.Append(')');
+
                     builder.Append(" && never(");
                     builder.Append(RemoveOuterParentheses(resetNextIf));
-                    builder.Append(")");
+                    builder.Append(')');
                 }
 
                 builder.Append(')');

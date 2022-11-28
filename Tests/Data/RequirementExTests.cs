@@ -56,6 +56,8 @@ namespace RATools.Tests.Data
                   "never(byte(0x001234) < 5)|never(byte(0x001234) > 8)|repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2)")]
         [TestCase("O:0xH001234<5_Z:0xH001234>8_N:0xH002345=1_0xH003456=2.10.",
                   "repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2 && never(byte(0x001234) < 5 || byte(0x001234) > 8))")]
+        [TestCase("Z:0xH004567=4_O:0xH001234=1_0xH002345=2.1.",
+                  "once((byte(0x001234) == 1 || byte(0x002345) == 2) && never(byte(0x004567) == 4))")]
         public void TestAppendString(string input, string expected)
         {
             var achievement = new AchievementBuilder();
