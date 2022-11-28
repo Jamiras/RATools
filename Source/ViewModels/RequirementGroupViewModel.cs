@@ -406,8 +406,11 @@ namespace RATools.ViewModels
                         {
                             if (indices[i - 1] == requirementIndex - 1 || indices[i + 1] == requirementIndex + 1)
                             {
-                                insertIndex = i - 1;
-                                break;
+                                if (i - 1 < pairs.Count)
+                                {
+                                    insertIndex = i - 1;
+                                    break;
+                                }
                             }
                         }
                     }
