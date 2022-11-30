@@ -1146,6 +1146,35 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
+        public void TestIfAny()
+        {
+            var scope = Evaluate("a = 0\n" +
+                                 "b = 0\n" +
+                                 "c = 0\n" +
+                                 "d = 0\n" +
+                                 "if (any_of([1,2,3], n => n == 2)) { a = 1 }" +
+                                 "if (any_of([1,2,3], n => n == 5)) { b = 1 }" +
+                                 "if (!any_of([1,2,3], n => n == 3)) { c = 1 }" +
+                                 "if (!any_of([1,2,3], n => n == 8)) { d = 1 }");
+
+            var a = scope.GetVariable("a");
+            Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)a).Value, Is.EqualTo(1));
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(0));
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)c).Value, Is.EqualTo(0));
+
+            var d = scope.GetVariable("d");
+            Assert.That(d, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)d).Value, Is.EqualTo(1));
+        }
+
+        [Test]
         public void TestDeltaBCDComparison()
         {
             var parser = Parse("function f() => bcd(byte(0x1234))\n" +

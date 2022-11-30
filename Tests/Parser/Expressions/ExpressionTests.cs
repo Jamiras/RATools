@@ -4,7 +4,6 @@ using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
-using System;
 using System.Text;
 
 namespace RATools.Tests.Parser.Expressions

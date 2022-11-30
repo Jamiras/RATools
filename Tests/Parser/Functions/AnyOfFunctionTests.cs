@@ -1,7 +1,9 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using RATools.Tests.Parser.Expressions;
 using System.Linq;
 
 namespace RATools.Tests.Parser.Functions
@@ -69,6 +71,18 @@ namespace RATools.Tests.Parser.Functions
             // always_false() elements returned by predicate will be optimized out by the AchievementScriptInterpreter
             Assert.That(Evaluate("any_of([1, 2, 3], (a) { if (a % 2 == 0) { return byte(0x1234) == a } else { return always_false() }})"),
                 Is.EqualTo("byte(0x001234) == 2"));
+        }
+
+        [Test]
+        public void TestEvaluationLogic()
+        {
+            var expr = ExpressionTests.Parse("any_of([1, 2, 3], a => a == 3)");
+            Assert.That(expr, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)expr).Value, Is.True);
+
+            expr = ExpressionTests.Parse("any_of([1, 2, 3], a => a == 7)");
+            Assert.That(expr, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)expr).Value, Is.False);
         }
 
         [Test]
