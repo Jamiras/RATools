@@ -455,11 +455,36 @@ namespace RATools.Parser.Expressions.Trigger
                 newRight = constantExpression;
             }
 
-            if (IsZero(newRight))
+            var leftValue = newLeft as MemoryValueExpression;
+            if (leftValue != null)
             {
-                var leftValue = newLeft as MemoryValueExpression;
-                if (leftValue != null)
+                if (IsZero(newRight))
                     return leftValue.SwapSubtractionWithConstant(newRight, operation);
+
+                // if a single AddAdress can be applied to both sides of the equation, prefer that
+                // over having a constant on the right side as the AddAddress will be shared,
+                // resulting in one less condition required.
+                if (leftValue._memoryAccessors != null && leftValue._memoryAccessors.Count >= 2)
+                {
+                    var result = leftValue.RebalanceForPointerChain(newRight, operation);
+                    if (result != null)
+                    {
+                        var comparison = result as ComparisonExpression;
+                        if (comparison != null && comparison.Operation == operation && comparison.Left == this)
+                        {
+                            var simpleNewRight = ReduceToSimpleExpression(comparison.Right) ?? comparison.Right;
+                            var simpleRight = ReduceToSimpleExpression(memoryValue) ?? memoryValue;
+
+                            if (simpleNewRight == simpleRight)
+                            {
+                                // rebalanced expression matched original expression, return "no change"
+                                return null;
+                            }
+                        }
+
+                        return result;
+                    }
+                }
             }
 
             return new ComparisonExpression(newLeft, operation, newRight);

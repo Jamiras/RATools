@@ -143,6 +143,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.None, null)] // no change necessary
         [TestCase("0 + byte(0x001234) - 9", "=", "0",
             ExpressionType.Comparison, "byte(0x001234) == 9")]
+        [TestCase("byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7", ">=", "byte(tbyte(0x001234) + 3)",
+            ExpressionType.Comparison, "byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7 >= byte(tbyte(0x001234) + 3)")]
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);

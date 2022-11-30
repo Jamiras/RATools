@@ -123,7 +123,12 @@ namespace RATools.Parser.Expressions.Trigger
         {
             // no complex subclauses, just dump them
             if (!conditions.OfType<RequirementClauseExpression>().Any())
-                return AppendSubclauses(context, conditions, joinBehavior);
+            {
+                // trigger_when(A || B) can be converted to trigger_when(A) || trigger_when(B),
+                // but only if there are no other alts
+                if (!PromoteTriggerWhenToAlts(conditions, context))
+                    return AppendSubclauses(context, conditions, joinBehavior);
+            }
 
             // separate into complex and non-complex
             var complexSubclauses = new List<RequirementClauseExpression>();
@@ -198,6 +203,38 @@ namespace RATools.Parser.Expressions.Trigger
 
             // keep the AndNext/OrNext chains and proceed
             return AppendSubclauses(context, conditions, joinBehavior);
+        }
+
+        private static bool PromoteTriggerWhenToAlts(List<RequirementExpressionBase> conditions, TriggerBuilderContext context)
+        {
+            BehavioralRequirementExpression triggerOr = null;
+
+            var achievementContext = context as AchievementBuilderContext;
+            if (achievementContext != null && achievementContext.Achievement.AlternateRequirements.Count == 0)
+            {
+                // trigger_when(A || B) => trigger_when(A) || trigger_when(B), but only if they can be put into alts
+                triggerOr = conditions.OfType<BehavioralRequirementExpression>().FirstOrDefault(c =>
+                    c.Behavior == RequirementType.Trigger && c.Condition is RequirementClauseExpression &&
+                    ((RequirementClauseExpression)c.Condition).Operation == ConditionalOperation.Or);
+            }
+
+            if (triggerOr == null)
+                return false;
+
+            var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or, Location = triggerOr.Location };
+            foreach (var condition in ((RequirementClauseExpression)triggerOr.Condition).Conditions)
+            {
+                newClause.AddCondition(new BehavioralRequirementExpression
+                {
+                    Behavior = RequirementType.Trigger,
+                    Condition = condition,
+                    Location = condition.Location
+                });
+            }
+            conditions.Remove(triggerOr);
+            conditions.Add(newClause);
+
+            return true;
         }
 
         private static void BubbleUpOrs(List<RequirementExpressionBase> subclauses,
@@ -666,6 +703,9 @@ namespace RATools.Parser.Expressions.Trigger
                         return error;
                 }
 
+                if (this.Operation == ConditionalOperation.And)
+                    EliminateRedundantSubclauseConditions(conditions);
+
                 error = BuildTrigger(achievementContext, conditions, splitBehavior);
                 if (error != null)
                     return error;
@@ -692,6 +732,85 @@ namespace RATools.Parser.Expressions.Trigger
                 subclauseContext.Trigger.Add(requirement);
 
             return null;
+        }
+
+        private static void EliminateRedundantSubclauseConditions(List<RequirementExpressionBase> conditions)
+        {
+            for (int i = conditions.Count - 1; i >= 0; i--)
+            {
+                var clause = conditions[i] as RequirementClauseExpression; // OR
+                if (clause == null)
+                    continue;
+
+                RequirementClauseExpression newClause = null;
+                for (int j = clause._conditions.Count - 1; j >= 0; j--)
+                {
+                    var subclause = clause._conditions[j] as RequirementClauseExpression; // AND
+                    if (subclause == null)
+                    {
+                        foreach (var coreCondition in conditions.OfType<RequirementConditionExpression>())
+                        {
+                            var intersect = clause._conditions[j].LogicalIntersect(coreCondition, ConditionalOperation.And);
+                            if (coreCondition == intersect)
+                            {
+                                // condition is handled by core, replace with always_true(), which is
+                                // then OR'd with anything in clause, so clause becomes always_true()
+                                // and can be removed from conditions.
+                                conditions.RemoveAt(i);
+                                newClause = null;
+                                break;
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    RequirementClauseExpression newSubclause = null;
+                    for (int k = subclause._conditions.Count - 1; k >= 0; k--)
+                    {
+                        foreach (var coreCondition in conditions.OfType<RequirementConditionExpression>())
+                        {
+                            var intersect = subclause._conditions[k].LogicalIntersect(coreCondition, ConditionalOperation.And);
+                            if (coreCondition == intersect)
+                            {
+                                // condition is managed by core clause
+                                if (newSubclause == null)
+                                    newSubclause = new RequirementClauseExpression(subclause);
+
+                                newSubclause._conditions.RemoveAt(k);
+                                break;
+                            }
+                        }
+                    }
+
+                    if (newSubclause != null)
+                    {
+                        if (newClause == null)
+                            newClause = new RequirementClauseExpression(clause);
+
+                        if (newSubclause._conditions.Count == 0)
+                        {
+                            // all subclause conditions handled by core, subclause becomes
+                            // always_true(), which is then OR'd with anything in clause, so clause
+                            // becomes always_true() and can be removed from conditions.
+                            conditions.RemoveAt(i);
+                            newClause = null;
+                            break;
+                        }
+
+                        newClause._conditions[j] = (newSubclause._conditions.Count == 1) ?
+                            newSubclause._conditions[0] : newSubclause;
+                    }
+                }
+
+                if (newClause != null)
+                {
+                    if (newClause._conditions.Count == 0)
+                        conditions.RemoveAt(i);
+                    else
+                        conditions[i] = newClause;
+                }
+            }
         }
 
         private static bool NeedAltsForOr(IEnumerable<ExpressionBase> conditions)

@@ -1,9 +1,11 @@
 using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
 {
@@ -60,10 +62,38 @@ namespace RATools.Tests.Parser.Expressions.Trigger
                   "0xH001234=1.1.S1=1SR:0xH002345=2_P:0xH003456=3")] // always_true()/unless forced alt groups
         [TestCase("unless(byte(0x3456) == 3) && once(byte(0x1234) == 1) && (always_true() || never(byte(0x2345) == 2))",
                   "P:0xH003456=3_0xH001234=1.1.S1=1SR:0xH002345=2")] // always_true()/unless forced alt groups
+        [TestCase("byte(0x001234) == 3 && (byte(0x002345) == 4 || (byte(0x002345) >= 7 && byte(0x002345) <= 10))",
+                  "0xH001234=3S0xH002345=4S0xH002345>=7_0xH002345<=10")]
+        [TestCase("byte(0x001234) == 3 && (byte(word(0x002345) + 8) == 4 || (byte(word(0x002345) + 8) >= 7 && byte(word(0x002345) + 8) <= 10))",
+                  "0xH001234=3SI:0x 002345_0xH000008=4SI:0x 002345_0xH000008>=7_I:0x 002345_0xH000008<=10")]
+        [TestCase("byte(0x001234) == 3 && trigger_when(byte(word(0x002345) + 8) == 4 || (byte(word(0x002345) + 8) >= 7 && byte(word(0x002345) + 8) <= 10))",
+                  "0xH001234=3SI:0x 002345_T:0xH000008=4SI:0x 002345_T:0xH000008>=7_I:0x 002345_T:0xH000008<=10")]
         public void TestBuildAchievement(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
             TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
+        }
+
+        [Test]
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4", "N:0xH001234=3_0xH002345=4")]
+        [TestCase("byte(0x001234) == 3 || byte(0x002345) == 4", "O:0xH001234=3_0xH002345=4")]
+        [TestCase("byte(0x001234) == 3 && (byte(0x002345) == 4 || byte(0x003456) == 5)", 
+                  "O:0xH002345=4_N:0xH003456=5_0xH001234=3")]
+        [TestCase("byte(0x001234) == 3 && ((byte(0x001234) == 3 && byte(0x002345) == 4) || byte(0x003456) == 5)",
+                  "O:0xH002345=4_N:0xH003456=5_0xH001234=3")] // common subclause should be eliminated
+        [TestCase("byte(0x001234) == 3 && (byte(0x001234) == 3 || byte(0x003456) == 5)",
+                  "0xH001234=3")] // common subclause will become always_true and eliminate the other subclause
+        [TestCase("byte(0x001234) == 3 && byte(0x002345) == 4 && ((byte(0x001234) == 3 && byte(0x002345) == 4) || byte(0x003456) == 5)",
+                  "N:0xH001234=3_0xH002345=4")] // common subclause will become always_true and eliminate the other subclause
+        public void TestBuildSubclauseTrigger(string input, string expected)
+        {
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+
+            var context = new AchievementBuilderContext();
+            var result = clause.BuildSubclauseTrigger(context);
+            Assert.That(result, Is.Null);
+
+            Assert.That(context.Achievement.SerializeRequirements(), Is.EqualTo(expected));
         }
 
         [Test]
