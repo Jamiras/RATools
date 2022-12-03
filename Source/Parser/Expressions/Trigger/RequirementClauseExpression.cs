@@ -1771,7 +1771,43 @@ namespace RATools.Parser.Expressions.Trigger
                 if (_conditions == null || _conditions.Count == 0)
                     return null;
 
-                return BuildTrigger(context, _conditions, RequirementType.OrNext);
+                var requirements = new List<Requirement>();
+                var subclauseContext = new TriggerBuilderContext { Trigger = requirements };
+
+                var error = BuildTrigger(subclauseContext, _conditions, RequirementType.OrNext);
+                if (error != null)
+                    return error;
+
+                foreach (var requirement in requirements) 
+                {
+                    if (requirement.Type == RequirementType.OrNext)
+                        requirement.DisabledOptimizations |= Requirement.Optimizations.ConvertOrNextToAlt;
+                    context.Trigger.Add(requirement);
+                }
+
+                return null;
+            }
+
+            public override ErrorExpression BuildSubclauseTrigger(TriggerBuilderContext context, ConditionalOperation splitCondition, RequirementType splitBehavior)
+            {
+                if (_conditions == null || _conditions.Count == 0)
+                    return null;
+
+                var requirements = new List<Requirement>();
+                var subclauseContext = new TriggerBuilderContext { Trigger = requirements };
+
+                var error = base.BuildSubclauseTrigger(subclauseContext, splitCondition, splitBehavior);
+                if (error != null)
+                    return error;
+
+                foreach (var requirement in requirements)
+                {
+                    if (requirement.Type == RequirementType.OrNext)
+                        requirement.DisabledOptimizations |= Requirement.Optimizations.ConvertOrNextToAlt;
+                    context.Trigger.Add(requirement);
+                }
+
+                return null;
             }
         }
     }

@@ -1426,6 +1426,7 @@ namespace RATools.Parser
                                 if (requirement.Type == RequirementType.OrNext)
                                 {
                                     seenOrNext = true;
+                                    canBeSplit = (requirement.DisabledOptimizations & Requirement.Optimizations.ConvertOrNextToAlt) == 0;
                                 }
                                 else if (requirement.Type == RequirementType.AndNext)
                                 {

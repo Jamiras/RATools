@@ -522,7 +522,18 @@ namespace RATools.Parser.Expressions
                     return false;
 
                 var wrapper = new RequirementClauseExpression.OrNextRequirementClauseExpression() { Location = comparison.Location };
-                wrapper.AddCondition(comparison);
+
+                var clause = comparison as RequirementClauseExpression;
+                if (clause != null && clause.Operation == ConditionalOperation.Or)
+                {
+                    foreach (var condition in clause.Conditions)
+                        wrapper.AddCondition(condition);
+                }
+                else
+                {
+                    wrapper.AddCondition(comparison);
+                }
+
                 result = wrapper;
                 return true;
             }

@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace RATools.Data
 {
@@ -122,6 +123,17 @@ namespace RATools.Data
         /// Any other value indicates the number of frames a requirement must be true before the achievement can trigger.
         /// </remarks>
         public uint HitCount { get; set; }
+
+        [Flags]
+        public enum Optimizations
+        {
+            None = 0,
+            ConvertOrNextToAlt = 1,
+        }
+        /// <summary>
+        /// Gets or sets which optimizations should be ignored by this requirement.
+        /// </summary>
+        public Optimizations DisabledOptimizations { get; set; }
 
         /// <summary>
         /// Returns a <see cref="System.String" /> that represents this instance.
