@@ -140,6 +140,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A == 1 && B == 1", "A == 1 && C == 1", ConditionalOperation.Or, "A == 1 && (B == 1 || C == 1)")]
         [TestCase("A == 1 && B == 1", "A > 1", ConditionalOperation.Or, null)]
         [TestCase("A > 1", "A == 1 && B == 1", ConditionalOperation.Or, null)]
+        [TestCase("float(0x1234) > 1.0", "float(0x1234) > 2.0", ConditionalOperation.And, "float(0x001234) > 2.0")]
+        [TestCase("float(0x1234) > 1.0", "float(0x1234) < 2.0", ConditionalOperation.And, null)]
+        [TestCase("float(0x1234) > 1.0", "float(0x1234) < -4.0", ConditionalOperation.And, "always_false()")]
         public void TestLogicalIntersect(string left, string right, ConditionalOperation op, string expected)
         {
             TriggerExpressionTests.AssertLogicalIntersect(left, right, op, expected);

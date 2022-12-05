@@ -5,7 +5,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Windows.Media.Media3D;
 
 namespace RATools.Parser
 {
@@ -23,12 +22,12 @@ namespace RATools.Parser
             RightMergeOperator,
         }
 
-        public static KeyValuePair<RequirementOperator, uint> MergeComparisons(
-            RequirementOperator comparison1, uint value1, RequirementOperator comparison2, uint value2,
+        public static KeyValuePair<RequirementOperator, IComparable> MergeComparisons(
+            RequirementOperator comparison1, IComparable value1, RequirementOperator comparison2, IComparable value2,
             ConditionalOperation mergeCondition)
         {
             RequirementOperator mergedOperator;
-            uint mergedValue;
+            IComparable mergedValue;
 
             if (value1 == value2)
             {
@@ -101,29 +100,31 @@ namespace RATools.Parser
                 }
             }
 
-            return new KeyValuePair<RequirementOperator, uint>(mergedOperator, mergedValue);
+            return new KeyValuePair<RequirementOperator, IComparable>(mergedOperator, mergedValue);
         }
 
         private static MoreRestrictiveRequirement GetMoreRestrictiveRequirement(
-            RequirementOperator comparison1, uint value1, RequirementOperator comparison2, uint value2)
+            RequirementOperator comparison1, IComparable value1, RequirementOperator comparison2, IComparable value2)
         {
+            var diff = value1.CompareTo(value2);
+
             switch (comparison2)                                    //  comp1    comp2  |  comp1    comp2  |  comp1    comp2
             {                                                       // value1 == value2 | value1 <  value2 | value1 >  value2  
                 case RequirementOperator.Equal:
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a == 1 | a == 1 && a == 2 | a == 2 && a == 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same : MoreRestrictiveRequirement.Conflict;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a == 1 | a <= 1 && a == 2 | a <= 2 && a == 1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
+                            return (diff < 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a == 1 | a >= 1 && a == 2 | a >= 2 && a == 1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
+                            return (diff > 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.NotEqual:          // a != 1 && a == 1 | a != 1 && a == 2 | a != 2 && a == 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.LessThan:          // a <  1 && a == 1 | a <  1 && a == 2 | a <  2 && a == 1
-                            return (value1 <= value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
+                            return (diff <= 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.GreaterThan:       // a >  1 && a == 1 | a >  1 && a == 2 | a >  2 && a == 1
-                            return (value1 >= value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
+                            return (diff >= 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Right;
                         default:
                             break;
                     }
@@ -133,19 +134,19 @@ namespace RATools.Parser
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a != 1 | a == 1 && a != 2 | a == 2 && a != 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a != 1 | a <= 1 && a != 2 | a <= 2 && a != 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.LeftMergeOperator :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
+                            return (diff == 0) ? MoreRestrictiveRequirement.LeftMergeOperator :
+                                (diff < 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a != 1 | a >= 1 && a != 2 | a >= 2 && a != 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.LeftMergeOperator :
-                                (value1 > value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
+                            return (diff == 0) ? MoreRestrictiveRequirement.LeftMergeOperator :
+                                (diff > 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
                         case RequirementOperator.NotEqual:          // a != 1 && a != 1 | a != 1 && a != 2 | a != 2 && a != 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same : MoreRestrictiveRequirement.None;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same : MoreRestrictiveRequirement.None;
                         case RequirementOperator.LessThan:          // a <  1 && a != 1 | a <  1 && a != 2 | a <  2 && a != 1
-                            return (value1 <= value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
+                            return (diff <= 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
                         case RequirementOperator.GreaterThan:       // a >  1 && a != 1 | a >  1 && a != 2 | a >  2 && a != 1
-                            return (value1 >= value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
+                            return (diff >= 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.None;
                         default:
                             break;
                     }
@@ -155,18 +156,18 @@ namespace RATools.Parser
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a <  1 | a == 1 && a <  2 | a == 2 && a <  1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Conflict;
+                            return (diff < 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a <  1 | a <= 1 && a <  2 | a <= 2 && a <  1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
+                            return (diff < 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a <  1 | a >= 1 && a <  2 | a >= 2 && a <  1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.NotEqual:          // a != 1 && a <  1 | a != 1 && a <  2 | a != 2 && a <  1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
+                            return (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.LessThan:          // a <  1 && a <  1 | a <  1 && a <  2 | a <  2 && a <  1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same :
+                                (diff < 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.GreaterThan:       // a >  1 && a <  1 | a >  1 && a <  2 | a >  2 && a <  1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         default:
                             break;
                     }
@@ -176,20 +177,20 @@ namespace RATools.Parser
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a <= 1 | a == 1 && a <= 2 | a == 2 && a <= 1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
+                            return (diff > 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a <= 1 | a <= 1 && a <= 2 | a <= 2 && a <= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same :
+                                (diff < 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a <= 1 | a >= 1 && a <= 2 | a >= 2 && a <= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.LeftMergeOperator :
-                                (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff == 0) ? MoreRestrictiveRequirement.LeftMergeOperator :
+                                (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.NotEqual:          // a != 1 && a <= 1 | a != 1 && a <= 2 | a != 2 && a <= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.RightMergeOperator :
-                                (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
+                            return (diff == 0) ? MoreRestrictiveRequirement.RightMergeOperator :
+                                (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.LessThan:          // a <  1 && a <= 1 | a <  1 && a <= 2 | a <  2 && a <= 1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
+                            return (diff > 0) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
                         case RequirementOperator.GreaterThan:       // a >  1 && a <= 1 | a >  1 && a <= 2 | a >  2 && a <= 1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff < 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         default:
                             break;
                     }
@@ -199,18 +200,18 @@ namespace RATools.Parser
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a >  1 | a == 1 && a >  2 | a == 2 && a >  1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Conflict;
+                            return (diff > 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a >  1 | a <= 1 && a >  2 | a <= 2 && a >  1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff > 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a >  1 | a >= 1 && a >  2 | a >= 2 && a >  1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
+                            return (diff > 0) ? MoreRestrictiveRequirement.Left : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.NotEqual:          // a != 1 && a >  1 | a != 1 && a >  2 | a != 2 && a >  1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
+                            return (diff > 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Right;
                         case RequirementOperator.LessThan:          // a <  1 && a >  1 | a <  1 && a >  2 | a <  2 && a >  1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff > 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.GreaterThan:       // a >  1 && a >  1 | a >  1 && a >  2 | a >  2 && a >  1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same :
+                                (diff < 0) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
                         default:
                             break;
                     }
@@ -220,20 +221,20 @@ namespace RATools.Parser
                     switch (comparison1)
                     {
                         case RequirementOperator.Equal:             // a == 1 && a >= 1 | a == 1 && a >= 2 | a == 2 && a >= 1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
+                            return (diff < 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.Left;
                         case RequirementOperator.LessThanOrEqual:   // a <= 1 && a >= 1 | a <= 1 && a >= 2 | a <= 2 && a >= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.LeftMergeOperator :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.None;
+                            return (diff == 0) ? MoreRestrictiveRequirement.LeftMergeOperator :
+                                (diff < 0) ? MoreRestrictiveRequirement.Conflict : MoreRestrictiveRequirement.None;
                         case RequirementOperator.GreaterThanOrEqual:// a >= 1 && a >= 1 | a >= 1 && a >= 2 | a >= 2 && a >= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.Same :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
+                            return (diff == 0) ? MoreRestrictiveRequirement.Same :
+                                (diff < 0) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
                         case RequirementOperator.NotEqual:          // a != 1 && a >= 1 | a != 1 && a >= 2 | a != 2 && a >= 1
-                            return (value1 == value2) ? MoreRestrictiveRequirement.RightMergeOperator :
-                                (value1 < value2) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.None;
+                            return (diff == 0) ? MoreRestrictiveRequirement.RightMergeOperator :
+                                (diff < 0) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.None;
                         case RequirementOperator.LessThan:          // a <  1 && a >= 1 | a <  1 && a >= 2 | a <  2 && a >= 1
-                            return (value1 > value2) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
+                            return (diff > 0) ? MoreRestrictiveRequirement.None : MoreRestrictiveRequirement.Conflict;
                         case RequirementOperator.GreaterThan:       // a >  1 && a >= 1 | a >  1 && a >= 2 | a >  2 && a >= 1
-                            return (value1 < value2) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
+                            return (diff < 0) ? MoreRestrictiveRequirement.Right : MoreRestrictiveRequirement.Left;
                         default:
                             break;
                     }

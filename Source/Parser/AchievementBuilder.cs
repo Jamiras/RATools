@@ -388,9 +388,9 @@ namespace RATools.Parser
                         break;
 
                     case RequirementType.MeasuredPercent:
-                        // 0.80 TBD
-                        if (minVer < 0.80)
-                            minVer = 0.80;
+                        // 1.0 29 Jan 2022
+                        if (minVer < 1.0)
+                            minVer = 1.0;
                         break;
 
                     default:
@@ -447,9 +447,9 @@ namespace RATools.Parser
                         case FieldSize.BigEndianDWord:
                         case FieldSize.Float:
                         case FieldSize.MBF32:
-                            // 0.80 TBD
-                            if (minVer < 0.80)
-                                minVer = 0.80;
+                            // 1.0 29 Jan 2022
+                            if (minVer < 1.0)
+                                minVer = 1.0;
                             break;
 
                         default:
