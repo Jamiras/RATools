@@ -174,7 +174,7 @@ namespace RATools.Tests.Parser.Regression
                             fileWriter.WriteLine("=== Rich Presence ===");
 
                             var minimumVersion = Double.Parse(localAchievements.Version, System.Globalization.NumberFormatInfo.InvariantInfo);
-                            if (minimumVersion < 0.80)
+                            if (minimumVersion < 1.0)
                             {
                                 interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
 

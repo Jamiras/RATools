@@ -1,5 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -508,8 +510,21 @@ namespace RATools.Parser.Expressions.Trigger
 
             var leftCondition = ConvertToRequirementOperator(Comparison);
             var rightCondition = ConvertToRequirementOperator(thatCondition.Comparison);
-            var merged = RequirementMerger.MergeComparisons(
-                leftCondition, leftField.Value, rightCondition, rightField.Value, condition);
+
+            KeyValuePair<RequirementOperator, IComparable> merged;
+
+            if (leftField.Type != FieldType.Float && rightField.Type != FieldType.Float)
+            {
+                merged = RequirementMerger.MergeComparisons(
+                    leftCondition, leftField.Value, rightCondition, rightField.Value, condition);
+            }
+            else
+            {
+                var leftFloat = (leftField.Type == FieldType.Float) ? leftField.Float : (float)leftField.Value;
+                var rightFloat = (rightField.Type == FieldType.Float) ? rightField.Float : (float)rightField.Value;
+                merged = RequirementMerger.MergeComparisons(
+                    leftCondition, leftFloat, rightCondition, rightFloat, condition);
+            }
 
             if (merged.Key != RequirementOperator.None)
             {
@@ -528,7 +543,11 @@ namespace RATools.Parser.Expressions.Trigger
                 switch (leftField.Type)
                 {
                     case FieldType.Value:
-                        result.Right = new IntegerConstantExpression((int)merged.Value);
+                        result.Right = new IntegerConstantExpression((int)(uint)merged.Value);
+                        break;
+
+                    case FieldType.Float:
+                        result.Right = new FloatConstantExpression((float)merged.Value);
                         break;
 
                     default:

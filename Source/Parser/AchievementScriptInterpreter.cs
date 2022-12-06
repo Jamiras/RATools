@@ -403,7 +403,7 @@ namespace RATools.Parser
             }
 
             _richPresence.DisableLookupCollapsing = (minimumVersion < 0.79);
-            _richPresence.DisableBuiltInMacros = (minimumVersion < 0.80);
+            _richPresence.DisableBuiltInMacros = (minimumVersion < 1.0);
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
             {
