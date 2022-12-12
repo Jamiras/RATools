@@ -77,6 +77,7 @@
             <jamiras:CodeEditorView DataContext="{Binding Editor}">
                 <jamiras:CodeEditorView.Resources>
                     <Style TargetType="{x:Type ScrollViewer}">
+                        <Setter Property="HorizontalScrollBarVisibility" Value="Visible"></Setter>
                         <Setter Property="Template" Value="{StaticResource themedScrollViewerTemplate}" />
                     </Style>
                 </jamiras:CodeEditorView.Resources>
