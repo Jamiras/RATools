@@ -39,6 +39,7 @@ namespace RATools.ViewModels
             foreach (var kvp in _themeColors)
                 Style.SetCustomColor((int)kvp.Value, Theme.GetColor(kvp.Key));
             Style.SetCustomColor((int)ExpressionType.BooleanConstant, Theme.GetColor(Theme.Color.EditorIntegerConstant));
+            Style.SetCustomColor((int)ExpressionType.FloatConstant, Theme.GetColor(Theme.Color.EditorIntegerConstant));
             Style.SetCustomColor((int)ExpressionType.Array, Theme.GetColor(Theme.Color.Foreground));
             Style.SetCustomColor((int)ExpressionType.Dictionary, Theme.GetColor(Theme.Color.Foreground));
             Style.Background = Theme.GetColor(Theme.Color.Background);
