@@ -154,6 +154,7 @@ namespace RATools.Parser.Internal
             And,
             Compare,
             BitwiseAnd,
+            BitwiseXor,
             AppendString,
             AddSubtract,
             MulDivMod,
@@ -366,6 +367,14 @@ namespace RATools.Parser.Internal
                             tokenizer.Advance();
                             clause = ParseConditional(tokenizer, clause, ConditionalOperation.Or, joinerLine, joinerColumn);
                         }
+                        break;
+
+                    case '^':
+                        if (priority >= OperationPriority.BitwiseXor)
+                            return clause;
+
+                        tokenizer.Advance();
+                        clause = ParseMathematic(tokenizer, clause, MathematicOperation.BitwiseXor, joinerLine, joinerColumn);
                         break;
 
                     default:
@@ -712,6 +721,10 @@ namespace RATools.Parser.Internal
 
                 case MathematicOperation.BitwiseAnd:
                     priority = OperationPriority.BitwiseAnd;
+                    break;
+
+                case MathematicOperation.BitwiseXor:
+                    priority = OperationPriority.BitwiseXor;
                     break;
 
                 default:

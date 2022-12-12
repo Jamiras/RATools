@@ -74,6 +74,9 @@ namespace RATools.Parser.Expressions.Trigger
                         case RequirementOperator.BitwiseAnd:
                             intResult &= right.Value;
                             break;
+                        case RequirementOperator.BitwiseXor:
+                            intResult ^= right.Value;
+                            break;
                         default:
                             return new Field();
                     }

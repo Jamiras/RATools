@@ -71,6 +71,10 @@ namespace RATools.Parser.Expressions.Trigger
                     builder.Append(" & ");
                     break;
 
+                case RequirementOperator.BitwiseXor:
+                    builder.Append(" ^ ");
+                    break;
+
                 default:
                     return;
             }
@@ -86,6 +90,7 @@ namespace RATools.Parser.Expressions.Trigger
                 switch (ModifyingOperator)
                 {
                     case RequirementOperator.BitwiseAnd:
+                    case RequirementOperator.BitwiseXor:
                         Modifier.AppendString(builder, NumberFormat.Hexadecimal);
                         break;
 
@@ -148,6 +153,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 case MathematicOperation.Multiply:
                 case MathematicOperation.BitwiseAnd:
+                case MathematicOperation.BitwiseXor:
                     return Combine(left, operation);
 
                 case MathematicOperation.Divide:
@@ -245,6 +251,12 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ErrorExpression("Cannot combine " + Type + " and " + right.Type + " using " + operation);
             }
 
+            if (newModifyingOperator == RequirementOperator.BitwiseAnd || newModifyingOperator == RequirementOperator.BitwiseXor)
+            {
+                if (field.IsFloat || Modifier.IsFloat || MemoryAccessor.Field.IsFloat)
+                    return new ErrorExpression("Cannot perform bitwise operations on floating point values");
+            }
+
             switch (ModifyingOperator)
             {
                 case RequirementOperator.None:
@@ -253,7 +265,6 @@ namespace RATools.Parser.Expressions.Trigger
 
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
-                case RequirementOperator.BitwiseAnd:
                     if (field.Type == FieldType.Float || Modifier.Type == FieldType.Float)
                     {
                         Modifier = FieldFactory.ConvertToFloat(Modifier);
@@ -309,15 +320,30 @@ namespace RATools.Parser.Expressions.Trigger
                     }
 
                     field = FieldFactory.ApplyMathematic(Modifier, newModifyingOperator, field);
-                    if (field.Type == FieldType.None)
-                        goto default;
+                    break;
 
+                case RequirementOperator.BitwiseAnd:
+                case RequirementOperator.BitwiseXor:
+                    if (field.Type == FieldType.Float || Modifier.Type == FieldType.Float)
+                        return new ErrorExpression("Cannot perform bitwise operations on floating point values");
+
+                    if (MathematicExpression.GetPriority(GetMathematicOperation(newModifyingOperator)) >
+                        MathematicExpression.GetPriority(GetMathematicOperation(ModifyingOperator)))
+                    {
+                        // new operator has priority, don't merge
+                        goto default;
+                    }
+
+                    field = FieldFactory.ApplyMathematic(Modifier, newModifyingOperator, field);
                     break;
 
                 default:
                     // return a MathematicExpression for now, it may get reduced in a comparison normalization
                     return new MathematicExpression(this, operation, right);
             }
+
+            if (field.Type == FieldType.None)
+                return new MathematicExpression(this, operation, right);
 
             if ((field.Type == FieldType.Value && field.Value == 0) ||
                 (field.Type == FieldType.Float && field.Float == 0.0))
@@ -329,19 +355,15 @@ namespace RATools.Parser.Expressions.Trigger
 
                     case RequirementOperator.Multiply:   // a * 0  =>  0
                     case RequirementOperator.BitwiseAnd: // a & 0  =>  0
-                        return new IntegerConstantExpression(0); 
+                        return new IntegerConstantExpression(0);
+
+                    case RequirementOperator.BitwiseXor: // a ^ 0  =>  a
+                        ModifyingOperator = RequirementOperator.None;
+                        break;
                 }
             }
-
-            Modifier = field;
-            CheckForIdentity();
-            return this;
-        }
-
-        private void CheckForIdentity()
-        {
-            if ((Modifier.Type == FieldType.Value && Modifier.Value == 1) ||
-                (Modifier.Type == FieldType.Float && Modifier.Float == 1.0))
+            else if ((field.Type == FieldType.Value && field.Value == 1) ||
+                     (field.Type == FieldType.Float && field.Float == 1.0))
             {
                 switch (ModifyingOperator)
                 {
@@ -351,6 +373,9 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
                 }
             }
+
+            Modifier = field;
+            return this;
         }
 
         public void GetMinMax(out long min, out long max)
@@ -397,6 +422,7 @@ namespace RATools.Parser.Expressions.Trigger
                     break;
 
                 case RequirementOperator.BitwiseAnd:
+                case RequirementOperator.BitwiseXor:
                     min = 0;
                     max = modifierMax;
                     break;
@@ -415,6 +441,7 @@ namespace RATools.Parser.Expressions.Trigger
                 case MathematicOperation.Multiply: return RequirementOperator.Multiply;
                 case MathematicOperation.Divide: return RequirementOperator.Divide;
                 case MathematicOperation.BitwiseAnd: return RequirementOperator.BitwiseAnd;
+                case MathematicOperation.BitwiseXor: return RequirementOperator.BitwiseXor;
                 default: return RequirementOperator.None;
             }
         }
@@ -426,6 +453,7 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementOperator.Multiply: return MathematicOperation.Multiply;
                 case RequirementOperator.Divide: return MathematicOperation.Divide;
                 case RequirementOperator.BitwiseAnd: return MathematicOperation.BitwiseAnd;
+                case RequirementOperator.BitwiseXor: return MathematicOperation.BitwiseXor;
                 default: return MathematicOperation.None;
             }
         }

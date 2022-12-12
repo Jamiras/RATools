@@ -79,6 +79,7 @@ namespace RATools.Tests.Parser.Expressions
                 case "/": return MathematicOperation.Divide;
                 case "%": return MathematicOperation.Modulus;
                 case "&": return MathematicOperation.BitwiseAnd;
+                case "^": return MathematicOperation.BitwiseXor;
                 default: Assert.Fail("Unknown operation: " + operation); break;
             }
 

@@ -584,7 +584,7 @@ namespace RATools.Data
                         }
                     }
                 }
-                else
+                else if (requirement != null)
                 {
                     switch (requirement.Type)
                     {
@@ -614,7 +614,7 @@ namespace RATools.Data
 
                 group.Last().Requirements.Add(requirement);
 
-                combiningRequirement = requirement.IsCombining ? requirement : null;
+                combiningRequirement = (requirement != null && requirement.IsCombining) ? requirement : null;
             }
 
             return group;
