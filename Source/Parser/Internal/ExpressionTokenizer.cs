@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Parser.Expressions;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Parser.Internal
 {
@@ -26,7 +27,8 @@ namespace RATools.Parser.Internal
 
         public void AddError(ErrorExpression error)
         {
-            _expressionGroup.AddParseError(error);
+            if (!_expressionGroup.ParseErrors.Contains(error))
+                _expressionGroup.AddParseError(error);
         }
 
         public void AdvanceToLine(int line)
