@@ -77,7 +77,13 @@ namespace RATools.Parser.Expressions
 
             var error = ParseStatementBlock(tokenizer, loop.Expressions);
             if (error != null)
-                return error;
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer == null)
+                    return error;
+
+                expressionTokenizer.AddError((ErrorExpression)error);
+            }
 
             loop._keywordFor = keywordFor;
             loop._keywordIn = keywordIn;
