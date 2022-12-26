@@ -248,6 +248,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 case MathematicOperation.Multiply:
                 case MathematicOperation.BitwiseAnd:
+                case MathematicOperation.BitwiseXor:
                     {
                         var modifiedMemoryAccessor = left as ModifiedMemoryAccessorExpression;
                         if (modifiedMemoryAccessor == null)

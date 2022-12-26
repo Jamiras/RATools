@@ -552,6 +552,7 @@ namespace RATools.Parser
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
                     case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
+                    case RequirementOperator.BitwiseXor: builder.Append('^'); break;
                     default:
                         if (minimumVersion < 0.77)
                             builder.Append("=0");
@@ -573,6 +574,7 @@ namespace RATools.Parser
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
                     case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
+                    case RequirementOperator.BitwiseXor: builder.Append('^'); break;
                     case RequirementOperator.None: return;
                 }
 

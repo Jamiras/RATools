@@ -64,6 +64,18 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) & byte(0x002345)")]
         [TestCase("byte(0x001234)", "%", "byte(0x002345)",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
+        [TestCase("float(0x001234)", "&", "10",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("float(0x001234)", "^", "10",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("byte(0x001234)", "&", "2.5",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("byte(0x001234)", "^", "2.5",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("byte(0x001234)", "&", "float(0x002345)",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("byte(0x001234)", "^", "float(0x002345)",
+            ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             // MemoryAccessorExpression.Combine just converts to a ModifiedMemoryAccessor and

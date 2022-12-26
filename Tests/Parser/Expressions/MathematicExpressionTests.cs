@@ -19,6 +19,7 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase(MathematicOperation.Divide, "variable / 99")]
         [TestCase(MathematicOperation.Modulus, "variable % 99")]
         [TestCase(MathematicOperation.BitwiseAnd, "variable & 99")]
+        [TestCase(MathematicOperation.BitwiseXor, "variable ^ 99")]
         public void TestAppendString(MathematicOperation op, string expected)
         {
             var variable = new VariableExpression("variable");
@@ -340,18 +341,32 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(0));
         }
 
-        private MathematicOperation GetOperation(char c)
+        [Test]
+        public void TestBitwiseXor()
         {
-            switch (c)
-            {
-                case '+': return MathematicOperation.Add;
-                case '-': return MathematicOperation.Subtract;
-                case '*': return MathematicOperation.Multiply;
-                case '/': return MathematicOperation.Divide;
-                case '%': return MathematicOperation.Modulus;
-                case '&': return MathematicOperation.BitwiseAnd;
-                default: return MathematicOperation.None;
-            }
+            var left = new IntegerConstantExpression(0xCF);
+            var right = new IntegerConstantExpression(0x56);
+            var expr = new MathematicExpression(left, MathematicOperation.BitwiseXor, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(0x99));
+        }
+
+        [Test]
+        public void TestBitwiseXorZero()
+        {
+            var left = new IntegerConstantExpression(0xCF);
+            var right = new IntegerConstantExpression(0);
+            var expr = new MathematicExpression(left, MathematicOperation.BitwiseXor, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(0xCF));
         }
 
         [Test]
@@ -380,6 +395,8 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase("byte(0) & 12 & 5", "byte(0x000000) & 0x00000004")] // bitwise and is commutative. prefer merging constants
         [TestCase("byte(0) & 12 * 5", "byte(0x000000) & 0x0000003C")] // multiplication has higher precedence
         [TestCase("byte(0) & 12 - 5", "byte(0x000000) & 0x00000007")] // addition has higher precedence
+        [TestCase("byte(0) ^ 12 ^ 5", "byte(0x000000) ^ 0x00000009")] // bitwise and is commutative. merge constants
+        [TestCase("byte(0) ^ 12 & 5", "byte(0x000000) ^ 0x00000004")] // bitwise and has higher precedence
         public void TestCombining(string input, string expected)
         {
             var expr = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));

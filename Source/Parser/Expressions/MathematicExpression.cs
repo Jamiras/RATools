@@ -64,6 +64,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Divide: return '/';
                 case MathematicOperation.Modulus: return '%';
                 case MathematicOperation.BitwiseAnd: return '&';
+                case MathematicOperation.BitwiseXor: return '^';
                 default: return '?';
             }
         }
@@ -78,6 +79,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Divide: return "division";
                 case MathematicOperation.Modulus: return "modulus";
                 case MathematicOperation.BitwiseAnd: return "bitwise and";
+                case MathematicOperation.BitwiseXor: return "bitwise xor";
                 default: return "mathematic";
             }
         }
@@ -92,6 +94,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Divide: return "divide";
                 case MathematicOperation.Modulus: return "modulus";
                 case MathematicOperation.BitwiseAnd: return "bitwise and";
+                case MathematicOperation.BitwiseXor: return "bitwise xor";
                 default: return "mathematic";
             }
         }
@@ -111,6 +114,9 @@ namespace RATools.Parser.Expressions
 
                 case MathematicOperation.BitwiseAnd:
                     return MathematicPriority.BitwiseAnd;
+
+                case MathematicOperation.BitwiseXor:
+                    return MathematicPriority.BitwiseXor;
 
                 default:
                     return MathematicPriority.None;
@@ -292,6 +298,11 @@ namespace RATools.Parser.Expressions
                     case MathematicOperation.BitwiseAnd:
                         if (integerRight.Value == 0)
                             return integerRight;
+                        break;
+
+                    case MathematicOperation.BitwiseXor:
+                        if (integerRight.Value == 0)
+                            return left;
                         break;
                 }
             }
@@ -591,6 +602,11 @@ namespace RATools.Parser.Expressions
         /// Gets the bits that are set in both the first value and the second.
         /// </summary>
         BitwiseAnd,
+
+        /// <summary>
+        /// Gets the bits that are set in either the first or and the second, but not both.
+        /// </summary>
+        BitwiseXor,
     }
 
     /// <summary>
@@ -614,9 +630,14 @@ namespace RATools.Parser.Expressions
         Multiply,
 
         /// <summary>
-        /// BitwiseAnd
+        /// Bitwise AND
         /// </summary>
         BitwiseAnd,
+
+        /// <summary>
+        /// Bitwise XOR
+        /// </summary>
+        BitwiseXor,
     }
 
     /// <summary>
@@ -694,6 +715,9 @@ namespace RATools.Parser.Expressions
 
                 case MathematicOperation.BitwiseAnd:
                     return value & amount;
+
+                case MathematicOperation.BitwiseXor:
+                    return value ^ amount;
 
                 default:
                     return 0;

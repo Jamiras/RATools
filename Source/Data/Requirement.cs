@@ -684,6 +684,11 @@ namespace RATools.Data
         /// The left value is masked by the right value. (combining conditions only)
         /// </summary>
         BitwiseAnd,
+
+        /// <summary>
+        /// The bits in the left value are toggled by the bits in the right value. (combining conditions only)
+        /// </summary>
+        BitwiseXor,
     }
 
     /// <summary>

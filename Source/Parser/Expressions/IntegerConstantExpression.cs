@@ -115,6 +115,9 @@ namespace RATools.Parser.Expressions
                     case MathematicOperation.BitwiseAnd:
                         return new IntegerConstantExpression(Value & integerExpression.Value);
 
+                    case MathematicOperation.BitwiseXor:
+                        return new IntegerConstantExpression(Value ^ integerExpression.Value);
+
                     default:
                         break;
                 }
