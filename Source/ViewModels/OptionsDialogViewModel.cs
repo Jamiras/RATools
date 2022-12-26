@@ -60,7 +60,7 @@ namespace RATools.ViewModels
             colors.Add(new ColorViewModel(Theme.Color.EditorLineNumbers, "Editor Line Numbers"));
             colors.Add(new ColorViewModel(Theme.Color.EditorKeyword, "Editor Keyword"));
             colors.Add(new ColorViewModel(Theme.Color.EditorComment, "Editor Comment"));
-            colors.Add(new ColorViewModel(Theme.Color.EditorIntegerConstant, "Editor Integer Constant"));
+            colors.Add(new ColorViewModel(Theme.Color.EditorIntegerConstant, "Editor Numeric Constant"));
             colors.Add(new ColorViewModel(Theme.Color.EditorStringConstant, "Editor String Constant"));
             colors.Add(new ColorViewModel(Theme.Color.EditorVariable, "Editor Variable"));
             colors.Add(new ColorViewModel(Theme.Color.EditorFunctionDefinition, "Editor Function Definition"));

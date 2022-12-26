@@ -9,7 +9,7 @@ namespace RATools.Parser.Expressions
         public BooleanConstantExpression(bool value, int line, int column)
             : this(value)
         {
-            Location = new TextRange(line, column, line, column + (value ? 4 : 5));
+            Location = new TextRange(line, column, line, column + (value ? 3 : 4));
         }
 
         public BooleanConstantExpression(bool value)
