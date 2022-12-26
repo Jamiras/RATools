@@ -474,7 +474,7 @@ namespace RATools.Parser
 
         private static void WriteEscaped(StreamWriter writer, string str)
         {
-            if (str.IndexOf('"') == -1 && str.IndexOf('\\') == -1)
+            if (str.IndexOfAny(new char[] { '"', '\\', '\n', '\r', '\t' }) == -1)
             {
                 writer.Write(str);
                 return;
