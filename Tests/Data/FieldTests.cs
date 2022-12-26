@@ -35,6 +35,7 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "byte(0x123456)")]
         [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "float(0x123456)")]
         [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "mbf32(0x123456)")]
+        [TestCase(FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456, "mbf32_le(0x123456)")]
         public void TestToString(FieldSize fieldSize, FieldType fieldType, int value, string expected)
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
@@ -130,6 +131,7 @@ namespace RATools.Tests.Data
         [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "fF123456")]
         [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "fM123456")]
         [TestCase(FieldSize.MBF32, FieldType.PreviousValue, 0x123456, "dfM123456")]
+        [TestCase(FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456, "fL123456")]
         public void TestSerialize(FieldSize fieldSize, FieldType fieldType, int value, string expected)
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
@@ -165,6 +167,7 @@ namespace RATools.Tests.Data
         [TestCase("fF123456", FieldSize.Float, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("fM123456", FieldSize.MBF32, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("dfM123456", FieldSize.MBF32, FieldType.PreviousValue, 0x123456U)]
+        [TestCase("fL123456", FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456U)]
         public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, uint value)
         {
             var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
