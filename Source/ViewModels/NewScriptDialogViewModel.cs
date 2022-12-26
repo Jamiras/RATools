@@ -355,7 +355,7 @@ namespace RATools.ViewModels
                         currentMacro = displayMacro = new RichPresenceMacro { Name = "Display", DisplayLines = new List<string>() };
                         _macros.Add(currentMacro);
                     }
-                    else
+                    else if (currentMacro != null)
                     {
                         if (currentMacro.DisplayLines != null)
                         {
