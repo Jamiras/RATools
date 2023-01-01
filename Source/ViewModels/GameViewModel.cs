@@ -813,7 +813,7 @@ namespace RATools.ViewModels
                 if (richPresenceViewModel == null)
                 {
                     richPresenceViewModel = new RichPresenceViewModel(this);
-                    assets.Insert(1, richPresenceViewModel);
+                    assets.Add(richPresenceViewModel);
                 }
 
                 richPresenceViewModel.Published.Asset = _publishedRichPresence;
