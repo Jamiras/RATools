@@ -120,6 +120,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("bcd(dword(1)) <= 100000000", "always_true()")]
         [TestCase("bcd(dword(1)) > 100000000", "always_false()")]
         [TestCase("bcd(dword(1)) >= 100000000", "always_false()")]
+        [TestCase("prev(bcd(byte(1)) - 1) >= 12", "prev(byte(0x000001)) >= 19")]
+        [TestCase("prev(bcd(byte(1)) - 1) == 14", "prev(byte(0x000001)) == 21")]
+        [TestCase("prev(bcd(byte(1)) - 1) == 19", "prev(byte(0x000001)) == 32")]
         public void TestNormalizeBCD(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);

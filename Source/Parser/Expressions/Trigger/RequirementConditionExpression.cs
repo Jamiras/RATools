@@ -150,9 +150,13 @@ namespace RATools.Parser.Expressions.Trigger
 
         private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
         {
-            var bcdWrapper = expression as BinaryCodedDecimalExpression;
+            var simpleExpression = MemoryValueExpression.ReduceToSimpleExpression(expression) ?? expression;
+
+            var bcdWrapper = simpleExpression as BinaryCodedDecimalExpression;
             if (bcdWrapper != null)
             {
+                // this removes the wrapper from the BCD expression by copying it into
+                // an unwrapper MemoryAccessorExpression
                 newExpression = new MemoryAccessorExpression(bcdWrapper);
                 return true;
             }
