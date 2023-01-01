@@ -189,6 +189,7 @@ namespace RATools.Data
                 case FieldSize.BigEndianDWord: return "dword_be";
                 case FieldSize.Float: return "float";
                 case FieldSize.MBF32: return "mbf32";
+                case FieldSize.LittleEndianMBF32: return "mbf32_le";
                 default: return size.ToString();
             }
         }
@@ -265,6 +266,7 @@ namespace RATools.Data
                 {
                     case FieldSize.Float:
                     case FieldSize.MBF32:
+                    case FieldSize.LittleEndianMBF32:
                         return true;
 
                     default:
@@ -329,6 +331,7 @@ namespace RATools.Data
                 case FieldSize.BigEndianDWord: builder.Append("0xG"); break;
                 case FieldSize.Float: builder.Append("fF"); break;
                 case FieldSize.MBF32: builder.Append("fM"); break;
+                case FieldSize.LittleEndianMBF32: builder.Append("fL"); break;
             }
 
             builder.AppendFormat("{0:x6}", Value);
@@ -385,6 +388,9 @@ namespace RATools.Data
                     case 'M':
                         tokenizer.Advance();
                         return new Field { Size = FieldSize.MBF32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    case 'L':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.LittleEndianMBF32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
                     default: 
                         return new Field { Type = FieldType.Float, Float = ReadFloat(tokenizer) };
                 }
@@ -772,5 +778,10 @@ namespace RATools.Data
         /// 32-bit Microsoft Binary Format floating point number.
         /// </summary>
         MBF32,
+
+        /// <summary>
+        /// 32-bit Microsoft Binary Format floating point number in little-endian mode.
+        /// </summary>
+        LittleEndianMBF32,
     }
 }

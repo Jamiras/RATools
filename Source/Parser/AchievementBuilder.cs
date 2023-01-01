@@ -407,6 +407,12 @@ namespace RATools.Parser
                             minVer = 0.78;
                         break;
 
+                    case RequirementOperator.BitwiseXor:
+                        // 1.1 15 Nov 2022
+                        if (minVer < 1.1)
+                            minVer = 1.1;
+                        break;
+
                     default:
                         break;
                 }
@@ -450,6 +456,12 @@ namespace RATools.Parser
                             // 1.0 29 Jan 2022
                             if (minVer < 1.0)
                                 minVer = 1.0;
+                            break;
+
+                        case FieldSize.LittleEndianMBF32:
+                            // 1.1 15 Nov 2022
+                            if (minVer < 1.1)
+                                minVer = 1.1;
                             break;
 
                         default:

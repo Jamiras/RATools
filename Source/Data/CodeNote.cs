@@ -50,6 +50,7 @@ namespace RATools.Data
             _fieldSize = FieldSize.None;
 
             Token token = new Token(Note, 0, Note.Length);
+            int index;
 
             var bitIndex = token.IndexOf("bit", StringComparison.OrdinalIgnoreCase);
             var byteIndex = token.IndexOf("byte", StringComparison.OrdinalIgnoreCase);
@@ -57,7 +58,6 @@ namespace RATools.Data
             {
                 Token prefix;
 
-                int index;
                 if (bitIndex == -1 || (byteIndex != -1 && byteIndex < bitIndex))
                 {
                     index = byteIndex;
@@ -160,25 +160,40 @@ namespace RATools.Data
                 return;
 
             token = new Token(Note, 0, Note.Length);
-            if (token.Contains("MBF32", StringComparison.OrdinalIgnoreCase))
+
+            index = token.IndexOf("MBF32", StringComparison.OrdinalIgnoreCase);
+            if (index != -1)
             {
                 _length = 4;
                 _fieldSize = FieldSize.MBF32;
-                return;
             }
-
-            if (token.Contains("MBF40", StringComparison.OrdinalIgnoreCase))
+            else
             {
-                // MBF-40 values are 100% compatible with MBF-32. The last 8 bits are
-                // too insignificant to be handled by the runtime, so can be ignored.
-                _length = 5;
-                _fieldSize = FieldSize.MBF32;
+                index = token.IndexOf("MBF40", StringComparison.OrdinalIgnoreCase);
+                if (index != -1)
+                {
+                    // MBF-40 values are 100% compatible with MBF-32. The last 8 bits are
+                    // too insignificant to be handled by the runtime, so can be ignored.
+                    _length = 5;
+                    _fieldSize = FieldSize.MBF32;
+                }
+            }
+            if (index != -1)
+            {
+                var subtoken = token.SubToken(index + 5);
+                if (subtoken.StartsWith("LE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.StartsWith("-LE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.StartsWith(" LE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.Contains("LittleEndian", StringComparison.OrdinalIgnoreCase))
+                {
+                    _fieldSize = FieldSize.LittleEndianMBF32;
+                }
                 return;
             }
 
             do
             {
-                var index = token.IndexOf("float", StringComparison.OrdinalIgnoreCase);
+                index = token.IndexOf("float", StringComparison.OrdinalIgnoreCase);
                 if (index == -1)
                     break;
 

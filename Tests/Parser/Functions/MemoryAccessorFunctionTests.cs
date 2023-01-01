@@ -125,6 +125,7 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("dword_be(0x1234)", FieldSize.BigEndianDWord)]
         [TestCase("float(0x1234)", FieldSize.Float)]
         [TestCase("mbf32(0x1234)", FieldSize.MBF32)]
+        [TestCase("mbf32_le(0x1234)", FieldSize.LittleEndianMBF32)]
         [TestCase("bit(0,0x1234)", FieldSize.Bit0)]
         [TestCase("bit(1,0x1234)", FieldSize.Bit1)]
         [TestCase("bit(2,0x1234)", FieldSize.Bit2)]
