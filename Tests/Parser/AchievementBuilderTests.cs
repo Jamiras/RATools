@@ -556,27 +556,6 @@ namespace RATools.Tests.Parser
         [TestCase("bit0(0x001234) == 1 && bit1(0x001234) == 1 && bit2(0x001234) == 0 && bit3(0x001234) == 1", "low4(0x001234) == 11")]
         [TestCase("bit4(0x001234) == 1 && bit5(0x001234) == 1 && bit6(0x001234) == 0 && bit7(0x001234) == 1", "high4(0x001234) == 11")]
         [TestCase("low4(0x001234) == 12 && high4(0x001234) == 8", "byte(0x001234) == 140")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "bitcount(0x001234) == 6")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) + " +
-                  "bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) == 6",
-                  "(bitcount(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234) + bit7(0x001234)) == 6")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) + " +
-                  "bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "(bitcount(0x001234) + bitcount(0x001234)) == 6")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) + bit0(0x001235) == 6",
-                  "(bitcount(0x001234) + bit0(0x001235)) == 6")]
-        [TestCase("bit7(0x001233) + bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "(bit7(0x001233) + bitcount(0x001234)) == 6")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit0(0x001235) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "(bitcount(0x001234) + bit0(0x001235)) == 6")]
-        [TestCase("bit0(0x001234) + bit1(0x001235) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "(bit0(0x001234) + bit1(0x001235) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234)) == 6")]
-        [TestCase("bit0(0x001234) + prev(bit1(0x001234)) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234) == 6",
-                  "(bit0(0x001234) + prev(bit1(0x001234)) + bit2(0x001234) + bit3(0x001234) + bit4(0x001234) + bit5(0x001234) + bit6(0x001234) + bit7(0x001234)) == 6")]
-        [TestCase("prev(bit0(0x001234)) + prev(bit1(0x001234)) + prev(bit2(0x001234)) + prev(bit3(0x001234)) + " +
-                  "prev(bit4(0x001234)) + prev(bit5(0x001234)) + prev(bit6(0x001234)) + prev(bit7(0x001234)) == 6",
-                  "prev(bitcount(0x001234)) == 6")]
         public void TestOptimizeMergeBits(string input, string expected)
         {
             var achievement = CreateAchievement(input);

@@ -77,7 +77,7 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
-        ExpressionBase IComparisonNormalizeExpression.NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        ExpressionBase IComparisonNormalizeExpression.NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
             return new ErrorExpression("Cannot chain comparisons", this);
         }

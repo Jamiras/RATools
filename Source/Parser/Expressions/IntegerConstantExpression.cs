@@ -143,10 +143,11 @@ namespace RATools.Parser.Expressions
         /// </summary>
         /// <param name="right">The expression to compare with the current expression.</param>
         /// <param name="operation">How to compare the expressions.</param>
+        /// <param name="canModifyRight"><c>true</c> if <paramref name="right"/> can be changed, <c>false</c> if not.</param>
         /// <returns>
         /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
         /// </returns>
-        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
             var integerRight = right as IntegerConstantExpression;
             if (integerRight != null)
@@ -172,7 +173,7 @@ namespace RATools.Parser.Expressions
 
             var floatRight = right as FloatConstantExpression;
             if (floatRight != null)
-                return new FloatConstantExpression((float)Value).NormalizeComparison(right, operation);
+                return new FloatConstantExpression((float)Value).NormalizeComparison(right, operation, canModifyRight);
 
             // prefer constants on right side of comparison
             if (!right.IsLiteralConstant)

@@ -15,13 +15,7 @@ namespace RATools.Tests.Parser.Expressions
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
 
-            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-
-            ExpressionBase result;
-            if (!expr.ReplaceVariables(scope, out result))
-                Assert.Fail(result.ToString());
-
-            return result;
+            return ReplaceVariables(expr);
         }
 
         public static T Parse<T>(string input)
@@ -30,6 +24,17 @@ namespace RATools.Tests.Parser.Expressions
             var result = Parse(input);
             Assert.That(result, Is.InstanceOf<T>());
             return (T)result;
+        }
+
+        public static ExpressionBase ReplaceVariables(ExpressionBase expression)
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            ExpressionBase result;
+            if (!expression.ReplaceVariables(scope, out result))
+                Assert.Fail(result.ToString());
+
+            return result;
         }
 
         public static void AssertAppendString(ExpressionBase expression, string expected)
@@ -138,7 +143,7 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         public static void AssertNormalizeComparison(string left, string operation,
-            string right, ExpressionType expectedType, string expected)
+            string right, ExpressionType expectedType, string expected, bool canModifyRight = true)
         {
             var op = GetComparisonOperation(operation);
 
@@ -147,15 +152,15 @@ namespace RATools.Tests.Parser.Expressions
 
             AssertNormalizeComparison(
                 new ComparisonExpression(leftExpr, op, rightExpr), 
-                expectedType, expected);
+                expectedType, expected, canModifyRight);
         }
 
-        public static void AssertNormalizeComparison(ComparisonExpression comparison, ExpressionType expectedType, string expected)
+        public static void AssertNormalizeComparison(ComparisonExpression comparison, ExpressionType expectedType, string expected, bool canModifyRight = true)
         {
             Assert.That(comparison.Left, Is.InstanceOf<IComparisonNormalizeExpression>());
             var normalizing = (IComparisonNormalizeExpression)comparison.Left;
 
-            var result = normalizing.NormalizeComparison(comparison.Right, comparison.Operation);
+            var result = normalizing.NormalizeComparison(comparison.Right, comparison.Operation, canModifyRight);
             if (expectedType == ExpressionType.None)
             {
                 Assert.That(result, Is.Null);

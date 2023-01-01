@@ -1705,112 +1705,11 @@ namespace RATools.Parser
             }
         };
 
-        private static void MergeBitCount(RequirementEx requirementEx)
-        {
-            var references = new List<BitReferences>();
-            bool inAddAddress = false;
-            for (int i = 0; i < requirementEx.Requirements.Count; i++)
-            {
-                var requirement = requirementEx.Requirements[i];
-                if (i != requirementEx.Requirements.Count - 1)
-                {
-                    switch (requirement.Type)
-                    {
-                        case RequirementType.AddAddress:
-                            inAddAddress = true;
-                            continue;
-
-                        case RequirementType.AddSource:
-                            if (requirement.Operator != RequirementOperator.None)
-                                goto default;
-                            break;
-
-                        default:
-                            inAddAddress = false;
-                            continue;
-                    }
-                }
-
-                if (!inAddAddress &&
-                    requirement.Left.Size >= FieldSize.Bit0 && requirement.Left.Size <= FieldSize.Bit7)
-                {
-                    BitReferences bitReferences = BitReferences.Find(references, requirement.Left.Value, requirement.Left.Type);
-                    bitReferences.requirements.Add(requirement);
-                    bitReferences.flags |= (ushort)(1 << (requirement.Left.Size - FieldSize.Bit0));
-                }
-
-                inAddAddress = false;
-            }
-
-            var comparison = requirementEx.Requirements.Last();
-            foreach (var bitReference in references)
-            {
-                if (bitReference.flags == 0xFF)
-                {
-                    var requirements = bitReference.requirements;
-                    while (requirements.Count >= 8)
-                    {
-                        var matches = new List<Requirement>(8);
-                        for (var bit = FieldSize.Bit0; bit <= FieldSize.Bit7; bit++)
-                        {
-                            var requirement = requirements.FirstOrDefault(r => r.Left.Size == bit);
-                            if (requirement == null) // second pass may not have enough items for a second BitCount
-                                break;
-                            requirements.Remove(requirement);
-                            matches.Add(requirement);
-                        }
-
-                        if (matches.Count < 8) // second pass may not have enough items for a second BitCount
-                            break;
-
-                        int insertIndex = requirementEx.Requirements.Count - 1;
-                        foreach (var requirement in matches)
-                        {
-                            var index = requirementEx.Requirements.IndexOf(requirement);
-                            if (index < insertIndex)
-                                insertIndex = index;
-
-                            requirementEx.Requirements.RemoveAt(index);
-                        }
-
-                        requirementEx.Requirements.Insert(insertIndex, new Requirement
-                        {
-                            Type = RequirementType.AddSource,
-                            Left = new Field
-                            {
-                                Size = FieldSize.BitCount,
-                                Type = bitReference.memoryType,
-                                Value = bitReference.address
-                            }
-                        });
-                    }
-                }
-            }
-
-            var comparisonIndex = requirementEx.Requirements.IndexOf(comparison);
-            if (comparisonIndex == -1)
-            {
-                var requirement = requirementEx.Requirements.Last();
-                comparison.Left = requirement.Left;
-                requirementEx.Requirements.RemoveAt(requirementEx.Requirements.Count - 1);
-                requirementEx.Requirements.Add(comparison);
-            }
-            else
-            {
-                requirementEx.Requirements.RemoveAt(comparisonIndex);
-                requirementEx.Requirements.Add(comparison);
-            }
-        }
-
         private static void MergeBits(IList<RequirementEx> group)
         {
             var references = new List<BitReferences>();
             foreach (var requirementEx in group)
             {
-                // convert AddSource bit chain to bitcount
-                if (requirementEx.Requirements.Count >= 8)
-                    MergeBitCount(requirementEx);
-
                 // ignore complex conditions (AddAddress, AndNext, etc)
                 if (requirementEx.Requirements.Count != 1)
                 {

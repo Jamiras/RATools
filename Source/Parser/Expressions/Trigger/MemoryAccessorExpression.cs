@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -117,6 +118,25 @@ namespace RATools.Parser.Expressions.Trigger
         public virtual MemoryAccessorExpression Clone()
         {
             return new MemoryAccessorExpression(this);
+        }
+
+        /// <summary>
+        /// Creates a clone of the expression with a different field size.
+        /// </summary>
+        /// <param name="newSize">The size for the clone.</param>
+        /// <returns>The cloned expression with the new size.</returns>
+        public MemoryAccessorExpression ChangeFieldSize(FieldSize newSize)
+        {
+            return new MemoryAccessorExpression(this)
+            {
+                Field = new Field
+                {
+                    Size = newSize,
+                    Type = this.Field.Type,
+                    Value = this.Field.Value,
+                    Float = this.Field.Float,
+                }
+            };
         }
 
         internal override void AppendString(StringBuilder builder)
@@ -288,11 +308,15 @@ namespace RATools.Parser.Expressions.Trigger
         /// </summary>
         /// <param name="right">The expression to compare with the current expression.</param>
         /// <param name="operation">How to compare the expressions.</param>
+        /// <param name="canModifyRight"><c>true</c> if <paramref name="right"/> can be changed, <c>false</c> if not.</param>
         /// <returns>
         /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
         /// </returns>
-        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
+            if (!canModifyRight)
+                return null;
+
             var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
             if (simplified != null)
                 right = simplified;
