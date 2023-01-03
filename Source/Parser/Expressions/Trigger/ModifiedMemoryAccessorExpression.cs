@@ -256,7 +256,7 @@ namespace RATools.Parser.Expressions.Trigger
                 if (field.IsFloat || Modifier.IsFloat || MemoryAccessor.Field.IsFloat)
                     return new ErrorExpression("Cannot perform bitwise operations on floating point values");
 
-                if (newModifyingOperator == RequirementOperator.BitwiseAnd)
+                if (newModifyingOperator == RequirementOperator.BitwiseAnd && field.Type == FieldType.Value)
                 {
                     long min, max;
                     MemoryAccessor.GetMinMax(out min, out max);
