@@ -92,6 +92,13 @@ namespace RATools.Parser.Functions
                 return true;
             }
 
+            if (_fieldType == FieldType.Invert)
+            {
+                result = new BitwiseInvertExpression(memoryAccessor);
+                CopyLocation(result);
+                return true;
+            }
+
             memoryAccessor = memoryAccessor.Clone();
 
             switch (memoryAccessor.Field.Type)

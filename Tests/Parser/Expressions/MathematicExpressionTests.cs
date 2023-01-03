@@ -370,6 +370,19 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         [Test]
+        public void TestBitwiseInvert()
+        {
+            var right = new IntegerConstantExpression(0x56);
+            var expr = new MathematicExpression(null, MathematicOperation.BitwiseInvert, right);
+            var scope = new InterpreterScope();
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That((uint)((IntegerConstantExpression)result).Value, Is.EqualTo(0xFFFFFFA9));
+        }
+
+        [Test]
         [TestCase("byte(0) + 3 + 1", "byte(0x000000) + 4")]
         [TestCase("byte(0) + 3 - 1", "byte(0x000000) + 2")]
         [TestCase("byte(0) + 1 - 3", "byte(0x000000) - 2")]

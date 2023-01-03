@@ -135,6 +135,30 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
+        // invert should be factored out
+        [TestCase("~byte(1) == 24", "byte(0x000001) == 231")]
+        [TestCase("~bit0(1) == 1", "bit0(0x000001) == 0")]
+        [TestCase("~word(1) == 1234", "word(0x000001) == 64301")]
+        [TestCase("~dword(1) == 1234567890", "dword(0x000001) == 3060399405")]
+        [TestCase("prev(~byte(1)) == 15", "prev(byte(0x000001)) == 240")]
+        [TestCase("~prev(byte(1)) == 15", "prev(byte(0x000001)) == 240")]
+        [TestCase("~byte(1) != prev(~byte(1))", "byte(0x000001) != prev(byte(0x000001))")]
+        [TestCase("byte(1) & ~0x3F == 0x80", "byte(0x000001) & 0x000000C0 == 128")]
+        // invert cannot be factored out
+        [TestCase("~byte(1) != byte(2)", "~byte(0x000001) != byte(0x000002)")]
+        [TestCase("byte(1) != ~byte(2)", "byte(0x000001) != ~byte(0x000002)")]
+        public void TestNormalizeInvert(string input, string expected)
+        {
+            var result = TriggerExpressionTests.Parse(input);
+
+            var condition = result as RequirementConditionExpression;
+            if (condition != null)
+                result = condition.Normalize();
+
+            ExpressionTests.AssertAppendString(result, expected);
+        }
+
+        [Test]
         public void TestAddAddressCompareToAddress()
         {
             var input = "byte(word(0x1234)) == word(0x2345)";

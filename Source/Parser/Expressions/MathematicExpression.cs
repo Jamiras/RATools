@@ -24,6 +24,13 @@ namespace RATools.Parser.Expressions
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
+            if (Operation == MathematicOperation.BitwiseInvert)
+            {
+                builder.Append('~');
+                Right.AppendString(builder);
+                return;
+            }
+
             var memoryValue = Left as MemoryValueExpression;
             if (memoryValue != null && memoryValue.HasConstant)
             {
@@ -65,6 +72,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Modulus: return '%';
                 case MathematicOperation.BitwiseAnd: return '&';
                 case MathematicOperation.BitwiseXor: return '^';
+                case MathematicOperation.BitwiseInvert: return '~';
                 default: return '?';
             }
         }
@@ -80,6 +88,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Modulus: return "modulus";
                 case MathematicOperation.BitwiseAnd: return "bitwise and";
                 case MathematicOperation.BitwiseXor: return "bitwise xor";
+                case MathematicOperation.BitwiseInvert: return "bitwise invert";
                 default: return "mathematic";
             }
         }
@@ -95,6 +104,7 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Modulus: return "modulus";
                 case MathematicOperation.BitwiseAnd: return "bitwise and";
                 case MathematicOperation.BitwiseXor: return "bitwise xor";
+                case MathematicOperation.BitwiseInvert: return "bitwise invert";
                 default: return "mathematic";
             }
         }
@@ -117,6 +127,9 @@ namespace RATools.Parser.Expressions
 
                 case MathematicOperation.BitwiseXor:
                     return MathematicPriority.BitwiseXor;
+
+                case MathematicOperation.BitwiseInvert:
+                    return MathematicPriority.BitwiseInvert;
 
                 default:
                     return MathematicPriority.None;
@@ -145,30 +158,60 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase left;
-            if (!Left.ReplaceVariables(scope, out left))
-            {
-                result = left;
-                return false;
-            }
-
             ExpressionBase right;
-            if (!Right.ReplaceVariables(scope, out right))
+
+            if (Operation == MathematicOperation.BitwiseInvert)
             {
-                result = right;
-                return false;
+                if (!Right.ReplaceVariables(scope, out right))
+                {
+                    result = right;
+                    return false;
+                }
+
+                var integerRight = right as IntegerConstantExpression;
+                if (integerRight != null)
+                {
+                    result = new IntegerConstantExpression(~integerRight.Value);
+                }
+                else
+                {
+                    var memoryAccessor = right as MemoryAccessorExpression;
+                    if (memoryAccessor != null)
+                    {
+                        result = new BitwiseInvertExpression(memoryAccessor);
+                    }
+                    else
+                    {
+                        result = new ErrorExpression("Cannot bitwise invert " + right.Type, Right);
+                    }
+                }
             }
-
-            var combinable = left as IMathematicCombineExpression;
-            result = (combinable != null) ? combinable.Combine(right, Operation) : null;
-            if (result == null)
+            else
             {
-                var inverseCombinable = right as IMathematicCombineInverseExpression;
-                if (inverseCombinable != null)
-                    result = inverseCombinable.CombineInverse(left, Operation);
+                ExpressionBase left;
+                if (!Left.ReplaceVariables(scope, out left))
+                {
+                    result = left;
+                    return false;
+                }
 
+                if (!Right.ReplaceVariables(scope, out right))
+                {
+                    result = right;
+                    return false;
+                }
+
+                var combinable = left as IMathematicCombineExpression;
+                result = (combinable != null) ? combinable.Combine(right, Operation) : null;
                 if (result == null)
-                    result = CreateCannotCombineError(left, Operation, right);
+                {
+                    var inverseCombinable = right as IMathematicCombineInverseExpression;
+                    if (inverseCombinable != null)
+                        result = inverseCombinable.CombineInverse(left, Operation);
+
+                    if (result == null)
+                        result = CreateCannotCombineError(left, Operation, right);
+                }
             }
 
             if (result.Location.IsEmpty)
@@ -607,6 +650,11 @@ namespace RATools.Parser.Expressions
         /// Gets the bits that are set in either the first or and the second, but not both.
         /// </summary>
         BitwiseXor,
+
+        /// <summary>
+        /// Toggles all bits in the first value (effectively XOR 0xFFFFFFFF)
+        /// </summary>
+        BitwiseInvert,
     }
 
     /// <summary>
@@ -638,6 +686,11 @@ namespace RATools.Parser.Expressions
         /// Bitwise XOR
         /// </summary>
         BitwiseXor,
+
+        /// <summary>
+        /// Bitwise inversion
+        /// </summary>
+        BitwiseInvert,
     }
 
     /// <summary>
@@ -718,6 +771,9 @@ namespace RATools.Parser.Expressions
 
                 case MathematicOperation.BitwiseXor:
                     return value ^ amount;
+
+                case MathematicOperation.BitwiseInvert:
+                    return ~value;
 
                 default:
                     return 0;

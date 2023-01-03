@@ -499,6 +499,14 @@ namespace RATools.Parser.Internal
 
                     return new ConditionalExpression(null, ConditionalOperation.Not, clause);
 
+                case '~':
+                    tokenizer.Advance();
+                    clause = ParseClause(tokenizer);
+                    if (clause.Type == ExpressionType.Error)
+                        return clause;
+
+                    return new MathematicExpression(null, MathematicOperation.BitwiseInvert, clause);
+
                 case '(':
                     if (AnonymousUserFunctionDefinitionExpression.IsAnonymousParameterList(tokenizer))
                         return AnonymousUserFunctionDefinitionExpression.ParseAnonymous(tokenizer);
