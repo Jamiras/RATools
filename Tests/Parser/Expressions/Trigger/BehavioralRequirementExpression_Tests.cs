@@ -51,6 +51,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("never(once(byte(0x1234) == 1) && repeated(12, always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
         [TestCase("never(repeated(12, once(byte(0x1234) == 1) && always_true()))", "N:0xH001234=1.1._R:1=1.12.")]
         [TestCase("never(float(0x1111) == 2.0)", "R:fF001111=f2.0")]
+        [TestCase("never(repeated(6, byte(1) == 56 && never(byte(2) == 3)))", "Z:0xH000002=3_R:0xH000001=56.6.")]
+        [TestCase("unless(repeated(6, byte(1) == 56 && never(byte(2) == 3)))", "Z:0xH000002=3_P:0xH000001=56.6.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<BehavioralRequirementExpression>(input);

@@ -6,7 +6,6 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
@@ -33,7 +32,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("float(0x001234) + 1.2345", "A:f1.2345_fF001234")] // constant should always be first
         [TestCase("mbf32(0x001234) - 1.2345", "B:f1.2345_fM001234")] // constant should always be first
         [TestCase("low4(0x001234) + high4(0x001234)", "A:0xL001234=0_0xU001234")]
-        [TestCase("bit0(0x001234) + bit1(0x001234) - bit2(0x001234) + bit3(0x001234) - 1", 
+        [TestCase("bit0(0x001234) + bit1(0x001234) - bit2(0x001234) + bit3(0x001234) - 1",
             "B:1=0_A:0xM001234=0_A:0xN001234=0_B:0xO001234=0_0xP001234")] // constant should always be first
         public void TestBuildTrigger(string input, string expected)
         {
@@ -395,7 +394,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
             Assert.That(comparison.Left, Is.InstanceOf<IComparisonNormalizeExpression>());
             var normalizing = (IComparisonNormalizeExpression)comparison.Left;
-            var result = normalizing.NormalizeComparison(comparison.Right, comparison.Operation);
+            var result = normalizing.NormalizeComparison(comparison.Right, comparison.Operation, true);
 
             if (expected == input)
             {
@@ -432,5 +431,122 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Expression can never be true"));
         }
 
+        [Test]
+        [TestCase("b0A + 0", null)] // +0 forces construction of MemoryValueExpression
+        [TestCase("b0A + b1A", null)]
+        [TestCase("b0A + b1A + b2A + b3A + b4A + b5A + b6A", null)] // incomplete
+        [TestCase("b0A + b1A + b2A + b3A + b4A + b5A + b6A + b7A", "kA")] // in order
+        [TestCase("b7A + b6A + b5A + b4A + b3A + b2A + b1A + b0A", "kA")] // reversed
+        [TestCase("b1A + b6A + b4A + b3A + b7A + b0A + b5A + b2A", "kA")] // random order
+        [TestCase("b0A + b1A + b2A + b3B + b4A + b5A + b6A + b7A", null)] // differing addresses
+        [TestCase("b0A + b1A + b2A + b3A - b4A + b5A + b6A + b7A", null)] // contains a subtraction
+        [TestCase("b0A + b1A + b2A + b3A + b4A + b5A + b6A + b7A + b0A + b1A + b2A + b3A + b4A + b5A + b6A + b7A", "kA + kA")] // doubled
+        [TestCase("b0A + b1A + b2A + b3A + b4A + b5A + b6A + b7A + b0A + b1A + b2A + b4A + b5A + b6A + b7A", "kA + b0A + b1A + b2A + b4A + b5A + b6A + b7A")] // partial doubled
+        [TestCase("b0A + b0A + b1A + b1A + b2A + b2A + b3A + b3A + b4A + b4A + b5A + b5A + b6A + b6A + b7A + b7A", "kA + kA")] // doubled alternating
+        [TestCase("b6A + b7A + b0B + b1B + b2B + b3B + b4B + b5B + b6B + b7B + b0C + b1C", "b6A + b7A + kB + b0C + b1C")] // bitcount in the middle of multiple bytes
+        [TestCase("db0A + db1A + db2A + db3A + db4A + db5A + db6A + db7A", "dkA")] // delta
+        [TestCase("db0A + db1A + db2A + b3A + db4A + db5A + db6A + db7A", null)] // delta/non-delta mix
+        [TestCase("b0I + b1I + b2I + b3I + b4I + b5I + b6I + b7I", "kI")] // with pointer
+        [TestCase("b0I + b1I + b2J + b3I + b4I + b5I + b6I + b7I", null)] // differing pointers
+        [TestCase("b0I + b1I + b2I + b3I + b4A + b5I + b6I + b7I", null)] // with a non-pointer
+        public void TestMergeBitCount(string input, string normalized)
+        {
+            var replacePlaceholders = (string i) =>
+            {
+                var builder = new StringBuilder();
+                bool wrapped = false;
+                foreach (var c in i)
+                {
+                    switch (c)
+                    {
+                        default: builder.Append(c); break;
+                        case 'b': builder.Append("bit"); break;
+                        case 'd': builder.Append("prev("); wrapped = true; break;
+                        case 'p': builder.Append("prior("); wrapped = true; break;
+                        case 'k': builder.Append("bitcount"); break;
+                        case 'A':
+                        case 'B':
+                        case 'C':
+                        case 'D':
+                            builder.Append("(0x00100");
+                            builder.Append(c);
+                            builder.Append(wrapped ? "))" : ")");
+                            wrapped = false;
+                            break;
+                        case 'I':
+                            builder.Append("(dword(0x005555) + 4106)"); // 4106 = 0x00100A
+                            if (wrapped)
+                            {
+                                builder.Append(')');
+                                wrapped = false;
+                            }
+                            break;
+                        case 'J':
+                            builder.Append("(dword(0x006666) + 4106)"); // 4106 = 0x00100A
+                            if (wrapped)
+                            {
+                                builder.Append(')');
+                                wrapped = false;
+                            }
+                            break;
+                    }
+                }
+                return builder.ToString();
+            };
+
+            var expandedInput = replacePlaceholders(input);
+            var accessor = TriggerExpressionTests.Parse<MemoryValueExpression>(expandedInput);
+
+            var comparison = accessor.NormalizeComparison(new IntegerConstantExpression(1), ComparisonOperation.Equal, true);
+
+            if (normalized == null)
+            {
+                Assert.That(comparison, Is.Null);
+            }
+            else
+            {
+                Assert.That(comparison, Is.InstanceOf<ComparisonExpression>());
+                var normalizedAccessor = ((ComparisonExpression)comparison).Left;
+
+                var expandedNormalized = replacePlaceholders(normalized);
+                ExpressionTests.AssertAppendString(normalizedAccessor, expandedNormalized);
+            }
+        }
+
+        [Test]
+        [TestCase(ComparisonOperation.Equal, 8, true, "byte(0x000001) == 255")]
+        [TestCase(ComparisonOperation.NotEqual, 8, true, "byte(0x000001) != 255")]
+        [TestCase(ComparisonOperation.Equal, 0, true, "byte(0x000001) == 0")]
+        [TestCase(ComparisonOperation.NotEqual, 0, true, "byte(0x000001) != 0")]
+        [TestCase(ComparisonOperation.Equal, 4, true, "bitcount(0x000001) == 4")]
+        [TestCase(ComparisonOperation.NotEqual, 4, true, "bitcount(0x000001) != 4")]
+        [TestCase(ComparisonOperation.Equal, 8, false, "bitcount(0x000001) == 8")]
+        [TestCase(ComparisonOperation.Equal, 0, false, "bitcount(0x000001) == 0")]
+        [TestCase(ComparisonOperation.Equal, 4, false, "bitcount(0x000001) == 4")]
+
+        // these will be further modified by range validation in RequirementConditionExpression
+        [TestCase(ComparisonOperation.GreaterThanOrEqual, 8, true, "byte(0x000001) >= 255")] // = 255
+        [TestCase(ComparisonOperation.GreaterThan, 8, true, "byte(0x000001) > 255")]         // false
+        [TestCase(ComparisonOperation.LessThanOrEqual, 8, true, "byte(0x000001) <= 255")]    // true
+        [TestCase(ComparisonOperation.LessThan, 8, true, "byte(0x000001) < 255")]            // != 255
+        [TestCase(ComparisonOperation.Equal, 9, true, "bitcount(0x000001) == 9")]            // false
+        [TestCase(ComparisonOperation.NotEqual, 9, true, "bitcount(0x000001) != 9")]         // true
+        public void TestMergeBitCountLimits(ComparisonOperation comparisonOperation, int value, bool canModifyRight, string expected)
+        {
+            string input = ExpressionTests.ReplacePlaceholders("mA + nA + oA + pA + qA + rA + sA + tA", true);
+            var accessor = TriggerExpressionTests.Parse<MemoryValueExpression>(input);
+
+            var comparison = accessor.NormalizeComparison(new IntegerConstantExpression(value), comparisonOperation, canModifyRight);
+
+            if (expected == null)
+            {
+                Assert.That(comparison, Is.Null);
+            }
+            else
+            {
+                Assert.That(comparison, Is.InstanceOf<ComparisonExpression>());
+                ExpressionTests.AssertAppendString(comparison, expected);
+            }
+        }
     }
 }

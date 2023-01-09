@@ -267,23 +267,31 @@ namespace RATools.Parser.Expressions.Trigger
         /// </summary>
         /// <param name="right">The expression to compare with the current expression.</param>
         /// <param name="operation">How to compare the expressions.</param>
+        /// <param name="canModifyRight"><c>true</c> if <paramref name="right"/> can be changed, <c>false</c> if not.</param>
         /// <returns>
         /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
         /// </returns>
-        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
             var simplified = ReduceToSimpleExpression(this) as IComparisonNormalizeExpression;
             if (simplified != null)
-                return simplified.NormalizeComparison(right, operation);
+                return simplified.NormalizeComparison(right, operation, canModifyRight);
 
             right = ReduceToSimpleExpression(right) ?? right;
 
-            var normalized = MoveConstantsToRightHandSide(right, operation);
-
+            var normalized = canModifyRight ? MoveConstantsToRightHandSide(right, operation) : null;
             var comparison = normalized ?? new ComparisonExpression(this, operation, right);
-            var underflowNormalized = CheckForUnderflow(comparison);
-            if (!ReferenceEquals(underflowNormalized, comparison))
-                normalized = underflowNormalized;
+
+            var bitcountNormalized = MergeBitCount(comparison, canModifyRight);
+            if (!ReferenceEquals(bitcountNormalized, comparison))
+                normalized = comparison = bitcountNormalized;
+
+            if (canModifyRight)
+            {
+                var underflowNormalized = CheckForUnderflow(comparison);
+                if (!ReferenceEquals(underflowNormalized, comparison))
+                    normalized = underflowNormalized;
+            }
 
             return CheckForImpossibleValues(normalized);
         }
@@ -604,6 +612,173 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return null;
+        }
+
+        private class BitReference
+        {
+            public uint Address;
+            public FieldType Type;
+            public RequirementType CombiningOperator;
+            public byte Mask;
+            public List<ModifiedMemoryAccessorExpression> MemoryAccessors;
+
+            public static BitReference Find(List<BitReference> bitReferences, ModifiedMemoryAccessorExpression memoryAccessor)
+            {
+                foreach (var scan in bitReferences)
+                {
+                    if (scan.Address == memoryAccessor.MemoryAccessor.Field.Value &&
+                        scan.Type == memoryAccessor.MemoryAccessor.Field.Type &&
+                        scan.CombiningOperator == memoryAccessor.CombiningOperator)
+                    {
+                        if (scan.MemoryAccessors[0].MemoryAccessor.PointerChainMatches(memoryAccessor.MemoryAccessor))
+                            return scan;
+                    }
+                }
+
+                var bitReference = new BitReference
+                {
+                    Address = memoryAccessor.MemoryAccessor.Field.Value,
+                    Type = memoryAccessor.MemoryAccessor.Field.Type,
+                    CombiningOperator = memoryAccessor.CombiningOperator,
+                    MemoryAccessors = new List<ModifiedMemoryAccessorExpression>()
+                };
+                bitReferences.Add(bitReference);
+                return bitReference;
+            }
+
+            public static byte GetMask(ModifiedMemoryAccessorExpression memoryAccessor)
+            {
+                switch (memoryAccessor.MemoryAccessor.Field.Size)
+                {
+                    case FieldSize.Bit0: return 0x01;
+                    case FieldSize.Bit1: return 0x02;
+                    case FieldSize.Bit2: return 0x04;
+                    case FieldSize.Bit3: return 0x08;
+                    case FieldSize.Bit4: return 0x10;
+                    case FieldSize.Bit5: return 0x20;
+                    case FieldSize.Bit6: return 0x40;
+                    case FieldSize.Bit7: return 0x80;
+                    default: return 0x00;
+                }
+            }
+        };
+
+        private static ExpressionBase MergeBitCount(ExpressionBase expression, bool canModifyRight)
+        {
+            var comparison = expression as ComparisonExpression;
+            if (comparison == null)
+                return expression;
+
+            var valueExpression = comparison.Left as MemoryValueExpression;
+            if (valueExpression == null || valueExpression._memoryAccessors.Count < 4)
+                return expression;
+
+            // identify bit accessors in the MemoryValueExpression
+            var newMemoryAccessors = new List<ModifiedMemoryAccessorExpression>(valueExpression._memoryAccessors);
+            var bitReferences = new List<BitReference>();
+
+            foreach (var memoryAccessor in newMemoryAccessors)
+            {
+                if (memoryAccessor.ModifyingOperator == RequirementOperator.None &&
+                    memoryAccessor.MemoryAccessor.Field.IsMemoryReference)
+                {
+                    byte mask = BitReference.GetMask(memoryAccessor);
+                    if (mask == 0)
+                        continue;
+
+                    var bitReference = BitReference.Find(bitReferences, memoryAccessor);
+                    bitReference.Mask |= mask;
+                    bitReference.MemoryAccessors.Add(memoryAccessor);
+                }
+            }
+
+            // if any address is fully represented, convert to a bitcount
+            foreach (var bitReference in bitReferences)
+            {
+                while (bitReference.Mask == 0xFF)
+                {
+                    // reset the mask in case there's more than one set of matches
+                    bitReference.Mask = 0;
+
+                    // clone an accessor that's going to be removed so we have the correct
+                    // pointer chain and turn it into a bitcount accessor
+                    var bitCountAccessor = bitReference.MemoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.BitCount);
+
+                    // extract one accessor for each bit
+                    byte matchedMask = 0;
+                    int index = 0;
+                    int replaceIndex = newMemoryAccessors.Count;
+                    while (index < bitReference.MemoryAccessors.Count)
+                    {
+                        var memoryAccessor = bitReference.MemoryAccessors[index];
+                        var mask = BitReference.GetMask(memoryAccessor);
+                        if ((matchedMask & mask) != 0)
+                        {
+                            // this bit is already represented, save it for later
+                            bitReference.Mask |= mask;
+                            index++;
+                            continue;
+                        }
+
+                        // found an unrepresented bit, remove it from the accessors list, keeping
+                        // track of the lowest removed index. that's where we'll insert the bitcount
+                        matchedMask |= mask;
+
+                        var accesorIndex = newMemoryAccessors.IndexOf(memoryAccessor);
+                        newMemoryAccessors.RemoveAt(accesorIndex);
+
+                        replaceIndex = Math.Min(replaceIndex, accesorIndex);
+
+                        // also remove from the unmatched accessors
+                        bitReference.MemoryAccessors.RemoveAt(index);
+                    }
+
+                    // expecting to find a full bitcount
+                    Debug.Assert(matchedMask == 0xFF);
+
+                    // insert the bitcount at the lowest index of the bit references that were replaced
+                    newMemoryAccessors.Insert(replaceIndex, new ModifiedMemoryAccessorExpression
+                    {
+                        MemoryAccessor = bitCountAccessor,
+                        CombiningOperator = bitReference.CombiningOperator,
+                    });
+                }
+            }
+
+            // if nothing was collapsed, return the original expression
+            if (newMemoryAccessors.Count == valueExpression._memoryAccessors.Count)
+                return expression;
+
+            if (canModifyRight && newMemoryAccessors.Count == 1)
+            {
+                var rightInteger = comparison.Right as IntegerConstantExpression;
+                if (rightInteger != null)
+                {
+                    if (rightInteger.Value == 8)
+                    {
+                        // prefer byte(X) == 255 over bitcount(X) == 8
+                        var byteAccessor = newMemoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
+                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(255));
+                    }
+                    else if (rightInteger.Value == 0)
+                    {
+                        // prefer byte(X) == 0 over bitcount(X) == 0
+                        var byteAccessor = newMemoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
+                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(0));
+                    }
+                }
+            }
+
+            // create a new expression
+            var newValueExpression = new MemoryValueExpression
+            {
+                Location = valueExpression.Location,
+                IntegerConstant = valueExpression.IntegerConstant,
+                FloatConstant = valueExpression.FloatConstant,
+                _memoryAccessors = newMemoryAccessors
+            };
+
+            return new ComparisonExpression(newValueExpression, comparison.Operation, comparison.Right);
         }
 
         private ExpressionBase SwapSubtractionWithConstant(ExpressionBase constant, ComparisonOperation operation)

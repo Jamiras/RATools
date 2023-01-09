@@ -121,7 +121,7 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            bool attemptNormalization = true;
+            bool canModifyRight = true;
             // if the right side is only a constant, check to see if we're in a measured.
             // if we are, the right side is the measured target, and we don't want to modify that.
             if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
@@ -133,55 +133,52 @@ namespace RATools.Parser.Expressions
                     if (format != null && format.Value == "raw")
                     {
                         // capturing raw measured value. don't modify comparison
-                        attemptNormalization = false;
+                        canModifyRight = false;
                     }
                 }
             }
 
             var comparison = new ComparisonExpression(left, Operation, right);
-            if (attemptNormalization)
+            do
             {
-                do
+                if (comparison.Left.Type != comparison.Right.Type)
                 {
-                    if (comparison.Left.Type != comparison.Right.Type)
+                    // attempt to find a common type to perform the comparison
+                    var converter = comparison.Left as IUpconvertibleExpression;
+                    var newLeft = (converter != null) ? converter.UpconvertTo(comparison.Right.Type) : null;
+                    if (newLeft != null)
                     {
-                        // attempt to find a common type to perform the comparison
-                        var converter = comparison.Left as IUpconvertibleExpression;
-                        var newLeft = (converter != null) ? converter.UpconvertTo(comparison.Right.Type) : null;
-                        if (newLeft != null)
-                        {
-                            comparison = new ComparisonExpression(newLeft, comparison.Operation, comparison.Right);
-                        }
-                        else
-                        {
-                            converter = comparison.Right as IUpconvertibleExpression;
-                            var newRight = (converter != null) ? converter.UpconvertTo(comparison.Left.Type) : null;
-                            if (newRight != null)
-                                comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
-                        }
+                        comparison = new ComparisonExpression(newLeft, comparison.Operation, comparison.Right);
                     }
-
-                    var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
-                    if (comparisonNormalize == null)
-                        break;
-
-                    var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation);
-                    if (newComparison == null)
+                    else
                     {
-                        // could not make any further normalizations, we're done
-                        break;
+                        converter = comparison.Right as IUpconvertibleExpression;
+                        var newRight = (converter != null) ? converter.UpconvertTo(comparison.Left.Type) : null;
+                        if (newRight != null)
+                            comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
                     }
+                }
 
-                    comparison = newComparison as ComparisonExpression;
-                    if (comparison == null)
-                    {
-                        // result of normalization is error or constant, return it
-                        result = newComparison;
-                        CopyLocation(result);
-                        return (result.Type != ExpressionType.Error);
-                    }
-                } while (true);
-            }
+                var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
+                if (comparisonNormalize == null)
+                    break;
+
+                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation, canModifyRight);
+                if (newComparison == null)
+                {
+                    // could not make any further normalizations, we're done
+                    break;
+                }
+
+                comparison = newComparison as ComparisonExpression;
+                if (comparison == null)
+                {
+                    // result of normalization is error or constant, return it
+                    result = newComparison;
+                    CopyLocation(result);
+                    return (result.Type != ExpressionType.Error);
+                }
+            } while (true);
 
             // if it's a memory comparison, wrap it is a RequirementClause
             switch (comparison.Left.Type)
@@ -314,7 +311,7 @@ namespace RATools.Parser.Expressions
             var normalizeComparison = left as IComparisonNormalizeExpression;
             if (left != null)
             {
-                var result = normalizeComparison.NormalizeComparison(right, Operation);
+                var result = normalizeComparison.NormalizeComparison(right, Operation, true);
                 var boolResult = result as BooleanConstantExpression;
                 return (boolResult != null) ? boolResult.Value : null;
             }

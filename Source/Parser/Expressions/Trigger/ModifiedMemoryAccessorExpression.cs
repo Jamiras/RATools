@@ -463,10 +463,11 @@ namespace RATools.Parser.Expressions.Trigger
         /// </summary>
         /// <param name="right">The expression to compare with the current expression.</param>
         /// <param name="operation">How to compare the expressions.</param>
+        /// <param name="canModifyRight"><c>true</c> if <paramref name="right"/> can be changed, <c>false</c> if not.</param>
         /// <returns>
         /// An expression representing the normalized comparison, or <c>null</c> if normalization did not occur.
         /// </returns>
-        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation)
+        public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
             var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
             if (simplified != null)
@@ -474,7 +475,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (ModifyingOperator == RequirementOperator.None && CombiningOperator == RequirementType.None)
             {
-                var normalized = MemoryAccessor.NormalizeComparison(right, operation);
+                var normalized = MemoryAccessor.NormalizeComparison(right, operation, canModifyRight);
                 if (normalized != null)
                     return normalized;
             }
@@ -550,7 +551,7 @@ namespace RATools.Parser.Expressions.Trigger
                     newLeft.ModifyingOperator = RequirementOperator.None;
 
                     var mathematic = new MathematicExpression(newLeft, mathematicOperation, modifier);
-                    return mathematic.NormalizeComparison(right, operation);
+                    return mathematic.NormalizeComparison(right, operation, canModifyRight);
                 }
             }
 
