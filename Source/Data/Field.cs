@@ -130,6 +130,11 @@ namespace RATools.Data
                     builder.Append(')');
                     break;
 
+                case FieldType.Invert:
+                    builder.Append('~');
+                    AppendMemoryReference(builder, Value, Size, addAddress);
+                    break;
+
                 case FieldType.None:
                     builder.Append("none");
                     break;
@@ -247,6 +252,7 @@ namespace RATools.Data
                     case FieldType.PreviousValue:
                     case FieldType.PriorValue:
                     case FieldType.BinaryCodedDecimal:
+                    case FieldType.Invert:
                         return true;
 
                     default:
@@ -299,6 +305,10 @@ namespace RATools.Data
 
                 case FieldType.BinaryCodedDecimal:
                     builder.Append('b');
+                    break;
+
+                case FieldType.Invert:
+                    builder.Append('~');
                     break;
 
                 case FieldType.Float:
@@ -359,6 +369,11 @@ namespace RATools.Data
 
                 case 'b':
                     fieldType = FieldType.BinaryCodedDecimal;
+                    tokenizer.Advance();
+                    break;
+
+                case '~':
+                    fieldType = FieldType.Invert;
                     tokenizer.Advance();
                     break;
 
@@ -667,6 +682,11 @@ namespace RATools.Data
         /// A floating point constant.
         /// </summary>
         Float,
+
+        /// <summary>
+        /// The bitwise inversion of the value at a memory address.
+        /// </summary>
+        Invert,
     }
 
     /// <summary>

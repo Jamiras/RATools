@@ -156,7 +156,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (bcdWrapper != null)
             {
                 // this removes the wrapper from the BCD expression by copying it into
-                // an unwrapper MemoryAccessorExpression
+                // an unwrapped MemoryAccessorExpression
                 newExpression = new MemoryAccessorExpression(bcdWrapper);
                 return true;
             }
@@ -255,6 +255,67 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return this;
+        }
+
+        private static bool ExtractInversion(ExpressionBase expression, out ExpressionBase newExpression)
+        {
+            var simpleExpression = MemoryValueExpression.ReduceToSimpleExpression(expression) ?? expression;
+
+            var invertWrapper = simpleExpression as BitwiseInvertExpression;
+            if (invertWrapper != null)
+            {
+                // this removes the wrapper from the inverted expression by copying it into
+                // an unwrapped MemoryAccessorExpression
+                newExpression = new MemoryAccessorExpression(invertWrapper);
+                return true;
+            }
+
+            newExpression = expression;
+            return false;
+        }
+
+        private static void NormalizeInvert(ref RequirementExpressionBase expression)
+        {
+            var condition = expression as RequirementConditionExpression;
+            if (condition == null)
+                return;
+
+            ExpressionBase newLeft;
+            ExpressionBase newRight;
+            bool leftHasInvert = ExtractInversion(condition.Left, out newLeft);
+            if (!leftHasInvert)
+                return;
+
+            bool rightHasInvert = ExtractInversion(condition.Right, out newRight);
+            if (!rightHasInvert)
+            {
+                var rightInteger = newRight as IntegerConstantExpression;
+                if (rightInteger != null)
+                {
+                    var leftMemoryAccessor = newLeft as MemoryAccessorExpression;
+                    if (leftMemoryAccessor != null)
+                    {
+                        long min, max;
+                        leftMemoryAccessor.GetMinMax(out min, out max);
+                        if ((max & 0x01) != 0)
+                        {
+                            newRight = new IntegerConstantExpression(~rightInteger.Value & (int)max);
+                            rightHasInvert = true;
+                        }
+                    }
+                }
+            }
+
+            if (rightHasInvert)
+            {
+                expression = new RequirementConditionExpression()
+                {
+                    Left = newLeft,
+                    Comparison = condition.Comparison,
+                    Right = newRight,
+                    Location = condition.Location,
+                };
+            }
         }
 
         private static void NormalizeLimits(ref RequirementExpressionBase expression)
@@ -452,6 +513,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             var result = NormalizeBCD();
+            NormalizeInvert(ref result);
             NormalizeLimits(ref result);
 
             if (!ReferenceEquals(result, this))

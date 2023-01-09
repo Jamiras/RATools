@@ -14,7 +14,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("word(dword(0x002345) + 4660)")]
         [TestCase("bit6(word(0x002345) * 106 + 4660)")]
         [TestCase("byte(word(dword(0x002345) + 10) + 4660)")]
-        [TestCase("word((tbyte(0x002345) & 0x1FFFFFF) + 4660)")]
+        [TestCase("word((dword(0x002345) & 0x1FFFFFF) + 4660)")]
         [TestCase("prev(high4(0x001234))")]
         [TestCase("prior(bit0(0x001234))")]
         public void TestAppendString(string input)
@@ -30,7 +30,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("bit6(word(0x002345) * 106 + 4660)", "I:0x 002345*106_0xS001234")]
         [TestCase("byte(word(dword(0x002345) + 10) + 4660)", "I:0xX002345_I:0x 00000a_0xH001234")]
         [TestCase("byte(4660 + word(dword(0x002345) + 10))", "I:0xX002345_I:0x 00000a_0xH001234")]
-        [TestCase("word((tbyte(0x002345) & 0x1FFFFFF) + 4660)", "I:0xW002345&33554431_0x 001234")]
+        [TestCase("word((dword(0x002345) & 0x1FFFFFF) + 4660)", "I:0xX002345&33554431_0x 001234")]
         [TestCase("prev(high4(0x001234))", "d0xU001234")]
         [TestCase("prior(bit0(0x001234))", "p0xM001234")]
         public void TestBuildTrigger(string input, string expected)

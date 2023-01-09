@@ -32,6 +32,8 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
                     if (expression is BinaryCodedDecimalExpression)
                         return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);
+                    if (expression is BitwiseInvertExpression)
+                        return memoryAccessor.Field.ChangeType(FieldType.Invert);
                     return memoryAccessor.Field;
 
                 default:
