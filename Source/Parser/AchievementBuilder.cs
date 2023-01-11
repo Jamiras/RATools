@@ -1609,78 +1609,6 @@ namespace RATools.Parser
             }
         }
 
-        private static void MergeAddSourceConstants(IList<RequirementEx> group)
-        {
-            foreach (var requirementEx in group)
-            {
-                uint addSourceConstantTotal = 0;
-                var addSourceConstants = new List<Requirement>();
-                var toRemove = new List<Requirement>();
-                bool isAddAddress = false;
-                foreach (var requirement in requirementEx.Requirements)
-                {
-                    switch (requirement.Type)
-                    {
-                        case RequirementType.AddSource:
-                            if (!isAddAddress && requirement.Left.Type == FieldType.Value)
-                            {
-                                addSourceConstantTotal += requirement.Left.Value;
-                                addSourceConstants.Add(requirement);
-                            }
-                            break;
-
-                        case RequirementType.SubSource:
-                            if (!isAddAddress && requirement.Left.Type == FieldType.Value)
-                            {
-                                addSourceConstantTotal -= requirement.Left.Value;
-                                addSourceConstants.Add(requirement);
-                            }
-                            break;
-
-                        case RequirementType.AddAddress:
-                            isAddAddress = true;
-                            continue;
-
-                        default:
-                            // anything other than AddAddress is lower priority than AddSource or SubSource
-                            // so process the merge now and reset the counters
-                            if (addSourceConstants.Count > 0)
-                            {
-                                MergeAddSourceConstants(requirement, toRemove, addSourceConstants, addSourceConstantTotal);
-
-                                addSourceConstants.Clear();
-                                addSourceConstantTotal = 0;
-                            }
-                            break;
-                    }
-
-                    isAddAddress = false;
-                }
-
-                if (!isAddAddress && addSourceConstants.Count > 0)
-                    MergeAddSourceConstants(requirementEx.Requirements.Last(), toRemove, addSourceConstants, addSourceConstantTotal);
-
-                foreach (var requirement in toRemove)
-                    requirementEx.Requirements.Remove(requirement);
-            }
-        }
-
-        private static void MergeAddSourceConstants(Requirement requirement, List<Requirement> toRemove,
-            List<Requirement> addSourceConstants, uint addSourceConstantTotal)
-        {
-            if (requirement.Left.Type == FieldType.Value)
-            {
-                requirement.Left = new Field
-                {
-                    Type = FieldType.Value,
-                    Size = requirement.Left.Size,
-                    Value = requirement.Left.Value + addSourceConstantTotal
-                };
-
-                toRemove.AddRange(addSourceConstants);
-            }
-        }
-
         private class BitReferences
         {
             public uint address;
@@ -2139,10 +2067,6 @@ namespace RATools.Parser
             groups.Add(RequirementEx.Combine(_core));
             for (int i = 0; i < _alts.Count; i++)
                 groups.Add(RequirementEx.Combine(_alts[i]));
-
-            // combine multiple constants in an AddSource chain
-            foreach (var group in groups)
-                MergeAddSourceConstants(group);
 
             if (!forSubclause)
             {
