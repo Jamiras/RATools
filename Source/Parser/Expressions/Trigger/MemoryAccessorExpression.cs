@@ -31,14 +31,14 @@ namespace RATools.Parser.Expressions.Trigger
         public MemoryAccessorExpression(MemoryAccessorExpression source)
             : this()
         {
-            Field = source.Field.Clone();
+            Field = source.Field;
             Location = source.Location;
 
             if (source._pointerChain != null)
             {
                 _pointerChain = new List<Requirement>(source._pointerChain.Count);
                 foreach (var pointer in source._pointerChain)
-                    _pointerChain.Add(pointer.Clone());
+                    _pointerChain.Add(pointer);
             }
         }
 

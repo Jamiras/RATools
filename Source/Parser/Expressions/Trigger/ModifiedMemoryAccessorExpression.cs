@@ -18,7 +18,7 @@ namespace RATools.Parser.Expressions.Trigger
         public ModifiedMemoryAccessorExpression(MemoryAccessorExpression source)
             : this()
         {
-            MemoryAccessor = source.Clone();
+            MemoryAccessor = source;
             Location = source.Location;
         }
 
@@ -118,10 +118,10 @@ namespace RATools.Parser.Expressions.Trigger
         public ModifiedMemoryAccessorExpression Clone()
         {
             var clone = new ModifiedMemoryAccessorExpression() { Location = this.Location };
-            clone.MemoryAccessor = MemoryAccessor.Clone();
+            clone.MemoryAccessor = MemoryAccessor;
             clone.CombiningOperator = CombiningOperator;
             clone.ModifyingOperator = ModifyingOperator;
-            clone.Modifier = Modifier.Clone();
+            clone.Modifier = Modifier;
             return clone;
         }
 
@@ -495,7 +495,7 @@ namespace RATools.Parser.Expressions.Trigger
                     modifiedMemoryAccessor.Modifier == Modifier)
                 {
                     // same modifier applied to both sides, eliminate it
-                    return new ComparisonExpression(MemoryAccessor.Clone(), operation, modifiedMemoryAccessor.MemoryAccessor.Clone());
+                    return new ComparisonExpression(MemoryAccessor, operation, modifiedMemoryAccessor.MemoryAccessor);
                 }
 
                 var opposingOperator = MathematicExpression.GetOppositeOperation(GetMathematicOperation(modifiedMemoryAccessor.ModifyingOperator));
