@@ -6,6 +6,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using System;
 using System.Text;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
@@ -42,37 +43,37 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         [TestCase("byte(0x001234) + 10", "+", "2",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12")]
         [TestCase("byte(0x001234) + 10", "-", "2",
-                ExpressionType.MemoryValue, "byte(0x001234) + 8")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 8")]
         [TestCase("byte(0x001234) + 10", "-", "12",
-                ExpressionType.MemoryValue, "byte(0x001234) - 2")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) - 2")]
         [TestCase("byte(0x001234) + word(0x002345)", "+", "2",
-                ExpressionType.MemoryValue, "byte(0x001234) + word(0x002345) + 2")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + word(0x002345) + 2")]
         [TestCase("byte(0x001234) + 2", "+", "word(0x002345)",
-                ExpressionType.MemoryValue, "byte(0x001234) + word(0x002345) + 2")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + word(0x002345) + 2")]
         [TestCase("byte(0x001234) + 10", "+", "2.5",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("byte(0x001234) + 10.5", "+", "2",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("byte(0x001234) + 10.25", "+", "2.25",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("byte(0x001234) + 2", "+", "word(0x002345) - 6",
-                ExpressionType.MemoryValue, "byte(0x001234) + word(0x002345) - 4")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + word(0x002345) - 4")]
         [TestCase("byte(0x001234) + 2", "-", "word(0x002345) - 6",
-                ExpressionType.MemoryValue, "byte(0x001234) - word(0x002345) + 8")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) - word(0x002345) + 8")]
         [TestCase("byte(0x001234) + 10", "*", "2",
-                ExpressionType.MemoryValue, "byte(0x001234) * 2 + 20")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) * 2 + 20")]
         [TestCase("byte(0x001234) * 50 + 10", "/", "5",
-                ExpressionType.MemoryValue, "byte(0x001234) * 10 + 2")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) * 10 + 2")]
         [TestCase("byte(0x001234) * 50 + 12", "/", "3",
                 ExpressionType.None, null)] // division with remainder will not be processed
         [TestCase("byte(0x001234) * 12 + 5", "/", "3",
                 ExpressionType.Mathematic, "(byte(0x001234) * 12 + 5) / 3")] // division with remainder will return mathematic
         [TestCase("byte(0x001234) + 1.5", "*", "3",
-                ExpressionType.MemoryValue, "byte(0x001234) * 3 + 4.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) * 3 + 4.5")]
         [TestCase("byte(0x001234) + 3.0", "/", "4",
-                ExpressionType.MemoryValue, "byte(0x001234) / 4 + 0.75")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) / 4 + 0.75")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertCombine(left, operation, right, expectedType, expected);
@@ -80,31 +81,31 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         [TestCase("2", "+", "byte(0x001234) + 10",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12")]
         [TestCase("2", "-", "byte(0x001234) + 10",
-                ExpressionType.MemoryValue, "- byte(0x001234) - 8")]
+                ExpressionType.MemoryAccessor, "- byte(0x001234) - 8")]
         [TestCase("12", "-", "byte(0x001234) + 10",
-                ExpressionType.MemoryValue, "- byte(0x001234) + 2")]
+                ExpressionType.MemoryAccessor, "- byte(0x001234) + 2")]
         [TestCase("2", "+", "byte(0x001234) + word(0x002345)",
-                ExpressionType.MemoryValue, "byte(0x001234) + word(0x002345) + 2")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + word(0x002345) + 2")]
         [TestCase("word(0x002345)", "+", "byte(0x001234) + 2",
-                ExpressionType.MemoryValue, "word(0x002345) + byte(0x001234) + 2")]
+                ExpressionType.MemoryAccessor, "word(0x002345) + byte(0x001234) + 2")]
         [TestCase("2.5", "+", "byte(0x001234) + 10",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("2", "+", "byte(0x001234) + 10.5",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("2.25", "+", "byte(0x001234) + 10.25",
-                ExpressionType.MemoryValue, "byte(0x001234) + 12.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) + 12.5")]
         [TestCase("word(0x002345) - 6", "+", "byte(0x001234) + 2",
-                ExpressionType.MemoryValue, "word(0x002345) + byte(0x001234) - 4")]
+                ExpressionType.MemoryAccessor, "word(0x002345) + byte(0x001234) - 4")]
         [TestCase("word(0x002345) - 6", "-", "byte(0x001234) + 2",
-                ExpressionType.MemoryValue, "word(0x002345) - byte(0x001234) - 8")]
+                ExpressionType.MemoryAccessor, "word(0x002345) - byte(0x001234) - 8")]
         [TestCase("2", "*", "byte(0x001234) + 10",
-                ExpressionType.MemoryValue, "byte(0x001234) * 2 + 20")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) * 2 + 20")]
         [TestCase("5", "/", "byte(0x001234) * 50 + 10",
                 ExpressionType.Error, "Cannot divide by complex memory reference")]
         [TestCase("3", "*", "byte(0x001234) + 1.5",
-                ExpressionType.MemoryValue, "byte(0x001234) * 3 + 4.5")]
+                ExpressionType.MemoryAccessor, "byte(0x001234) * 3 + 4.5")]
         public void TestCombineInverse(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             var op = ExpressionTests.GetMathematicOperation(operation);
@@ -451,7 +452,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("b0I + b1I + b2I + b3I + b4A + b5I + b6I + b7I", null)] // with a non-pointer
         public void TestMergeBitCount(string input, string normalized)
         {
-            var replacePlaceholders = (string i) =>
+            Func<string, string> replacePlaceholders = (string i) =>
             {
                 var builder = new StringBuilder();
                 bool wrapped = false;

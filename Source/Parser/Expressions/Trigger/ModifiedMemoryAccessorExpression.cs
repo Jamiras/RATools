@@ -1,17 +1,21 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class ModifiedMemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression,
+    /// <summary>
+    /// Modifies a <see cref="MemoryAccessor"/> by scaling or masking it.
+    /// </summary>
+    internal class ModifiedMemoryAccessorExpression : MemoryAccessorExpressionBase,
+        ITriggerExpression, IExecutableExpression,
         IMathematicCombineExpression, IMathematicCombineInverseExpression,
-        IComparisonNormalizeExpression, IUpconvertibleExpression, ICloneableExpression
+        IComparisonNormalizeExpression, ICloneableExpression
     {
         public ModifiedMemoryAccessorExpression()
-            : base(ExpressionType.ModifiedMemoryAccessor)
+            : base()
         {
         }
 
@@ -22,18 +26,90 @@ namespace RATools.Parser.Expressions.Trigger
             Location = source.Location;
         }
 
-        public MemoryAccessorExpression MemoryAccessor { get; set; }
-
-        public RequirementType CombiningOperator { get; set; }
-        public RequirementOperator ModifyingOperator { get; set; }
-        public Field Modifier { get; set; }
-
-        public void InvertCombiningOperator()
+        public ModifiedMemoryAccessorExpression(ModifiedMemoryAccessorExpression source)
+            : this()
         {
+            MemoryAccessor = source.MemoryAccessor;
+            CombiningOperator = source.CombiningOperator;
+            ModifyingOperator = source.ModifyingOperator;
+            Modifier = source.Modifier;
+            Location = source.Location;
+        }
+
+        /// <summary>
+        /// Gets or sets the <see cref="MemoryAccessor"/> that is to be modified.
+        /// </summary>
+        public MemoryAccessorExpression MemoryAccessor
+        {
+            get { return _memoryAccessor; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _memoryAccessor = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private MemoryAccessorExpression _memoryAccessor;
+
+        /// <summary>
+        /// Gets or sets how the <see cref="MemoryAccessor"/> will be modified.
+        /// </summary>
+        public RequirementOperator ModifyingOperator
+        {
+            get { return _modifyingOperator; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _modifyingOperator = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private RequirementOperator _modifyingOperator;
+
+        /// <summary>
+        /// Gets or sets the value to be applied to the <see cref="MemoryAccessor"/>.
+        /// </summary>
+        public Field Modifier
+        {
+            get { return _modifier; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _modifier = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private Field _modifier;
+
+        /// <summary>
+        /// Gets or sets the operator used to combine this <see cref="ModifiedMemoryAccessorExpression"/>
+        /// with other <see cref="ModifiedMemoryAccessorExpression"/>s in a <see cref="MemoryValueExpression"/>.
+        /// </summary>
+        public RequirementType CombiningOperator
+        {
+            get { return _combiningOperator; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _combiningOperator = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private RequirementType _combiningOperator;
+
+        /// <summary>
+        /// Creates a clone of the <see cref="ModifiedMemoryAccessorExpression"/> with the opposing <see cref="CombiningOperator"/>.
+        /// </summary>
+        public ModifiedMemoryAccessorExpression InvertCombiningOperator()
+        {
+            var clone = Clone();
+
             if (CombiningOperator == RequirementType.SubSource)
-                CombiningOperator = RequirementType.AddSource;
+                clone.CombiningOperator = RequirementType.AddSource;
             else
-                CombiningOperator = RequirementType.SubSource;
+                clone.CombiningOperator = RequirementType.SubSource;
+
+            return clone;
         }
 
         protected override bool Equals(ExpressionBase obj)
@@ -115,14 +191,12 @@ namespace RATools.Parser.Expressions.Trigger
             return Clone();
         }
 
+        /// <summary>
+        /// Creates a clone of the expression.
+        /// </summary>
         public ModifiedMemoryAccessorExpression Clone()
         {
-            var clone = new ModifiedMemoryAccessorExpression() { Location = this.Location };
-            clone.MemoryAccessor = MemoryAccessor;
-            clone.CombiningOperator = CombiningOperator;
-            clone.ModifyingOperator = ModifyingOperator;
-            clone.Modifier = Modifier;
-            return clone;
+            return new ModifiedMemoryAccessorExpression(this);
         }
 
         /// <summary>
@@ -135,8 +209,7 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public ExpressionBase Combine(ExpressionBase right, MathematicOperation operation)
         {
-            var modifiedMemoryAccessorExpression = Clone();
-            return modifiedMemoryAccessorExpression.ApplyMathematic(right, operation);
+            return ApplyMathematic(right, operation);
         }
 
         public ExpressionBase CombineInverse(ExpressionBase left, MathematicOperation operation)
@@ -176,6 +249,9 @@ namespace RATools.Parser.Expressions.Trigger
                     memoryValue.ApplyMathematic(this, MathematicOperation.Add);
                     return memoryValue.ApplyMathematic(right, operation);
             }
+
+            if (IsReadOnly)
+                return Clone().ApplyMathematic(right, operation);
 
             Field field;
 
@@ -386,7 +462,10 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
-        public void GetMinMax(out long min, out long max)
+        /// <summary>
+        /// Gets the lowest and highest values that can be represented by this expression.
+        /// </summary>
+        public override void GetMinMax(out long min, out long max)
         {
             long accessorMin = 0;
             long accessorMax = Field.GetMaxValue(MemoryAccessor.Field.Size);
@@ -477,9 +556,7 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
-            var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
-            if (simplified != null)
-                right = simplified;
+            right = ReduceToSimpleExpression(right);
 
             if (ModifyingOperator == RequirementOperator.None && CombiningOperator == RequirementType.None)
             {
@@ -584,26 +661,6 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
-        /// <summary>
-        /// Attempts to create a new expression from the current expression without loss of data.
-        /// </summary>
-        /// <param name="newType">The type of express to try to convert to.</param>
-        /// <returns>
-        /// A new expression of the requested type, or <c>null</c> if the conversion could not be performed.
-        /// </returns>
-        public ExpressionBase UpconvertTo(ExpressionType newType)
-        {
-            switch (newType)
-            {
-                case ExpressionType.MemoryValue:
-                    var clause = new MemoryValueExpression();
-                    return clause.ApplyMathematic(this, MathematicOperation.Add);
-
-                default:
-                    return null;
-            }
-        }
-
         public ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             MemoryAccessor.BuildTrigger(context);
@@ -627,6 +684,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
+            // report error if this occurs outside a trigger clause
             return MemoryAccessor.Execute(scope);
         }
     }

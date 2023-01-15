@@ -47,13 +47,19 @@ namespace RATools.Parser.Functions
                     return ReplaceVariablesMathematic((MathematicExpression)parameter, scope, out result);
 
                 case ExpressionType.MemoryAccessor:
-                    return WrapMemoryAccessor((MemoryAccessorExpression)parameter, scope, out result);
+                    var memoryAccessor = parameter as MemoryAccessorExpression;
+                    if (memoryAccessor != null)
+                        return WrapMemoryAccessor(memoryAccessor, scope, out result);
 
-                case ExpressionType.ModifiedMemoryAccessor:
-                    return WrapModifiedMemoryAccessor((ModifiedMemoryAccessorExpression)parameter, scope, out result);
+                    var modifiedMemoryAccessor = parameter as ModifiedMemoryAccessorExpression;
+                    if (modifiedMemoryAccessor != null)
+                        return WrapModifiedMemoryAccessor(modifiedMemoryAccessor, scope, out result);
 
-                case ExpressionType.MemoryValue:
-                    return WrapMemoryValue((MemoryValueExpression)parameter, scope, out result);
+                    var memoryValue = parameter as MemoryValueExpression;
+                    if (memoryValue != null)
+                        return WrapMemoryValue(memoryValue, scope, out result);
+
+                    break;
             }
 
             result = new ErrorExpression("accessor did not evaluate to a memory accessor", parameter);

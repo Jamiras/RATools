@@ -405,46 +405,56 @@ namespace RATools.Parser
                     return true;
 
                 case ExpressionType.MemoryAccessor:
-                    term = ConvertToTerm((MemoryAccessorExpression)expression, out result);
-                    if (term == null)
-                        return false;
-
-                    terms.Add(term);
-                    return true;
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                    term = ConvertToTerm((ModifiedMemoryAccessorExpression)expression, out result);
-                    if (term == null)
-                        return false;
-
-                    terms.Add(term);
-                    return true;
-
-                case ExpressionType.MemoryValue:
-                    var memoryValue = (MemoryValueExpression)expression;
-                    foreach (var accessor in memoryValue.MemoryAccessors)
+                    var memoryAccessor = expression as MemoryAccessorExpression;
+                    if (memoryAccessor != null)
                     {
-                        term = ConvertToTerm(accessor, out result);
+                        term = ConvertToTerm(memoryAccessor, out result);
                         if (term == null)
                             return false;
 
                         terms.Add(term);
+                        return true;
                     }
 
-                    if (memoryValue.HasConstant)
+                    var modifiedMemoryAccessor = expression as ModifiedMemoryAccessorExpression;
+                    if (modifiedMemoryAccessor != null)
                     {
-                        term = new Term();
-                        term.field = FieldFactory.CreateField(memoryValue.ExtractConstant());
-                        if (term.field.Type == FieldType.Value && (int)term.field.Value < 0)
-                        {
-                            term.field.Value = (uint)(-(int)term.field.Value);
-                            term.multiplier = FieldFactory.NegateValue(term.multiplier);
-                        }
+                        term = ConvertToTerm(modifiedMemoryAccessor, out result);
+                        if (term == null)
+                            return false;
+
                         terms.Add(term);
+                        return true;
                     }
 
-                    result = null;
-                    return true;
+                    var memoryValue = expression as MemoryValueExpression;
+                    if (memoryValue != null)
+                    {
+                        foreach (var accessor in memoryValue.MemoryAccessors)
+                        {
+                            term = ConvertToTerm(accessor, out result);
+                            if (term == null)
+                                return false;
+
+                            terms.Add(term);
+                        }
+
+                        if (memoryValue.HasConstant)
+                        {
+                            term = new Term();
+                            term.field = FieldFactory.CreateField(memoryValue.ExtractConstant());
+                            if (term.field.Type == FieldType.Value && (int)term.field.Value < 0)
+                            {
+                                term.field.Value = (uint)(-(int)term.field.Value);
+                                term.multiplier = FieldFactory.NegateValue(term.multiplier);
+                            }
+                            terms.Add(term);
+                        }
+
+                        result = null;
+                        return true;
+                    }
+                    break;
 
                 case ExpressionType.Mathematic:
                     var mathematic = (MathematicExpression)expression;

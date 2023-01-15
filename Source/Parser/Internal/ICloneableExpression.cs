@@ -3,7 +3,7 @@
     internal interface ICloneableExpression
     {
         /// <summary>
-        /// Create a clone of an expression
+        /// Creates a clone of the expression.
         /// </summary>
         ExpressionBase Clone();
     }

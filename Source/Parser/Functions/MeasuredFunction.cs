@@ -35,10 +35,7 @@ namespace RATools.Parser.Functions
                 var memoryValue = comparison as MemoryValueExpression;
                 if (memoryValue == null)
                 {
-                    var upconvert = comparison as IUpconvertibleExpression;
-                    if (upconvert != null)
-                        memoryValue = upconvert.UpconvertTo(ExpressionType.MemoryValue) as MemoryValueExpression;
-    
+                    memoryValue = MemoryAccessorExpressionBase.WrapInMemoryValue(comparison);
                     if (memoryValue == null)
                     {
                         result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);

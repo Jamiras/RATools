@@ -41,27 +41,27 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         [TestCase("byte(0x001234)", "+", "2",
-            ExpressionType.MemoryValue, "byte(0x001234) + 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) + 2")]
         [TestCase("byte(0x001234)", "-", "2",
-            ExpressionType.MemoryValue, "byte(0x001234) - 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) - 2")]
         [TestCase("byte(0x001234)", "*", "2",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) * 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 2")]
         [TestCase("byte(0x001234)", "/", "2",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) / 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) / 2")]
         [TestCase("byte(0x001234)", "&", "2",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) & 0x00000002")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) & 0x00000002")]
         [TestCase("byte(0x001234)", "%", "2",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("byte(0x001234)", "+", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) + byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) + byte(0x002345)")]
         [TestCase("byte(0x001234)", "-", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) - byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) - byte(0x002345)")]
         [TestCase("byte(0x001234)", "*", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) * byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * byte(0x002345)")]
         [TestCase("byte(0x001234)", "/", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) / byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) / byte(0x002345)")]
         [TestCase("byte(0x001234)", "&", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) & byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) & byte(0x002345)")]
         [TestCase("byte(0x001234)", "%", "byte(0x002345)",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("float(0x001234)", "&", "10",
@@ -85,27 +85,27 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         [TestCase("2", "+", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x002345) + 2")]
+            ExpressionType.MemoryAccessor, "byte(0x002345) + 2")]
         [TestCase("2", "-", "byte(0x002345)",
-            ExpressionType.MemoryValue, "- byte(0x002345) + 2")]
+            ExpressionType.MemoryAccessor, "- byte(0x002345) + 2")]
         [TestCase("2", "*", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x002345) * 2")]
+            ExpressionType.MemoryAccessor, "byte(0x002345) * 2")]
         [TestCase("2", "/", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "2 / byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "2 / byte(0x002345)")]
         [TestCase("2", "&", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x002345) & 0x00000002")]
+            ExpressionType.MemoryAccessor, "byte(0x002345) & 0x00000002")]
         [TestCase("2", "%", "byte(0x002345)",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("byte(0x001234)", "+", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) + byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) + byte(0x002345)")]
         [TestCase("byte(0x001234)", "-", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) - byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) - byte(0x002345)")]
         [TestCase("byte(0x001234)", "*", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) * byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * byte(0x002345)")]
         [TestCase("byte(0x001234)", "/", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) / byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) / byte(0x002345)")]
         [TestCase("byte(0x001234)", "&", "byte(0x002345)",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) & byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) & byte(0x002345)")]
         [TestCase("byte(0x001234)", "%", "byte(0x002345)",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         public void TestCombineInverse(string left, string operation, string right, ExpressionType expectedType, string expected)
@@ -155,21 +155,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
-        public void TestUpconvertToModifiedMemoryAccesor()
+        public void TestWrapMemoryValue()
         {
             string input = "byte(0x001234)";
             var accessor = TriggerExpressionTests.Parse<MemoryAccessorExpression>(input);
-            var converted = accessor.UpconvertTo(ExpressionType.ModifiedMemoryAccessor);
-            Assert.That(converted, Is.InstanceOf<ModifiedMemoryAccessorExpression>());
-            ExpressionTests.AssertAppendString(converted, input);
-        }
-
-        [Test]
-        public void TestUpconvertToMemoryValue()
-        {
-            string input = "byte(0x001234)";
-            var accessor = TriggerExpressionTests.Parse<MemoryAccessorExpression>(input);
-            var converted = accessor.UpconvertTo(ExpressionType.MemoryValue);
+            var converted = MemoryAccessorExpressionBase.WrapInMemoryValue(accessor);
             Assert.That(converted, Is.InstanceOf<MemoryValueExpression>());
             ExpressionTests.AssertAppendString(converted, input);
         }

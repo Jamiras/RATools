@@ -37,6 +37,7 @@ namespace RATools.Parser.Functions
                 return false;
 
             CopyLocation(result);
+            result.MakeReadOnly();
             return true;
         }
 

@@ -528,8 +528,8 @@ namespace RATools.Parser.Expressions
                     case MathematicOperation.Divide:
                         // a / x < b   =>   a < b * x
                         newRight = rightCombining.Combine(Right, MathematicOperation.Multiply);
-                        if (newRight != null && newRight.Type == ExpressionType.ModifiedMemoryAccessor &&
-                            right.Type == ExpressionType.MemoryAccessor)
+                        if (newRight != null && newRight is ModifiedMemoryAccessorExpression &&
+                            right is MemoryAccessorExpression)
                         {
                             // don't cuase an unmodified memory accessor to become modified
                             newRight = null;
@@ -541,8 +541,8 @@ namespace RATools.Parser.Expressions
                         newRight = rightCombining.Combine(Right, MathematicOperation.Divide);
                         if (newRight != null)
                         {
-                            if (newRight.Type == ExpressionType.ModifiedMemoryAccessor &&
-                                right.Type == ExpressionType.MemoryAccessor)
+                            if (newRight is ModifiedMemoryAccessorExpression &&
+                                right is MemoryAccessorExpression)
                             {
                                 // don't cuase an unmodified memory accessor to become modified
                                 newRight = null;

@@ -36,18 +36,18 @@ namespace RATools.Parser.Internal
         /// </remarks>
         internal bool IsReadOnly { get; private set; }
 
-        internal ExpressionBase MakeReadOnly(ExpressionBase expression)
+        internal ExpressionBase MakeReadOnly()
         {
-            expression.IsReadOnly = true;
+            IsReadOnly = true;
 
-            var nested = expression as INestedExpressions;
+            var nested = this as INestedExpressions;
             if (nested != null)
             {
                 foreach (var nestedExpression in nested.NestedExpressions)
-                    MakeReadOnly(nestedExpression);
+                    nestedExpression.MakeReadOnly();
             }
 
-            return expression;
+            return this;
         }
 
         /// <summary>
@@ -1197,16 +1197,6 @@ namespace RATools.Parser.Internal
         /// A memory accessor.
         /// </summary>
         MemoryAccessor,
-
-        /// <summary>
-        /// A memory accessor that has been scaled or masked.
-        /// </summary>
-        ModifiedMemoryAccessor,
-
-        /// <summary>
-        /// A mathematic chain of MemoryAccessors (AddSource/SubSource).
-        /// </summary>
-        MemoryValue,
 
         /// <summary>
         /// A comparison of MemoryValues with a possible hit target.
