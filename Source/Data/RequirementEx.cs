@@ -96,7 +96,7 @@ namespace RATools.Data
 
                 case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
-                    requirement.Right.AppendString(builder, numberFormat);
+                    requirement.Right.AppendString(builder, NumberFormat.Hexadecimal);
                     break;
             }
         }

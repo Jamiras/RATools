@@ -184,7 +184,7 @@ namespace RATools.Tests.Parser
         [TestCase("A:0xN20770f=0_0xO20770f=0", "(bit1(0x20770F) + bit2(0x20770F)) == 0")]
         [TestCase("A:0xN20770f*6_0xO20770f=0", "(bit1(0x20770F) * 6 + bit2(0x20770F)) == 0")]
         [TestCase("A:0xN20770f/6_0xO20770f=0", "(bit1(0x20770F) / 6 + bit2(0x20770F)) == 0")]
-        [TestCase("A:0xN20770f&6_0xO20770f=0", "(bit1(0x20770F) & 6 + bit2(0x20770F)) == 0")]
+        [TestCase("A:0xN20770f&6_0xO20770f=0", "(bit1(0x20770F) & 0x06 + bit2(0x20770F)) == 0")]
         [TestCase("B:0xN20770f=0_0xO20770f=0", "(bit2(0x20770F) - bit1(0x20770F)) == 0")]
         [TestCase("C:0xN20770f=0_0xO20770f=0.4.", "tally(4, bit1(0x20770F) == 0, bit2(0x20770F) == 0)")]
         [TestCase("O:0xN20770f=0_0xO20770f=0.4.", "repeated(4, bit1(0x20770F) == 0 || bit2(0x20770F) == 0)")]

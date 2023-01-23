@@ -239,6 +239,87 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
+        private ExpressionBase ApplyMask(uint mask)
+        {
+            // anything & 0 is 0
+            if (mask == 0)
+                return new IntegerConstantExpression(0);
+
+            // if any bits are non-zero after the first non-zero bit, we can't simplify
+            var shifted = mask >> 1;
+            if ((mask & shifted) != shifted)
+                return null;
+
+            long min, max;
+            MemoryAccessor.GetMinMax(out min, out max);
+
+            // if the mask contains more bits than the value can possibly have, the mask can be ignored
+            if (mask >= max)
+            {
+                ModifyingOperator = RequirementOperator.None;
+                return this;
+            }
+
+            if (mask > 0x00FFFFFF)
+            {
+                // dword required
+                return null;
+            }
+
+            FieldSize size;
+            uint sizeMask;
+
+            if (mask > 0x0000FFFF)
+            {
+                size = FieldSize.TByte;
+                sizeMask = 0x00FFFFFF;
+            }
+            else if (mask > 0x000000FF)
+            {
+                size = FieldSize.Word;
+                sizeMask = 0x0000FFFF;
+            }
+            else if (mask > 0x00000001)
+            {
+                // if masking off the lower nibble, convert to low4,
+                // otherwise just mask off the byte itself to avoid double masking.
+                if (mask == 0x0000000F)
+                {
+                    size = FieldSize.LowNibble;
+                    sizeMask = 0x0000000F;
+                }
+                else
+                {
+                    size = FieldSize.Byte;
+                    sizeMask = 0x000000FF;
+                }
+            }
+            else
+            {
+                size = FieldSize.Bit0;
+                sizeMask = 0x00000001;
+            }
+
+            if (max < sizeMask)
+                return null;
+
+            // shrink to size
+            if (MemoryAccessor.Field.Size != size)
+                MemoryAccessor = MemoryAccessor.ChangeFieldSize(size);
+
+            if (mask < sizeMask)
+            {
+                ModifyingOperator = RequirementOperator.BitwiseAnd;
+                Modifier = FieldFactory.CreateField(new IntegerConstantExpression((int)mask));
+            }
+            else
+            {
+                ModifyingOperator = RequirementOperator.None;
+            }
+
+            return this;
+        }
+
         public ExpressionBase ApplyMathematic(ExpressionBase right, MathematicOperation operation)
         {
             switch (operation)
@@ -428,6 +509,13 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (field.Type == FieldType.None)
                 return new MathematicExpression(this, operation, right);
+
+            if (ModifyingOperator == RequirementOperator.BitwiseAnd && field.Type == FieldType.Value)
+            {
+                var masked = ApplyMask(field.Value);
+                if (masked != null)
+                    return masked;
+            }
 
             if ((field.Type == FieldType.Value && field.Value == 0) ||
                 (field.Type == FieldType.Float && field.Float == 0.0))

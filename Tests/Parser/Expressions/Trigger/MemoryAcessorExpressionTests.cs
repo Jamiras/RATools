@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 
@@ -76,6 +75,34 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
         [TestCase("byte(0x001234)", "^", "float(0x002345)",
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("dword(0x001234)", "&", "0xFFFFFFFF",
+            ExpressionType.MemoryAccessor, "dword(0x001234)")]
+        [TestCase("dword(0x001234)", "&", "0x7FFFFFFF",
+            ExpressionType.MemoryAccessor, "dword(0x001234) & 0x7FFFFFFF")]
+        [TestCase("dword(0x001234)", "&", "0x00FFFFFF",
+            ExpressionType.MemoryAccessor, "tbyte(0x001234)")]
+        [TestCase("dword(0x001234)", "&", "0x000FFFFF",
+            ExpressionType.MemoryAccessor, "tbyte(0x001234) & 0x000FFFFF")]
+        [TestCase("dword(0x001234)", "&", "0x0000FFFF",
+            ExpressionType.MemoryAccessor, "word(0x001234)")]
+        [TestCase("dword(0x001234)", "&", "0x00000FFF",
+            ExpressionType.MemoryAccessor, "word(0x001234) & 0x00000FFF")]
+        [TestCase("dword(0x001234)", "&", "0x000000FF",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("dword(0x001234)", "&", "0x0000000F",
+            ExpressionType.MemoryAccessor, "low4(0x001234)")]
+        [TestCase("dword(0x001234)", "&", "0x00000001",
+            ExpressionType.MemoryAccessor, "bit0(0x001234)")]
+        [TestCase("byte(0x001234)", "&", "0x0000FFFF",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "&", "0x000001FF",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "&", "0x000000FF",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "&", "0x000000F7",
+            ExpressionType.MemoryAccessor, "byte(0x001234) & 0x000000F7")]
+        [TestCase("byte(0x001234)", "&", "0x0000007F",
+            ExpressionType.MemoryAccessor, "byte(0x001234) & 0x0000007F")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             // MemoryAccessorExpression.Combine just converts to a ModifiedMemoryAccessor and
