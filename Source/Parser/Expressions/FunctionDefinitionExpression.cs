@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
@@ -288,6 +289,63 @@ namespace RATools.Parser.Expressions
 
             parseError = null;
             return typedParameter;
+        }
+
+        /// <summary>
+        /// Gets the memory address parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected MemoryAccessorExpression GetMemoryAddressParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            parseError = null;
+
+            var integerParameter = parameter as IntegerConstantExpression;
+            if (integerParameter != null)
+            {
+                var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)integerParameter.Value);
+                parameter.CopyLocation(memoryAccessor);
+                return memoryAccessor;
+            }
+
+            var accessorParameter = parameter as MemoryAccessorExpression;
+            if (accessorParameter != null)
+            {
+                var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, 0U);
+                foreach (var pointer in memoryAccessor.PointerChain)
+                    memoryAccessor.AddPointer(pointer);
+                memoryAccessor.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = accessorParameter.Field });
+                parameter.CopyLocation(memoryAccessor);
+                return memoryAccessor;
+            }
+
+            var memoryValueParameter = parameter as MemoryValueExpression;
+            if (memoryValueParameter != null && memoryValueParameter.MemoryAccessors.Count() == 1)
+            {
+                var pointerBase = memoryValueParameter.MemoryAccessors.First();
+                if (pointerBase.ModifyingOperator == RequirementOperator.None)
+                {
+                    var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)memoryValueParameter.IntegerConstant);
+                    foreach (var pointer in pointerBase.MemoryAccessor.PointerChain)
+                        memoryAccessor.AddPointer(pointer);
+                    memoryAccessor.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = pointerBase.MemoryAccessor.Field });
+                    parameter.CopyLocation(memoryAccessor);
+                    return memoryAccessor;
+                }
+            }
+
+            var originalParameter = LocateParameter(scope, name);
+            if (originalParameter != null)
+                parameter = originalParameter;
+
+            parseError = new ErrorExpression(name + " is not a memory address", parameter);
+            return null;
         }
 
         /// <summary>
