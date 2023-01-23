@@ -3,7 +3,6 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Linq;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser.Functions
 {

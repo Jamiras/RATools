@@ -184,8 +184,6 @@ namespace RATools.Parser.Expressions
             switch (comparison.Left.Type)
             {
                 case ExpressionType.MemoryAccessor:
-                case ExpressionType.ModifiedMemoryAccessor:
-                case ExpressionType.MemoryValue:
                     var requirement = new RequirementConditionExpression
                     {
                         Left = comparison.Left,
@@ -203,8 +201,6 @@ namespace RATools.Parser.Expressions
             switch (comparison.Right.Type)
             {
                 case ExpressionType.MemoryAccessor:
-                case ExpressionType.ModifiedMemoryAccessor:
-                case ExpressionType.MemoryValue:
                     var requirement = new RequirementConditionExpression
                     {
                         Left = comparison.Right,

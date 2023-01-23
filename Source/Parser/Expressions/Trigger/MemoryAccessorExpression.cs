@@ -1,6 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -8,9 +7,13 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class MemoryAccessorExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
+    /// <summary>
+    /// Represents a memory read (with optional pointer chain).
+    /// </summary>
+    internal class MemoryAccessorExpression : MemoryAccessorExpressionBase,
+        ITriggerExpression, IExecutableExpression,
         IMathematicCombineExpression, IMathematicCombineInverseExpression,
-        IComparisonNormalizeExpression, IUpconvertibleExpression, ICloneableExpression
+        IComparisonNormalizeExpression, ICloneableExpression
     {
         public MemoryAccessorExpression(FieldType type, FieldSize size, uint value)
             : this(new Field { Type = type, Size = size, Value = value })
@@ -24,26 +27,38 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         public MemoryAccessorExpression()
-            : base(ExpressionType.MemoryAccessor)
+            : base()
         {
         }
 
         public MemoryAccessorExpression(MemoryAccessorExpression source)
             : this()
         {
-            Field = source.Field.Clone();
+            Field = source.Field;
             Location = source.Location;
 
             if (source._pointerChain != null)
-            {
-                _pointerChain = new List<Requirement>(source._pointerChain.Count);
-                foreach (var pointer in source._pointerChain)
-                    _pointerChain.Add(pointer.Clone());
-            }
+                _pointerChain = new List<Requirement>(source._pointerChain);
         }
 
-        public Field Field { get; set; }
+        /// <summary>
+        /// Gets or sets the memory being read.
+        /// </summary>
+        public Field Field
+        {
+            get { return _field; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _field = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private Field _field;
 
+        /// <summary>
+        /// Gets the chain of pointers leading to the element represented by <see cref="Field"/>.
+        /// </summary>
         public IEnumerable<Requirement> PointerChain
         {
             get { return _pointerChain ?? Enumerable.Empty<Requirement>(); }
@@ -51,13 +66,21 @@ namespace RATools.Parser.Expressions.Trigger
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected List<Requirement> _pointerChain;
 
+        /// <summary>
+        /// Returns <c>true</c> if <see cref="PointerChain"/> is not empty.
+        /// </summary>
         public bool HasPointerChain
         {
             get { return _pointerChain != null && _pointerChain.Count > 0; }
         }
 
+        /// <summary>
+        /// Adds a pointer to <see cref="PointerChain"/>.
+        /// </summary>
         public void AddPointer(Requirement pointer)
         {
+            Debug.Assert(!IsReadOnly);
+
             if (_pointerChain == null)
                 _pointerChain = new List<Requirement>();
 
@@ -65,11 +88,18 @@ namespace RATools.Parser.Expressions.Trigger
             _pointerChain.Add(pointer);
         }
 
+        /// <summary>
+        /// Clears <see cref="PointerChain"/>.
+        /// </summary>
         public void ClearPointerChain()
         {
+            Debug.Assert(!IsReadOnly);
             _pointerChain = null;
         }
 
+        /// <summary>
+        /// Determines if <see cref="PointerChain"/> matches <paramref name="that"/>.<see cref="PointerChain"/>.
+        /// </summary>
         public bool PointerChainMatches(MemoryAccessorExpression that)
         {
             if (_pointerChain == null || that._pointerChain == null)
@@ -87,7 +117,10 @@ namespace RATools.Parser.Expressions.Trigger
             return true;
         }
 
-        public bool PointerChainMatches(ExpressionBase that)
+        /// <summary>
+        /// Determines if <see cref="PointerChain"/> matches <paramref name="that"/>.<see cref="PointerChain"/>.
+        /// </summary>
+        public bool PointerChainMatches(MemoryAccessorExpressionBase that)
         {
             var memoryAccessor = that as MemoryAccessorExpression;
             if (memoryAccessor != null)
@@ -115,6 +148,9 @@ namespace RATools.Parser.Expressions.Trigger
             return Clone();
         }
 
+        /// <summary>
+        /// Creates a clone of the expression.
+        /// </summary>
         public virtual MemoryAccessorExpression Clone()
         {
             return new MemoryAccessorExpression(this);
@@ -317,34 +353,30 @@ namespace RATools.Parser.Expressions.Trigger
             if (!canModifyRight)
                 return null;
 
-            var simplified = MemoryValueExpression.ReduceToSimpleExpression(right);
-            if (simplified != null)
-                right = simplified;
+            right = ReduceToSimpleExpression(right);
 
             bool swap = false;
 
-            switch (right.Type)
+            var memoryValue = right as MemoryValueExpression;
+            if (memoryValue != null)
             {
-                case ExpressionType.MemoryValue:
+                if (memoryValue.IntegerConstant >= 0 && memoryValue.FloatConstant >= 0)
                 {
-                    var memoryValue = (MemoryValueExpression)right;
-                    if (memoryValue.IntegerConstant >= 0 && memoryValue.FloatConstant >= 0)
-                    { 
-                        if (memoryValue.MemoryAccessors.All(a => a.CombiningOperator == RequirementType.AddSource))
-                        {
-                            // right side is all positive stuff, just invert everything
-                            return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
-                        }
-                    }
-
-                    var modifiedMemoryAccessor = memoryValue.ConvertToModifiedMemoryAccessor();
-                    if (modifiedMemoryAccessor != null)
+                    if (memoryValue.MemoryAccessors.All(a => a.CombiningOperator == RequirementType.AddSource))
                     {
-                        // right side can be simplified to a ModifierMemoryAccessor, treat it as such.
-                        right = modifiedMemoryAccessor;
-                        goto case ExpressionType.ModifiedMemoryAccessor;
+                        // right side is all positive stuff, just invert everything
+                        return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
                     }
+                }
 
+                var converted = memoryValue.ConvertToModifiedMemoryAccessor();
+                if (converted != null)
+                {
+                    // right side can be simplified to a ModifierMemoryAccessor, treat it as such.
+                    right = converted;
+                }
+                else
+                {
                     var newRight = memoryValue.ClearConstant();
                     if (newRight is not MemoryValueExpression)
                     {
@@ -356,49 +388,47 @@ namespace RATools.Parser.Expressions.Trigger
                     }
 
                     swap = true;
-                    break;
                 }
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                {
-                    var modifiedMemoryAccessor = (ModifiedMemoryAccessorExpression)right;
-                    if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
-                    {
-                        right = modifiedMemoryAccessor.MemoryAccessor;
-                        goto case ExpressionType.MemoryAccessor;
-                    }
-
-                    swap = true;
-                    break;
-                }
-
-                case ExpressionType.MemoryAccessor:
-                {
-                    var memoryAccessor = (MemoryAccessorExpression)right;
-                    if (memoryAccessor.HasPointerChain)
-                    {
-                        if (!HasPointerChain)
-                        {
-                            swap = true;
-                        }
-                        else if (!PointerChainMatches(memoryAccessor))
-                        {
-                            // both sides have pointers (that are not the same).
-                            // move them both to the same side and compare to 0
-                            var memoryValue = new MemoryValueExpression();
-                            memoryValue.ApplyMathematic(this, MathematicOperation.Add);
-                            memoryValue.ApplyMathematic(memoryAccessor, MathematicOperation.Subtract);
-                            return new ComparisonExpression(memoryValue, operation, new IntegerConstantExpression(0));
-                        }
-                    }
-                    break;
-                }
-
-                case ExpressionType.FloatConstant:
-                    if (!Field.IsFloat)
-                        return ComparisonExpression.NormalizeFloatComparisonForInteger(this, operation, right);
-                    break;
             }
+
+            var modifiedMemoryAccessor = right as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+            {
+                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
+                {
+                    // right side can be simplified to a MemoryAccessor, treat it as such.
+                    right = modifiedMemoryAccessor.MemoryAccessor;
+                }
+                else
+                {
+                    swap = true;
+                }
+            }
+
+            var memoryAccessor = right as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+            {
+                if (memoryAccessor.HasPointerChain)
+                {
+                    if (!HasPointerChain)
+                    {
+                        swap = true;
+                    }
+                    else if (!PointerChainMatches(memoryAccessor))
+                    {
+                        // both sides have pointers (that are not the same).
+                        // move them both to the same side and compare to 0
+                        memoryValue = new MemoryValueExpression();
+                        memoryValue.ApplyMathematic(this, MathematicOperation.Add);
+                        memoryValue.ApplyMathematic(memoryAccessor, MathematicOperation.Subtract);
+                        return new ComparisonExpression(memoryValue, operation, new IntegerConstantExpression(0));
+                    }
+                }
+            }
+
+            var floatConstant = right as FloatConstantExpression;
+            if (floatConstant != null && !Field.IsFloat)
+                return ComparisonExpression.NormalizeFloatComparisonForInteger(this, operation, right);
 
             if (swap)
                 return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
@@ -406,33 +436,13 @@ namespace RATools.Parser.Expressions.Trigger
             return null;
         }
 
-        public void GetMinMax(out long min, out long max)
+        /// <summary>
+        /// Gets the lowest and highest values that can be represented by this expression.
+        /// </summary>
+        public override void GetMinMax(out long min, out long max)
         {
             min = 0;
             max = Field.GetMaxValue(Field.Size);
-        }
-
-        /// <summary>
-        /// Attempts to create a new expression from the current expression without loss of data.
-        /// </summary>
-        /// <param name="newType">The type of express to try to convert to.</param>
-        /// <returns>
-        /// A new expression of the requested type, or <c>null</c> if the conversion could not be performed.
-        /// </returns>
-        public ExpressionBase UpconvertTo(ExpressionType newType)
-        {
-            switch (newType)
-            {
-                case ExpressionType.ModifiedMemoryAccessor:
-                    return new ModifiedMemoryAccessorExpression(this);
-
-                case ExpressionType.MemoryValue:
-                    var clause = new MemoryValueExpression();
-                    return clause.ApplyMathematic(this, MathematicOperation.Add);
-
-                default:
-                    return null;
-            }
         }
     }
 }

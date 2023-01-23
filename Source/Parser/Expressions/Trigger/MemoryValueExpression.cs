@@ -8,18 +8,38 @@ using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal class MemoryValueExpression : ExpressionBase, ITriggerExpression, IExecutableExpression, 
-        IMathematicCombineExpression, IMathematicCombineInverseExpression, IComparisonNormalizeExpression,
-        ICloneableExpression
+    /// <summary>
+    /// A sequence of <see cref="ModifiedMemoryAccessorExpression"/> that are summed together.
+    /// </summary>
+    internal class MemoryValueExpression : MemoryAccessorExpressionBase,
+        ITriggerExpression, IExecutableExpression, IMathematicCombineExpression,
+        IMathematicCombineInverseExpression, IComparisonNormalizeExpression,
+        ICloneableExpression, INestedExpressions
     {
         public MemoryValueExpression()
-            : base(ExpressionType.MemoryValue)
+            : base()
         {
         }
 
+        public MemoryValueExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
+            : this()
+        {
+            ApplyAddition(modifiedMemoryAccessor, RequirementType.AddSource);
+        }
+
+        /// <summary>
+        /// Gets the numerical offset to apply to the value read from memory.
+        /// </summary>
         public int IntegerConstant { get; private set; }
+
+        /// <summary>
+        /// Gets the numerical offset to apply to the value read from memory.
+        /// </summary>
         public double FloatConstant { get; private set; }
 
+        /// <summary>
+        /// Gets the list of <see cref="ModifiedMemoryAccesorExpression"/>s that are summed together.
+        /// </summary>
         public IEnumerable<ModifiedMemoryAccessorExpression> MemoryAccessors
         {
             get { return _memoryAccessors ?? Enumerable.Empty<ModifiedMemoryAccessorExpression>(); }
@@ -27,6 +47,9 @@ namespace RATools.Parser.Expressions.Trigger
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected List<ModifiedMemoryAccessorExpression> _memoryAccessors;
 
+        /// <summary>
+        /// Returns <c>true</c> if <see cref="IntegerConstant"/> or <see cref="FloatConstant"/> are not zero.
+        /// </summary>
         public bool HasConstant
         {
             get
@@ -35,6 +58,9 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
+        /// <summary>
+        /// Returns <c>true</c> if <see cref="MemoryAccessors"/> is not empty.
+        /// </summary>
         public bool HasMemoryAccessor
         {
             get
@@ -43,6 +69,9 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
+        /// <summary>
+        /// Returns <c>true</c> if <see cref="MemoryAccessors"/> contains any subtracted accessors.
+        /// </summary>
         private bool HasSubtractedMemoryAccessor
         {
             get
@@ -51,6 +80,9 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
+        /// <summary>
+        /// Returns <c>true</c> if <see cref="MemoryAccessors"/> contains any added accessors.
+        /// </summary>
         private bool HasAddedMemoryAccessor
         {
             get
@@ -113,7 +145,7 @@ namespace RATools.Parser.Expressions.Trigger
                         clone._memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
                         foreach (var accessor in _memoryAccessors)
                         {
-                            var combined = accessor.Combine(right, operation);
+                            var combined = accessor.Clone().Combine(right, operation);
                             if (combined is ErrorExpression)
                                 return combined;
                             var newAccessor = combined as ModifiedMemoryAccessorExpression;
@@ -160,103 +192,101 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ExpressionBase ApplyMathematic(ExpressionBase right, MathematicOperation operation)
         {
-            ModifiedMemoryAccessorExpression modifiedMemoryAccessor = null;
             switch (operation)
             {
                 case MathematicOperation.Add:
-                    switch (right.Type)
-                    {
-                        case ExpressionType.IntegerConstant:
-                            IntegerConstant += ((IntegerConstantExpression)right).Value;
-                            break;
-
-                        case ExpressionType.FloatConstant:
-                            FloatConstant += ((FloatConstantExpression)right).Value;
-                            break;
-
-                        case ExpressionType.MemoryAccessor:
-                            modifiedMemoryAccessor = new ModifiedMemoryAccessorExpression((MemoryAccessorExpression)right);
-                            modifiedMemoryAccessor.CombiningOperator = RequirementType.AddSource;
-                            break;
-
-                        case ExpressionType.ModifiedMemoryAccessor:
-                            modifiedMemoryAccessor = ((ModifiedMemoryAccessorExpression)right).Clone();
-                            modifiedMemoryAccessor.CombiningOperator = RequirementType.AddSource;
-                            break;
-
-                        case ExpressionType.MemoryValue:
-                            var clause = (MemoryValueExpression)right;
-                            if (clause._memoryAccessors != null)
-                            {
-                                if (_memoryAccessors == null)
-                                    _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
-                                foreach (var accessor in clause.MemoryAccessors)
-                                {
-                                    var clone = accessor.Clone();
-                                    _memoryAccessors.Add(clone);
-                                }
-                            }
-                            IntegerConstant += clause.IntegerConstant;
-                            FloatConstant += clause.FloatConstant;
-                            break;
-
-                        default:
-                            return new ErrorExpression(String.Format("Cannot add {0} to requirement clause", right.Type));
-                    }
-                    break;
+                    return ApplyAddition(right, RequirementType.AddSource);
 
                 case MathematicOperation.Subtract:
-                    switch (right.Type)
-                    {
-                        case ExpressionType.IntegerConstant:
-                            IntegerConstant -= ((IntegerConstantExpression)right).Value;
-                            break;
-
-                        case ExpressionType.FloatConstant:
-                            FloatConstant -= ((FloatConstantExpression)right).Value;
-                            break;
-
-                        case ExpressionType.MemoryAccessor:
-                            modifiedMemoryAccessor = new ModifiedMemoryAccessorExpression((MemoryAccessorExpression)right);
-                            modifiedMemoryAccessor.CombiningOperator = RequirementType.SubSource;
-                            break;
-
-                        case ExpressionType.ModifiedMemoryAccessor:
-                            modifiedMemoryAccessor = ((ModifiedMemoryAccessorExpression)right).Clone();
-                            modifiedMemoryAccessor.CombiningOperator = RequirementType.SubSource;
-                            break;
-
-                        case ExpressionType.MemoryValue:
-                            var clause = (MemoryValueExpression)right;
-                            if (clause._memoryAccessors != null)
-                            {
-                                if (_memoryAccessors == null)
-                                    _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
-                                foreach (var accessor in clause.MemoryAccessors)
-                                {
-                                    var clone = accessor.Clone();
-                                    clone.InvertCombiningOperator();
-                                    _memoryAccessors.Add(clone);
-                                }
-                            }
-                            IntegerConstant -= clause.IntegerConstant;
-                            FloatConstant -= clause.FloatConstant;
-                            break;
-
-                        default:
-                            return new ErrorExpression(String.Format("Cannot subtract {0} from requirement clause", right.Type));
-                    }
-                    break;
+                    return ApplyAddition(right, RequirementType.SubSource);
 
                 default:
                     return new MathematicExpression(this, operation, right);
             }
+        }
 
-            if (modifiedMemoryAccessor != null)
+        private ExpressionBase ApplyAddition(ExpressionBase right, RequirementType combiningOperator)
+        {
+            if (IsReadOnly)
+                return Clone().ApplyAddition(right, combiningOperator);
+
+            switch (right.Type)
             {
-                if (_memoryAccessors == null)
-                    _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
-                _memoryAccessors.Add(modifiedMemoryAccessor);
+                case ExpressionType.IntegerConstant:
+                    if (combiningOperator == RequirementType.AddSource)
+                        IntegerConstant += ((IntegerConstantExpression)right).Value;
+                    else
+                        IntegerConstant -= ((IntegerConstantExpression)right).Value;
+                    break;
+
+                case ExpressionType.FloatConstant:
+                    if (combiningOperator == RequirementType.AddSource)
+                        FloatConstant += ((FloatConstantExpression)right).Value;
+                    else
+                        FloatConstant -= ((FloatConstantExpression)right).Value;
+                    break;
+
+                case ExpressionType.MemoryAccessor:
+                    var memoryValue = right as MemoryValueExpression;
+                    if (memoryValue != null)
+                    {
+                        if (combiningOperator == RequirementType.AddSource)
+                        {
+                            if (memoryValue._memoryAccessors != null)
+                            {
+                                if (_memoryAccessors == null)
+                                    _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
+                                foreach (var accessor in memoryValue.MemoryAccessors)
+                                    _memoryAccessors.Add(accessor);
+                            }
+
+                            IntegerConstant += memoryValue.IntegerConstant;
+                            FloatConstant += memoryValue.FloatConstant;
+                        }
+                        else
+                        {
+                            if (memoryValue._memoryAccessors != null)
+                            {
+                                if (_memoryAccessors == null)
+                                    _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
+                                foreach (var accessor in memoryValue.MemoryAccessors)
+                                    _memoryAccessors.Add(accessor.InvertCombiningOperator());
+                            }
+
+                            IntegerConstant -= memoryValue.IntegerConstant;
+                            FloatConstant -= memoryValue.FloatConstant;
+                        }
+                        break;
+                    }
+
+                    var modifiedMemoryAccessor = right as ModifiedMemoryAccessorExpression;
+                    if (modifiedMemoryAccessor != null)
+                    {
+                        if (modifiedMemoryAccessor.CombiningOperator != combiningOperator)
+                        {
+                            modifiedMemoryAccessor = modifiedMemoryAccessor.Clone();
+                            modifiedMemoryAccessor.CombiningOperator = combiningOperator;
+                            modifiedMemoryAccessor.MakeReadOnly();
+                        }
+                    }
+                    else
+                    {
+                        var memoryAccessor = right as MemoryAccessorExpression;
+                        if (memoryAccessor == null)
+                            goto default;
+
+                        modifiedMemoryAccessor = new ModifiedMemoryAccessorExpression(memoryAccessor);
+                        modifiedMemoryAccessor.CombiningOperator = combiningOperator;
+                        modifiedMemoryAccessor.MakeReadOnly();
+                    }
+
+                    if (_memoryAccessors == null)
+                        _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
+                    _memoryAccessors.Add(modifiedMemoryAccessor);
+                    break;
+
+                default:
+                    return new ErrorExpression(String.Format("Cannot {0} {1} to requirement clause", (combiningOperator == RequirementType.AddSource) ? "add" : "subtract", right.Type));
             }
 
             return this;
@@ -274,10 +304,10 @@ namespace RATools.Parser.Expressions.Trigger
         public ExpressionBase NormalizeComparison(ExpressionBase right, ComparisonOperation operation, bool canModifyRight)
         {
             var simplified = ReduceToSimpleExpression(this) as IComparisonNormalizeExpression;
-            if (simplified != null)
+            if (simplified != null && !ReferenceEquals(simplified, this))
                 return simplified.NormalizeComparison(right, operation, canModifyRight);
 
-            right = ReduceToSimpleExpression(right) ?? right;
+            right = ReduceToSimpleExpression(right);
 
             var normalized = canModifyRight ? MoveConstantsToRightHandSide(right, operation) : null;
             var comparison = normalized ?? new ComparisonExpression(this, operation, right);
@@ -294,45 +324,6 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return CheckForImpossibleValues(normalized);
-        }
-
-        public static ExpressionBase ReduceToSimpleExpression(ExpressionBase expression)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.IntegerConstant:
-                case ExpressionType.FloatConstant:
-                    return expression;
-
-                case ExpressionType.MemoryAccessor:
-                    var memoryAccessor = (MemoryAccessorExpression)expression;
-                    if (!memoryAccessor.HasPointerChain)
-                        return memoryAccessor;
-                    break;
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                    var modifiedMemoryAcceessor = (ModifiedMemoryAccessorExpression)expression;
-                    if (modifiedMemoryAcceessor.ModifyingOperator == RequirementOperator.None)
-                        return modifiedMemoryAcceessor.MemoryAccessor;
-                    break;
-
-                case ExpressionType.MemoryValue:
-                    var memoryValue = (MemoryValueExpression)expression;
-                    if (!memoryValue.HasMemoryAccessor)
-                        return memoryValue.ExtractConstant();
-                    if (!memoryValue.HasConstant)
-                    {
-                        var extracted = memoryValue.ExtractModifiedMemoryAccessor();
-                        if (extracted != null)
-                        {
-                            var reduced = ReduceToSimpleExpression(extracted);
-                            return reduced ?? extracted;
-                        }
-                    }
-                    break;
-            }
-
-            return null;
         }
 
         private ExpressionBase MoveConstantsToRightHandSide(ExpressionBase right, ComparisonOperation operation)
@@ -427,7 +418,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 // constants canceled out
             }
-            else if (newLeft.Type == ExpressionType.MemoryAccessor ||
+            else if (newLeft is MemoryAccessorExpression ||
                     newLeft.IsLiteralConstant)
             {
                 // new left is non-complex, reverse the equation to eliminate the subtraction
@@ -480,8 +471,8 @@ namespace RATools.Parser.Expressions.Trigger
                         var comparison = result as ComparisonExpression;
                         if (comparison != null && comparison.Operation == operation && comparison.Left == this)
                         {
-                            var simpleNewRight = ReduceToSimpleExpression(comparison.Right) ?? comparison.Right;
-                            var simpleRight = ReduceToSimpleExpression(memoryValue) ?? memoryValue;
+                            var simpleNewRight = ReduceToSimpleExpression(comparison.Right);
+                            var simpleRight = ReduceToSimpleExpression(memoryValue);
 
                             if (simpleNewRight == simpleRight)
                             {
@@ -565,10 +556,7 @@ namespace RATools.Parser.Expressions.Trigger
                 value._memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
 
             foreach (var memoryAccessor in MemoryAccessors)
-            {
-                memoryAccessor.InvertCombiningOperator();
-                value._memoryAccessors.Add(memoryAccessor);
-            }
+                value._memoryAccessors.Add(memoryAccessor.InvertCombiningOperator());
 
             _memoryAccessors = null;
             return value;
@@ -1071,8 +1059,10 @@ namespace RATools.Parser.Expressions.Trigger
                     integerOffset = ((IntegerConstantExpression)right).Value;
                     break;
 
-                case ExpressionType.MemoryValue:
-                    integerOffset = ((MemoryValueExpression)right).IntegerConstant;
+                case ExpressionType.MemoryAccessor:
+                    var memoryValue = right as MemoryValueExpression;
+                    if (memoryValue != null)
+                        integerOffset = memoryValue.IntegerConstant;
                     break;
             }
 
@@ -1086,7 +1076,10 @@ namespace RATools.Parser.Expressions.Trigger
             return underflowAdjustment;
         }
 
-        public void GetMinMax(out long min, out long max)
+        /// <summary>
+        /// Gets the lowest and highest values that can be represented by this expression.
+        /// </summary>
+        public override void GetMinMax(out long min, out long max)
         {
             long totalMin = IntegerConstant;
             long totalMax = IntegerConstant;
@@ -1165,19 +1158,14 @@ namespace RATools.Parser.Expressions.Trigger
         public ModifiedMemoryAccessorExpression ConvertToModifiedMemoryAccessor()
         {
             if (IntegerConstant == 0 && FloatConstant == 0.0)
-                return ExtractModifiedMemoryAccessor();
-
-            return null;
-        }
-
-        private ModifiedMemoryAccessorExpression ExtractModifiedMemoryAccessor()
-        { 
-            if (_memoryAccessors != null && _memoryAccessors.Count == 1 && 
-                _memoryAccessors[0].CombiningOperator == RequirementType.AddSource)
             {
-                var newLeft = _memoryAccessors[0].Clone();
-                newLeft.CombiningOperator = RequirementType.None;
-                return newLeft;
+                if (_memoryAccessors != null && _memoryAccessors.Count == 1 &&
+                    _memoryAccessors[0].CombiningOperator == RequirementType.AddSource)
+                {
+                    var accessor = _memoryAccessors[0].Clone();
+                    accessor.CombiningOperator = RequirementType.None;
+                    return accessor;
+                }
             }
 
             return null;
@@ -1185,6 +1173,8 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ExpressionBase ClearConstant()
         {
+            Debug.Assert(!IsReadOnly);
+
             if (_memoryAccessors == null)
                 return new IntegerConstantExpression(0);
 
@@ -1343,25 +1333,22 @@ namespace RATools.Parser.Expressions.Trigger
 
         public static bool HasFloat(ExpressionBase expression)
         {
-            switch (expression.Type)
+            var memoryValue = expression as MemoryValueExpression;
+            if (memoryValue != null)
+                return memoryValue.MemoryAccessors.Any(a => HasFloat(a));
+
+            var modifiedMemoryAccessor = expression as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
             {
-                case ExpressionType.MemoryAccessor:
-                    return ((MemoryAccessorExpression)expression).Field.IsFloat;
-
-                case ExpressionType.ModifiedMemoryAccessor:
-                    var modifiedMemoryAccessor = (ModifiedMemoryAccessorExpression)expression;
-                    return modifiedMemoryAccessor.MemoryAccessor.Field.IsFloat ||
-                        (modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.None && modifiedMemoryAccessor.Modifier.IsFloat);
-
-                case ExpressionType.MemoryValue:
-                    var memoryValue = (MemoryValueExpression)expression;
-                    if (memoryValue._memoryAccessors != null)
-                        return memoryValue._memoryAccessors.Any(a => HasFloat(a));
-                    return false;
-
-                default:
-                    return false;
+                return modifiedMemoryAccessor.MemoryAccessor.Field.IsFloat ||
+                    (modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.None && modifiedMemoryAccessor.Modifier.IsFloat);
             }
+
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+                return memoryAccessor.Field.IsFloat;
+
+            return false;
         }
 
         public ErrorExpression BuildTrigger(TriggerBuilderContext context)
@@ -1439,7 +1426,35 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
-            return new MemoryAccessorExpression().Execute(scope);
+            if (_memoryAccessors == null || _memoryAccessors.Count == 0)
+                return null;
+
+            // report error if this occurs outside a trigger clause
+            return _memoryAccessors.First().Execute(scope);
         }
+
+        #region INestedExpressions
+
+        IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
+        {
+            get
+            {
+                if (_memoryAccessors != null)
+                {
+                    foreach (var accessor in _memoryAccessors)
+                        yield return accessor;
+                }
+            }
+        }
+
+        void INestedExpressions.GetDependencies(HashSet<string> dependencies)
+        {
+        }
+
+        void INestedExpressions.GetModifications(HashSet<string> modifies)
+        {
+        }
+
+        #endregion
     }
 }

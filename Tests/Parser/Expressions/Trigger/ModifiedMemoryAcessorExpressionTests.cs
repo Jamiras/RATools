@@ -53,13 +53,13 @@ namespace RATools.Tests.Parser.Expressions.Trigger
 
         [Test]
         [TestCase("byte(0x001234) * 10", "+", "2",
-            ExpressionType.MemoryValue, "byte(0x001234) * 10 + 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 10 + 2")]
         [TestCase("byte(0x001234) * 10", "-", "2",
-            ExpressionType.MemoryValue, "byte(0x001234) * 10 - 2")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 10 - 2")]
         [TestCase("byte(0x001234) * 10", "*", "2",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) * 20")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 20")]
         [TestCase("byte(0x001234) * 10", "/", "2",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) * 5")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 5")]
         [TestCase("byte(0x001234) * 10", "&", "2",
             ExpressionType.Mathematic, "byte(0x001234) * 10 & 2")]
         [TestCase("byte(0x001234) * 10", "^", "2",
@@ -67,9 +67,9 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) * 10", "%", "2",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("byte(0x001234) * 10", "+", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) * 10 + byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 10 + byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "-", "byte(0x002345)",
-            ExpressionType.MemoryValue, "byte(0x001234) * 10 - byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) * 10 - byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "*", "byte(0x002345)",
             ExpressionType.Mathematic, "byte(0x001234) * 10 * byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "/", "byte(0x002345)",
@@ -83,19 +83,19 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) * 10", "/", "3",
             ExpressionType.Mathematic, "byte(0x001234) * 10 / 3")] // don't collapse integer division with remainder
         [TestCase("byte(0x001234) / 10", "/", "3",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) / 30")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) / 30")]
         [TestCase("byte(0x001234) / 10", "*", "2",
             ExpressionType.Mathematic, "byte(0x001234) / 10 * 2")] // "/5" could produce differing results: 17/10*2 = 2, 17/5=3
         [TestCase("byte(0x001234) * 10", "/", "10",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234)")] // "*1" is unnecessary
+            ExpressionType.MemoryAccessor, "byte(0x001234)")] // "*1" is unnecessary
         [TestCase("byte(0x001234) / 10", "*", "10",
             ExpressionType.Mathematic, "byte(0x001234) / 10 * 10")] // "/1" could produce differing results: 17/10*10 = 10, 17/1=17
         [TestCase("byte(0x001234) & 10", "&", "6",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) & 0x00000002")] // merge ANDs
+            ExpressionType.MemoryAccessor, "byte(0x001234) & 0x00000002")] // merge ANDs
         [TestCase("byte(0x001234) ^ 10", "^", "6",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) ^ 0x0000000C")] // merge XORs
+            ExpressionType.MemoryAccessor, "byte(0x001234) ^ 0x0000000C")] // merge XORs
         [TestCase("byte(0x001234) ^ 10", "&", "6",
-            ExpressionType.ModifiedMemoryAccessor, "byte(0x001234) ^ 0x00000002")] // merge ANDs
+            ExpressionType.MemoryAccessor, "byte(0x001234) ^ 0x00000002")] // merge ANDs
         [TestCase("byte(0x001234) & 10", "^", "6",
             ExpressionType.Mathematic, "byte(0x001234) & 0x0000000A ^ 6")] // cannot merge
         [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(dword(0x002345) + 0x14)",
@@ -184,11 +184,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
-        public void TestUpconvertToMemoryValue()
+        public void TestWrapInMemoryValue()
         {
             string input = "byte(0x001234) * 10";
             var accessor = TriggerExpressionTests.Parse<ModifiedMemoryAccessorExpression>(input);
-            var converted = accessor.UpconvertTo(ExpressionType.MemoryValue);
+            var converted = MemoryAccessorExpressionBase.WrapInMemoryValue(accessor);
             Assert.That(converted, Is.InstanceOf<MemoryValueExpression>());
             ExpressionTests.AssertAppendString(converted, input);
         }

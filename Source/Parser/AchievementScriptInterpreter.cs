@@ -627,8 +627,6 @@ namespace RATools.Parser
             switch (expression.Type)
             {
                 case ExpressionType.MemoryAccessor:
-                case ExpressionType.ModifiedMemoryAccessor:
-                case ExpressionType.MemoryValue:
                 case ExpressionType.Requirement:
                     return true;
 

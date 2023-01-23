@@ -73,7 +73,7 @@ namespace RATools.Parser.Expressions.Trigger
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             ErrorExpression error;
-            var right = MemoryValueExpression.ReduceToSimpleExpression(Right) ?? Right;
+            var right = MemoryAccessorExpressionBase.ReduceToSimpleExpression(Right);
 
             var memoryValue = Left as MemoryValueExpression;
             if (memoryValue != null)
@@ -99,7 +99,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 if (rightAccessor.HasPointerChain)
                 {
-                    if (!rightAccessor.PointerChainMatches(Left))
+                    if (!rightAccessor.PointerChainMatches(Left as MemoryAccessorExpressionBase))
                         return new ErrorExpression("Cannot compare values with different pointer chains", this);
 
                     rightAccessor = rightAccessor.Clone();
@@ -150,7 +150,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         private static bool ExtractBCD(ExpressionBase expression, out ExpressionBase newExpression)
         {
-            var simpleExpression = MemoryValueExpression.ReduceToSimpleExpression(expression) ?? expression;
+            var simpleExpression = MemoryAccessorExpressionBase.ReduceToSimpleExpression(expression);
 
             var bcdWrapper = simpleExpression as BinaryCodedDecimalExpression;
             if (bcdWrapper != null)
@@ -259,7 +259,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         private static bool ExtractInversion(ExpressionBase expression, out ExpressionBase newExpression)
         {
-            var simpleExpression = MemoryValueExpression.ReduceToSimpleExpression(expression) ?? expression;
+            var simpleExpression = MemoryAccessorExpressionBase.ReduceToSimpleExpression(expression);
 
             var invertWrapper = simpleExpression as BitwiseInvertExpression;
             if (invertWrapper != null)
@@ -509,7 +509,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 // cannot have comparison and modifier in same line. wrap the modifier in
                 // a MemoryValue so it can generate an AddSource chain with a 0
-                Left = modifiedMemoryAccessor.UpconvertTo(ExpressionType.MemoryValue);
+                Left = new MemoryValueExpression(modifiedMemoryAccessor);
             }
 
             var result = NormalizeBCD();
@@ -523,17 +523,15 @@ namespace RATools.Parser.Expressions.Trigger
 
         private static Field CreateField(ExpressionBase expr)
         {
-            switch (expr.Type)
-            {
-                default:
-                    return FieldFactory.CreateField(expr);
+            var memoryValue = expr as MemoryValueExpression;
+            if (memoryValue != null)
+                return FieldFactory.CreateField(memoryValue.MemoryAccessors.Last().MemoryAccessor);
 
-                case ExpressionType.ModifiedMemoryAccessor:
-                    return FieldFactory.CreateField(((ModifiedMemoryAccessorExpression)expr).MemoryAccessor);
+            var modifiedMemoryAccessor = expr as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+                return FieldFactory.CreateField(modifiedMemoryAccessor.MemoryAccessor);
 
-                case ExpressionType.MemoryValue:
-                    return FieldFactory.CreateField(((MemoryValueExpression)expr).MemoryAccessors.Last().MemoryAccessor);
-            }
+            return FieldFactory.CreateField(expr);
         }
 
         public override RequirementExpressionBase LogicalIntersect(RequirementExpressionBase that, ConditionalOperation condition)
@@ -552,18 +550,16 @@ namespace RATools.Parser.Expressions.Trigger
                 return null;
             }
 
-            if (Left.Type == thatCondition.Left.Type)
+            if (Left.GetType() == thatCondition.Left.GetType())
             {
                 if (Left != thatCondition.Left)
                     return null;
             }
             else
             {
-                var leftUpconvert = Left as IUpconvertibleExpression;
-                var leftConverted = (leftUpconvert != null) ? leftUpconvert.UpconvertTo(ExpressionType.MemoryValue) : Left;
-                var rightUpconvert = thatCondition.Left as IUpconvertibleExpression;
-                var rightConverted = (rightUpconvert != null) ? rightUpconvert.UpconvertTo(ExpressionType.MemoryValue) : thatCondition.Left;
-                if (leftConverted != rightConverted)
+                var leftConverted = MemoryAccessorExpressionBase.WrapInMemoryValue(Left);
+                var thatLeftConverted = MemoryAccessorExpressionBase.WrapInMemoryValue(thatCondition.Left);
+                if (leftConverted != thatLeftConverted)
                     return null;
             }
 
