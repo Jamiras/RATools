@@ -699,6 +699,15 @@ namespace RATools.ViewModels
                             tokenizer.Advance(2);
                         }
 
+                        if (String.IsNullOrEmpty(leaderboard.Start))
+                            leaderboard.Start = "1=1";
+                        if (String.IsNullOrEmpty(leaderboard.Cancel))
+                            leaderboard.Cancel = "1=1";
+                        if (String.IsNullOrEmpty(leaderboard.Submit))
+                            leaderboard.Submit = "1=1";
+                        if (String.IsNullOrEmpty(leaderboard.Value))
+                            leaderboard.Value = "0";
+
                         _publishedLeaderboards.Add(leaderboard);
                     }
 
