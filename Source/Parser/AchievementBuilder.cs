@@ -356,119 +356,7 @@ namespace RATools.Parser
             double minVer = 0.30;
 
             foreach (var requirement in requirements)
-            {
-                switch (requirement.Type)
-                {
-                    case RequirementType.AndNext:
-                        // 0.76 21 Jun 2019
-                        if (minVer < 0.76)
-                            minVer = 0.76;
-                        break;
-
-                    case RequirementType.AddAddress:
-                    case RequirementType.Measured:
-                        // 0.77 30 Nov 2019
-                        if (minVer < 0.77)
-                            minVer = 0.77;
-                        break;
-
-                    case RequirementType.MeasuredIf:
-                    case RequirementType.OrNext:
-                        // 0.78 18 May 2020
-                        if (minVer < 0.78)
-                            minVer = 0.78;
-                        break;
-
-                    case RequirementType.ResetNextIf:
-                    case RequirementType.Trigger:
-                    case RequirementType.SubHits:
-                        // 0.79 22 May 2021
-                        if (minVer < 0.79)
-                            minVer = 0.79;
-                        break;
-
-                    case RequirementType.MeasuredPercent:
-                        // 1.0 29 Jan 2022
-                        if (minVer < 1.0)
-                            minVer = 1.0;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                switch (requirement.Operator)
-                {
-                    case RequirementOperator.Multiply:
-                    case RequirementOperator.Divide:
-                    case RequirementOperator.BitwiseAnd:
-                        // 0.78 18 May 2020
-                        if (minVer < 0.78)
-                            minVer = 0.78;
-                        break;
-
-                    case RequirementOperator.BitwiseXor:
-                        // 1.1 15 Nov 2022
-                        if (minVer < 1.1)
-                            minVer = 1.1;
-                        break;
-
-                    default:
-                        break;
-                }
-
-                foreach (var type in new FieldType[] { requirement.Left.Type, requirement.Right.Type })
-                {
-                    switch (type)
-                    {
-                        case FieldType.PriorValue:
-                            // 0.76 21 Jun 2019
-                            if (minVer < 0.76)
-                                minVer = 0.76;
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-
-                foreach (var size in new FieldSize[] { requirement.Left.Size, requirement.Right.Size })
-                {
-                    switch (size)
-                    {
-                        case FieldSize.TByte:
-                            // 0.77 30 Nov 2019
-                            if (minVer < 0.77)
-                                minVer = 0.77;
-                            break;
-
-                        case FieldSize.BitCount:
-                            // 0.78 18 May 2020
-                            if (minVer < 0.78)
-                                minVer = 0.78;
-                            break;
-
-                        case FieldSize.BigEndianWord:
-                        case FieldSize.BigEndianTByte:
-                        case FieldSize.BigEndianDWord:
-                        case FieldSize.Float:
-                        case FieldSize.MBF32:
-                            // 1.0 29 Jan 2022
-                            if (minVer < 1.0)
-                                minVer = 1.0;
-                            break;
-
-                        case FieldSize.LittleEndianMBF32:
-                            // 1.1 15 Nov 2022
-                            if (minVer < 1.1)
-                                minVer = 1.1;
-                            break;
-
-                        default:
-                            break;
-                    }
-                }
-            }
+                minVer = Math.Max(minVer, requirement.MinimumVersion());
 
             return minVer;
         }
@@ -504,7 +392,7 @@ namespace RATools.Parser
 
             foreach (Requirement requirement in core)
             {
-                SerializeRequirement(requirement, builder, minimumVersion);
+                requirement.Serialize(builder, minimumVersion);
                 builder.Append('_');
             }
 
@@ -525,7 +413,7 @@ namespace RATools.Parser
 
                 foreach (Requirement requirement in alt)
                 {
-                    SerializeRequirement(requirement, builder, minimumVersion);
+                    requirement.Serialize(builder, minimumVersion);
                     builder.Append('_');
                 }
 
@@ -533,72 +421,6 @@ namespace RATools.Parser
             }
 
             return builder.ToString();
-        }
-
-        private static void SerializeRequirement(Requirement requirement, StringBuilder builder, double minimumVersion)
-        {
-            switch (requirement.Type)
-            {
-                case RequirementType.ResetIf: builder.Append("R:"); break;
-                case RequirementType.PauseIf: builder.Append("P:"); break;
-                case RequirementType.AddSource: builder.Append("A:"); break;
-                case RequirementType.SubSource: builder.Append("B:"); break;
-                case RequirementType.AddHits: builder.Append("C:"); break;
-                case RequirementType.SubHits: builder.Append("D:"); break;
-                case RequirementType.AndNext: builder.Append("N:"); break;
-                case RequirementType.OrNext: builder.Append("O:"); break;
-                case RequirementType.Measured: builder.Append("M:"); break;
-                case RequirementType.MeasuredPercent: builder.Append("G:"); break;
-                case RequirementType.MeasuredIf: builder.Append("Q:"); break;
-                case RequirementType.AddAddress: builder.Append("I:"); break;
-                case RequirementType.ResetNextIf: builder.Append("Z:"); break;
-                case RequirementType.Trigger: builder.Append("T:"); break;
-            }
-
-            requirement.Left.Serialize(builder);
-
-            if (requirement.IsScalable)
-            {
-                switch (requirement.Operator)
-                {
-                    case RequirementOperator.Multiply: builder.Append('*'); break;
-                    case RequirementOperator.Divide: builder.Append('/'); break;
-                    case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
-                    case RequirementOperator.BitwiseXor: builder.Append('^'); break;
-                    default:
-                        if (minimumVersion < 0.77)
-                            builder.Append("=0");
-                        return;
-                }
-
-                requirement.Right.Serialize(builder);
-            }
-            else
-            {
-                switch (requirement.Operator)
-                {
-                    case RequirementOperator.Equal: builder.Append('='); break;
-                    case RequirementOperator.NotEqual: builder.Append("!="); break;
-                    case RequirementOperator.LessThan: builder.Append('<'); break;
-                    case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
-                    case RequirementOperator.GreaterThan: builder.Append('>'); break;
-                    case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
-                    case RequirementOperator.Multiply: builder.Append('*'); break;
-                    case RequirementOperator.Divide: builder.Append('/'); break;
-                    case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
-                    case RequirementOperator.BitwiseXor: builder.Append('^'); break;
-                    case RequirementOperator.None: return;
-                }
-
-                requirement.Right.Serialize(builder);
-            }
-
-            if (requirement.HitCount > 0)
-            {
-                builder.Append('.');
-                builder.Append(requirement.HitCount);
-                builder.Append('.');
-            }
         }
 
         public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> requirements,

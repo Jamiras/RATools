@@ -117,13 +117,13 @@ namespace RATools.Parser.Functions
                         if (builder.Length > 0)
                             builder.Append('$');
 
-                        builder.Append(TriggerBuilderContext.GetValueString(value, scope, out result));
+                        builder.Append(ValueBuilderContext.GetValueString(value, scope, out result));
                     }
                     return builder.ToString();
                 }
             }
 
-            return TriggerBuilderContext.GetValueString(expression, scope, out result);
+            return ValueBuilderContext.GetValueString(expression, scope, out result);
         }
     }
 
