@@ -160,7 +160,27 @@ namespace RATools.Data
             builder.Append('(');
 
             if (!string.IsNullOrEmpty(addAddress))
-                builder.Append(addAddress);
+            {
+                if (address == 0)
+                {
+                    builder.Append(addAddress);
+                    builder.Length -= 3;
+                    builder.Append(')');
+                    return;
+                }
+
+                if (addAddress.Contains(" & 0x"))
+                {
+                    builder.Append('(');
+                    builder.Append(addAddress);
+                    builder.Length -= 3;
+                    builder.Append(") + ");
+                }
+                else
+                {
+                    builder.Append(addAddress);
+                }
+            }
 
             builder.Append("0x");
             builder.AppendFormat("{0:X6}", address);
