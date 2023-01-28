@@ -1584,6 +1584,12 @@ namespace RATools.ViewModels
 
         private static void DumpLegacyExpression(StreamWriter stream, string parameter, DumpAsset dumpAsset)
         {
+            if (String.IsNullOrEmpty(parameter))
+            {
+                stream.Write('0');
+                return;
+            }
+
             var builder = new StringBuilder();
 
             var parts = parameter.Split('_');
