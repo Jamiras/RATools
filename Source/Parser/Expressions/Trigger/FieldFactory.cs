@@ -11,20 +11,10 @@ namespace RATools.Parser.Expressions.Trigger
             switch (expression.Type)
             {
                 case ExpressionType.IntegerConstant:
-                    return new Field 
-                    { 
-                        Type = FieldType.Value, 
-                        Size = FieldSize.DWord, 
-                        Value = (uint)((IntegerConstantExpression)expression).Value
-                    };
+                    return CreateField(((IntegerConstantExpression)expression).Value);
 
                 case ExpressionType.FloatConstant:
-                    return new Field
-                    {
-                        Type = FieldType.Float,
-                        Size = FieldSize.Float,
-                        Float = ((FloatConstantExpression)expression).Value
-                    };
+                    return CreateField(((FloatConstantExpression)expression).Value);
 
                 case ExpressionType.MemoryAccessor:
                     var memoryAccessor = (MemoryAccessorExpression)expression;
@@ -41,6 +31,26 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return new Field();
+        }
+
+        internal static Field CreateField(int value)
+        {
+            return new Field
+            {
+                Type = FieldType.Value,
+                Size = FieldSize.DWord,
+                Value = (uint)value
+            };
+        }
+
+        internal static Field CreateField(float value)
+        {
+            return new Field
+            {
+                Type = FieldType.Float,
+                Size = FieldSize.Float,
+                Float = value
+            };
         }
 
         internal static Field ApplyMathematic(Field left, RequirementOperator operation, Field right)

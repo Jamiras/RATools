@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -102,12 +103,36 @@ namespace RATools.Parser.Expressions.Trigger
             if (clause != null && clause.Conditions.Count() > 1)
                 return new ErrorExpression("measured comparison can only have one logical clause", Condition);
 
-            var error = Condition.BuildSubclauseTrigger(context);
+            var requirements = new List<Requirement>();
+            ErrorExpression error;
+            {
+                // generate the subclause using a clean set of requirements in case we need to
+                // rearrange some stuff later
+                var oldRequirements = context.Trigger;
+                context.Trigger = requirements;
+
+                error = Condition.BuildSubclauseTrigger(context);
+
+                context.Trigger = oldRequirements;
+            }
+
             if (error != null)
                 return error;
 
-            context.LastRequirement.Type = Format;
+            // make sure at least one condition is flagged with Measured
+            EnsureHasMeasuredRequirement(requirements);
 
+            if (Format != RequirementType.Measured)
+            {
+                var measured = requirements.Last(r => r.Type == RequirementType.Measured);
+                measured.Type = Format;
+            }
+
+            // copy the Measured clauses to the context
+            foreach (var requirement in requirements)
+                context.Trigger.Add(requirement);
+
+            // if there's a MeasuredIf, process it too
             Debug.Assert(When != null);
             if (When is not AlwaysTrueExpression)
             {
@@ -129,6 +154,47 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return null;
+        }
+
+        internal static void EnsureHasMeasuredRequirement(List<Requirement> requirements)
+        {
+            if (requirements.Any(r => r.Type == RequirementType.Measured))
+                return;
+
+            // find a condition without a flag
+            var last = requirements.LastOrDefault(r => r.Type == RequirementType.None);
+            if (last == null)
+            {
+                // find the last AddSource or SubSource
+                last = requirements.LastOrDefault(r => r.Type == RequirementType.AddSource || r.Type == RequirementType.SubSource);
+                if (last != null && last.Type == RequirementType.SubSource)
+                {
+                    // if it's a SubSource, try to find an AddSource
+                    var index = requirements.IndexOf(last);
+                    last = requirements.LastOrDefault(r => r.Type == RequirementType.AddSource);
+                    if (last != null)
+                    {
+                        // found an AddSource. move it to the end (and any AddAddresses associated to it)
+                        var index2 = requirements.IndexOf(last);
+                        do
+                        {
+                            var toMove = requirements[index2];
+                            requirements.RemoveAt(index2);
+                            requirements.Insert(index, toMove);
+                            index--;
+                            index2--;
+                        } while (index2 >= 0 && requirements[index2].Type == RequirementType.AddAddress);
+                    }
+                    else
+                    {
+                        // did not find an AddSource, add a dummy requirement
+                        last = new Requirement { Left = FieldFactory.CreateField(0) };
+                        requirements.Add(last);
+                    }
+                }
+            }
+
+            last.Type = RequirementType.Measured;
         }
 
         internal class MemoryValueWrapper : RequirementExpressionBase

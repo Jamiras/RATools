@@ -50,7 +50,7 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
+            var value = ValueBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
                 return false;
 

@@ -1359,67 +1359,84 @@ namespace RATools.Parser.Expressions.Trigger
         public ErrorExpression BuildTrigger(TriggerBuilderContext context, ExpressionBase comparison)
         {
             var memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
+            ModifiedMemoryAccessorExpression constantAccessor = null;
 
             if (FloatConstant != 0.0)
             {
                 var value = (float)(FloatConstant + IntegerConstant);
                 var field = new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = Math.Abs(value) };
-                var accessor = new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(field));
-                accessor.CombiningOperator = (value < 0.0) ? RequirementType.SubSource : RequirementType.AddSource;
-                memoryAccessors.Add(accessor);
+                constantAccessor = new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(field));
+                constantAccessor.CombiningOperator = (value < 0.0) ? RequirementType.SubSource : RequirementType.AddSource;
             }
             else if (IntegerConstant != 0)
             {
                 var field = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = (uint)Math.Abs(IntegerConstant) };
-                var accessor = new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(field));
-                accessor.CombiningOperator = (IntegerConstant < 0) ? RequirementType.SubSource : RequirementType.AddSource;
-                memoryAccessors.Add(accessor);
+                constantAccessor = new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(field));
+                constantAccessor.CombiningOperator = (IntegerConstant < 0) ? RequirementType.SubSource : RequirementType.AddSource;
+            }
+
+            bool appendConstantAccessor = false;
+            if (constantAccessor != null)
+            {
+                if (context is ValueBuilderContext && constantAccessor.CombiningOperator == RequirementType.AddSource)
+                    appendConstantAccessor = true;
+                else
+                    memoryAccessors.Add(constantAccessor);
             }
 
             if (_memoryAccessors != null)
                 memoryAccessors.AddRange(_memoryAccessors);
 
-            // last item has to be an unmodified AddSource.
-            // if a comparison is provided then the AddAddress chain must also match.
-            var comparisonAccessor = (comparison != null) ? ReduceToSimpleExpression(comparison) as MemoryAccessorExpression : null;
+            if (appendConstantAccessor)
+                memoryAccessors.Add(constantAccessor);
 
-            var lastIndex = memoryAccessors.Count - 1;
-            for (; lastIndex >= 0; --lastIndex)
+            if (context is not ValueBuilderContext)
             {
-                var last = memoryAccessors[lastIndex];
-                if (last.CombiningOperator == RequirementType.SubSource)
-                    continue;
+                // last item has to be an unmodified AddSource so we can compare it.
+                // if a comparison is provided then the AddAddress chain must also match.
+                var comparisonAccessor = (comparison != null) ? ReduceToSimpleExpression(comparison) as MemoryAccessorExpression : null;
 
-                if (last.ModifyingOperator != RequirementOperator.None)
-                    continue;
+                var lastIndex = memoryAccessors.Count - 1;
+                for (; lastIndex >= 0; --lastIndex)
+                {
+                    var last = memoryAccessors[lastIndex];
+                    if (last.CombiningOperator == RequirementType.SubSource)
+                        continue;
 
-                if (comparisonAccessor != null && !comparisonAccessor.PointerChainMatches(last))
-                    continue;
+                    if (last.ModifyingOperator != RequirementOperator.None)
+                        continue;
 
-                break;
-            }
+                    if (comparisonAccessor != null && !comparisonAccessor.PointerChainMatches(last))
+                        continue;
 
-            if (lastIndex == -1)
-            {
-                // no unmodified AddSource items, append a item with value 0
-                if (context is not ValueBuilderContext)
-                    memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
-            }
-            else if (lastIndex != memoryAccessors.Count - 1)
-            {
-                // move the last unmodified AddSource item to the end of the list
-                var last = memoryAccessors[lastIndex];
-                memoryAccessors.RemoveAt(lastIndex);
-                memoryAccessors.Add(last);
+                    break;
+                }
+
+                if (lastIndex == -1)
+                {
+                    // no unmodified AddSource items, append a item with value 0
+                    if (context is not ValueBuilderContext)
+                        memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
+                }
+                else if (lastIndex != memoryAccessors.Count - 1)
+                {
+                    // move the last unmodified AddSource item to the end of the list so we can
+                    var last = memoryAccessors[lastIndex];
+                    memoryAccessors.RemoveAt(lastIndex);
+                    memoryAccessors.Add(last);
+                }
             }
 
             // output the accessor chain
             foreach (var accessor in memoryAccessors)
                 accessor.BuildTrigger(context);
 
-            // the last item will be flagged as an AddSource (or None if 0 was appended)
-            // make sure it's None before leaving
-            context.LastRequirement.Type = RequirementType.None;
+            if (context is not ValueBuilderContext)
+            {
+                // the last item will be flagged as an AddSource (or None if 0 was appended)
+                // make sure it's None before leaving
+                context.LastRequirement.Type = RequirementType.None;
+            }
 
             return null;
         }

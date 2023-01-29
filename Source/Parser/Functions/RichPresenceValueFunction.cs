@@ -85,7 +85,7 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            var value = TriggerBuilderContext.GetValueString(expression, scope, out result);
+            var value = ValueBuilderContext.GetValueString(expression, scope, out result);
             if (value == null)
                 return false;
 
