@@ -1,3 +1,18 @@
+v1.11.0 - 29 Jan 2023
+* add `mbf32_le` function
+* add `substring` function
+* add `ascii_string_equals` and `unicode_string_equals` functions
+* add XOR operator (`^`)
+* add bitwise invert operator (`~`)
+* add horizontal scrollbar when file is sufficiently wide
+* ability to select entire lines by clicking on line number
+* support for merging bits into bitcount when pointers are involved
+* fix corruption of local notes containing newlines
+* fix dumping game using masked pointers
+* fix exception dumping game with no achievements or leaderboards
+* fix exception dumping game with incomplete leaderboards (one or more blank fields)
+* fix exception dumping rich presence with whitespace at the top of the file
+
 v1.10.2 - 6 Dec 2022
 * fix intersection of float comparisons
 

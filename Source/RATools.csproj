@@ -10,13 +10,13 @@
     <Authors>Jamiras</Authors>
     <Company>retroachievements.org</Company>
     <Description>Collection of tools for developers contributing to retroachievements.org</Description>
-    <Copyright>Copyright © 2022 Brian Weiss</Copyright>
+    <Copyright>Copyright © 2023 Brian Weiss</Copyright>
     <PackageProjectUrl>https://github.com/Jamiras/RATools/wiki</PackageProjectUrl>
     <PackageIcon>Icon.png</PackageIcon>
     <ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
     <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
-    <VersionPrefix>1.10.2</VersionPrefix>
-    <InformationalVersion>6 Dec 2022</InformationalVersion>
+    <VersionPrefix>1.11.0</VersionPrefix>
+    <InformationalVersion>29 Jan 2023</InformationalVersion>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
