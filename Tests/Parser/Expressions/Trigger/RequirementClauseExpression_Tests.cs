@@ -117,6 +117,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("A > 1 && B == 1 && A == 3", "B == 1 && A == 3")]
         [TestCase("(A == 1 && B == 1) || (A == 1 && B == 2) || (A == 1 && B == 3)", "A == 1 && (B == 1 || B == 2 || B == 3)")]
         [TestCase("(A == 1 || B != 1) && (A == 1 || B != 2) && (A == 1 || B != 3)", "A == 1 || (B != 1 && B != 2 && B != 3)")]
+        [TestCase("A == 1 && ((once(B == 1 && C == 1) && D == 1) || (once(B == 2 && C == 1) && D == 1))",
+            // "D == 1" can be extracted from the alts, but  don't collapse
+            // "(once(B == 1 && C == 1) || once(B == 2 && C == 1))" to
+            // "once((B == 1 || B == 2) && C == 1)" when processing a subclause
+            "A == 1 && D == 1 && (once(B == 1 && C == 1) || once(B == 2 && C == 1))")]
         public void TestOptimize(string input, string expected)
         {
             input = ExpressionTests.ReplacePlaceholders(input);

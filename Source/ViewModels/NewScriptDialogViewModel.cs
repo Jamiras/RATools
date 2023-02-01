@@ -455,7 +455,7 @@ namespace RATools.ViewModels
                 if (macro == null)
                     macro = displayRichPresence;
 
-                if (!String.IsNullOrEmpty(parameter) && parameter[1] == ':')
+                if (parameter.Length > 2 && parameter[1] == ':')
                 {
                     var achievement = new AchievementBuilder();
                     achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
@@ -1516,7 +1516,7 @@ namespace RATools.ViewModels
                     {
                         stream.Write("0");
                     }
-                    else if (parameter[1] == ':')
+                    else if (parameter.Length > 2 && parameter[1] == ':')
                     {
                         var achievement = new AchievementBuilder();
                         achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));

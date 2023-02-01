@@ -495,6 +495,23 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
+        private static bool HasNestedSubclause(RequirementExpressionBase expression)
+        {
+            var clause = expression as RequirementClauseExpression;
+            if (clause != null)
+                return clause.Conditions.Any(HasComplexSubclause);
+
+            var behavioral = expression as BehavioralRequirementExpression;
+            if (behavioral != null)
+                return HasNestedSubclause(behavioral.Condition);
+
+            var tallied = expression as TalliedRequirementExpression;
+            if (tallied != null)
+                return tallied.Conditions.OfType<RequirementExpressionBase>().Any(c => HasNestedSubclause(c));
+
+            return false;
+        }
+
         private static bool HasOrSubclause(RequirementExpressionBase expression)
         {
             var clause = expression as RequirementClauseExpression;
@@ -1282,7 +1299,18 @@ namespace RATools.Parser.Expressions.Trigger
                         }
                         else if (intersected != null)
                         {
-                            intersected = condition.LogicalIntersect(intersected, operation);
+                            var newIntersect = condition.LogicalIntersect(intersected, operation);
+
+                            if (HasNestedSubclause(newIntersect))
+                            {
+                                // if the resulting expression has multiple levels of clauses (i.e. "A && (B || C)")
+                                // then it can't be used as a subclause. keep them separate.
+                                intersected = null;
+                            }
+                            else
+                            {
+                                intersected = newIntersect;
+                            }
                         }
 
                         break;
