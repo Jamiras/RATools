@@ -55,14 +55,28 @@ namespace RATools.Parser.Functions
                 reqClause.Conditions.OfType<BehavioralRequirementExpression>().Any(c => c.Behavior == RequirementType.ResetIf))
             {
                 // split the reset conditions out
+                var resetClause = new RequirementClauseExpression { Operation = ConditionalOperation.Or };
                 var newClause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
                 foreach (var c in reqClause.Conditions)
                 {
                     var behavioral = c as BehavioralRequirementExpression;
                     if (behavioral != null && behavioral.Behavior == RequirementType.ResetIf)
-                        tally.AddResetCondition(behavioral.Condition);
+                        resetClause.AddCondition(behavioral.Condition);
                     else
                         newClause.AddCondition(c);
+                }
+
+                if (resetClause.Conditions.Any())
+                {
+                    if (resetClause.Conditions.Count() == 1)
+                    {
+                        tally.ResetCondition = resetClause.Conditions.First();
+                    }
+                    else
+                    {
+                        resetClause.DeriveLocation();
+                        tally.ResetCondition = resetClause;
+                    }
                 }
 
                 tally.AddTalliedCondition(newClause);

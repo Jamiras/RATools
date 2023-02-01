@@ -33,13 +33,6 @@ namespace RATools.Parser.Expressions.Trigger
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         protected List<RequirementExpressionBase> _conditions;
 
-        public IEnumerable<RequirementExpressionBase> ResetConditions
-        {
-            get { return _resetConditions ?? Enumerable.Empty<RequirementExpressionBase>(); }
-        }
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected List<RequirementExpressionBase> _resetConditions;
-
         public void AddTalliedCondition(RequirementExpressionBase condition)
         {
             if (_conditions == null)
@@ -57,13 +50,7 @@ namespace RATools.Parser.Expressions.Trigger
             });
         }
 
-        public void AddResetCondition(RequirementExpressionBase condition)
-        {
-            if (_resetConditions == null)
-                _resetConditions = new List<RequirementExpressionBase>();
-
-            _resetConditions.Add(condition);
-        }
+        public RequirementExpressionBase ResetCondition { get; set; }
 
         ExpressionBase ICloneableExpression.Clone()
         {
@@ -90,14 +77,11 @@ namespace RATools.Parser.Expressions.Trigger
                 builder.Length -= 2; // remove last ", "
                 builder.Append(')');
 
-                if (_resetConditions != null)
+                if (ResetCondition != null)
                 {
-                    foreach (var condition in _resetConditions)
-                    {
-                        builder.Append(" && never(");
-                        condition.AppendString(builder);
-                        builder.Append(')');
-                    }
+                    builder.Append(" && never(");
+                    ResetCondition.AppendString(builder);
+                    builder.Append(')');
                 }
             }
             else
@@ -112,14 +96,11 @@ namespace RATools.Parser.Expressions.Trigger
                 else
                     _conditions[0].AppendString(builder);
 
-                if (_resetConditions != null)
+                if (ResetCondition != null)
                 {
-                    foreach (var condition in _resetConditions)
-                    {
-                        builder.Append(" && never(");
-                        condition.AppendString(builder);
-                        builder.Append(')');
-                    }
+                    builder.Append(" && never(");
+                    ResetCondition.AppendString(builder);
+                    builder.Append(')');
                 }
 
                 builder.Append(')');
@@ -131,7 +112,7 @@ namespace RATools.Parser.Expressions.Trigger
             var that = obj as TalliedRequirementExpression;
             return (that != null && HitTarget == that.HitTarget &&
                 CompareRequirements(_conditions, that._conditions) &&
-                CompareRequirements(_resetConditions, that._resetConditions));
+                ResetCondition == that.ResetCondition);
         }
 
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
@@ -172,23 +153,24 @@ namespace RATools.Parser.Expressions.Trigger
                 newConditions.Add(optimized);
             }
 
-            var newResetConditions = new List<RequirementExpressionBase>();
-            foreach (var condition in ResetConditions)
+            RequirementExpressionBase newResetCondition = null;
+            if (ResetCondition != null)
             {
-                var optimized = condition.Optimize(context);
+                var optimized = ResetCondition.Optimize(context);
 
                 // always false conditions cannot capture hits. no reason to include them in the trigger
                 if (optimized is AlwaysFalseExpression)
                 {
                     updated = true;
-                    continue;
                 }
-
-                updated |= !ReferenceEquals(condition, optimized);
-                newResetConditions.Add(optimized);
+                else
+                {
+                    updated |= !ReferenceEquals(ResetCondition, optimized);
+                    newResetCondition = optimized;
+                }
             }
 
-            if (newResetConditions.Count == 0 && newConditions.Count == 1)
+            if (newResetCondition == null && newConditions.Count == 1)
             {
                 var nestedTally = newConditions[0] as TalliedRequirementExpression;
                 if (nestedTally != null)
@@ -227,7 +209,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     HitTarget = HitTarget,
                     _conditions = newConditions,
-                    _resetConditions = (newResetConditions.Count > 0) ? newResetConditions : null
+                    ResetCondition = newResetCondition
                 };
             }
 
@@ -322,11 +304,13 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var condition in sortedConditions)
             {
                 // reset conditions have to be inserted before each tallied condition and the last condition
-                if (_resetConditions != null)
+                if (ResetCondition != null)
                 {
-                    error = BuildResetClause(context);
+                    error = ResetCondition.BuildSubclauseTrigger(context);
                     if (error != null)
                         return error;
+
+                    context.LastRequirement.Type = RequirementType.ResetNextIf;
                 }
 
                 error = condition.BuildSubclauseTrigger(context);
@@ -369,20 +353,6 @@ namespace RATools.Parser.Expressions.Trigger
 
             context.LastRequirement.Type = RequirementType.None;
             context.LastRequirement.HitCount = HitTarget;
-
-            return null;
-        }
-
-        private ErrorExpression BuildResetClause(TriggerBuilderContext context)
-        {
-            foreach (var condition in ResetConditions)
-            {
-                var error = condition.BuildSubclauseTrigger(context);
-                if (error != null)
-                    return error;
-
-                context.LastRequirement.Type = RequirementType.ResetNextIf;
-            }
 
             return null;
         }
