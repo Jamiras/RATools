@@ -205,7 +205,8 @@ namespace RATools.Parser
                     requirement.Left = Field.Deserialize(tokenizer);
 
                     requirement.Operator = ReadOperator(tokenizer);
-                    if (requirement.Operator != RequirementOperator.None)
+                    if (requirement.Operator != RequirementOperator.None &&
+                        !requirement.IsComparison)
                     {
                         requirement.Right = Field.Deserialize(tokenizer);
                         if (requirement.Right.Type == FieldType.Value &&
