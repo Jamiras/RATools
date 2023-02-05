@@ -798,16 +798,6 @@ namespace RATools.ViewModels
             }
 
             // update the grid
-            var rowsToRemove = new List<MemoryItem>();
-            foreach (var row in MemoryAddresses.Rows)
-            {
-                var memoryItem = (MemoryItem)row.Model;
-                if (visibleAddresses.Remove(memoryItem))
-                    rowsToRemove.Add(memoryItem);
-            }
-            foreach (var memoryItem in rowsToRemove)
-                MemoryAddresses.RemoveRow(memoryItem);
-
             visibleAddresses.Sort((l,r) =>
             {
                 int diff = (int)l.Address - (int)r.Address;
@@ -820,13 +810,14 @@ namespace RATools.ViewModels
             var memIndex = 0;
             for (int addrIndex = 0; addrIndex < visibleAddresses.Count; addrIndex++)
             {
+                MemoryItem rowItem = null;
                 var memoryItem = visibleAddresses[addrIndex];
                 while (memIndex < MemoryAddresses.Rows.Count)
                 {
-                    var rowItem = (MemoryItem)MemoryAddresses.Rows[memIndex].Model;
+                    rowItem = (MemoryItem)MemoryAddresses.Rows[memIndex].Model;
                     if (rowItem.Address < memoryItem.Address || rowItem.Size < memoryItem.Size)
                     {
-                        memIndex++;
+                        MemoryAddresses.RemoveRow(rowItem);
                         continue;
                     }
 
@@ -840,8 +831,14 @@ namespace RATools.ViewModels
                         memoryItem.UpdateFunctionName(functionNameStyle, note);
                 }
 
-                MemoryAddresses.InsertRow(memIndex, memoryItem);
+                if (rowItem == null || rowItem.Address != memoryItem.Address || rowItem.Size != memoryItem.Size)
+                    MemoryAddresses.InsertRow(memIndex, memoryItem);
+
+                memIndex++;
             }
+
+            while (memIndex < MemoryAddresses.Rows.Count)
+                MemoryAddresses.Rows.RemoveAt(MemoryAddresses.Rows.Count - 1);
         }
 
         private void UpdateFunctionNames()
@@ -952,6 +949,7 @@ namespace RATools.ViewModels
                         {
                             // found a bit suffix, but nothing to use as a prefix. discard prefix
                             note = "";
+                            index = -1;
                         }
                         break;
 
