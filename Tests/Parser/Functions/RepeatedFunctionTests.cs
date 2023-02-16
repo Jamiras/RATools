@@ -60,7 +60,7 @@ namespace RATools.Tests.Parser.Functions
             "N:0xH004567=4_O:0xH005678=5_N:0xH003456=3_N:0xH001234=1_0xH002345=2.17.")]
         [TestCase("repeated(18, byte(0x1234) == 1 && never(byte(0x2345) == 2))", "Z:0xH002345=2_0xH001234=1.18.")]
         [TestCase("repeated(19, byte(0x1234) == 1 && never(byte(0x2345) == 2) && never(byte(0x003456) == 7)", 
-            "Z:0xH002345=2_Z:0xH003456=7_0xH001234=1.19.")]
+            "O:0xH002345=2_Z:0xH003456=7_0xH001234=1.19.")]
         [TestCase("repeated(20, byte(0x1234) == 1 && never(repeated(3, byte(0x2345) == 2 && never(byte(0x3456) == 3))))",
             "Z:0xH003456=3_Z:0xH002345=2.3._0xH001234=1.20.")]
         [TestCase("repeated(21, byte(0x002345) == 1 && byte(0x003456) == 2 && never(byte(0x001234) < 5 || byte(0x001234) > 8))",
@@ -84,6 +84,15 @@ namespace RATools.Tests.Parser.Functions
             scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
 
             TriggerExpressionTests.AssertParseError(input, scope, "comparison is not a requirement");
+        }
+
+        [Test]
+        [TestCase("repeated(3, A == 1 && never(B == 1 && C == 1) && never(B == 2 && C == 2)")]
+        [TestCase("repeated(3, A == 1 && never((B == 1 && C == 1) || (B == 2 && C == 2))")]
+        public void TestBuildTriggerTooComplex(string input)
+        {
+            input = ExpressionTests.ReplacePlaceholders(input);
+            TriggerExpressionTests.AssertBuildTriggerError(input, "Combination of &&s and ||s is too complex for subclause");
         }
     }
 }

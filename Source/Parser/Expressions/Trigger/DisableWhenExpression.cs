@@ -94,7 +94,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // Until has to be injected before each clause of the tally.
                     // do so using the reset clause of a new TalliedRequirementExpression
                     var newTally = tallied.Clone();
-                    newTally.AddResetCondition(Until);
+                    newTally.ResetCondition = Until;
                     var newDisableWhen = new DisableWhenRequirementExpression 
                     {
                         Condition = newTally, 

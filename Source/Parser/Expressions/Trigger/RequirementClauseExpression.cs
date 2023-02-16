@@ -48,6 +48,18 @@ namespace RATools.Parser.Expressions.Trigger
             _conditions.Add(condition);
         }
 
+        public void DeriveLocation()
+        {
+            var newLocation = new Jamiras.Components.TextRange();
+            if (_conditions != null)
+            {
+                foreach (var condition in _conditions)
+                    newLocation = newLocation.Union(condition.Location);
+            }
+
+            Location = newLocation;
+        }
+
         ExpressionBase ICloneableExpression.Clone()
         {
             return Clone();
