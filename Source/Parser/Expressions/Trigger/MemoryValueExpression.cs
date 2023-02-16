@@ -377,7 +377,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 // if there's no constant on the right, moving the left constant will create a negative constant on
                 // the right and it'll just get moved back to the left. do nothing
-                if (!memoryValue.HasConstant)
+                if (!memoryValue.HasConstant && memoryValue.HasMemoryAccessor)
                 {
                     // cannot leave pointer chain on right side unless it matches the left.
                     if (memoryValue._memoryAccessors.Any(
