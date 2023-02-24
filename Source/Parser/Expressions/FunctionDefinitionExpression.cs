@@ -426,11 +426,39 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as RequirementExpressionBase;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
+                var invalidClause = parameter;
 
-                parseError = new ErrorExpression(name + " is not a requirement", parameter);
+                var originalParameter = LocateParameter(scope, name);
+                if (originalParameter != null && !ReferenceEquals(originalParameter, parameter))
+                {
+                    var conditional = parameter as ConditionalExpression;
+                    if (conditional != null)
+                        invalidClause = conditional.Conditions.FirstOrDefault(c => c is not RequirementExpressionBase) ?? parameter;
+
+                    // FunctionCallExpression.ReplaceVariables will call Evaluate and then
+                    // replace the location of the result to the function call's location.
+                    // Call Evaluate directly to get the original location.
+                    if (invalidClause.Location.Start == originalParameter.Location.Start &&
+                        invalidClause.Location.End == originalParameter.Location.End)
+                    {
+                        var functionCall = originalParameter as FunctionCallExpression;
+                        if (functionCall != null)
+                        {
+                            ExpressionBase result;
+                            if (functionCall.Evaluate(scope, out result) && result == parameter)
+                                invalidClause = result;
+                        }
+                    }
+                }
+
+                parseError = new ErrorExpression(name + " is not a requirement", originalParameter ?? parameter);
+
+                if (!ReferenceEquals(invalidClause, parameter))
+                {
+                    ((ErrorExpression)parseError).InnerError =
+                        new ErrorExpression("Cannot convert " + invalidClause.Type.ToString().ToLower() + " to requirement", invalidClause);
+                }
+
                 return null;
             }
 

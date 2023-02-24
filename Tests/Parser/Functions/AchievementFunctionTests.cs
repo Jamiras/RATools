@@ -106,5 +106,35 @@ namespace RATools.Tests.Parser.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected.ToString()));
         }
+
+        [Test]
+        public void TestInvalidComparisonInTrigger()
+        {
+            var input = "function a() => byte(0x1234)\n" +
+                        "achievement(\"T\", \"D\", 5, a == 1)";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "2:1 achievement call failed\r\n" +
+                "- 2:26 trigger is not a requirement"));
+        }
+
+        [Test]
+        public void TestInvalidComparisonInHelperFunction()
+        {
+            var input = "function a() => byte(0x1234)\n" +
+                        "function b() => a == 1\n" +
+                        "achievement(\"T\", \"D\", 5, b())";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "3:1 achievement call failed\r\n" +
+                "- 3:26 trigger is not a requirement\r\n" +
+                "- 2:17 Cannot convert comparison to requirement"));
+        }
     }
 }
