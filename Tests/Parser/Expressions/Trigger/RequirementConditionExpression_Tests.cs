@@ -202,5 +202,15 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             expected = expected.Replace("WB", "word(0x002345)");
             ExpressionTests.AssertAppendString(clause, expected);
         }
+
+        [Test]
+        public void TestAddressOffsetInWrongLocation()
+        {
+            string input = "prev(byte(0x1234) + 10) == 0";
+            // becomes "prev(byte(0x1234)) == -10", which can never be true
+            // user meant "prev(byte(0x1234 + 10)) == 0"
+
+            TriggerExpressionTests.Parse<AlwaysFalseExpression>(input);
+        }
     }
 }
