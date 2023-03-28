@@ -414,6 +414,13 @@ namespace RATools.Data
                     while (index > 0 && definition[index] != ' ')
                         index--;
 
+                    if (index == 0 && width >= wrapWidth - indent)
+                    {
+                        index = width;
+                        while (index < definition.Length && definition[index] != ' ')
+                            index++;
+                    }
+
                     builder.Append(definition.ToString(), 0, index);
                     definition.Remove(0, index);
                 }
