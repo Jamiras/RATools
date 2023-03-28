@@ -1300,11 +1300,11 @@ namespace RATools.Parser
 
                                 foreach (var requirement in requirementEx.Requirements)
                                 {
-                                    subclause.Requirements.Add(requirement);
-
                                     if (requirement.Type == RequirementType.OrNext)
                                     {
-                                        requirement.Type = orNextGroupType;
+                                        var newRequirement = requirement.Clone();
+                                        newRequirement.Type = orNextGroupType;
+                                        subclause.Requirements.Add(newRequirement);
 
                                         subclause = new RequirementEx();
 
@@ -1312,6 +1312,10 @@ namespace RATools.Parser
                                             groups.Add(new List<RequirementEx>() { subclause });
                                         else
                                             group.Insert(++i, subclause);
+                                    }
+                                    else
+                                    {
+                                        subclause.Requirements.Add(requirement);
                                     }
                                 }
                             }
