@@ -180,6 +180,7 @@ namespace RATools.Parser
                         continue;
 
                     case 'S': // ||
+                    case '$': // max_of
                         tokenizer.Advance();
                         if (ReferenceEquals(current, _core) || current.Count != 0)
                         {

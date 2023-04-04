@@ -1358,10 +1358,15 @@ namespace RATools.ViewModels
 
                 stream.Write("    value = ");
                 var valueTrigger = assetSource.TriggerList.ElementAt(3);
-                if (valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
-                    DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(3), indent);
+                if (valueTrigger.Groups.Count() > 1 ||
+                    valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
+                {
+                    DumpValue(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(3), indent - 1);
+                }
                 else
+                {
                     DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard);
+                }
                 stream.WriteLine(",");
 
                 stream.Write("    format = \"");
@@ -1525,7 +1530,7 @@ namespace RATools.ViewModels
                         var vmAchievement = new AssetSourceViewModel(new AchievementViewModel(null), "Rich Presence");
                         vmAchievement.Asset = achievement.ToAchievement();
 
-                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 32);
+                        DumpValue(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 32);
                     }
                     else
                     {
@@ -1733,6 +1738,36 @@ namespace RATools.ViewModels
             }
             if (!first)
                 stream.Write(')');
+        }
+
+        private static void DumpValue(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)
+        {
+            if (triggerViewModel.Groups.Count() > 1)
+            {
+                stream.WriteLine("max_of(");
+                indent += 4;
+
+                bool first = true;
+                foreach (var value in triggerViewModel.Groups)
+                {
+                    if (!first)
+                        stream.WriteLine(",");
+
+                    stream.Write(new string(' ', indent));
+                    first = false;
+
+                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent + 2);
+                }
+
+                indent -= 4;
+                stream.WriteLine();
+                stream.Write(new string(' ', indent));
+                stream.Write(")");
+            }
+            else
+            {
+                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), numberFormat, indent);
+            }
         }
 
         private static void DumpPublishedRequirements(StreamWriter stream, DumpAsset dumpAsset,
