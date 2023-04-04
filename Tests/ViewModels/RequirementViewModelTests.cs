@@ -59,5 +59,27 @@ namespace RATools.Tests.ViewModels
 
             Assert.That(vmRequirement.Notes, Is.EqualTo(expected));
         }
+
+        [TestCase("0xH1111=7", "")]
+        [TestCase("0xH1234=7", "Addr1")]
+        [TestCase("0xH2345=7", "Addr2")]
+        public void TestNoteShortening(string serialized, string expected)
+        {
+            var notes = new Dictionary<int, string>();
+            notes[0x1234] = "Addr1";
+            notes[0x2345] = "Addr2\r\n0=True\r\n1=False";
+
+            var builder = new AchievementBuilder();
+            builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
+            var requirement = builder.ToAchievement().CoreRequirements.First();
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+
+            Assert.That(vmRequirement.NotesShort, Is.EqualTo(expected));
+
+            if (expected == vmRequirement.Notes)
+                Assert.IsFalse(vmRequirement.IsNoteShortened);
+            else
+                Assert.IsTrue(vmRequirement.IsNoteShortened);
+        }
     }
 }
