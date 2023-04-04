@@ -83,7 +83,7 @@ namespace RATools.ViewModels
         {
             _backgroundWorkerService.RunAsync(() =>
             {
-                RAWebCache.ExpireHours = 64;
+                RAWebCache.ExpireHours = 96;
                 CalculateMastery(true);
                 RAWebCache.ExpireHours = 0;
             });

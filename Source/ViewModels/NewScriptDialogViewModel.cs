@@ -1055,7 +1055,7 @@ namespace RATools.ViewModels
         {
             _game.InitializeForUI();
 
-            var cleansed = _game.Title;
+            var cleansed = _game.Title ?? "Untitled";
             foreach (var c in Path.GetInvalidFileNameChars())
                 cleansed = cleansed.Replace(c.ToString(), "");
             if (String.IsNullOrEmpty(cleansed))
