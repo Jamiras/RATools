@@ -106,6 +106,25 @@
         </Style.Triggers>
     </Style>
 
+    <DataTemplate x:Key="codeNotesStackPanelTemplate">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding NotesShort}" Style="{StaticResource themedTextBlock}" TextWrapping="Wrap" FontStyle="Italic" />
+            <Border BorderBrush="{Binding DataContext.Resources.ScrollBarForegroundBrush, ElementName=gameGrid}"
+                    BorderThickness="2" CornerRadius="4" Margin="6,0,0,0">
+                <Border.Style>
+                    <Style TargetType="{x:Type Border}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsNoteShortened}" Value="False">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+                <TextBlock Text="..." ToolTip="{Binding Notes}" Style="{StaticResource themedTextBlock}" Margin="2,-6,2,0" />
+            </Border>
+        </StackPanel>
+    </DataTemplate>
+
     <DataTemplate x:Key="assetBodyTemplate">
         <Grid Grid.IsSharedSizeScope="True">
             <Grid.Resources>
@@ -138,7 +157,8 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Grid.Column="2" Text="{Binding Notes}" TextWrapping="Wrap" FontStyle="Italic" Style="{StaticResource themedTextBlock}" />
+                        <ContentControl Grid.Column="2" Content="{Binding}"
+                                        ContentTemplate="{StaticResource codeNotesStackPanelTemplate}" />
                     </Grid>
                 </DataTemplate>
 
@@ -149,7 +169,8 @@
                             <ColumnDefinition Width="*" />
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding Definition}" Margin="0,0,8,0" Style="{StaticResource themedTextBlock}" />
-                        <TextBlock Grid.Column="1" Text="{Binding Notes}" Style="{StaticResource notesTextBlock}" />
+                        <ContentControl Grid.Column="1" Content="{Binding}"
+                                        ContentTemplate="{StaticResource codeNotesStackPanelTemplate}" />
                     </Grid>
                 </DataTemplate>
             </Grid.Resources>

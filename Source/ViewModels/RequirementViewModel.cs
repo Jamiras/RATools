@@ -74,7 +74,31 @@ namespace RATools.ViewModels
             private set { SetValue(DefinitionProperty, value); }
         }
 
-        public string Notes { get; private set; }
+        public string Notes
+        {
+            get { return _notes; }
+            private set
+            {
+                _notes = value;
+
+                var index = value.IndexOf('\n');
+                if (index != -1)
+                {
+                    NotesShort = value.Substring(0, index).TrimEnd();
+                    IsNoteShortened = true;
+                }
+                else
+                {
+                    NotesShort = value;
+                    IsNoteShortened = false;
+                }
+            }
+        }
+        private string _notes;
+
+        public string NotesShort { get; private set; }
+
+        public bool IsNoteShortened { get; private set; }
 
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
         {
