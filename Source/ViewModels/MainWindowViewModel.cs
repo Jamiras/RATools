@@ -28,6 +28,7 @@ namespace RATools.ViewModels
 
             DragDropScriptCommand = new DelegateCommand<string[]>(DragDropFile, CanDragDropFile);
             UpdateLocalCommand = DisabledCommand.Instance;
+            ViewAchievementsCommand = DisabledCommand.Instance;
 
             GameStatsCommand = new DelegateCommand(GameStats);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
@@ -151,10 +152,12 @@ namespace RATools.ViewModels
                 vm.SaveScriptAsCommand = new DelegateCommand(() => vm.SaveScriptAs());
                 vm.RefreshScriptCommand = new DelegateCommand(vm.RefreshScript);
                 vm.UpdateLocalCommand = new DelegateCommand(vm.UpdateLocal);
+                vm.ViewAchievementsCommand = new DelegateCommand(vm.ViewAchievements);
                 vm.OnPropertyChanged(() => vm.SaveScriptCommand);
                 vm.OnPropertyChanged(() => vm.SaveScriptAsCommand);
                 vm.OnPropertyChanged(() => vm.RefreshScriptCommand);
                 vm.OnPropertyChanged(() => vm.UpdateLocalCommand);
+                vm.OnPropertyChanged(() => vm.ViewAchievementsCommand);
             }
         }
 
@@ -474,6 +477,20 @@ namespace RATools.ViewModels
             }
 
             var dialog = new UpdateLocalViewModel(game);
+            dialog.ShowDialog();
+        }
+
+        public CommandBase ViewAchievementsCommand { get; private set; }
+        private void ViewAchievements()
+        {
+            var game = Game;
+            if (game == null)
+            {
+                TaskDialogViewModel.ShowErrorMessage("No game loaded", "Cannot view achievements if game not loaded.");
+                return;
+            }
+
+            var dialog = new ViewAchievementsViewModel(game);
             dialog.ShowDialog();
         }
 

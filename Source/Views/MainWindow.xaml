@@ -54,6 +54,8 @@
                 <MenuItem Header="Update _Local" Command="{Binding UpdateLocalCommand}" controls:CommandBinding.InputGesture="Ctrl+L" />
             </MenuItem>
             <MenuItem Header="_View">
+                <MenuItem Header="_Achievement List" Command="{Binding ViewAchievementsCommand}" />
+                <Separator />
                 <MenuItem Header="_Hexadecimal Values" IsCheckable="True" IsChecked="{Binding ShowHexValues}" />
                 <Separator />
                 <MenuItem Header="_Error List" IsCheckable="True" IsChecked="{Binding Game.SelectedEditor.Editor.ErrorsToolWindow.IsVisible, FallbackValue=False}" InputGestureText="Ctrl+E" />
