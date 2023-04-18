@@ -30,7 +30,7 @@
                   ScrollViewer.HorizontalScrollBarVisibility="Hidden">
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Grid Margin="0,2,0,2">
+                    <Grid Margin="0,2,0,2" Height="64">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
@@ -59,13 +59,13 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock FontSize="26" FontWeight="Medium"
-                                       Foreground="#828194" Margin="0,-2,0,-2">
+                                       Foreground="#828194" Margin="0,-4,0,-4">
                                 <TextBlock Text="{Binding Title}" /><Run Text=" (" /><TextBlock Text="{Binding Points}" /><Run Text=" points)" />
                             </TextBlock>
                             <TextBlock Grid.Row="1" FontSize="18" FontWeight="Medium"
                                        Foreground="#706A69" Text="{Binding Description}" />
 
-                            <Grid Grid.Row="2">
+                            <Grid Grid.Row="2" Margin="0,-2,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="600" />
                                     <ColumnDefinition Width="*" />
@@ -79,7 +79,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Grid.Style>
-                                <Border BorderBrush="#3C3D3E" Background="#B2B1AF" BorderThickness="2" Height="6" HorizontalAlignment="Stretch" />
+                                <Border BorderBrush="#3C3D3E" Background="#B2B1AF" BorderThickness="2" Height="8" HorizontalAlignment="Stretch" />
                                 <TextBlock Grid.Column="1" Margin="4,-2,0,0" Foreground="#5B5757" Text="{Binding MeasuredTarget}" />
                             </Grid>
                             

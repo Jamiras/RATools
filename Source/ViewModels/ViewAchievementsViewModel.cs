@@ -1,10 +1,8 @@
 ﻿using Jamiras.Commands;
 using Jamiras.ViewModels;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 
 namespace RATools.ViewModels
 {
@@ -14,7 +12,7 @@ namespace RATools.ViewModels
         {
             _game = game;
 
-            DialogTitle = "View Achievements - " + game.Title;
+            DialogTitle = "Achievements - " + game.Title;
             CanClose = true;
             CancelButtonText = null;
             ExtraButtonCommand = new DelegateCommand(Export);
