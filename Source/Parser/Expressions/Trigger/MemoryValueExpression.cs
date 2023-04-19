@@ -522,9 +522,13 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ComparisonExpression(newLeft, operation, newRight);
             }
 
-            // right side is just a single accessor, don't move it
-            if (!memoryValue.HasConstant && memoryValue._memoryAccessors != null && memoryValue._memoryAccessors.Count == 1)
+            // if right side is just a single unmodified accessor, don't move it
+            if (!memoryValue.HasConstant && memoryValue._memoryAccessors != null &&
+                memoryValue._memoryAccessors.Count == 1 &&
+                memoryValue._memoryAccessors[0].ModifyingOperator == RequirementOperator.None)
+            {
                 return null;
+            }
 
             var cloneLeft = Clone();
             cloneLeft.IntegerConstant = 0;
@@ -1049,7 +1053,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             long min, max;
             GetMinMax(out min, out max);
-            var underflowAdjustment = -(int)min;
+            var underflowAdjustment = -min;
 
             // adjust a comparison against a negative value up to 0.
             var integerOffset = 0;
@@ -1073,7 +1077,10 @@ namespace RATools.Parser.Expressions.Trigger
                     underflowAdjustment = negativeAdjustment;
             }
 
-            return underflowAdjustment;
+            if (underflowAdjustment > Int32.MaxValue || underflowAdjustment < Int32.MinValue)
+                return 0;
+
+            return (int)underflowAdjustment;
         }
 
         /// <summary>

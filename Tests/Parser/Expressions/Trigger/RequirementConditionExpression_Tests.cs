@@ -1,6 +1,5 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
 
 namespace RATools.Tests.Parser.Expressions.Trigger
 {
@@ -46,6 +45,13 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("word(byte(0x1234) & 7) == 1", "I:0xH001234&7_0x 000000=1")]
         [TestCase("word((byte(0x1234) & 7) + 17) == 1", "I:0xH001234&7_0x 000011=1")]
         [TestCase("dword((dword(0x12345) & 0x1ffffff) + 0xff7f6255) == 60", "I:0xX012345&33554431_0xXff7f6255=60")]
+        [TestCase("byte(0x001234) * 100 + byte(0x1235) > prev(byte(0x002345))", "A:0xH001234*100_0xH001235>d0xH002345")]
+        [TestCase("byte(0x001234) * 100 + byte(0x1235) > prev(byte(0x002345)) * 100", "A:25500_A:0xH001234*100_B:d0xH002345*100_0xH001235>25500")]
+        [TestCase("byte(0x001234) * 100 + byte(0x1235) > prev(byte(0x002345)) * 100 + prev(byte(0x2346))", "A:25755_A:0xH001234*100_B:d0xH002345*100_B:d0xH002346_0xH001235>25755")]
+        [TestCase("low4(0x001234) * 10000000 + byte(0x1235) > prev(low4(0x002345)) * 10000000 + prev(byte(0x2346))", "A:150000255_A:0xL001234*10000000_B:d0xL002345*10000000_B:d0xH002346_0xH001235>150000255")]
+        [TestCase("byte(0x001234) * 10000000 + byte(0x1235) > prev(byte(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xH001234*10000000_B:d0xH002345*10000000_0xH001235>d0xH002346")] // underflow adjustment exceeds MAX_INT, don't apply one
+        [TestCase("byte(0x001234) * 10000000 + byte(0x1235) != prev(byte(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xH001234*10000000_B:d0xH002345*10000000_0xH001235!=d0xH002346")] // don't need underflow adjustment for inequality
+        [TestCase("low4(0x001234) * 10000000 + byte(0x1235) != prev(low4(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xL001234*10000000_B:d0xL002345*10000000_0xH001235!=d0xH002346")] // don't need underflow adjustment for inequality
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
