@@ -1,3 +1,18 @@
+v1.12.0 - 23 Apr 2023
+* only show first line of code notes in achievement/leaderboard views
+* new dialog to preview list of achievements as they would appear in the emulator
+  * ability to export list of achievements from preview dialog
+* support for `max_of` when dumping leaderboards
+* improve error when function call contains a function used as a variable
+* fix infinite loop trying to find whitespace is a very long pointer chain
+* fix empty referenced memory addresses list when generating new script for game with no assets
+* fix issue generating multiple ResetNextIfs in an AndNext/OrNext chain
+* fix issue generating nested clauses in alt groups
+* fix infinite loop when underflow adjustment exceeds 32-bits
+* fix exception rebalancing comparison of unwrapped pointer offset and zero
+* fix exception when tally target is greater than 0x7FFFFFFF
+* fix exception generating script for game without name
+
 v1.11.0 - 29 Jan 2023
 * add `mbf32_le` function
 * add `substring` function
