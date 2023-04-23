@@ -17,14 +17,18 @@ namespace RATools.Parser.Expressions.Trigger
                     return CreateField(((FloatConstantExpression)expression).Value);
 
                 case ExpressionType.MemoryAccessor:
-                    var memoryAccessor = (MemoryAccessorExpression)expression;
-                    if (memoryAccessor.PointerChain.Any())
-                        break;
-                    if (expression is BinaryCodedDecimalExpression)
-                        return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);
-                    if (expression is BitwiseInvertExpression)
-                        return memoryAccessor.Field.ChangeType(FieldType.Invert);
-                    return memoryAccessor.Field;
+                    var memoryAccessor = expression as MemoryAccessorExpression;
+                    if (memoryAccessor != null)
+                    {
+                        if (memoryAccessor.PointerChain.Any())
+                            break;
+                        if (expression is BinaryCodedDecimalExpression)
+                            return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);
+                        if (expression is BitwiseInvertExpression)
+                            return memoryAccessor.Field.ChangeType(FieldType.Invert);
+                        return memoryAccessor.Field;
+                    }
+                    break;
 
                 default:
                     break;
