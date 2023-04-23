@@ -53,5 +53,51 @@ namespace RATools.ViewModels
         {
             _owner.UpdateLocal((Achievement)asset, (Achievement)localAsset, warning, validateAll);
         }
+
+        public string MeasuredTarget
+        {
+            get
+            {
+                var asset = Generated.Asset ?? Local.Asset ?? Published.Asset;
+                var achievement = asset as Achievement;
+                if (achievement != null)
+                {
+                    var measuredTarget = GetMeasuredTarget(achievement.CoreRequirements);
+                    if (measuredTarget != null)
+                        return measuredTarget;
+
+                    foreach (var alt in achievement.AlternateRequirements)
+                    {
+                        measuredTarget = GetMeasuredTarget(alt);
+                        if (measuredTarget != null)
+                            return measuredTarget;
+                    }
+                }
+
+                return null;
+            }
+        }
+
+        private static string GetMeasuredTarget(IEnumerable<Requirement> requirements)
+        {
+            foreach (var requirement in requirements)
+            {
+                if (requirement.Type == RequirementType.MeasuredPercent)
+                    return "100%";
+
+                if (requirement.Type == RequirementType.Measured)
+                {
+                    if (requirement.Right.IsMemoryReference)
+                        return "?";
+
+                    if (requirement.Right.IsFloat)
+                        return requirement.Right.Float.ToString();
+
+                    return requirement.Right.Value.ToString();
+                }
+            }
+
+            return null;
+        }
     }
 }
