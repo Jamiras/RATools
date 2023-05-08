@@ -87,6 +87,9 @@ namespace RATools.ViewModels
 
                 if (requirement.Type == RequirementType.Measured)
                 {
+                    if (requirement.HitCount != 0)
+                        return requirement.HitCount.ToString();
+
                     if (requirement.Right.IsMemoryReference)
                         return "?";
 
