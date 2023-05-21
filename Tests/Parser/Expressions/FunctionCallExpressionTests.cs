@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
@@ -75,7 +76,22 @@ namespace RATools.Tests.Parser.Expressions
             Assert.That(innerScope.VariableCount, Is.EqualTo(0));
         }
 
-        private FunctionDefinitionExpression Parse(string input)
+        [Test]
+        public void TestParseTrailingComma()
+        {
+            var group = new ExpressionGroup();
+            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("func(i,)"), group);
+            var functionCall = ExpressionBase.Parse(tokenizer);
+
+            // function call is still returned for parsing completeness
+            Assert.That(functionCall, Is.InstanceOf<FunctionCallExpression>());
+
+            var parseError = group.ParseErrors.First();
+            Assert.That(parseError.Message, Is.EqualTo("Trailing comma in parameter list"));
+            Assert.That(parseError.Location, Is.EqualTo(new TextRange(1, 7, 1, 8)));
+        }
+
+        private static FunctionDefinitionExpression Parse(string input)
         {
             var def = UserFunctionDefinitionExpression.ParseForTest(input);
             Assert.That(def, Is.Not.Null);
@@ -334,6 +350,7 @@ namespace RATools.Tests.Parser.Expressions
             var parseError = (ErrorExpression)result;
             Assert.That(parseError.InnermostError.Message, Is.EqualTo("Unknown variable: var"));
         }
+
         [Test]
         public void TestReplaceVariablesUnknownParameter()
         {
