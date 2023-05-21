@@ -52,6 +52,8 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x001234) * 10000000 + byte(0x1235) > prev(byte(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xH001234*10000000_B:d0xH002345*10000000_0xH001235>d0xH002346")] // underflow adjustment exceeds MAX_INT, don't apply one
         [TestCase("byte(0x001234) * 10000000 + byte(0x1235) != prev(byte(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xH001234*10000000_B:d0xH002345*10000000_0xH001235!=d0xH002346")] // don't need underflow adjustment for inequality
         [TestCase("low4(0x001234) * 10000000 + byte(0x1235) != prev(low4(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xL001234*10000000_B:d0xL002345*10000000_0xH001235!=d0xH002346")] // don't need underflow adjustment for inequality
+        [TestCase("dword(dword(0x001234) + 8) - dword(dword(0x001234) + 12) > 100000", "A:100000_I:0xX001234_0xX00000c<0xX000008")] // AddAddress can be shared
+        [TestCase("dword(dword(0x001234) + 8) - dword(dword(0x001234) + 12) * 4 > 100000", "I:0xX001234_B:0xX00000c*4_I:0xX001234_0xX000008>100000")] // AddAddress cannot be shared
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);

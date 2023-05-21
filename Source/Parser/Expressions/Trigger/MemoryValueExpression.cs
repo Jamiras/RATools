@@ -581,6 +581,7 @@ namespace RATools.Parser.Expressions.Trigger
                 var searchMemoryAccessor = _memoryAccessors[i].MemoryAccessor;
                 var paired = _memoryAccessors.FirstOrDefault(a =>
                     a.CombiningOperator == RequirementType.AddSource &&
+                    a.ModifyingOperator == RequirementOperator.None &&
                     a.MemoryAccessor.Field.Value == searchMemoryAccessor.Field.Value &&
                     a.MemoryAccessor.Field.Size == searchMemoryAccessor.Field.Size &&
                     a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
@@ -590,7 +591,9 @@ namespace RATools.Parser.Expressions.Trigger
                     // could not find a prev/non-prev match. try again for any shared pointer chain
                     paired = _memoryAccessors.FirstOrDefault(a =>
                         a.CombiningOperator == RequirementType.AddSource &&
-                        a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
+                        a.ModifyingOperator == _memoryAccessors[i].ModifyingOperator &&
+                        a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor) &&
+                        a.Modifier == _memoryAccessors[i].Modifier);
                 }
 
                 if (paired != null)
