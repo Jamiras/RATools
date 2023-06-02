@@ -686,8 +686,18 @@ namespace RATools.Parser.Internal
                     if (tokenizer.NextChar != ',')
                         break;
 
+                    var commaLocation = tokenizer.Location;
                     tokenizer.Advance();
                     SkipWhitespace(tokenizer);
+
+                    if (tokenizer.NextChar == ')')
+                    {
+                        tokenizer.Advance(); // skip parenthesis at end of list
+                        var error = ParseError(tokenizer, "Trailing comma in parameter list");
+                        error.Location = new TextRange(commaLocation,
+                            new TextLocation(commaLocation.Line, commaLocation.Column + 1));
+                        return error;
+                    }
                 } while (true);
             }
 
