@@ -594,6 +594,8 @@ namespace RATools.Parser.Expressions
                 return ParseError(tokenizer, "Expected '(' after function name", Name);
             tokenizer.Advance();
 
+            ErrorExpression nonConstantDefaultParameterError = null;
+
             SkipWhitespace(tokenizer);
             if (tokenizer.NextChar != ')')
             {
@@ -625,7 +627,15 @@ namespace RATools.Parser.Expressions
 
                         ExpressionBase evaluated;
                         if (!value.ReplaceVariables(scope, out evaluated))
-                            return ParseError(tokenizer, "Default value for " + parameter.ToString() + " is not constant", evaluated);
+                        {
+                            // a variable reference could be a constant hiding a magic number or a dictionary.
+                            // as long as it's not referencing another parameter, let it through (for now).
+                            var variable = value as VariableExpression;
+                            if (variable != null && !Parameters.Any(p => p.Name == variable.Name))
+                                evaluated = value;
+                            else if (nonConstantDefaultParameterError == null)
+                                nonConstantDefaultParameterError = ParseError(tokenizer, "Default value for " + parameter.ToString() + " is not constant", value);
+                        }
 
                         DefaultParameters[parameter.ToString()] = evaluated;
                     }
@@ -648,6 +658,9 @@ namespace RATools.Parser.Expressions
 
             tokenizer.Advance(); // closing parenthesis
             SkipWhitespace(tokenizer);
+
+            if (nonConstantDefaultParameterError != null)
+                return nonConstantDefaultParameterError;
 
             ExpressionBase expression;
 

@@ -108,7 +108,7 @@ namespace RATools.Tests.Parser.Expressions
         public void TestParseNonDefaultAfterDefaultParameters()
         {
             Parse("function func(i, j = 2, k) { l = i + j + k }",
-                "1:26 Non-default parameter k appears after default parameters");
+                "1:25 Non-default parameter k appears after default parameters");
         }
 
         [Test]
@@ -153,10 +153,49 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         [Test]
+        public void TestParseDefaultParameterVariable()
+        {
+            var expr = Parse("function func(i, j = z) { k = i + j }");
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<VariableExpression>());
+            Assert.That(((VariableExpression)expr.DefaultParameters["j"]).Name, Is.EqualTo("z"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            var builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("k = i + j"));
+
+            var scope = new InterpreterScope();
+            scope.AddFunction(expr);
+            scope.DefineVariable(new VariableDefinitionExpression("z"), new IntegerConstantExpression(2));
+            scope.DefineVariable(new VariableDefinitionExpression("k"), new IntegerConstantExpression(0));
+
+            ExpressionBase result;
+            var funcCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(6) });
+            Assert.That(funcCall.Evaluate(scope, out result), Is.True);
+
+            result = scope.GetVariable("k");
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(8));
+        }
+
+        [Test]
         public void TestParseDefaultParameterNonConstant()
         {
-            Parse("function func(i, j = i + 2) { k = i + j }",
-                "1:27 Default value for j is not constant");
+            Parse("function func(i, j = z + 2) { k = i + j }",
+                "1:22 Default value for j is not constant");
+        }
+
+        [Test]
+        public void TestParseDefaultParameterReferencingOtherParameter()
+        {
+            Parse("function func(i, j = i) { k = i + j }",
+                "1:22 Default value for j is not constant");
         }
 
         [Test]
