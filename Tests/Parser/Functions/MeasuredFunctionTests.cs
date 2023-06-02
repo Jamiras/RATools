@@ -73,6 +73,7 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("measured(byte(word(0x1234) + 16))", "I:0x 001234_M:0xH000010")]
         [TestCase("measured(repeated(0, byte(0x1234) == 5))", "M:0xH001234=5")]
         [TestCase("measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))", "C:0xH001234=20_M:0xH001234=67")]
+        [TestCase("measured(tally(0, byte(0x1234) == 20 && byte(0x2345) == 67))", "N:0xH001234=20_M:0xH002345=67")]
         public void TestBuildValue(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
@@ -109,6 +110,23 @@ namespace RATools.Tests.Parser.Functions
             TriggerExpressionTests.AssertBuildTriggerError(
                 "measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))",
                 "Unbounded count is only supported in measured value expressions");
+        }
+
+        [Test]
+        public void TestValueComparison()
+        {
+            TriggerExpressionTests.AssertBuildValueError(
+                "measured(byte(0x1234) == 20)",
+                "Comparison must be wrapped in tally(0,...) to be used in measured value expression");
+        }
+
+
+        [Test]
+        public void TestValueComparisonAndNext()
+        {
+            TriggerExpressionTests.AssertBuildValueError(
+                "measured(byte(0x1234) == 20 && byte(0x2345) == 67)",
+                "Comparison must be wrapped in tally(0,...) to be used in measured value expression");
         }
     }
 }
