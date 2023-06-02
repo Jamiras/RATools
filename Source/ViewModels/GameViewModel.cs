@@ -840,7 +840,10 @@ namespace RATools.ViewModels
                 if (richPresenceViewModel == null)
                 {
                     richPresenceViewModel = new RichPresenceViewModel(this);
-                    assets.Insert(1, richPresenceViewModel);
+                    if (Script == null) // New Script
+                        assets.Add(richPresenceViewModel);
+                    else
+                        assets.Insert(1, richPresenceViewModel);
                 }
 
                 richPresenceViewModel.Local.Asset = _localAssets.RichPresence;
