@@ -185,6 +185,43 @@ namespace RATools.Tests.Parser.Expressions
         }
 
         [Test]
+        public void TestParseDefaultParameterIndexedVariable()
+        {
+            var expr = Parse("function func(i, j = z[3]) { k = i + j }");
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<IndexedVariableExpression>());
+
+            var builder = new StringBuilder();
+            expr.DefaultParameters["j"].AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("z[3]"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("k = i + j"));
+
+            var dict = new DictionaryExpression();
+            dict.Add(new IntegerConstantExpression(3), new IntegerConstantExpression(2));
+
+            var scope = new InterpreterScope();
+            scope.AddFunction(expr);
+            scope.DefineVariable(new VariableDefinitionExpression("z"), dict);
+            scope.DefineVariable(new VariableDefinitionExpression("k"), new IntegerConstantExpression(0));
+
+            ExpressionBase result;
+            var funcCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(6) });
+            Assert.That(funcCall.Evaluate(scope, out result), Is.True);
+
+            result = scope.GetVariable("k");
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(8));
+        }
+
+        [Test]
         public void TestParseDefaultParameterNonConstant()
         {
             Parse("function func(i, j = z + 2) { k = i + j }",
