@@ -95,8 +95,14 @@ namespace RATools.Parser.Expressions.Trigger
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
-            if (Format == RequirementType.MeasuredPercent && context is ValueBuilderContext)
-                return new ErrorExpression("Value fields only support raw measured values", this);
+            if (context is ValueBuilderContext)
+            {
+                if (Format == RequirementType.MeasuredPercent)
+                    return new ErrorExpression("Value fields only support raw measured values", this);
+
+                if (Condition is RequirementConditionExpression || Condition is RequirementClauseExpression)
+                    return new ErrorExpression("Comparison must be wrapped in tally(0,...) to be used in measured value expression", this);
+            }
 
             Debug.Assert(Condition != null);
             var clause = Condition as RequirementClauseExpression;

@@ -85,6 +85,17 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionTests.AssertError(error, message);
         }
 
+        public static void AssertBuildValueError(string input, string message)
+        {
+            var clause = Parse<RequirementExpressionBase>(input);
+
+            var requirements = new List<Requirement>();
+            var context = new ValueBuilderContext() { Trigger = requirements };
+
+            var error = clause.BuildTrigger(context);
+            ExpressionTests.AssertError(error, message);
+        }
+
         public static string Serialize(ITriggerExpression expression)
         {
             var requirements = new List<Requirement>();
