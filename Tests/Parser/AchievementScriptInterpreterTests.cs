@@ -1012,6 +1012,23 @@ namespace RATools.Tests.Parser
         }
 
         [Test]
+        public void TestPassFunctionToFunctionNameConflict()
+        {
+            // the "b" function defines an "a" parameter within it's scope, which hides the
+            // global "a" function. "c" calls "b" with the "a" function as the parameter.
+            // make sure the function reference to "a" can still find the global "a" function.
+            var scope = Evaluate(
+                "function a(n) => n + 1\n" +
+                "function b(a, n) => a(n)\n" +
+                "c = b(a, 3)\n");
+
+            var c = scope.GetVariable("c");
+            Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
+            var integerConstant = (IntegerConstantExpression)c;
+            Assert.That(integerConstant.Value, Is.EqualTo(4));
+        }
+
+        [Test]
         public void TestDefaultParameterPassthrough()
         {
             var parser = Parse("function a(id = 0, badge = \"0\")\n" +

@@ -117,8 +117,8 @@ namespace RATools.Tests.Parser.Functions
             var parser = new AchievementScriptInterpreter();
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
-                "2:1 achievement call failed\r\n" +
-                "- 2:26 trigger is not a requirement"));
+                "2:26 Invalid value for parameter: trigger\r\n" +
+                "- 2:26 Cannot compare function reference and IntegerConstant"));
         }
 
         [Test]
@@ -132,9 +132,9 @@ namespace RATools.Tests.Parser.Functions
             var parser = new AchievementScriptInterpreter();
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
-                "3:1 achievement call failed\r\n" +
-                "- 3:26 trigger is not a requirement\r\n" +
-                "- 2:17 Cannot convert comparison to requirement"));
+                "3:26 Invalid value for parameter: trigger\r\n" +
+                "- 3:26 b call failed\r\n" +
+                "- 2:17 Cannot compare function reference and IntegerConstant"));
         }
     }
 }

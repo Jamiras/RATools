@@ -105,6 +105,24 @@ namespace RATools.Parser.Expressions
                 return false;
             }
 
+            var funcRefLeft = left as FunctionReferenceExpression;
+            var funcRefRight = right as FunctionReferenceExpression;
+            if (funcRefLeft != null || funcRefRight != null)
+            {
+                if (funcRefLeft != null && funcRefRight != null)
+                {
+                    result = new BooleanConstantExpression(funcRefLeft.Name == funcRefRight.Name);
+                    CopyLocation(result);
+                    return true;
+                }
+
+                if (funcRefLeft != null)
+                    result = new ErrorExpression(string.Format("Cannot compare function reference and {0}", right.Type), this.Location);
+                else
+                    result = new ErrorExpression(string.Format("Cannot compare {0} and function reference", left.Type), this.Location);
+                return false;
+            }
+
             // if the same operation is being applied to both sides, just cancel it out
             {
                 var mathematicRight = right as MathematicExpression;

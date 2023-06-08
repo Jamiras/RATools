@@ -1,9 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -163,6 +161,74 @@ namespace RATools.Tests.Parser.Expressions
             ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.EqualTo(expected));
             Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestCompareFunctionReferences()
+        {
+            var tokenizer = Tokenizer.CreateTokenizer("function a() => 1");
+            var exprA = (FunctionDefinitionExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            tokenizer = Tokenizer.CreateTokenizer("function b() => 2");
+            var exprB = (FunctionDefinitionExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope();
+            scope.AddFunction(exprA);
+            scope.AddFunction(exprB);
+
+            tokenizer = Tokenizer.CreateTokenizer("c = a");
+            var exprC = (AssignmentExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            exprC.Evaluate(scope);
+
+            ExpressionBase result;
+
+            // direct comparison - true
+            tokenizer = Tokenizer.CreateTokenizer("a == a");
+            var expr1 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr1.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)result).Value, Is.True);
+
+            // direct comparison - false
+            tokenizer = Tokenizer.CreateTokenizer("a == b");
+            var expr2 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr2.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)result).Value, Is.False);
+
+            // indirect comparison - true
+            tokenizer = Tokenizer.CreateTokenizer("a == c");
+            var expr3 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr3.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)result).Value, Is.True);
+
+            // indirect comparison - false
+            tokenizer = Tokenizer.CreateTokenizer("b == c");
+            var expr4 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr4.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<BooleanConstantExpression>());
+            Assert.That(((BooleanConstantExpression)result).Value, Is.False);
+
+            // invalid direct comparison
+            tokenizer = Tokenizer.CreateTokenizer("a == 1");
+            var expr5 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr5.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+
+            // invalid indirect comparison
+            tokenizer = Tokenizer.CreateTokenizer("c == 1");
+            var expr6 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr6.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+
+            // invalid direct comparison reversed
+            tokenizer = Tokenizer.CreateTokenizer("b() == a");
+            var expr7 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(expr7.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare IntegerConstant and function reference"));
         }
     }
 }

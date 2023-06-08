@@ -120,7 +120,16 @@ namespace RATools.Parser.Internal
 
                     var functionReference = functionVariable.Value as FunctionReferenceExpression;
                     if (functionReference != null)
-                        return scope.GetFunction(functionReference.Name);
+                    {
+                        // start looking for the referenced function
+                        functionName = functionReference.Name;
+
+                        // check current scope again
+                        if (scope._functions != null && scope._functions.TryGetValue(functionName, out function))
+                            return function;
+
+                        // proceed to next parent scope
+                    }
                 }
             }
 
