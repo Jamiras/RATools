@@ -55,8 +55,11 @@ namespace RATools.Parser.Internal
         /// </summary>
         internal void CopyLocation(ExpressionBase target)
         {
-            if (Location.End.Line != 0 && !target.IsReadOnly)
-                target.Location = Location;
+            if (Location.End.Line != 0)
+            {
+                if (!target.IsReadOnly || target.Location.End.Line == 0)
+                    target.Location = Location;
+            }
         }
 
         /// <summary>

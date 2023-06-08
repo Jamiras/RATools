@@ -451,14 +451,15 @@ namespace RATools.Parser.Expressions
                     }
                 }
 
-                parseError = new ErrorExpression(name + " is not a requirement", originalParameter ?? parameter);
+                var parameterError = new ErrorExpression(name + " is not a requirement", originalParameter ?? parameter);
 
-                if (!ReferenceEquals(invalidClause, parameter))
+                if (invalidClause != null)
                 {
-                    ((ErrorExpression)parseError).InnerError =
+                    parameterError.InnerError =
                         new ErrorExpression("Cannot convert " + invalidClause.Type.ToString().ToLower() + " to requirement", invalidClause);
                 }
 
+                parseError = parameterError;
                 return null;
             }
 
