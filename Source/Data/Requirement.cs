@@ -190,7 +190,23 @@ namespace RATools.Data
                 case RequirementType.Measured:
                 case RequirementType.MeasuredPercent:
                     builder.Append("measured(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+
+                    // if there's no HitTarget and there's an AndNext or OrNext clause, assume we're counting
+                    // complex conditions for a Value clause and wrap it in a "tally(0, ...)"
+                    if (HitCount == 0 && !String.IsNullOrEmpty(andNext))
+                    {
+                        var measuredClause = new StringBuilder();
+                        AppendRepeatedCondition(measuredClause, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+
+                        builder.Append("tally(0, ");
+                        builder.Append(RemoveOuterParentheses(measuredClause.ToString()));
+                        builder.Append(')');
+                    }
+                    else
+                    {
+                        AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
+                    }
+
                     if (measuredIf != null)
                     {
                         builder.Append(", when=");
