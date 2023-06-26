@@ -145,11 +145,12 @@ namespace RATools.Parser.Expressions
                 functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
+            if (result != null && result.Location.Start.Line == 0)
+                CopyLocation(result);
+
             var error = result as ErrorExpression;
             if (error != null)
             {
-                if (error.Location.Start.Line == 0)
-                    CopyLocation(error);
                 result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }

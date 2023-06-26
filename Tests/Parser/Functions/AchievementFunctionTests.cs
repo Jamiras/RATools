@@ -136,5 +136,53 @@ namespace RATools.Tests.Parser.Functions
                 "- 3:26 b call failed\r\n" +
                 "- 2:17 Cannot compare function reference and IntegerConstant"));
         }
+
+        [Test]
+        public void TestIncompleteComparison()
+        {
+            var input = "function a() => byte(0x1234)\n" +
+                        "achievement(\"T\", \"D\", 5, a())";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "2:1 achievement call failed\r\n" +
+                "- 2:26 trigger is not a requirement\r\n" +
+                "- 1:17 Cannot convert memoryaccessor to requirement"));
+        }
+
+        [Test]
+        public void TestIncompleteComparisonInHelperFunction()
+        {
+            var input = "function a() => byte(0x1234)\n" +
+                        "function b() => a() + 1\r\n" +
+                        "achievement(\"T\", \"D\", 5, b())";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "3:1 achievement call failed\r\n" +
+                "- 3:26 trigger is not a requirement\r\n" +
+                // this actually reports the entire "a() + 1" as invalid
+                "- 2:17 Cannot convert memoryaccessor to requirement"));
+        }
+
+        [Test]
+        public void TestIncompleteComparisonInHelperFunctionLogical()
+        {
+            var input = "function a() => byte(0x1234)\n" +
+                        "function b() => a() && byte(0x2345) == 6\r\n" +
+                        "achievement(\"T\", \"D\", 5, b())";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "3:1 achievement call failed\r\n" +
+                "- 3:26 trigger is not a requirement\r\n" +
+                "- 1:17 Cannot convert memoryaccessor to requirement"));
+        }
     }
 }

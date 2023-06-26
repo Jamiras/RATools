@@ -60,21 +60,21 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         }
 
         [Test]
-        [TestCase("never(6+2)")] // numeric
-        [TestCase("never(byte(0x1234))")] // no comparison
-        [TestCase("never(f)")] // function reference
-        [TestCase("unless(6+2)")] // numeric
-        [TestCase("unless(byte(0x1234))")] // no comparison
-        [TestCase("unless(f)")] // function reference
-        [TestCase("trigger_when(6+2)")] // numeric
-        [TestCase("trigger_when(byte(0x1234))")] // no comparison
-        [TestCase("trigger_when(f)")] // function reference
-        public void TestUnsupportedComparisons(string input)
+        [TestCase("never(6+2)", "integerconstant")] // numeric
+        [TestCase("never(byte(0x1234))", "memoryaccessor")] // no comparison
+        [TestCase("never(f)", "variable")] // function reference
+        [TestCase("unless(6+2)", "integerconstant")] // numeric
+        [TestCase("unless(byte(0x1234))", "memoryaccessor")] // no comparison
+        [TestCase("unless(f)", "variable")] // function reference
+        [TestCase("trigger_when(6+2)", "integerconstant")] // numeric
+        [TestCase("trigger_when(byte(0x1234))", "memoryaccessor")] // no comparison
+        [TestCase("trigger_when(f)", "variable")] // function reference
+        public void TestUnsupportedComparisons(string input, string unsupportedType)
         {
             var scope = TriggerExpressionTests.CreateScope();
             scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
 
-            TriggerExpressionTests.AssertParseError(input, scope, "comparison is not a requirement");
+            TriggerExpressionTests.AssertParseError(input, scope, "Cannot convert " + unsupportedType + " to requirement");
         }
 
         [Test]

@@ -416,7 +416,7 @@ namespace RATools.Tests.Parser
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison is not a requirement"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 Cannot convert memoryaccessor to requirement"));
         }
 
         [Test]
@@ -834,17 +834,13 @@ namespace RATools.Tests.Parser
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var parser = new AchievementScriptInterpreter();
             Assert.That(parser.Run(tokenizer), Is.False);
-            Assert.That(parser.ErrorMessage, Is.EqualTo("2:30 always_true has no meaning outside of a trigger clause"));
+            Assert.That(parser.ErrorMessage, Is.EqualTo(
+                "10:40 Invalid value for parameter: trigger\r\n" +
+                "- 10:40 foo call failed\r\n" +
+                "- 2:30 always_true call failed\r\n" +
+                "- 2:30 always_true has no meaning outside of a trigger clause"));
         }
         */
-
-        [Test]
-        public void TestErrorInFunctionInExpression()
-        {
-            var parser = Parse("function foo() => byte(1)\n" +
-                               "achievement(\"Title\", \"Description\", 5, once(foo()))\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 comparison is not a requirement"));
-        }
 
         [Test]
         public void TestErrorInFunctionParameterLocation()
