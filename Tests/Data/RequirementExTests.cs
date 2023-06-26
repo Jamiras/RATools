@@ -58,6 +58,12 @@ namespace RATools.Tests.Data
                   "repeated(10, byte(0x002345) == 1 && byte(0x003456) == 2 && never(byte(0x001234) < 5 || byte(0x001234) > 8))")]
         [TestCase("Z:0xH004567=4_O:0xH001234=1_0xH002345=2.1.",
                   "once((byte(0x001234) == 1 || byte(0x002345) == 2) && never(byte(0x004567) == 4))")]
+        [TestCase("N:0xH001234=1_M:0xH002345=2.100.",
+                  "measured(repeated(100, byte(0x001234) == 1 && byte(0x002345) == 2))")]
+        [TestCase("N:0xH001234=1_M:0xH002345=2",
+                  "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
+        [TestCase("O:0xH001234=1_M:0xH002345=2",
+                  "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
         public void TestAppendString(string input, string expected)
         {
             var achievement = new AchievementBuilder();
