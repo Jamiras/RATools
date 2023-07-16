@@ -1802,6 +1802,15 @@ namespace RATools.Parser
                             continue;
                         }
 
+                        if (lastRequirement.Type == RequirementType.Trigger)
+                        {
+                            // if the ResetNextIf is attached to a Trigger clause, assume there are other conditions
+                            // that would also be reset if the ResetNextIf were changed to a ResetIf and that would
+                            // cause the challenge indicator to be hidden.
+                            canExtract = false;
+                            continue;
+                        }
+
                         resetNextIfClauses.Add(requirementEx);
 
                         resetNextIsForPause |= (lastRequirement.Type == RequirementType.PauseIf);
