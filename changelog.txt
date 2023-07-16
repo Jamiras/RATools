@@ -1,3 +1,15 @@
+v1.12.1 - 16 Jul 2023
+* improve error message when parameter list has a trailing comma
+* improve error message when using measured with an untallied comparison
+* improve error message when building trigger from memory accessor without comparison
+* allow variables to be assigned to default parameters of functions to emulate constants
+* fix exception when viewport height change causes last line of script to be hidden
+* fix exception when local variable has same name as global function
+* fix ResetNextIf being converted to ResetIf when attached to a Trigger
+* fix modified AddAddress being optimized out of comparison
+* fix Measured target calculation when using tally
+* fix dumping achievement using measured unbounded tally
+
 v1.12.0 - 23 Apr 2023
 * only show first line of code notes in achievement/leaderboard views
 * new dialog to preview list of achievements as they would appear in the emulator
