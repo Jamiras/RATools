@@ -24,7 +24,7 @@
             </ListView.Resources>
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="User" Width="240">
+                    <GridViewColumn Header="Achievement" Width="240">
                         <GridViewColumn.CellTemplate>
                             <DataTemplate>
                                 <TextBlock>
