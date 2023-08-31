@@ -24,11 +24,14 @@ namespace RATools.Parser.Functions
                 case "Score":
                     return ValueFormat.Score;
 
-                case "Centisecs":
+                case "Centiseconds":
                     return ValueFormat.TimeMillisecs;
 
                 case "Seconds":
                     return ValueFormat.TimeSecs;
+
+                case "SecondsAsMinutes":
+                    return ValueFormat.TimeSecsAsMins;
 
                 case "Minutes":
                     return ValueFormat.TimeMinutes;

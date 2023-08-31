@@ -116,10 +116,28 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
-        public void TestFormat()
+        [TestCase("VALUE", "VALUE")]
+        [TestCase("SECS", "SECS")]
+        [TestCase("TIMESECS", "SECS")]
+        [TestCase("FRAMES", "FRAMES")]
+        [TestCase("TIME", "FRAMES")]
+        [TestCase("POINTS", "SCORE")]
+        [TestCase("SCORE", "SCORE")]
+        [TestCase("CENTISECS", "MILLISECS")]
+        [TestCase("MILLISECS", "MILLISECS")]
+        [TestCase("MINUTES", "MINUTES")]
+        [TestCase("SECS_AS_MINS", "SECS_AS_MINS")]
+        [TestCase("OTHER", "OTHER")]
+        [TestCase("FLOAT1", "FLOAT1")]
+        [TestCase("FLOAT2", "FLOAT2")]
+        [TestCase("FLOAT3", "FLOAT3")]
+        [TestCase("FLOAT4", "FLOAT4")]
+        [TestCase("FLOAT5", "FLOAT5")]
+        [TestCase("FLOAT6", "FLOAT6")]
+        public void TestFormat(string format, string expectedFormat)
         {
-            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234), format=\"FRAMES\")");
-            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=FRAMES\r\n\r\nDisplay:\r\n@Name(0xH001234)\r\n"));
+            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234), format=\"" + format + "\")");
+            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=" + expectedFormat + "\r\n\r\nDisplay:\r\n@Name(0xH001234)\r\n"));
         }
 
         [Test]

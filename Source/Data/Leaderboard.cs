@@ -49,17 +49,18 @@
                     return ValueFormat.Value;
 
                 case "SECS":
-                case "TIMESECS":
+                case "TIMESECS": // valid in runtime - maps to SECS
                     return ValueFormat.TimeSecs;
 
                 case "FRAMES":
-                case "TIME":
+                case "TIME": // valid in runtime - maps to FRAMES
                     return ValueFormat.TimeFrames;
 
-                case "POINTS":
+                case "POINTS": // valid in runtime - maps to SCORE
                 case "SCORE":
                     return ValueFormat.Score;
 
+                case "CENTISECS": // not valid in runtime. converted to MILLISECS when serialized
                 case "MILLISECS":
                     return ValueFormat.TimeMillisecs;
 
@@ -69,7 +70,7 @@
                 case "SECS_AS_MINS":
                     return ValueFormat.TimeSecsAsMins;
 
-                case "OTHER":
+                case "OTHER": // valid in runtime - maps to SCORE
                     return ValueFormat.Other;
 
                 case "FLOAT1":
@@ -122,6 +123,24 @@
 
                 case ValueFormat.Other:
                     return "OTHER";
+
+                case ValueFormat.Float1:
+                    return "FLOAT1";
+
+                case ValueFormat.Float2:
+                    return "FLOAT2";
+
+                case ValueFormat.Float3:
+                    return "FLOAT3";
+
+                case ValueFormat.Float4:
+                    return "FLOAT4";
+
+                case ValueFormat.Float5:
+                    return "FLOAT5";
+
+                case ValueFormat.Float6:
+                    return "FLOAT6";
 
                 default:
                     return "UNKNOWN";
