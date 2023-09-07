@@ -44,7 +44,7 @@ namespace RATools.Parser.Expressions
         /// <summary>
         /// Returns <c>true</c> if the constant is numerically negative
         /// </summary>
-        public bool IsNegative
+        public virtual bool IsNegative
         {
             get { return Value < 0; }
         }
@@ -52,7 +52,7 @@ namespace RATools.Parser.Expressions
         /// <summary>
         /// Returns <c>true</c> if the constant is numerically positive
         /// </summary>
-        public bool IsPositive
+        public virtual bool IsPositive
         {
             get { return Value > 0; }
         }
@@ -91,36 +91,52 @@ namespace RATools.Parser.Expressions
             var integerExpression = right as IntegerConstantExpression;
             if (integerExpression != null)
             {
+                var newValue = 0;
                 switch (operation)
                 {
                     case MathematicOperation.Add:
-                        return new IntegerConstantExpression(Value + integerExpression.Value);
+                        newValue = Value + integerExpression.Value;
+                        break;
 
                     case MathematicOperation.Subtract:
-                        return new IntegerConstantExpression(Value - integerExpression.Value);
+                        newValue = Value - integerExpression.Value;
+                        break;
 
                     case MathematicOperation.Multiply:
-                        return new IntegerConstantExpression(Value * integerExpression.Value);
+                        newValue = Value * integerExpression.Value;
+                        break;
 
                     case MathematicOperation.Divide:
                         if (integerExpression.Value == 0)
                             return new ErrorExpression("Division by zero");
-                        return new IntegerConstantExpression(Value / integerExpression.Value);
+                        newValue = Value / integerExpression.Value;
+                        break;
 
                     case MathematicOperation.Modulus:
                         if (integerExpression.Value == 0)
                             return new ErrorExpression("Division by zero");
-                        return new IntegerConstantExpression(Value % integerExpression.Value);
+                        newValue = Value % integerExpression.Value;
+                        break;
 
                     case MathematicOperation.BitwiseAnd:
-                        return new IntegerConstantExpression(Value & integerExpression.Value);
+                        newValue = Value & integerExpression.Value;
+                        break;
 
                     case MathematicOperation.BitwiseXor:
-                        return new IntegerConstantExpression(Value ^ integerExpression.Value);
+                        newValue = Value ^ integerExpression.Value;
+                        break;
 
                     default:
                         break;
                 }
+
+                if (right is UnsignedIntegerConstantExpression ||
+                    this is UnsignedIntegerConstantExpression)
+                {
+                    return new UnsignedIntegerConstantExpression((uint)newValue);
+                }
+
+                return new IntegerConstantExpression(newValue);
             }
 
             if (right is FloatConstantExpression)
@@ -180,6 +196,39 @@ namespace RATools.Parser.Expressions
                 return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;
+        }
+    }
+
+    internal class UnsignedIntegerConstantExpression : IntegerConstantExpression
+    {
+        public UnsignedIntegerConstantExpression(uint value)
+            : base((int)value)
+        {
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically negative
+        /// </summary>
+        public override bool IsNegative
+        {
+            get { return false; }
+        }
+
+        /// <summary>
+        /// Returns <c>true</c> if the constant is numerically positive
+        /// </summary>
+        public override bool IsPositive
+        {
+            get { return Value != 0; }
+        }
+
+        /// <summary>
+        /// Appends the textual representation of this expression to <paramref name="builder" />.
+        /// </summary>
+        internal override void AppendString(StringBuilder builder)
+        {
+            builder.Append((uint)Value);
+            builder.Append('U');
         }
     }
 }

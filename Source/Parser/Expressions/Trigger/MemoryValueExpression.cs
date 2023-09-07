@@ -548,7 +548,7 @@ namespace RATools.Parser.Expressions.Trigger
             return new ComparisonExpression(cloneLeft, operation, constant);
         }
 
-        private MemoryValueExpression InvertAndMigrateAccessorsTo(ExpressionBase target)
+        internal MemoryValueExpression InvertAndMigrateAccessorsTo(ExpressionBase target)
         {
             var value = target as MemoryValueExpression;
             if (value == null)
@@ -1004,6 +1004,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             Debug.Assert(comparison.Left is MemoryValueExpression);
             var leftMemoryValue = (MemoryValueExpression)comparison.Left;
+            IntegerConstantExpression integerConstant;
 
             var newLeft = leftMemoryValue.Clone();
             newLeft.IntegerConstant += underflowAdjustment;
@@ -1036,7 +1037,7 @@ namespace RATools.Parser.Expressions.Trigger
             else if (underflowAdjustment < 0)
             {
                 // attempting to clamp adjustment, see if we can clamp it even more
-                var integerConstant = newRight as IntegerConstantExpression;
+                integerConstant = newRight as IntegerConstantExpression;
                 if (integerConstant != null)
                 {
                     var newConstant = integerConstant.Value - newLeft.IntegerConstant;
@@ -1048,6 +1049,12 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                 }
             }
+
+            // if the resulting underflow comparison target is negative, explicitly make it positive
+            // to prevent further underflow calculations.
+            integerConstant = newRight as IntegerConstantExpression;
+            if (integerConstant != null && integerConstant.IsNegative)
+                newRight = new UnsignedIntegerConstantExpression((uint)integerConstant.Value);
 
             return new ComparisonExpression(newLeft, operation, newRight);
         }
@@ -1063,6 +1070,9 @@ namespace RATools.Parser.Expressions.Trigger
             switch (right.Type)
             {
                 case ExpressionType.IntegerConstant:
+                    if (right is UnsignedIntegerConstantExpression)
+                        return 0; // explicit unsigned in comparison, do not adjust for underflow
+
                     integerOffset = ((IntegerConstantExpression)right).Value;
                     break;
 

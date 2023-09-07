@@ -54,6 +54,11 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("low4(0x001234) * 10000000 + byte(0x1235) != prev(low4(0x002345)) * 10000000 + prev(byte(0x2346))", "A:0xL001234*10000000_B:d0xL002345*10000000_0xH001235!=d0xH002346")] // don't need underflow adjustment for inequality
         [TestCase("dword(dword(0x001234) + 8) - dword(dword(0x001234) + 12) > 100000", "A:100000_I:0xX001234_0xX00000c<0xX000008")] // AddAddress can be shared
         [TestCase("dword(dword(0x001234) + 8) - dword(dword(0x001234) + 12) * 4 > 100000", "I:0xX001234_B:0xX00000c*4_I:0xX001234_0xX000008>100000")] // AddAddress cannot be shared
+        [TestCase("word(0x18294A) * 10 - word(0x182946) * 8 < 0x80000000", "A:0x 18294a*10_B:0x 182946*8_0<2147483648")]
+        [TestCase("byte(0x1234) - byte(0x2345) == 1", "B:0xH002345=0_0xH001234=1")]
+        [TestCase("byte(0x1234) - byte(0x2345) == -1", "B:0xH001234=0_0xH002345=1")] // invert to eliminate negative value
+        [TestCase("byte(0x1234) - byte(0x2345) == 4294967295", "B:0xH002345=0_0xH001234=4294967295")] // don't invert very high positive value
+        [TestCase("byte(0x1234) - byte(0x2345) <= -1", "A:1=0_0xH001234<=0xH002345")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -85,12 +90,12 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("tbyte(0x001234) <= 16777215", "always_true()")]
         [TestCase("tbyte(0x001234) > 16777215", "always_false()")]
         [TestCase("tbyte(0x001234) >= 16777215", "tbyte(0x001234) == 16777215")]
-        [TestCase("dword(0x001234) == 4294967295", "dword(0x001234) == 4294967295")]
-        [TestCase("dword(0x001234) != 4294967295", "dword(0x001234) != 4294967295")]
-        [TestCase("dword(0x001234) < 4294967295", "dword(0x001234) < 4294967295")]
+        [TestCase("dword(0x001234) == 4294967295", "dword(0x001234) == 4294967295U")]
+        [TestCase("dword(0x001234) != 4294967295", "dword(0x001234) != 4294967295U")]
+        [TestCase("dword(0x001234) < 4294967295", "dword(0x001234) < 4294967295U")]
         [TestCase("dword(0x001234) <= 4294967295", "always_true()")]
         [TestCase("dword(0x001234) > 4294967295", "always_false()")]
-        [TestCase("dword(0x001234) >= 4294967295", "dword(0x001234) == 4294967295")]
+        [TestCase("dword(0x001234) >= 4294967295", "dword(0x001234) == 4294967295U")]
         [TestCase("bit3(0x001234) == 0", "bit3(0x001234) == 0")]
         [TestCase("bit3(0x001234) != 0", "bit3(0x001234) == 1")]
         [TestCase("bit3(0x001234) < 0", "always_false()")]

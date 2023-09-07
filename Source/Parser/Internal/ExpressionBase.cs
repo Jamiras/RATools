@@ -480,8 +480,15 @@ namespace RATools.Parser.Internal
                     return new ErrorExpression("Number too large");
             }
 
-            if (value > Int32.MaxValue && !isUnsigned)
-                return new ErrorExpression("Number too large");
+            if (value > Int32.MaxValue)
+            { 
+                if (!isUnsigned)
+                    return new ErrorExpression("Number too large");
+
+                var unsignedIntegerExpression = new UnsignedIntegerConstantExpression(value);
+                unsignedIntegerExpression.Location = new TextRange(line, column, endLine, endColumn);
+                return unsignedIntegerExpression;
+            }
 
             var integerExpression = new IntegerConstantExpression((int)value);
             integerExpression.Location = new TextRange(line, column, endLine, endColumn);

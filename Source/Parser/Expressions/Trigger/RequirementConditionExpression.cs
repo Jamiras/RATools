@@ -57,7 +57,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             // special handling: comparisons use unsigned values
             var rightInteger = Right as IntegerConstantExpression;
-            if (rightInteger != null && rightInteger.Value < 0)
+            if (rightInteger != null && rightInteger.IsNegative)
                 builder.Append((uint)rightInteger.Value);
             else
                 Right.AppendString(builder);
@@ -419,19 +419,26 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else if (value > max)
             {
-                switch (condition.Comparison)
+                if (value > Int32.MaxValue && min < 0)
                 {
-                    case ComparisonOperation.GreaterThan:
-                    case ComparisonOperation.GreaterThanOrEqual:
-                    case ComparisonOperation.Equal:
-                        expression = new AlwaysFalseExpression();
-                        return;
+                    // value is implicitly negative, ignore it.
+                }
+                else
+                {
+                    switch (condition.Comparison)
+                    {
+                        case ComparisonOperation.GreaterThan:
+                        case ComparisonOperation.GreaterThanOrEqual:
+                        case ComparisonOperation.Equal:
+                            expression = new AlwaysFalseExpression();
+                            return;
 
-                    case ComparisonOperation.LessThan:
-                    case ComparisonOperation.LessThanOrEqual:
-                    case ComparisonOperation.NotEqual:
-                        expression = new AlwaysTrueExpression();
-                        return;
+                        case ComparisonOperation.LessThan:
+                        case ComparisonOperation.LessThanOrEqual:
+                        case ComparisonOperation.NotEqual:
+                            expression = new AlwaysTrueExpression();
+                            return;
+                    }
                 }
             }
             else if (value == max)
@@ -502,6 +509,26 @@ namespace RATools.Parser.Expressions.Trigger
                     Right = Left
                 };
                 return reversed.Normalize();
+            }
+
+            var integerRight = Right as IntegerConstantExpression;
+            if (integerRight != null && integerRight.IsNegative && integerRight.Value > -100000)
+            {
+                var memoryValue = Left as MemoryValueExpression;
+                if (memoryValue != null && memoryValue.MemoryAccessors.Any(a => a.CombiningOperator == RequirementType.SubSource))
+                {
+                    // A - B < -2  =>  B - A > 2
+                    var newMemoryValue = new MemoryValueExpression();
+                    newMemoryValue = memoryValue.InvertAndMigrateAccessorsTo(newMemoryValue);
+                    var integerConstant = new IntegerConstantExpression(-integerRight.Value);
+                    var normalized = new RequirementConditionExpression
+                    {
+                        Left = newMemoryValue,
+                        Comparison = ComparisonExpression.ReverseComparisonOperation(Comparison),
+                        Right = integerConstant
+                    };
+                    return normalized.Normalize();
+                }
             }
 
             var modifiedMemoryAccessor = Left as ModifiedMemoryAccessorExpression;
