@@ -152,8 +152,6 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.Comparison, "float(0x001234) != 3.363636")]
         [TestCase("byte(0x001234) * 10", "=", "byte(0x002345) * 5",
             ExpressionType.Comparison, "byte(0x001234) * 2 == byte(0x002345)")]
-        [TestCase("byte(0x001234) * 10", "=", "byte(0x002345) * 3",
-            ExpressionType.Error, "Result can never be true using integer math")]
         [TestCase("byte(0x001234) * 10", "=", "byte(0x002345) / 3",
             ExpressionType.Comparison, "byte(0x001234) * 30 == byte(0x002345)")]
         [TestCase("byte(0x001234) / 10", "=", "byte(0x002345) * 3",
@@ -178,6 +176,18 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             ExpressionType.None, null)] // division cannot be moved; multiplication cannot be extracted
         [TestCase("byte(0x001234) / byte(0x002345) * 10", ">", "80",
             ExpressionType.Comparison, "byte(0x001234) / byte(0x002345) > 8")]
+        [TestCase("byte(0x001234) * 10", "=", "byte(0x002345) * 8",
+            ExpressionType.Comparison, "byte(0x001234) * 10 - byte(0x002345) * 8 == 0U")] // comparison of two modified memory accesors results in subsource chain
+        [TestCase("byte(0x001234) * 10", "!=", "byte(0x002345) * 8",
+            ExpressionType.Comparison, "byte(0x001234) * 10 - byte(0x002345) * 8 != 0U")] // comparison of two modified memory accesors results in subsource chain
+        [TestCase("byte(0x001234) * 10", "<", "byte(0x002345) * 8",
+            ExpressionType.Comparison, "byte(0x001234) * 10 - byte(0x002345) * 8 >= 2147483648U")] // comparison of two modified memory accesors results in subsource chain
+        [TestCase("byte(0x001234) * 10", "<=", "byte(0x002345) * 8",
+            ExpressionType.Requirement, "byte(0x001234) * 10 - byte(0x002345) * 8 >= 2147483648U || byte(0x001234) * 10 - byte(0x002345) * 8 == 0U")] // comparison of two modified memory accesors results in subsource chain
+        [TestCase("byte(0x001234) * 10", ">", "byte(0x002345) * 8",
+            ExpressionType.Requirement, "byte(0x001234) * 10 - byte(0x002345) * 8 < 2147483648U && byte(0x001234) * 10 - byte(0x002345) * 8 != 0U")] // comparison of two modified memory accesors results in subsource chain
+        [TestCase("byte(0x001234) * 10", ">=", "byte(0x002345) * 8",
+            ExpressionType.Comparison, "byte(0x001234) * 10 - byte(0x002345) * 8 < 2147483648U")] // comparison of two modified memory accesors results in subsource chain
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);

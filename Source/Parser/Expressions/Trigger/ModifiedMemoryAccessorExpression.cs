@@ -700,7 +700,50 @@ namespace RATools.Parser.Expressions.Trigger
                     result = newRight.ApplyMathematic(modifier, opposingOperator);
 
                     if (result is MathematicExpression)
-                        return new ErrorExpression("Result can never be true using integer math");
+                    {
+                        var zero = new UnsignedIntegerConstantExpression(0U);
+                        var negative = new UnsignedIntegerConstantExpression(0x80000000U);
+
+                        // left and right are both modified memory expressions. use subsource and check the negative bit
+                        var memoryValue = new MemoryValueExpression(this);
+                        memoryValue.ApplyMathematic(modifiedMemoryAccessor.Clone(), MathematicOperation.Subtract);
+                        switch (operation)
+                        {
+                            case ComparisonOperation.Equal:
+                            case ComparisonOperation.NotEqual:
+                                // A * 3 == B * 4  =>  A * 3 - B * 4 == 0  =>  A * 3 - B * 4 == 0
+                                // A * 3 != B * 4  =>  A * 3 - B * 4 != 0  =>  A * 3 - B * 4 != 0
+                                return new ComparisonExpression(memoryValue, operation, zero);
+
+                            case ComparisonOperation.LessThan:
+                            case ComparisonOperation.GreaterThanOrEqual:
+                                // A * 3 <  B * 4  =>  A * 3 - B * 4 <  0  =>  A * 3 - B * 4 >= 0x80000000
+                                // A * 3 >= B * 4  =>  A * 3 - B * 4 >= 0  =>  A * 3 - B * 4 <  0x80000000
+                                var newOperation = ComparisonExpression.GetOppositeComparisonOperation(operation);
+                                return new ComparisonExpression(memoryValue, newOperation, negative);
+
+                            case ComparisonOperation.LessThanOrEqual:
+                                // A * 3 <= B * 4  =>  A * 3 - B * 4 <= 0  =>  A * 3 - B * 4 >= 0x80000000 || == 0
+                                var negativeComparison = new RequirementConditionExpression() { Left = memoryValue, Comparison = ComparisonOperation.GreaterThanOrEqual, Right = negative };
+                                var zeroComparison = new RequirementConditionExpression() { Left = memoryValue, Comparison = ComparisonOperation.Equal, Right = zero };
+                                var lessThanOrEqualClause = new RequirementClauseExpression() { Operation = ConditionalOperation.Or };
+                                lessThanOrEqualClause.AddCondition(negativeComparison);
+                                lessThanOrEqualClause.AddCondition(zeroComparison);
+                                return lessThanOrEqualClause;
+
+                            case ComparisonOperation.GreaterThan:
+                                // A * 3 >  B * 4  =>  A * 3 - B * 4 >  0  =>  A * 3 - B * 4 <  0x80000000 && != 0
+                                var positiveComparison = new RequirementConditionExpression() { Left = memoryValue, Comparison = ComparisonOperation.LessThan, Right = negative };
+                                var nonZeroComparison = new RequirementConditionExpression() { Left = memoryValue, Comparison = ComparisonOperation.NotEqual, Right = zero };
+                                var greaterThanClause = new RequirementClauseExpression() { Operation = ConditionalOperation.And };
+                                greaterThanClause.AddCondition(positiveComparison);
+                                greaterThanClause.AddCondition(nonZeroComparison);
+                                return greaterThanClause;
+
+                            default:
+                                return new ErrorExpression("Result can never be true using integer math");
+                        }
+                    }
 
                     // swap so modifier is on left
                     newRight = newLeft;
