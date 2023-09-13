@@ -64,15 +64,15 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("tally(17, repeated(6, byte(0x1234) == 5 || byte(0x2345) == 6), byte(0x1234) == 34)",
             "O:0xH001234=5_C:0xH002345=6.6._0xH001234=34.17.")] // with nested repeated()
         [TestCase("tally(18, byte(0x1234) == 56, deduct(byte(0x2345) == 99))",
-            "D:0xH002345=99_0xH001234=56.18.")] // simple deduct
+            "D:0xH002345=99_C:0xH001234=56_0=1.18.")] // simple deduct
         [TestCase("tally(19, byte(0x1234) == 56, deduct(byte(0x2345) == 99), byte(0x5555) == 0, deduct(byte(0x5555) == 1))",
-            "C:0xH001234=56_D:0xH002345=99_D:0xH005555=1_0xH005555=0.19.")] // mutiple deducts moved after adds
+            "C:0xH001234=56_D:0xH002345=99_D:0xH005555=1_C:0xH005555=0_0=1.19.")] // mutiple deducts moved after adds
         [TestCase("tally(20, byte(0x1234) == 56, deduct(repeated(10, byte(0x2345) == 99)))",
-            "D:0xH002345=99.10._0xH001234=56.20.")] // deduct repeated
+            "D:0xH002345=99.10._C:0xH001234=56_0=1.20.")] // deduct repeated
         [TestCase("tally(21, repeated(10, byte(0x1234) == 56), deduct(repeated(10, byte(0x2345) == 99)))",
             "C:0xH001234=56.10._D:0xH002345=99.10._0=1.21.")] // deduct and non-deduct repeated
         [TestCase("tally(22, byte(0x1234) == 56, always_true(), deduct(always_true()), byte(0x1234) == 78)",
-            "C:0xH001234=56_C:1=1_D:1=1_0xH001234=78.22.")] // always_trues are not ignored
+            "C:0xH001234=56_C:1=1_D:1=1_C:0xH001234=78_0=1.22.")] // always_trues are not ignored
         [TestCase("tally(23, byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3))",
             "N:0xH002345=2_Z:0xH003456=3_0xH001234=1.23.")]
         [TestCase("tally(24, byte(0x1234) == 1 && once(byte(0x1234) == 2))",
