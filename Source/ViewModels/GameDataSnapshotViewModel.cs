@@ -188,6 +188,13 @@ namespace RATools.ViewModels
                 {
                     contents = stream.ReadToEnd();
                 }
+
+                if (contents.StartsWith("Could not"))
+                {
+                    // Could not connect to database (server overloaded). Wait 10 seconds, then try again
+                    System.Threading.Thread.Sleep(10000);
+                    RefreshFromServer(gameId, file, fileSystemService, httpRequestService);
+                }
             }
         }
 

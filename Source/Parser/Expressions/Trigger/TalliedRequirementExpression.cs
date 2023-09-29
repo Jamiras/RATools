@@ -321,6 +321,9 @@ namespace RATools.Parser.Expressions.Trigger
                 if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)
                 {
                     Debug.Assert(context.LastRequirement.Type == RequirementType.SubHits);
+                    // if there's a SubHits, we need an always_false clause for the total hits as the
+                    // individual hits can potentially exceed the total.
+                    needsAlwaysFalse = true;
                 }
                 else
                 {
