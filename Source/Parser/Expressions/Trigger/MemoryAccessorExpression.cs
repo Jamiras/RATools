@@ -132,7 +132,13 @@ namespace RATools.Parser.Expressions.Trigger
 
             var memoryValue = that as MemoryValueExpression;
             if (memoryValue != null)
-                return PointerChainMatches(memoryValue.MemoryAccessors.Last().MemoryAccessor);
+            {
+                var memoryAcessorExpression = memoryValue.MemoryAccessors.Last();
+                if (memoryAcessorExpression.ModifyingOperator != RequirementOperator.None)
+                    return false;
+
+                return PointerChainMatches(memoryAcessorExpression.MemoryAccessor);
+            }
 
             return (_pointerChain == null || _pointerChain.Count == 0);
         }

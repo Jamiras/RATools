@@ -73,18 +73,68 @@ namespace RATools.Parser.Expressions.Trigger
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             ErrorExpression error;
+            var comparison = Comparison;
+            var left = Left;
             var right = MemoryAccessorExpressionBase.ReduceToSimpleExpression(Right);
 
-            var memoryValue = Left as MemoryValueExpression;
+            var rightAccessor = right as MemoryAccessorExpression;
+            if (rightAccessor != null && rightAccessor.HasPointerChain)
+            {
+                if (rightAccessor.PointerChainMatches(left as MemoryAccessorExpressionBase))
+                {
+                    rightAccessor = rightAccessor.Clone();
+                    rightAccessor.ClearPointerChain();
+                }
+                else
+                {
+                    var leftMemoryValue = left as MemoryValueExpression;
+                    if (leftMemoryValue != null && leftMemoryValue.MemoryAccessors.All(m => m.ModifyingOperator != RequirementOperator.None))
+                    {
+                        // all elements on left side are modified, so we'd need a 0 placeholder for the comparison
+                        // attempt to avoid that by making the right value the AddSource element.
+                        //
+                        //     A / 2 > B   ->   - A / 2 + B < 0
+                        //
+                        // move the left side to the right side and invert
+                        var newLeft = new MemoryValueExpression();
+                        newLeft = newLeft.Combine(right, MathematicOperation.Add) as MemoryValueExpression;
+                        left = newLeft.Combine(left, MathematicOperation.Subtract);
+                        comparison = ComparisonExpression.ReverseComparisonOperation(comparison);
+                    }
+                    else
+                    {
+                        // move the right side to the left side and compare to zero.
+                        //
+                        //     A > B / 2   ->   - B / 2 + A > 0
+                        //
+                        var newLeft = new MemoryValueExpression();
+                        newLeft = newLeft.Combine(left, MathematicOperation.Add) as MemoryValueExpression;
+                        left = newLeft.Combine(right, MathematicOperation.Subtract);
+                    }
+
+                    if (comparison == ComparisonOperation.LessThan || comparison == ComparisonOperation.LessThanOrEqual)
+                    {
+                        // can't comare "<0" or "<=0". invert comparison
+                        var newLeft = new MemoryValueExpression();
+                        left = ((MemoryValueExpression)left).InvertAndMigrateAccessorsTo(newLeft);
+                        comparison = ComparisonExpression.ReverseComparisonOperation(comparison);
+                    }
+
+                    right = new IntegerConstantExpression(0);
+                    rightAccessor = null;
+                }
+            }
+
+            var memoryValue = left as MemoryValueExpression;
             if (memoryValue != null)
             {
                 error = memoryValue.BuildTrigger(context, right);
             }
             else
             {
-                var trigger = Left as ITriggerExpression;
+                var trigger = left as ITriggerExpression;
                 if (trigger == null)
-                    return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Left.Type), Left);
+                    return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", left.Type), left);
 
                 error = trigger.BuildTrigger(context);
             }
@@ -94,29 +144,15 @@ namespace RATools.Parser.Expressions.Trigger
 
             var lastRequirement = context.LastRequirement;
 
-            var rightAccessor = right as MemoryAccessorExpression;
             if (rightAccessor != null)
-            {
-                if (rightAccessor.HasPointerChain)
-                {
-                    if (!rightAccessor.PointerChainMatches(Left as MemoryAccessorExpressionBase))
-                        return new ErrorExpression("Cannot compare values with different pointer chains", this);
-
-                    rightAccessor = rightAccessor.Clone();
-                    rightAccessor.ClearPointerChain();
-                }
-
                 lastRequirement.Right = FieldFactory.CreateField(rightAccessor);
-            }
             else
-            {
                 lastRequirement.Right = FieldFactory.CreateField(right);
-            }
 
             if (lastRequirement.Right.Type == FieldType.None)
                 return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type), Right);
 
-            lastRequirement.Operator = ConvertToRequirementOperator(Comparison);
+            lastRequirement.Operator = ConvertToRequirementOperator(comparison);
             return null;
         }
 

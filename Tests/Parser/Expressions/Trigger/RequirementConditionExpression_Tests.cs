@@ -59,6 +59,10 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x1234) - byte(0x2345) == -1", "B:0xH001234=0_0xH002345=1")] // invert to eliminate negative value
         [TestCase("byte(0x1234) - byte(0x2345) == 4294967295", "B:0xH002345=0_0xH001234=4294967295")] // don't invert very high positive value
         [TestCase("byte(0x1234) - byte(0x2345) <= -1", "A:1=0_0xH001234<=0xH002345")]
+        [TestCase("dword(0x1234) - prev(dword(0x1234)) >= 0x1000", "A:4096=0_d0xX001234<=0xX001234")]
+        [TestCase("word(dword(0x7f6f10) + 0xB00) > word(dword(0x7f6f10) + 0xB02)", "I:0xX7f6f10_0x 000b00>0x 000b02")]
+        [TestCase("word(dword(0x7f6f10) + 0xB00) > word(dword(0x7f6f10) + 0xB02) / 2", "I:0xX7f6f10_B:0x 000b02/2_I:0xX7f6f10_0x 000b00>0")] // cannot share addaddress if one value is modified
+        [TestCase("word(dword(0x7f6f10) + 0xB00) / 2 > word(dword(0x7f6f10) + 0xB02)", "I:0xX7f6f10_B:0x 000b02_I:0xX7f6f10_A:0x 000b00/2_0>0")] // cannot share addaddress if one value is modified
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
