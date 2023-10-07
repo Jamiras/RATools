@@ -1,3 +1,10 @@
+v1.12.2 - 7 Oct 2023
+* ensure `tally` with `deduct` has at least one unbounded condition for total hit target
+* fix achievement containing only a modification to an AddSource constant not appearing modified
+* fix modifier being lost when comparing values with the same pointer chain
+* fix issue trying to process complex comparison to very large number
+* fix "Centiseconds" rich presence macro; support "SecondsAsMinutes" rich presence macro
+
 v1.12.1 - 16 Jul 2023
 * improve error message when parameter list has a trailing comma
 * improve error message when using measured with an untallied comparison

@@ -15,8 +15,8 @@
     <PackageIcon>Icon.png</PackageIcon>
     <ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
     <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
-    <VersionPrefix>1.12.1</VersionPrefix>
-    <InformationalVersion>16 Jul 2023</InformationalVersion>
+    <VersionPrefix>1.12.2</VersionPrefix>
+    <InformationalVersion>7 Oct 2023</InformationalVersion>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
