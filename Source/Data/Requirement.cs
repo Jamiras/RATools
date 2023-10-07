@@ -651,14 +651,14 @@ namespace RATools.Data
                         result = true;
                         break;
 
-                    case RequirementOperator.Multiply:
-                    case RequirementOperator.Divide:
-                    case RequirementOperator.BitwiseAnd:
-                        return null;
-
-                    default:
+                    case RequirementOperator.NotEqual:
+                    case RequirementOperator.LessThan:
+                    case RequirementOperator.GreaterThan:
                         result = false;
                         break;
+
+                    default:
+                        return null;
                 }
             }
             else if (Left.Type == FieldType.Float || Right.Type == FieldType.Float)
@@ -688,8 +688,7 @@ namespace RATools.Data
                         result = (leftFloat >= rightFloat);
                         break;
                     default:
-                        result = false;
-                        break;
+                        return null;
                 }
             }
             else
@@ -716,8 +715,7 @@ namespace RATools.Data
                         result = (Left.Value >= Right.Value);
                         break;
                     default:
-                        result = false;
-                        break;
+                        return null;
                 }
             }
 
