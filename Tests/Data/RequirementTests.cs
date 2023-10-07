@@ -14,6 +14,7 @@ namespace RATools.Tests.Data
             Byte2345,
             Word2345,
             Value99,
+            Value66,
         }
 
         private Field GetField(TestField field)
@@ -28,6 +29,8 @@ namespace RATools.Tests.Data
                     return new Field { Size = FieldSize.Word, Type = FieldType.MemoryAddress, Value = 0x2345 };
                 case TestField.Value99:
                     return new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 99 };
+                case TestField.Value66:
+                    return new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 66 };
                 default:
                     return new Field();
             }
@@ -99,6 +102,69 @@ namespace RATools.Tests.Data
         {
             var field = new Requirement();
             Assert.That(field.ToString(), Is.EqualTo("none"));
+        }
+
+        [Test]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.LessThan, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.LessThanOrEqual, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.GreaterThan, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.GreaterThanOrEqual, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Byte2345, null)]
+        [TestCase(TestField.Byte2345, RequirementOperator.Equal, TestField.Word2345, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Byte1234, true)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte2345, null)]
+        [TestCase(TestField.Byte2345, RequirementOperator.NotEqual, TestField.Word2345, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte1234, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte1234, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.LessThan, TestField.Byte1234, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.LessThanOrEqual, TestField.Byte1234, true)]
+        [TestCase(TestField.Byte1234, RequirementOperator.GreaterThan, TestField.Byte1234, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.GreaterThanOrEqual, TestField.Byte1234, true)]
+        [TestCase(TestField.Value66, RequirementOperator.Equal, TestField.Value99, false)]
+        [TestCase(TestField.Value66, RequirementOperator.NotEqual, TestField.Value99, true)]
+        [TestCase(TestField.Value66, RequirementOperator.LessThan, TestField.Value99, true)]
+        [TestCase(TestField.Value66, RequirementOperator.LessThanOrEqual, TestField.Value99, true)]
+        [TestCase(TestField.Value66, RequirementOperator.GreaterThan, TestField.Value99, false)]
+        [TestCase(TestField.Value66, RequirementOperator.GreaterThanOrEqual, TestField.Value99, false)]
+        [TestCase(TestField.Value66, RequirementOperator.Equal, TestField.Value66, true)]
+        [TestCase(TestField.Value66, RequirementOperator.NotEqual, TestField.Value66, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Multiply, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Multiply, TestField.Byte1234, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Divide, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.BitwiseAnd, TestField.Value99, null)]
+        [TestCase(TestField.Value99, RequirementOperator.None, TestField.None, null)]
+        public void TestEvaluate(TestField left, RequirementOperator requirementOperator, TestField right, bool? expected)
+        {
+            var requirement = new Requirement
+            {
+                Left = GetField(left),
+                Operator = requirementOperator,
+                Right = GetField(right),
+            };
+
+            Assert.That(requirement.Evaluate(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Byte1234, 0, true)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Byte1234, 1, true)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Equal, TestField.Byte1234, 2, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte1234, 0, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte1234, 1, false)]
+        [TestCase(TestField.Byte1234, RequirementOperator.NotEqual, TestField.Byte1234, 2, false)]
+        public void TestEvaluateHitCount(TestField left, RequirementOperator requirementOperator, TestField right, int hitTarget, bool? expected)
+        {
+            var requirement = new Requirement
+            {
+                Left = GetField(left),
+                Operator = requirementOperator,
+                Right = GetField(right),
+                HitCount = (uint)hitTarget,
+            };
+
+            Assert.That(requirement.Evaluate(), Is.EqualTo(expected));
         }
 
         [Test]

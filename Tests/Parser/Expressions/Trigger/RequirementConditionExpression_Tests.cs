@@ -59,6 +59,7 @@ namespace RATools.Tests.Parser.Expressions.Trigger
         [TestCase("byte(0x1234) - byte(0x2345) == -1", "B:0xH001234=0_0xH002345=1")] // invert to eliminate negative value
         [TestCase("byte(0x1234) - byte(0x2345) == 4294967295", "B:0xH002345=0_0xH001234=4294967295")] // don't invert very high positive value
         [TestCase("byte(0x1234) - byte(0x2345) <= -1", "A:1=0_0xH001234<=0xH002345")]
+        [TestCase("dword(0x1234) - prev(dword(0x1234)) >= 0x1000", "A:4096=0_d0xX001234<=0xX001234")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
