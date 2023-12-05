@@ -554,6 +554,17 @@ namespace RATools.Parser
         }
     }
 
+    internal class AltBuilderContext : AchievementBuilderContext
+    {
+        public AltBuilderContext(AchievementBuilderContext parent)
+            : base(parent.Achievement)
+        {
+            Parent = parent;
+        }
+
+        public AchievementBuilderContext Parent { get; private set; }
+    }
+
     /// <summary>
     /// <see cref="TriggerBuilderContext"/> for building a subclause to be used in a once/repeated/tally
     /// </summary>

@@ -119,7 +119,11 @@ namespace RATools.Parser.Expressions.Trigger
                     break;
 
                 case RequirementType.Trigger:
-                    if (optimized is AlwaysTrueExpression || optimized is AlwaysFalseExpression)
+                    if (optimized is AlwaysTrueExpression)
+                        return optimized;
+                    // trigger_when(always_false()) makes the group always false,
+                    // but doing so in an alt allows showing a trigger alongside a measured.
+                    if (optimized is AlwaysFalseExpression && context is not AltBuilderContext)
                         return optimized;
                     break;
 

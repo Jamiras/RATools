@@ -112,5 +112,47 @@ namespace RATools.Tests.Parser.Expressions.Trigger
             var expected = "1=1ST:0xH000001=56_T:0xH000002=3ST:0xH000001=55_T:0xH000002=4";
             TriggerExpressionTests.AssertSerializeAchievement(clause, expected);
         }
+
+        [Test]
+        public void TestTriggerFalseCore()
+        {
+            // trigger_when(always_false()) at top level makes the entire top-level clause impossible
+            // which makes the entire achievement impossible.
+            var input = "trigger_when(always_false()) && byte(0x1234) == 2";
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            TriggerExpressionTests.AssertSerializeAchievement(clause, "0=1");
+        }
+
+        [Test]
+        public void TestTriggerFalseInAlt()
+        {
+            // trigger_when(always_false()) in an alt makes that alt impossible, but not the entire
+            // achievement. this behavior can be used to show a trigger icon while a measured counter
+            // is eligible to increment. for example:
+            //
+            //    Alt1 = measured(tally_of(event1(), event2(), event3()))
+            //    Alt2 = trigger_when(always_false()) && event1_eligible()
+            //    Alt3 = trigger_when(always_false()) && event2_eligible()
+            //    Alt4 = trigger_when(always_false()) && event3_eligible()
+            //
+            // that would show the trigger icon while any of the three events was eligible, then the
+            // measured would increment when each individual event was completed and the alt containing
+            // the measured would be true when all three events were completed.
+            //
+            // TODO: consider implementing a helper function for this
+            //
+            //    measured_tally_of({
+            //        event1_eligible() => event1(),
+            //        event2_eligible() => event2(),
+            //        event3_eligible() => event3(),
+            //    })
+            //
+            var input = "byte(0x1234) == 1 && (" +
+                         "measured(byte(0x2345) == 56) || " +
+                         "(trigger_when(always_false()) && byte(0x3456) == 2)" +
+                        ")";
+            var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            TriggerExpressionTests.AssertSerializeAchievement(clause, "0xH001234=1SM:0xH002345=56ST:0=1_0xH003456=2");
+        }
     }
 }
