@@ -1003,6 +1003,15 @@ namespace RATools.Parser
                         var result = groups[j][0].Evaluate();
                         if (result == false)
                         {
+                            if (groups[j][0].Requirements.Any(r => r.Type == RequirementType.Trigger))
+                            {
+                                // trigger_when(always_false()) can be used in an alt group to display
+                                // the challenge icon while a measured value is being incremented in
+                                // another alt group.
+                                if (groups.Skip(1).Any(g => g.Any(e => e.Requirements.Any(r => r.IsMeasured))))
+                                    continue;
+                            }
+
                             // an always_false alt group will not affect the logic, remove it
                             groups.RemoveAt(j);
                         }

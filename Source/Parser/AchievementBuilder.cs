@@ -847,12 +847,22 @@ namespace RATools.Parser
                     requirement.Operator = alwaysFalseRequirement.Operator;
                     requirement.Right = alwaysFalseRequirement.Right;
 
-                    // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
-                    // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
                     if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
+                    {
+                        // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
+                        // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
                         alwaysTrue.Add(requirementEx);
+                    }
+                    else if (requirement.Type == RequirementType.Trigger && !forSubclause)
+                    {
+                        // trigger_when(always_false()) is valid in an alt group.
+                        // it allows the trigger to be shown while another alt group is still false
+                        // (normally as the result of an incomplete measured)
+                    }
                     else
+                    {
                         alwaysFalse.Add(requirementEx);
+                    }
                 }
             }
 
@@ -1203,7 +1213,20 @@ namespace RATools.Parser
                 for (int i = groups.Count - 1; i > 0; i--)
                 {
                     if (isAlwaysFalse(groups[i]))
+                    {
+                        Debug.Assert(groups[i].Count == 1);
+                        if (groups[i][0].Type == RequirementType.Trigger)
+                        {
+                            // trigger_when(always_false()) can be used in an alt group to display the
+                            // challenge icon while a measured value is being incremented in another alt group.
+                            if (groups.Skip(1).Any(g => g.Any(r => r.IsMeasured)))
+                                continue;
+
+                            // no measured/measuredifs, discard group
+                        }
+
                         groups.RemoveAt(i);
+                    }
                 }
 
                 // only always_false alt groups were found, the entire trigger is always_false

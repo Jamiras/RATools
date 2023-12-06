@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Linq;
@@ -121,10 +122,34 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementType.Trigger:
                     if (optimized is AlwaysTrueExpression)
                         return optimized;
+
                     // trigger_when(always_false()) makes the group always false,
                     // but doing so in an alt allows showing a trigger alongside a measured.
                     if (optimized is AlwaysFalseExpression && context is not AltBuilderContext)
                         return optimized;
+
+                    if (optimized is MeasuredRequirementExpression && context is not AltBuilderContext)
+                    {
+                        // trigger_when(measured(...)) can be split into two alts:
+                        //   measured(...) || trigger_when(always_false())
+                        //
+                        // if core is false, the trigger icon will not be shown
+                        // if core is true, and the measured alt is false, it will show the trigger icon
+                        //   because if the trigger condition was true, it would trigger
+                        // if core is true, and the measured alt is true, it will fire
+                        var clause = new RequirementClauseExpression
+                        {
+                            Operation = ConditionalOperation.Or,
+                            Location = Location,
+                        };
+                        clause.AddCondition(optimized);
+                        clause.AddCondition(new BehavioralRequirementExpression
+                        {
+                            Behavior = RequirementType.Trigger,
+                            Condition = new AlwaysFalseExpression(),
+                        });
+                        return clause;
+                    }
                     break;
 
                 default:

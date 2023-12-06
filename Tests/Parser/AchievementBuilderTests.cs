@@ -3,7 +3,9 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using RATools.Tests.Parser.Expressions.Trigger;
 using System.Linq;
 
 namespace RATools.Tests.Parser
@@ -745,6 +747,15 @@ namespace RATools.Tests.Parser
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(),
                 Is.EqualTo("0xH001234=1.1.S0xH004567=1S0xH004567=2SR:0xH002345=2_P:0xH003456=3_0=1"));
+        }
+
+        [Test]
+        public void TestTriggerWhenMeasured()
+        {
+            var achievement = CreateAchievement("byte(0x1234) == 1 && trigger_when(measured(repeated(3, byte(0x2345) == 6)))");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(),
+                Is.EqualTo("0xH001234=1SM:0xH002345=6.3.ST:0=1"));
         }
     }
 }
