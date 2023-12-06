@@ -1196,53 +1196,6 @@ namespace RATools.Parser
             }
         }
 
-        private static void RemoveAlwaysFalseAlts(List<List<RequirementEx>> groups)
-        {
-            bool alwaysFalse = false;
-
-            Predicate<List<RequirementEx>> isAlwaysFalse = 
-                group => group.Count == 1 && group[0].Evaluate() == false;
-
-            if (isAlwaysFalse(groups[0]))
-            {
-                // core is always_false; the entire trigger is always_false
-                alwaysFalse = true;
-            }
-            else if (groups.Count > 1)
-            {
-                for (int i = groups.Count - 1; i > 0; i--)
-                {
-                    if (isAlwaysFalse(groups[i]))
-                    {
-                        Debug.Assert(groups[i].Count == 1);
-                        if (groups[i][0].Type == RequirementType.Trigger)
-                        {
-                            // trigger_when(always_false()) can be used in an alt group to display the
-                            // challenge icon while a measured value is being incremented in another alt group.
-                            if (groups.Skip(1).Any(g => g.Any(r => r.IsMeasured)))
-                                continue;
-
-                            // no measured/measuredifs, discard group
-                        }
-
-                        groups.RemoveAt(i);
-                    }
-                }
-
-                // only always_false alt groups were found, the entire trigger is always_false
-                if (groups.Count == 1)
-                    alwaysFalse = true;
-            }
-
-            if (alwaysFalse)
-            {
-                groups.Clear();
-                groups.Add(new List<RequirementEx>());
-                groups[0].Add(new RequirementEx());
-                groups[0][0].Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-            }
-        }
-
         private static void DenormalizeOrNexts(List<List<RequirementEx>> groups)
         {
             bool canMoveToAlts = false;
@@ -1981,10 +1934,6 @@ namespace RATools.Parser
             // remove the always_true statement
             if (groups[0].Count > 1)
                 groups[0].RemoveAll(g => g.Evaluate() == true);
-
-            // if core is always_false, or all alts are always_false, the entire trigger is always_false.
-            // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
-            RemoveAlwaysFalseAlts(groups);
 
             if (!forSubclause)
             {

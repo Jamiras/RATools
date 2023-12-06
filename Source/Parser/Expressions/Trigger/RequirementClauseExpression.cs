@@ -885,7 +885,11 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var condition in Conditions)
                 BubbleUpOrs(newClause, condition);
 
+            // anything OR false is just anything. but false OR false should still be false, not "nothing".
             newClause._conditions.RemoveAll(c => c is AlwaysFalseExpression);
+            if (newClause._conditions.Count == 0)
+                newClause._conditions.Add(new AlwaysFalseExpression());
+
             if (newClause._conditions.Count == 1)
             {
                 var requirement = newClause._conditions[0];
