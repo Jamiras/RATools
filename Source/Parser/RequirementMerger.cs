@@ -993,62 +993,84 @@ namespace RATools.Parser
 
             // if at least two alt groups still exist, check for always_true and always_false placeholders
             if (groups.Count > 2)
-            {
-                bool hasAlwaysTrue = false;
+                RemoveAlwaysTrueAndAlwaysFalseAlts(groups);
+        }
 
-                for (int j = groups.Count - 1; j >= 1; j--)
+        private static void RemoveAlwaysTrueAndAlwaysFalseAlts(List<List<RequirementEx>> groups)
+        {
+            bool hasAlwaysTrue = false;
+
+            for (int j = groups.Count - 1; j >= 1; j--)
+            {
+                if (groups[j].Count == 1)
                 {
-                    if (groups[j].Count == 1)
+                    var result = groups[j][0].Evaluate();
+                    if (result == false)
                     {
-                        var result = groups[j][0].Evaluate();
-                        if (result == false)
+                        if (groups[j][0].Requirements.Any(r => r.Type == RequirementType.Trigger))
                         {
-                            // an always_false alt group will not affect the logic, remove it
-                            groups.RemoveAt(j);
+                            // trigger_when(always_false()) can be used in an alt group to display
+                            // the challenge icon while a measured value is being incremented in
+                            // another alt group.
+                            if (groups.Skip(1).Any(g => g.Any(e => e.Requirements.Any(r => r.IsMeasured))))
+                                continue;
                         }
-                        else if (result == true)
-                        {
-                            // an always_true alt group supercedes all other alt groups.
-                            // if we see one, keep track of that and we'll process it later.
-                            hasAlwaysTrue = true;
-                        }
+
+                        // an always_false alt group will not affect the logic, remove it
+                        groups.RemoveAt(j);
+                    }
+                    else if (result == true)
+                    {
+                        // an always_true alt group supercedes all other alt groups.
+                        // if we see one, keep track of that and we'll process it later.
+                        hasAlwaysTrue = true;
                     }
                 }
+            }
 
+            if (hasAlwaysTrue)
+            {
                 // if a trigger contains an always_true alt group, remove any other alt groups that don't
                 // have PauseIf or ResetIf conditions as they are unimportant
-                if (hasAlwaysTrue)
+                bool alwaysTrueKept = false;
+                for (int j = groups.Count - 1; j >= 1; j--)
                 {
-                    bool alwaysTrueKept = false;
-                    for (int j = groups.Count - 1; j >= 1; j--)
+                    if (groups[j].Count == 1 && groups[j][0].Evaluate() == true)
                     {
-                        if (groups[j].Count == 1 && groups[j][0].Evaluate() == true)
-                        {
-                            if (!alwaysTrueKept)
-                                alwaysTrueKept = true;
-                            else
-                                groups.RemoveAt(j);
-                            continue;
-                        }
-
-                        if (groups[j].All(r => r.Type != RequirementType.ResetIf && r.Type != RequirementType.PauseIf))
+                        if (!alwaysTrueKept)
+                            alwaysTrueKept = true;
+                        else
                             groups.RemoveAt(j);
+                        continue;
                     }
 
-                    // if only the always_true group is left, get rid of it
-                    if (groups.Count == 2)
-                    {
-                        groups.RemoveAt(1);
+                    if (groups[j].All(r => r.Type != RequirementType.ResetIf && r.Type != RequirementType.PauseIf))
+                        groups.RemoveAt(j);
+                }
 
-                        // if the core group is empty, add an explicit always_true
-                        if (groups[0].Count == 0)
-                        {
-                            var requirementEx = new RequirementEx();
-                            requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
-                            groups[0].Add(requirementEx);
-                        }
+                // if only the always_true group is left, get rid of it
+                if (groups.Count == 2)
+                {
+                    groups.RemoveAt(1);
+
+                    // if the core group is empty, add an explicit always_true
+                    if (groups[0].Count == 0)
+                    {
+                        var requirementEx = new RequirementEx();
+                        requirementEx.Requirements.Add(AlwaysTrueFunction.CreateAlwaysTrueRequirement());
+                        groups[0].Add(requirementEx);
                     }
                 }
+            }
+            else if (groups.Count == 1)
+            {
+                // if all alt groups were eliminated because they were false, put back a single
+                // always_false alt to prevent the achievement from triggering.
+                var requirementEx = new RequirementEx();
+                requirementEx.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                var group = new List<RequirementEx>();
+                group.Add(requirementEx);
+                groups.Add(group);
             }
         }
     }

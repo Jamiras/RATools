@@ -595,7 +595,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (subclauses.All(c => c is OrNextRequirementClauseExpression))
                 return AppendSubclauses(context, subclauses, RequirementType.None);
 
-            var triggerContext = new TriggerBuilderContext();
+            var altContext = new AltBuilderContext(context);
             var alts = new RequirementClauseExpression
             {
                 Operation = ConditionalOperation.Or,
@@ -628,7 +628,7 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                 }
 
-                var optimized = alt.Optimize(triggerContext);
+                var optimized = alt.Optimize(altContext);
                 var optimizedClause = optimized as RequirementClauseExpression;
                 var optimizedConditions = (optimizedClause != null) ? optimizedClause._conditions : new List<RequirementExpressionBase>() { optimized };
 
@@ -672,9 +672,9 @@ namespace RATools.Parser.Expressions.Trigger
                         foreach (var condition in alts.Conditions)
                         {
                             context.BeginAlt();
-                            triggerContext.Trigger = context.Trigger;
+                            altContext.Trigger = context.Trigger;
 
-                            var error = condition.BuildTrigger(triggerContext);
+                            var error = condition.BuildTrigger(altContext);
                             if (error != null)
                                 return error;
                         }
@@ -885,7 +885,11 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var condition in Conditions)
                 BubbleUpOrs(newClause, condition);
 
+            // anything OR false is just anything. but false OR false should still be false, not "nothing".
             newClause._conditions.RemoveAll(c => c is AlwaysFalseExpression);
+            if (newClause._conditions.Count == 0)
+                newClause._conditions.Add(new AlwaysFalseExpression());
+
             if (newClause._conditions.Count == 1)
             {
                 var requirement = newClause._conditions[0];
@@ -911,17 +915,17 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            var triggerContext = new TriggerBuilderContext();
+            var altContext = new AltBuilderContext(context);
             foreach (var condition in newClause.Conditions)
             {
                 context.BeginAlt();
-                triggerContext.Trigger = context.Trigger;
+                altContext.Trigger = context.Trigger;
 
                 // Since we're creating alt groups, we don't need to call BuildSubclauseTrigger.
                 var requirement = condition as ITriggerExpression;
                 if (requirement != null)
                 {
-                    var error = requirement.BuildTrigger(triggerContext);
+                    var error = requirement.BuildTrigger(altContext);
                     if (error != null)
                         return error;
                 }
@@ -974,9 +978,13 @@ namespace RATools.Parser.Expressions.Trigger
             RequirementExpressionBase alwaysFalseCondition = null;
             RequirementExpressionBase alwaysTrueCondition = null;
 
+            var subContext = context;
+            if (achievementContext != null && Operation == ConditionalOperation.Or)
+                subContext = new AltBuilderContext(achievementContext);
+
             foreach (var requirement in _conditions)
             {
-                var optimized = requirement.Optimize(context) ?? requirement;
+                var optimized = requirement.Optimize(subContext) ?? requirement;
                 updated |= !ReferenceEquals(optimized, requirement);
 
                 ErrorExpression error;

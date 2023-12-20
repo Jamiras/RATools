@@ -847,12 +847,22 @@ namespace RATools.Parser
                     requirement.Operator = alwaysFalseRequirement.Operator;
                     requirement.Right = alwaysFalseRequirement.Right;
 
-                    // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
-                    // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
                     if (requirement.Type == RequirementType.ResetIf || requirement.Type == RequirementType.PauseIf)
+                    {
+                        // a PauseIf for a condition that can never be true can be eliminated - replace with always_true
+                        // a ResetIf for a condition that can never be true can be eliminated - replace with always_true
                         alwaysTrue.Add(requirementEx);
+                    }
+                    else if (requirement.Type == RequirementType.Trigger && !forSubclause)
+                    {
+                        // trigger_when(always_false()) is valid in an alt group.
+                        // it allows the trigger to be shown while another alt group is still false
+                        // (normally as the result of an incomplete measured)
+                    }
                     else
+                    {
                         alwaysFalse.Add(requirementEx);
+                    }
                 }
             }
 
@@ -1183,40 +1193,6 @@ namespace RATools.Parser
 
                 // put one copy of the repeated requirements in the core group
                 groups[0].AddRange(requirementsFoundInAll);
-            }
-        }
-
-        private static void RemoveAlwaysFalseAlts(List<List<RequirementEx>> groups)
-        {
-            bool alwaysFalse = false;
-
-            Predicate<List<RequirementEx>> isAlwaysFalse = 
-                group => group.Count == 1 && group[0].Evaluate() == false;
-
-            if (isAlwaysFalse(groups[0]))
-            {
-                // core is always_false; the entire trigger is always_false
-                alwaysFalse = true;
-            }
-            else if (groups.Count > 1)
-            {
-                for (int i = groups.Count - 1; i > 0; i--)
-                {
-                    if (isAlwaysFalse(groups[i]))
-                        groups.RemoveAt(i);
-                }
-
-                // only always_false alt groups were found, the entire trigger is always_false
-                if (groups.Count == 1)
-                    alwaysFalse = true;
-            }
-
-            if (alwaysFalse)
-            {
-                groups.Clear();
-                groups.Add(new List<RequirementEx>());
-                groups[0].Add(new RequirementEx());
-                groups[0][0].Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
             }
         }
 
@@ -1958,10 +1934,6 @@ namespace RATools.Parser
             // remove the always_true statement
             if (groups[0].Count > 1)
                 groups[0].RemoveAll(g => g.Evaluate() == true);
-
-            // if core is always_false, or all alts are always_false, the entire trigger is always_false.
-            // otherwise, any always_falses in the alt groups can be removed as they have no impact on the trigger.
-            RemoveAlwaysFalseAlts(groups);
 
             if (!forSubclause)
             {

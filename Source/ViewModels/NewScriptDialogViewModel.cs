@@ -1698,6 +1698,10 @@ namespace RATools.ViewModels
 
         private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)
         {
+            var triggerWhenMeasuredGroups = new List<RequirementGroupViewModel>();
+            if (triggerViewModel.Groups.Count() > 2)
+                IdentifyTriggerWhenMeasured(triggerViewModel, triggerWhenMeasuredGroups);
+
             var groupEnumerator = triggerViewModel.Groups.GetEnumerator();
             groupEnumerator.MoveNext();
 
@@ -1708,6 +1712,10 @@ namespace RATools.ViewModels
             bool first = true;
             while (groupEnumerator.MoveNext())
             {
+                // ignore trigger alt of triggerWhenMeasured groups
+                if (ReferenceEquals(triggerWhenMeasuredGroups.FirstOrDefault(), groupEnumerator.Current))
+                    continue;
+
                 if (first)
                 {
                     if (!isCoreEmpty)
@@ -1723,21 +1731,84 @@ namespace RATools.ViewModels
                         // only core and one alt, inject an always_false clause to prevent the compiler from joining them
                         stream.Write("always_false() || ");
                     }
-
-                    stream.Write('(');
                 }
                 else
                 {
                     stream.WriteLine(" ||");
                     stream.Write(new string(' ', indent));
-                    stream.Write(" (");
+                    stream.Write(' ');
                 }
 
-                DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
-                stream.Write(")");
+                if (triggerWhenMeasuredGroups.Contains(groupEnumerator.Current))
+                {
+                    stream.Write("trigger_when(");
+                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
+                    stream.Write(')');
+                }
+                else
+                {
+                    stream.Write('(');
+                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
+                    stream.Write(')');
+                }
             }
             if (!first)
                 stream.Write(')');
+        }
+
+        private static void IdentifyTriggerWhenMeasured(TriggerViewModel triggerViewModel, List<RequirementGroupViewModel> triggerWhenMeasuredGroups)
+        {
+            RequirementEx triggerAlt = null;
+            foreach (var group in triggerViewModel.Groups.Skip(1))
+            {
+                if (!group.Requirements.Any(r => r.Requirement.Type == RequirementType.Trigger))
+                    continue;
+
+                var groupEx = RequirementEx.Combine(group.Requirements.Select(r => r.Requirement));
+                if (groupEx.Count == 1)
+                {
+                    triggerWhenMeasuredGroups.Add(group);
+                    triggerAlt = groupEx[0];
+                    break;
+                }
+            }
+
+            if (triggerAlt == null)
+                return;
+
+            foreach (var group in triggerViewModel.Groups.Skip(1))
+            {
+                if (!group.Requirements.Any(r => r.Requirement.Type == RequirementType.Measured || r.Requirement.Type == RequirementType.MeasuredPercent))
+                    continue;
+
+                var groupEx = RequirementEx.Combine(group.Requirements.Select(r => r.Requirement));
+                if (groupEx.Count != 1)
+                    continue;
+
+                if (triggerAlt.Evaluate() == false)
+                {
+                    triggerWhenMeasuredGroups.Add(group);
+                }
+                else
+                {
+                    for (int i = 0; i < groupEx.Count; i++)
+                    {
+                        var lastRequirement = groupEx[i].Requirements.Last();
+                        if (lastRequirement.Type == RequirementType.Measured || lastRequirement.Type == RequirementType.MeasuredPercent)
+                        {
+                            var clone = lastRequirement.Clone();
+                            clone.Type = RequirementType.Trigger;
+                            groupEx[i].Requirements[groupEx[i].Requirements.Count - 1] = clone;
+                            if (groupEx[i] == triggerAlt)
+                                triggerWhenMeasuredGroups.Add(group);
+                        }
+                    }
+                }
+            }
+
+            // if only the trigger alt was found, discard it
+            if (triggerWhenMeasuredGroups.Count == 1)
+                triggerWhenMeasuredGroups.Clear();
         }
 
         private static void DumpValue(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)

@@ -68,6 +68,8 @@ namespace RATools.Tests.Parser.Functions
         [TestCase("repeated(22, never(byte(0x1234) == 1))", "0xH001234!=1.22.")]
         [TestCase("repeated(23, ((byte(0x1234) == 1 && byte(0x2345) == 2) || byte(0x3456) == 3) && never(byte(0x4567) == 4 && byte(0x5678) == 5))",
             "N:0xH004567=4_Z:0xH005678=5_N:0xH001234=1_O:0xH002345=2_0xH003456=3.23.")]
+        [TestCase("repeated(24, once(bit3(0x1234) < prev(bit3(0x1234)) && never(repeated(3, bit3(0x1234) == 0))) && bit5(0x1234) == 0)",
+            "Z:0xP001234=0.3._N:0xP001234<d0xP001234.1._0xR001234=0.24.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);
