@@ -32,31 +32,13 @@ namespace RATools.Parser.Functions
                 result = new ErrorExpression("count must be greater than or equal to zero", count);
                 return false;
             }
-                
-            var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
+
+            var varargs = GetVarArgsParameter(scope, out result, count, true);
             if (varargs == null)
-            {
-                if (!(result is ErrorExpression))
-                    result = new ErrorExpression("unexpected varargs", count);
                 return false;
-            }
 
             var parameters = new List<ExpressionBase>();
             parameters.Add(count);
-
-            // special case - if there's a single array parameter, assume it's a list of conditions
-            if (varargs.Entries.Count == 1)
-            {
-                var arrayExpression = varargs.Entries[0] as ArrayExpression;
-                if (arrayExpression == null)
-                {
-                    var referenceExpression = varargs.Entries[0] as VariableReferenceExpression;
-                    if (referenceExpression != null)
-                        arrayExpression = referenceExpression.Expression as ArrayExpression;
-                }
-                if (arrayExpression != null)
-                    varargs = arrayExpression;
-            }
 
             foreach (var comparison in varargs.Entries)
             {

@@ -110,6 +110,15 @@ namespace RATools.Tests.Parser.Functions
         }
 
         [Test]
+        public void TestValueMaxOfArray()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of([byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8]))");
+            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3$0xH001235*5$0xH001236*8"));
+        }
+
+        [Test]
         public void TestValueMeasured()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +

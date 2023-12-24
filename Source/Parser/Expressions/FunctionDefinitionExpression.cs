@@ -467,6 +467,38 @@ namespace RATools.Parser.Expressions
             return typedParameter;
         }
 
+        protected ArrayExpression GetVarArgsParameter(InterpreterScope scope, out ExpressionBase parseError, ExpressionBase lastExpression, bool expandArray = false)
+        {
+            var varargs = GetParameter(scope, "varargs", out parseError) as ArrayExpression;
+            if (varargs == null)
+            {
+                if (!(parseError is ErrorExpression))
+                {
+                    if (lastExpression != null)
+                        parseError = new ErrorExpression("unexpected varargs", lastExpression);
+                    else
+                        parseError = new ErrorExpression("unexpected varargs");
+                }
+                return null;
+            }
+
+            // special case - if there's a single array parameter, treat it as a list of parameters
+            if (varargs.Entries.Count == 1 && expandArray)
+            {
+                var arrayExpression = varargs.Entries[0] as ArrayExpression;
+                if (arrayExpression == null)
+                {
+                    var referenceExpression = varargs.Entries[0] as VariableReferenceExpression;
+                    if (referenceExpression != null)
+                        arrayExpression = referenceExpression.Expression as ArrayExpression;
+                }
+                if (arrayExpression != null)
+                    varargs = arrayExpression;
+            }
+
+            return varargs;
+        }
+
         /// <summary>
         /// Creates an <see cref="InterpreterScope"/> with all variables required for the function call.
         /// </summary>
