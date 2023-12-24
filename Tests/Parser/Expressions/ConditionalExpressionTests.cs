@@ -62,6 +62,7 @@ namespace RATools.Tests.Parser.Expressions
         [TestCase("!always_true()", "always_false()")]
         [TestCase("!always_false()", "always_true()")]
         [TestCase("!(always_false() || A == 1)", "always_true() && A != 1")]
+        [TestCase("(A == 1 && B != 1) || (A != 1 && B == 1)", "(A == 1 && B != 1) || (A != 1 && B == 1)")]
         public void TestReplaceVariables(string input, string expected)
         {
             input = input.Replace("A", "byte(10)");
