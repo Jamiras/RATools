@@ -101,6 +101,8 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new PrevPriorFunction("prior", FieldType.PriorValue));
                 _globalScope.AddFunction(new PrevPriorFunction("bcd", FieldType.BinaryCodedDecimal));
 
+                _globalScope.AddFunction(new IdentityTransformFunction());
+
                 _globalScope.AddFunction(new OnceFunction());
                 _globalScope.AddFunction(new RepeatedFunction());
                 _globalScope.AddFunction(new TallyFunction());
