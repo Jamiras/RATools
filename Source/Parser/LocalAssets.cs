@@ -338,7 +338,7 @@ namespace RATools.Parser
                         achievement.BadgeName != externalAchievement.BadgeName ||
                         achievement.Title != externalAchievement.Title ||
                         achievement.Description != externalAchievement.Description ||
-                        !achievement.AreRequirementsSame(externalAchievement))
+                        !AchievementBuilder.AreRequirementsSame(achievement, externalAchievement))
                     {
                         var index = achievements.IndexOf(achievement);
                         achievements[index] = externalAchievement;

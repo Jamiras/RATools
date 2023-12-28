@@ -82,13 +82,7 @@ namespace RATools.ViewModels
         private static Achievement CreateValue(string definition)
         {
             var achievementBuilder = new AchievementBuilder();
-            if (definition.Length > 2)
-            {
-                if (definition[1] == ':')
-                    achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(definition));
-                else
-                    achievementBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
-            }
+            achievementBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
             return achievementBuilder.ToAchievement();
         }
     }

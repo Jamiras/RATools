@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jamiras.Components;
+using System;
 using System.Diagnostics;
 
 namespace RATools.Data

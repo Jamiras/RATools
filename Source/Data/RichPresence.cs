@@ -8,7 +8,7 @@ namespace RATools.Data
     [DebuggerDisplay("Rich Presence")]
     public class RichPresence : AssetBase
     {
-        internal RichPresence()
+        public RichPresence()
         {
             Title = "Rich Presence";
         }

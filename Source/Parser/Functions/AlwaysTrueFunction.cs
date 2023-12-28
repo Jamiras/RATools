@@ -31,11 +31,7 @@ namespace RATools.Parser.Functions
 
         public static Requirement CreateAlwaysTrueRequirement()
         {
-            var requirement = new Requirement();
-            requirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
-            requirement.Operator = RequirementOperator.Equal;
-            requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
-            return requirement;
+            return Requirement.CreateAlwaysTrueRequirement();
         }
     }
 }

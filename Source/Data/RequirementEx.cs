@@ -1,5 +1,4 @@
-﻿using RATools.Parser.Functions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -269,7 +268,7 @@ namespace RATools.Data
                             addHitsRequirements.All(r => r.HitCount != 0 || r.IsScalable))
                         {
                             addHitsRequirements.Last().Type = RequirementType.OrNext;
-                            addHitsRequirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
+                            addHitsRequirements.Add(Requirement.CreateAlwaysFalseRequirement());
                             hasAlwaysFalse = true;
                         }
 
@@ -434,7 +433,7 @@ namespace RATools.Data
             builder.Append(definition.ToString());
         }
 
-        internal void AppendString(StringBuilder builder, NumberFormat numberFormat, ref int width, int wrapWidth, int indent, string measuredIf)
+        public void AppendString(StringBuilder builder, NumberFormat numberFormat, ref int width, int wrapWidth, int indent, string measuredIf)
         {
             AppendString(builder, Requirements, numberFormat, ref width, wrapWidth, indent, measuredIf);
         }

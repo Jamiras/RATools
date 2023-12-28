@@ -1,5 +1,4 @@
-﻿using RATools.Parser;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace RATools.Data
@@ -10,11 +9,15 @@ namespace RATools.Data
     [DebuggerDisplay("{Title} ({Points})")]
     public class Achievement : AssetBase
     {
-        internal Achievement()
+        public Achievement()
         {
-            CoreRequirements = new Requirement[0];
-            AlternateRequirements = new IEnumerable<Requirement>[0];
+            Trigger = new Trigger();
         }
+
+        /// <summary>
+        /// Gets the trigger for the achievement.
+        /// </summary>
+        public Trigger Trigger { get; internal set; }
 
         /// <summary>
         /// Gets the achievement category (3=Core, 5=Unofficial).
@@ -32,25 +35,21 @@ namespace RATools.Data
         /// <summary>
         /// Gets the core requirements for the achievement.
         /// </summary>
-        public IEnumerable<Requirement> CoreRequirements { get; internal set; }
+        public IEnumerable<Requirement> CoreRequirements
+        {
+            get { return Trigger.Core.Requirements; }
+        }
 
         /// <summary>
         /// Gets the alternate requirements for the achivement.
         /// </summary>
-        public IEnumerable<IEnumerable<Requirement>> AlternateRequirements { get; internal set; }
-
-        /// <summary>
-        /// Determines if the achievement's requirements match a second achievement.
-        /// </summary>
-        /// <returns><c>true</c> if the requirements match, <c>false</c> if not.</returns>
-        public bool AreRequirementsSame(Achievement achievement)
+        public IEnumerable<IEnumerable<Requirement>> AlternateRequirements
         {
-            var builder1 = new AchievementBuilder(this);
-            builder1.Optimize();
-            var builder2 = new AchievementBuilder(achievement);
-            builder2.Optimize();
-
-            return builder1.AreRequirementsSame(builder2);
+            get
+            {
+                foreach (var alt in Trigger.Alts)
+                    yield return alt.Requirements;
+            }
         }
     }
 }
