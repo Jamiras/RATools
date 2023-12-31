@@ -1,5 +1,4 @@
-﻿using Jamiras.Components;
-using System;
+﻿using System;
 using System.Diagnostics;
 
 namespace RATools.Data
@@ -13,7 +12,7 @@ namespace RATools.Data
         /// <summary>
         /// Gets the unique identifier of the asset.
         /// </summary>
-        public int Id { get; internal set; }
+        public int Id { get; set; }
 
         /// <summary>
         /// Gets or sets the title of the asset.
@@ -28,22 +27,22 @@ namespace RATools.Data
         /// <summary>
         /// Gets the number of points the asset is worth.
         /// </summary>
-        public int Points { get; internal set; }
+        public int Points { get; set; }
 
         /// <summary>
         /// Gets the name of the badge for the asset.
         /// </summary>
-        public string BadgeName { get; internal set; }
+        public string BadgeName { get; set; }
 
         /// <summary>
         /// Gets the date/time the asset was first published.
         /// </summary>
-        public DateTime Published { get; internal set; }
+        public DateTime Published { get; set; }
 
         /// <summary>
         /// Gets the date/time the asset was last modified.
         /// </summary>
-        public DateTime LastModified { get; internal set; }
+        public DateTime LastModified { get; set; }
 
         /// <summary>
         /// Gets whether or not the asset has been published but not promoted to Core.
@@ -56,6 +55,6 @@ namespace RATools.Data
         /// <summary>
         /// Gets the script line associated to creating the asset.
         /// </summary>
-        internal int SourceLine { get; set; }
+        public int SourceLine { get; set; }
     }
 }

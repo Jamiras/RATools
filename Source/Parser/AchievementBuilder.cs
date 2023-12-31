@@ -61,6 +61,11 @@ namespace RATools.Parser
         public int Id { get; set; }
 
         /// <summary>
+        /// Gets or sets the category of the achievement.
+        /// </summary>
+        public int Category { get; set; }
+
+        /// <summary>
         /// Gets or sets the name of the badge for the achievement.
         /// </summary>
         public string BadgeName { get; set; }
@@ -98,7 +103,16 @@ namespace RATools.Parser
 
             var trigger = new Trigger(_core.ToArray(), alts);
 
-            var achievement = new Achievement { Title = Title, Description = Description, Points = Points, Trigger = trigger, Id = Id, BadgeName = BadgeName };
+            var achievement = new Achievement 
+            { 
+                Title = Title,
+                Description = Description,
+                Points = Points,
+                Trigger = trigger,
+                Category = Category,
+                Id = Id,
+                BadgeName = BadgeName
+            };
             return achievement;
         }
 

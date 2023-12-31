@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FloatConstantExpression : ExpressionBase,
+    public class FloatConstantExpression : ExpressionBase,
         IMathematicCombineExpression, IComparisonNormalizeExpression, INumericConstantExpression
     {
         public FloatConstantExpression(float value)

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class StringConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
+    public class StringConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public StringConstantExpression(string value)
             : base(ExpressionType.StringConstant)

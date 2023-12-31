@@ -1,15 +1,15 @@
 ﻿//#define DEBUG_UPDATE
 
 using Jamiras.Components;
-using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser.Expressions
 {
-    internal class ExpressionGroupCollection
+    public class ExpressionGroupCollection
     {
         public ExpressionGroupCollection()
         {

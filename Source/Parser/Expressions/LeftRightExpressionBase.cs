@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using Jamiras.Components;
-using RATools.Parser.Internal;
+﻿using Jamiras.Components;
+using System.Collections.Generic;
 
 namespace RATools.Parser.Expressions
 {
-    internal abstract class LeftRightExpressionBase : ExpressionBase, INestedExpressions
+    public abstract class LeftRightExpressionBase : ExpressionBase, INestedExpressions
     {
         public LeftRightExpressionBase(ExpressionBase left, ExpressionBase right, ExpressionType type)
             : base(type)

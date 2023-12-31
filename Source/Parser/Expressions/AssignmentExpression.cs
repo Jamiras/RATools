@@ -1,5 +1,4 @@
-﻿using RATools.Parser.Internal;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -7,7 +6,7 @@ namespace RATools.Parser.Expressions
     /// <summary>
     /// Represents an assignment within an expression tree.
     /// </summary>
-    internal class AssignmentExpression : ExpressionBase, INestedExpressions
+    public class AssignmentExpression : ExpressionBase, INestedExpressions
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AssignmentExpression"/> class.

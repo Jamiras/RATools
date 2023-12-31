@@ -1,12 +1,11 @@
 ﻿using Jamiras.Components;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class DictionaryExpression : ExpressionBase, INestedExpressions, IIterableExpression
+    public class DictionaryExpression : ExpressionBase, INestedExpressions, IIterableExpression
     {
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)

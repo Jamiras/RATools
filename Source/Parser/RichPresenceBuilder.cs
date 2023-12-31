@@ -2,7 +2,6 @@
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,7 +11,7 @@ using System.Text;
 namespace RATools.Parser
 {
     [DebuggerDisplay("{DisplayString}")]
-    internal class RichPresenceBuilder
+    public class RichPresenceBuilder
     {
         private class Lookup
         {
@@ -44,6 +43,16 @@ namespace RATools.Parser
         public bool DisableLookupCollapsing { get; set; }
 
         public bool DisableBuiltInMacros { get; set; }
+
+        public static ValueFormat GetValueFormat(string macro)
+        {
+            return RichPresenceMacroFunction.GetValueFormat(macro);
+        }
+
+        public static string GetFormatString(ValueFormat format)
+        {
+            return RichPresenceValueFunction.GetFormatString(format);
+        }
 
         public void AddConditionalDisplayString(string condition, string displayString)
         {

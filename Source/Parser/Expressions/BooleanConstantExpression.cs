@@ -4,7 +4,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class BooleanConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
+    public class BooleanConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public BooleanConstantExpression(bool value, int line, int column)
             : this(value)

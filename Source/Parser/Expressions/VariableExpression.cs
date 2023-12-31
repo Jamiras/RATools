@@ -1,11 +1,10 @@
-﻿using RATools.Parser.Internal;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal abstract class VariableExpressionBase : ExpressionBase
+    public abstract class VariableExpressionBase : ExpressionBase
     {
         public VariableExpressionBase(string name)
             : base(ExpressionType.Variable)
@@ -46,7 +45,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class VariableExpression : VariableExpressionBase, INestedExpressions
+    public class VariableExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableExpression(string name)
             : base(name)
@@ -105,7 +104,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class VariableDefinitionExpression : VariableExpressionBase, INestedExpressions
+    public class VariableDefinitionExpression : VariableExpressionBase, INestedExpressions
     {
         public VariableDefinitionExpression(string name)
             : base(name)
@@ -141,7 +140,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class VariableReferenceExpression : ExpressionBase
+    public class VariableReferenceExpression : ExpressionBase
     {
         public VariableReferenceExpression(VariableDefinitionExpression variable, ExpressionBase expression)
             : base(ExpressionType.VariableReference)

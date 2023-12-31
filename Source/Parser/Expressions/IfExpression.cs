@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class IfExpression : ExpressionBase, INestedExpressions
+    public class IfExpression : ExpressionBase, INestedExpressions
     {
         public IfExpression(ExpressionBase condition)
             : base(ExpressionType.If)

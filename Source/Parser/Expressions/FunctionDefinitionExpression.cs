@@ -8,7 +8,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FunctionDefinitionExpression : ExpressionBase, INestedExpressions
+    public class FunctionDefinitionExpression : ExpressionBase, INestedExpressions
     {
         public FunctionDefinitionExpression(string name)
             : this(new VariableDefinitionExpression(name))
@@ -298,7 +298,7 @@ namespace RATools.Parser.Expressions
         /// <param name="name">The name of the parameter.</param>
         /// <param name="parseError">[out] The error that occurred.</param>
         /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
-        protected MemoryAccessorExpression GetMemoryAddressParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        internal MemoryAccessorExpression GetMemoryAddressParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
         {
             var parameter = GetParameter(scope, name, out parseError);
             if (parameter == null)
@@ -417,7 +417,7 @@ namespace RATools.Parser.Expressions
         /// <param name="name">The name of the parameter.</param>
         /// <param name="parseError">[out] The error that occurred.</param>
         /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
-        protected RequirementExpressionBase GetRequirementParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        internal RequirementExpressionBase GetRequirementParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
         {
             var parameter = GetParameter(scope, name, out parseError);
             if (parameter == null)

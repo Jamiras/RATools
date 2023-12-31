@@ -1,13 +1,13 @@
 ﻿using RATools.Data;
-using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser.Expressions
 {
-    internal class ExpressionGroup
+    public class ExpressionGroup
     {
         public ExpressionGroup()
         {

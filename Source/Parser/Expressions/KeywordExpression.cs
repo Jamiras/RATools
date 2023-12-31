@@ -1,9 +1,8 @@
-﻿using RATools.Parser.Internal;
-using System.Text;
+﻿using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class KeywordExpression : ExpressionBase
+    public class KeywordExpression : ExpressionBase
     {
         public KeywordExpression(string keyword)
             : base(ExpressionType.Keyword)

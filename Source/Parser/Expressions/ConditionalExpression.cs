@@ -9,7 +9,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class ConditionalExpression : ExpressionBase, INestedExpressions
+    public class ConditionalExpression : ExpressionBase, INestedExpressions
     {
         public ConditionalExpression(ExpressionBase left, ConditionalOperation operation, ExpressionBase right)
             : base(ExpressionType.Conditional)

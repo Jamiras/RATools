@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class ForExpression : ExpressionBase, INestedExpressions
+    public class ForExpression : ExpressionBase, INestedExpressions
     {
         public ForExpression(VariableDefinitionExpression iteratorName, ExpressionBase range)
             : base(ExpressionType.For)

@@ -1,9 +1,8 @@
-﻿using RATools.Parser.Internal;
-using System.Text;
+﻿using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class CommentExpression : ExpressionBase
+    public class CommentExpression : ExpressionBase
     {
         public CommentExpression(string value)
             : base(ExpressionType.Comment)

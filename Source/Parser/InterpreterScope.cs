@@ -4,12 +4,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser
 {
     using VariableDefinitionPair = KeyValuePair<VariableDefinitionExpression, ExpressionBase>;
 
     [DebuggerDisplay("\\{Context={Context} Vars={VariableCount} Funcs={FunctionCount} Depth={Depth}\\}")]
-    internal class InterpreterScope
+    public class InterpreterScope
     {
         public InterpreterScope()
         {
@@ -393,13 +393,13 @@ namespace RATools.Parser.Internal
         /// Gets whether or not the processor has encountered an early exit statement (return, break)
         /// </summary>
         public bool IsComplete { get; internal set; }
- 
+
         /// <summary>
         /// Gets the value to return when leaving the scope.
         /// </summary>
         public ExpressionBase ReturnValue { get; internal set; }
 
-        internal object Context { get; set; }
+        public object Context { get; set; }
 
         internal T GetContext<T>()
             where T : class

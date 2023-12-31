@@ -28,7 +28,7 @@ namespace RATools.Parser
         {
         }
 
-        internal LocalAssets(string filename, IFileSystemService fileSystemService)
+        public LocalAssets(string filename, IFileSystemService fileSystemService)
         {
             _fileSystemService = fileSystemService;
             _extraLines = new List<string>();
@@ -54,7 +54,7 @@ namespace RATools.Parser
         /// <summary>
         /// Gets the title of the associated game.
         /// </summary>
-        public string Title { get; internal set; }
+        public string Title { get; set; }
 
         /// <summary>
         /// Gets the achievements read from the file.
