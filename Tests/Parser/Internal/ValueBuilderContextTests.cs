@@ -1,10 +1,10 @@
 ﻿using NUnit.Framework;
-using RATools.Parser;
+using RATools.Data.Tests;
 using RATools.Parser.Expressions;
-using RATools.Tests.Data;
-using RATools.Tests.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
+using RATools.Parser.Tests.Expressions.Trigger;
 
-namespace RATools.Tests.Parser
+namespace RATools.Parser.Tests.Internal
 {
     [TestFixture]
     class ValueBuilderContextTests

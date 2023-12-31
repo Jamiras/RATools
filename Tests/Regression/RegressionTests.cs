@@ -8,10 +8,9 @@ using RATools.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using static RATools.ViewModels.NewScriptDialogViewModel;
 
-namespace RATools.Tests.Parser.Regression
+namespace RATools.Tests.Regression
 {
     [TestFixture]
     class RegressionTests

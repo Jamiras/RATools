@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data.Tests;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
-using RATools.Tests.Data;
 using System.Text;
 
-namespace RATools.Tests.Parser.Expressions
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class FloatConstantExpressionTests

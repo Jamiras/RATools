@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Expressions.Trigger;
 
-namespace RATools.Tests.Parser.Expressions.Trigger
+namespace RATools.Parser.Tests.Expressions.Trigger
 {
     [TestFixture]
     class RequirementConditionExpressionTests

@@ -1,9 +1,8 @@
 ﻿using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using System.Text;
 
-namespace RATools.Tests.Parser.Expressions
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class BooleanConstantExpressionTests

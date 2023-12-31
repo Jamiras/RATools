@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Parser
+namespace RATools.Parser.Internal
 {
     internal class ParameterInitializationContext
     {

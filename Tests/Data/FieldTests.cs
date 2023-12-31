@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Data;
 using System;
 using System.Globalization;
 using System.Text;
 
-namespace RATools.Tests.Data
+namespace RATools.Data.Tests
 {
     [TestFixture]
     class FieldTests

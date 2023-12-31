@@ -363,7 +363,7 @@ namespace RATools.Parser
             {
                 if (scope.FunctionCount > 0 || scope.VariableCount > 0)
                 {
-                    if (expressionGroups.Scope != null)
+                    if (expressionGroups.Scope != null && !ReferenceEquals(expressionGroups.Scope, GetGlobalScope()))
                         expressionGroups.Scope.Merge(scope);
                     else
                         expressionGroups.Scope = scope;

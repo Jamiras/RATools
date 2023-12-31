@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Tests.Parser.Internal
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class ExpressionBaseTests
@@ -560,7 +559,7 @@ namespace RATools.Tests.Parser.Internal
             Assert.That(expression, Is.InstanceOf<IndexedVariableExpression>());
             var variable = (IndexedVariableExpression)expression;
             Assert.That(variable.Variable, Is.InstanceOf<VariableExpression>());
-            Assert.That(((VariableExpression)variable.Variable).Name, Is.EqualTo("dict"));
+            Assert.That(variable.Variable.Name, Is.EqualTo("dict"));
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
         }
 
@@ -576,7 +575,7 @@ namespace RATools.Tests.Parser.Internal
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
             variable = (IndexedVariableExpression)variable.Variable;
             Assert.That(variable.Variable, Is.InstanceOf<VariableExpression>());
-            Assert.That(((VariableExpression)variable.Variable).Name, Is.EqualTo("dict"));
+            Assert.That(variable.Variable.Name, Is.EqualTo("dict"));
             Assert.That(variable.Index, Is.InstanceOf<IntegerConstantExpression>());
         }
 

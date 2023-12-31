@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Internal
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class ExpressionGroupTests

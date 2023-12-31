@@ -1,8 +1,7 @@
 ﻿using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 
-namespace RATools.Tests.Parser.Internal
+namespace RATools.Parser.Tests
 {
     [TestFixture]
     class InterpreterScopeTests

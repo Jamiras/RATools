@@ -1,11 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Internal
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class ExpressionGroupCollectionTests
@@ -227,10 +226,10 @@ namespace RATools.Tests.Parser.Internal
                         "leaderboard(\"t\", \"d\", byte(0x1234) == a, byte(0x1234) == a + 1, byte(0x1234) == a + 2, byte(0x2345))\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var group = new ExpressionGroupCollection();
-            group.Scope = RATools.Parser.AchievementScriptInterpreter.GetGlobalScope();
+            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
             group.Parse(tokenizer);
 
-            var interpreter = new RATools.Parser.AchievementScriptInterpreter();
+            var interpreter = new AchievementScriptInterpreter();
             interpreter.Run(group, null);
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
@@ -264,10 +263,10 @@ namespace RATools.Tests.Parser.Internal
                         ")\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var group = new ExpressionGroupCollection();
-            group.Scope = RATools.Parser.AchievementScriptInterpreter.GetGlobalScope();
+            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
             group.Parse(tokenizer);
 
-            var interpreter = new RATools.Parser.AchievementScriptInterpreter();
+            var interpreter = new AchievementScriptInterpreter();
             interpreter.Run(group, null);
 
             Assert.That(group.HasEvaluationErrors, Is.True);

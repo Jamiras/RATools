@@ -1,14 +1,12 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Data;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Functions
+namespace RATools.Parser.Tests.Functions
 {
     [TestFixture]
     class ArrayPushFunctionTests

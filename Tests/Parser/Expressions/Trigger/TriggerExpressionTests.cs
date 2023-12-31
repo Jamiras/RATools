@@ -1,13 +1,12 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Data;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 
-namespace RATools.Tests.Parser.Expressions.Trigger
+namespace RATools.Parser.Tests.Expressions.Trigger
 {
     internal static class TriggerExpressionTests
     {

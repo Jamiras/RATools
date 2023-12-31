@@ -2,16 +2,15 @@
 using Moq;
 using NUnit.Framework;
 using RATools.Data;
-using RATools.Parser;
-using RATools.Tests.Data;
+using RATools.Data.Tests;
 using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Tests.Parser
+namespace RATools.Parser.Tests
 {
     [TestFixture]
-    class LocalAchievementsTests
+    class LocalAssetsTests
     {
         private LocalAssets Initialize(string fileContents, MemoryStream memoryStream)
         {

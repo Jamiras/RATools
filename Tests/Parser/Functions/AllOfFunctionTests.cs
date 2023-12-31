@@ -1,12 +1,11 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Tests.Parser.Expressions;
+using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Functions
+namespace RATools.Parser.Tests.Functions
 {
     [TestFixture]
     class AllOfFunctionTests

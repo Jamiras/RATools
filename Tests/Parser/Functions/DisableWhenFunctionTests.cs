@@ -1,11 +1,10 @@
 ﻿using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Tests.Parser.Expressions;
-using RATools.Tests.Parser.Expressions.Trigger;
+using RATools.Parser.Tests.Expressions;
+using RATools.Parser.Tests.Expressions.Trigger;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Functions
+namespace RATools.Parser.Tests.Functions
 {
     [TestFixture]
     class DisableWhenFunctionTests
