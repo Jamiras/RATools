@@ -308,7 +308,15 @@ namespace RATools.Parser.Expressions
             if (function.Parameters.Count == 1 && Parameters.Count == 1)
             {
                 if (GetSingleParameter(function, parameterScope, out error))
+                {
+                    if (function.Parameters.First().Name == "...")
+                    {
+                        var value = parameterScope.GetVariable("...");
+                        parameterScope.UndefineVariable("...");
+                        parameterScope.DefineVariable(new VariableDefinitionExpression("varargs"), value);
+                    }
                     return parameterScope;
+                }
 
                 if (error != null)
                     return null;

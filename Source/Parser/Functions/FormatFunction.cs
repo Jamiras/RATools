@@ -31,13 +31,9 @@ namespace RATools.Parser.Functions
             if (stringExpression == null)
                 return false;
 
-            var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
+            var varargs = GetVarArgsParameter(scope, out result, stringExpression);
             if (varargs == null)
-            {
-                if (!(result is ErrorExpression))
-                    result = new ErrorExpression("unexpected varargs", stringExpression);
                 return false;
-            }
 
             var builder = new StringBuilder();
 

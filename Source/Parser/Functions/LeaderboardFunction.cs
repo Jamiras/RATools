@@ -137,13 +137,9 @@ namespace RATools.Parser.Functions
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var varargs = GetParameter(scope, "varargs", out result) as ArrayExpression;
+            var varargs = GetVarArgsParameter(scope, out result, null, true);
             if (varargs == null)
-            {
-                if (!(result is ErrorExpression))
-                    result = new ErrorExpression("unexpected varargs");
                 return false;
-            }
 
             var parameters = new List<ExpressionBase>();
             foreach (var entry in varargs.Entries)
