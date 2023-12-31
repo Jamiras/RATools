@@ -761,7 +761,7 @@ namespace RATools.Parser
             // try to merge them
             bool hasMerge = false;
             bool hasConflict = false;
-            bool hasEverything = false;
+            int everythingCount = 0;
             MoreRestrictiveRequirement moreRestrictive = MoreRestrictiveRequirement.Same;
             RequirementEx[] merged = new RequirementEx[left.Requirements.Count];
             bool[] matches = new bool[right.Requirements.Count];
@@ -811,7 +811,7 @@ namespace RATools.Parser
                             break;
 
                         case MoreRestrictiveRequirement.Everything:
-                            hasEverything = true;
+                            ++everythingCount;
                             break;
 
                         default:
@@ -832,7 +832,7 @@ namespace RATools.Parser
             {
                 // if one or more conditions conflicts with its partner, we have to assume the extra
                 // conditions are differentiators and we can't merge
-                if (hasEverything || hasConflict)
+                if (everythingCount != 0 || hasConflict)
                     return MoreRestrictiveRequirement.None;
 
                 switch (moreRestrictive)
@@ -867,7 +867,14 @@ namespace RATools.Parser
             switch (moreRestrictive)
             {
                 case MoreRestrictiveRequirement.Same:
-                    if (hasEverything)
+                    // Same is the default state of moreRestrictive, which means
+                    // we only found Same, Conflicts or Everythings.
+
+                    // if every pair of conditions conflicted with each other, the groups are mutually exclusive
+                    if (everythingCount == left.Requirements.Count)
+                        return MoreRestrictiveRequirement.None;
+
+                    if (everythingCount > 0)
                     {
                         // if at least one requirement was merged into an always_true, replace the left
                         moreRestrictive = MoreRestrictiveRequirement.Left;
@@ -889,7 +896,7 @@ namespace RATools.Parser
 
             // remove any always_true conditions. if nothing is left, return Everything so the parent
             // can replace both groups with a single always_true.
-            if (hasEverything)
+            if (everythingCount > 0)
             {
                 resultGroup.Requirements.RemoveAll(r => r.Evaluate() == true);
                 if (resultGroup.Requirements.Count == 0)

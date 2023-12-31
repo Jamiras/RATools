@@ -227,6 +227,9 @@ namespace RATools.Tests.Parser
         [TestCase("(A == 1 && B == 2 && C == 3) || (A == 1 && B != 2 && C == 3)", "A == 1 && C == 3")] // conflicting Bs cancel each other out
         [TestCase("(A == 1 && B == 2 && C == 3) || (A == 1 && B != 2 && C == 4)", "A == 1 && ((B == 2 && C == 3) || (B != 2 && C == 4))")] // unique Cs prevent merger, but A can still be extracted
         [TestCase("(A == 1 && A == 2) || (B == 1 && B == 2)", "always_false()")] // both subclauses can never be true, collapse to a single always_false()
+        [TestCase("(A == 1 && B != 1) || (A != 1 && B == 1)", "(A == 1 && B != 1) || (A != 1 && B == 1)")] // mutually exclusive - ignore conflicts
+        [TestCase("(A == 1 && B == 1) || (A == 2 && B == 2)", "(A == 1 && B == 1) || (A == 2 && B == 2)")] // mutually exclusive - ignore conflicts
+        [TestCase("(A == 1 && B != 1) || (A == 1 && B == 1)", "A == 1")] // B is superfluous
         public void TestMergeRequirementGroups(string input, string expected)
         {
             AssertLogicalMerge(input, "8", expected);
