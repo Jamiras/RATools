@@ -9,10 +9,13 @@
 
   <ItemGroup>
     <Compile Remove="Data\**" />
+    <Compile Remove="Parser\**" />
     <Compile Remove="Regressions\**" />
     <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Parser\**" />
     <EmbeddedResource Remove="Regressions\**" />
     <None Remove="Data\**" />
+    <None Remove="Parser\**" />
     <None Remove="Regressions\**" />
   </ItemGroup>
 

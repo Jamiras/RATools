@@ -1,7 +1,7 @@
 ﻿using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 

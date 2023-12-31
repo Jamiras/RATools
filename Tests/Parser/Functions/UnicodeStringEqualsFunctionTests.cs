@@ -1,8 +1,8 @@
 ﻿using NUnit.Framework;
+using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using RATools.Tests.Parser.Expressions;
 using RATools.Tests.Parser.Expressions.Trigger;
 using System;
