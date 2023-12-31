@@ -276,7 +276,7 @@ namespace RATools.Tests.Data
         }
     }
 
-    internal class CultureOverride : IDisposable
+    public class CultureOverride : IDisposable
     {
         public CultureOverride(string name)
         {

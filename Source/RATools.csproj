@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <Import Project="RATools.properties" />
+
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <Platforms>AnyCPU;x86</Platforms>
@@ -7,22 +9,22 @@
     <Nullable>disable</Nullable>
     <UseWPF>true</UseWPF>
     <BaseOutputPath>..\bin\</BaseOutputPath>
-    <Authors>Jamiras</Authors>
-    <Company>retroachievements.org</Company>
-    <Description>Collection of tools for developers contributing to retroachievements.org</Description>
-    <Copyright>Copyright © 2023 Brian Weiss</Copyright>
-    <PackageProjectUrl>https://github.com/Jamiras/RATools/wiki</PackageProjectUrl>
     <PackageIcon>Icon.png</PackageIcon>
     <ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
-    <RepositoryUrl>https://github.com/Jamiras/RATools</RepositoryUrl>
-    <VersionPrefix>1.12.2</VersionPrefix>
-    <InformationalVersion>7 Oct 2023</InformationalVersion>
     <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Data\**" />
+    <EmbeddedResource Remove="Data\**" />
+    <None Remove="Data\**" />
+    <Page Remove="Data\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core\Source\Jamiras.Core.csproj" />
     <ProjectReference Include="..\Core\UI\WPF\Source\Jamiras.UI.WPF.csproj" />
+    <ProjectReference Include="Data\RATools.Data.csproj" />
   </ItemGroup>
 
   <ItemGroup>

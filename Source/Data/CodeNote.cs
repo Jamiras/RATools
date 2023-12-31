@@ -5,7 +5,7 @@ using System.Diagnostics;
 namespace RATools.Data
 {
     [DebuggerDisplay("{Address,h}: {Note}")]
-    struct CodeNote
+    public struct CodeNote
     {
         public CodeNote(uint address, string note)
         {

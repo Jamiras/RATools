@@ -1,7 +1,5 @@
-﻿using Jamiras.Components;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using RATools.Data;
-using RATools.Parser;
 using System.Text;
 
 namespace RATools.Tests.Data
@@ -66,9 +64,8 @@ namespace RATools.Tests.Data
                   "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
         public void TestAppendString(string input, string expected)
         {
-            var achievement = new AchievementBuilder();
-            achievement.ParseRequirements(Tokenizer.CreateTokenizer(input));
-            var groups = RequirementEx.Combine(achievement.CoreRequirements);
+            var trigger = Trigger.Deserialize(input);
+            var groups = RequirementEx.Combine(trigger.Core.Requirements);
 
             var builder = new StringBuilder();
             foreach (var group in groups)
@@ -82,7 +79,7 @@ namespace RATools.Tests.Data
             Assert.That(builder.ToString(), Is.EqualTo(expected));
 
             // make sure we didn't modify the source requirements
-            Assert.That(achievement.SerializeRequirements(), Is.EqualTo(input));
+            Assert.That(trigger.Serialize(), Is.EqualTo(input));
         }
     }
 }

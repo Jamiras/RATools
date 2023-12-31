@@ -1,5 +1,5 @@
-﻿using System;
-using System.Reflection;
+﻿using Jamiras.Components;
+using System;
 using System.Text;
 
 namespace RATools.Data
@@ -445,7 +445,7 @@ namespace RATools.Data
                 builder.Append(suffix);
         }
 
-        public void Serialize(StringBuilder builder, double minimumVersion = 0.0)
+        public void Serialize(StringBuilder builder, double minimumVersion = 0.0, int addressWidth = 6)
         {
             switch (Type)
             {
@@ -465,7 +465,7 @@ namespace RATools.Data
                 case RequirementType.Trigger: builder.Append("T:"); break;
             }
 
-            Left.Serialize(builder);
+            Left.Serialize(builder, addressWidth);
 
             if (IsScalable)
             {
@@ -481,7 +481,7 @@ namespace RATools.Data
                         return;
                 }
 
-                Right.Serialize(builder);
+                Right.Serialize(builder, addressWidth);
             }
             else
             {
@@ -500,7 +500,7 @@ namespace RATools.Data
                     case RequirementOperator.None: return;
                 }
 
-                Right.Serialize(builder);
+                Right.Serialize(builder, addressWidth);
             }
 
             if (HitCount > 0)
@@ -790,6 +790,131 @@ namespace RATools.Data
             return !left.Equals(right);
         }
 
+        internal static Requirement Deserialize(Tokenizer tokenizer)
+        {
+            var requirement = new Requirement();
+
+            if (tokenizer.Match("R:"))
+                requirement.Type = RequirementType.ResetIf;
+            else if (tokenizer.Match("P:"))
+                requirement.Type = RequirementType.PauseIf;
+            else if (tokenizer.Match("A:"))
+                requirement.Type = RequirementType.AddSource;
+            else if (tokenizer.Match("B:"))
+                requirement.Type = RequirementType.SubSource;
+            else if (tokenizer.Match("C:"))
+                requirement.Type = RequirementType.AddHits;
+            else if (tokenizer.Match("D:"))
+                requirement.Type = RequirementType.SubHits;
+            else if (tokenizer.Match("N:"))
+                requirement.Type = RequirementType.AndNext;
+            else if (tokenizer.Match("O:"))
+                requirement.Type = RequirementType.OrNext;
+            else if (tokenizer.Match("I:"))
+                requirement.Type = RequirementType.AddAddress;
+            else if (tokenizer.Match("M:"))
+                requirement.Type = RequirementType.Measured;
+            else if (tokenizer.Match("G:"))
+                requirement.Type = RequirementType.MeasuredPercent;
+            else if (tokenizer.Match("Q:"))
+                requirement.Type = RequirementType.MeasuredIf;
+            else if (tokenizer.Match("Z:"))
+                requirement.Type = RequirementType.ResetNextIf;
+            else if (tokenizer.Match("T:"))
+                requirement.Type = RequirementType.Trigger;
+            requirement.Left = Field.Deserialize(tokenizer);
+
+            requirement.Operator = ReadOperator(tokenizer);
+            if (requirement.Operator != RequirementOperator.None)
+                requirement.Right = Field.Deserialize(tokenizer);
+
+            if (requirement.IsScalable && requirement.IsComparison)
+            {
+                requirement.Operator = RequirementOperator.None;
+                requirement.Right = new Field();
+            }
+
+            if (tokenizer.NextChar == '.')
+            {
+                tokenizer.Advance(); // first period
+                requirement.HitCount = ReadNumber(tokenizer);
+                tokenizer.Advance(); // second period
+            }
+            else if (tokenizer.NextChar == '(') // old format
+            {
+                tokenizer.Advance(); // '('
+                requirement.HitCount = ReadNumber(tokenizer);
+                tokenizer.Advance(); // ')'
+            }
+
+            return requirement;
+        }
+
+        private static uint ReadNumber(Tokenizer tokenizer)
+        {
+            uint value = 0;
+            while (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
+            {
+                value *= 10;
+                value += (uint)(tokenizer.NextChar - '0');
+                tokenizer.Advance();
+            }
+
+            return value;
+        }
+
+        internal static RequirementOperator ReadOperator(Tokenizer tokenizer)
+        {
+            switch (tokenizer.NextChar)
+            {
+                case '=':
+                    tokenizer.Advance();
+                    return RequirementOperator.Equal;
+
+                case '!':
+                    tokenizer.Advance();
+                    if (tokenizer.NextChar == '=')
+                    {
+                        tokenizer.Advance();
+                        return RequirementOperator.NotEqual;
+                    }
+                    break;
+
+                case '<':
+                    tokenizer.Advance();
+                    if (tokenizer.NextChar == '=')
+                    {
+                        tokenizer.Advance();
+                        return RequirementOperator.LessThanOrEqual;
+                    }
+                    return RequirementOperator.LessThan;
+
+                case '>':
+                    tokenizer.Advance();
+                    if (tokenizer.NextChar == '=')
+                    {
+                        tokenizer.Advance();
+                        return RequirementOperator.GreaterThanOrEqual;
+                    }
+                    return RequirementOperator.GreaterThan;
+
+                case '*':
+                    tokenizer.Advance();
+                    return RequirementOperator.Multiply;
+
+                case '/':
+                    tokenizer.Advance();
+                    return RequirementOperator.Divide;
+
+                case '&':
+                    tokenizer.Advance();
+                    return RequirementOperator.BitwiseAnd;
+            }
+
+            return RequirementOperator.None;
+        }
+
+
         /// <summary>
         /// Gets the logically opposing operator.
         /// </summary>
@@ -822,6 +947,30 @@ namespace RATools.Data
                 case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThanOrEqual;
                 default: return RequirementOperator.None;
             }
+        }
+
+        /// <summary>
+        /// Creates a requirement that will always evaluate true.
+        /// </summary>
+        public static Requirement CreateAlwaysTrueRequirement()
+        {
+            var requirement = new Requirement();
+            requirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
+            requirement.Operator = RequirementOperator.Equal;
+            requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
+            return requirement;
+        }
+
+        /// <summary>
+        /// Creates a requirement that will always evaluate false.
+        /// </summary>
+        public static Requirement CreateAlwaysFalseRequirement()
+        {
+            var requirement = new Requirement();
+            requirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 };
+            requirement.Operator = RequirementOperator.Equal;
+            requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
+            return requirement;
         }
     }
 

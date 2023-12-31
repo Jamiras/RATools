@@ -43,22 +43,24 @@ namespace RATools.Tests.Parser
             achievement.Points = 5;
             achievement.Id = 12345;
             achievement.BadgeName = "Badge";
-            achievement.CoreRequirements = new Requirement[]
-            {
-                new Requirement { Left = address1, Operator = RequirementOperator.Equal, Right = value1 },
-                new Requirement { Left = address2, Operator = RequirementOperator.Equal, Right = value2 },
-            };
-            achievement.AlternateRequirements = new Requirement[][]
-            {
+            achievement.Trigger = new Trigger(
                 new Requirement[]
                 {
-                    new Requirement { Left = address3, Operator = RequirementOperator.Equal, Right = value3 },
+                    new Requirement { Left = address1, Operator = RequirementOperator.Equal, Right = value1 },
+                    new Requirement { Left = address2, Operator = RequirementOperator.Equal, Right = value2 },
                 },
-                new Requirement[]
+                new Requirement[][]
                 {
-                    new Requirement { Left = address3, Operator = RequirementOperator.Equal, Right = value4 },
+                    new Requirement[]
+                    {
+                        new Requirement { Left = address3, Operator = RequirementOperator.Equal, Right = value3 },
+                    },
+                    new Requirement[]
+                    {
+                        new Requirement { Left = address3, Operator = RequirementOperator.Equal, Right = value4 },
+                    }
                 }
-            };
+            );
 
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.Title, Is.EqualTo("Title"));

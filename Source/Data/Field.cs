@@ -307,7 +307,7 @@ namespace RATools.Data
         /// <remarks>
         /// This is a custom serialization format.
         /// </remarks>
-        internal void Serialize(StringBuilder builder)
+        public void Serialize(StringBuilder builder, int addressWidth = 6)
         {
             switch (Type)
             {
@@ -364,7 +364,18 @@ namespace RATools.Data
                 case FieldSize.LittleEndianMBF32: builder.Append("fL"); break;
             }
 
-            builder.AppendFormat("{0:x6}", Value);
+            switch (addressWidth)
+            {
+                case 2:
+                    builder.AppendFormat("{0:x2}", Value);
+                    break;
+                case 4:
+                    builder.AppendFormat("{0:x4}", Value);
+                    break;
+                default:
+                    builder.AppendFormat("{0:x6}", Value);
+                    break;
+            }
         }
 
 
@@ -372,7 +383,7 @@ namespace RATools.Data
         /// Creates a <see cref="Field"/> from a serialized value.
         /// </summary>
         /// <param name="tokenizer">The tokenizer.</param>
-        internal static Field Deserialize(Tokenizer tokenizer)
+        public static Field Deserialize(Tokenizer tokenizer)
         {
             var fieldType = FieldType.MemoryAddress;
             switch (tokenizer.NextChar)

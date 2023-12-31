@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace RATools.Parser
@@ -91,13 +92,13 @@ namespace RATools.Parser
         /// </summary>
         public Achievement ToAchievement()
         {
-            var core = _core.ToArray();
-
-            var achievement = new Achievement { Title = Title, Description = Description, Points = Points, CoreRequirements = core, Id = Id, BadgeName = BadgeName };
             var alts = new Requirement[_alts.Count][];
             for (int i = 0; i < _alts.Count; i++)
                 alts[i] = _alts[i].ToArray();
-            achievement.AlternateRequirements = alts;
+
+            var trigger = new Trigger(_core.ToArray(), alts);
+
+            var achievement = new Achievement { Title = Title, Description = Description, Points = Points, Trigger = trigger, Id = Id, BadgeName = BadgeName };
             return achievement;
         }
 
@@ -106,261 +107,42 @@ namespace RATools.Parser
         /// </summary>
         public void ParseRequirements(Tokenizer tokenizer)
         {
-            var current = _core;
-            do
-            {
-                if (tokenizer.NextChar != 'S')
-                {
-                    var requirement = new Requirement();
+            var trigger = Trigger.Deserialize(tokenizer);
+            _core.AddRange(trigger.Core.Requirements);
 
-                    if (tokenizer.Match("R:"))
-                        requirement.Type = RequirementType.ResetIf;
-                    else if (tokenizer.Match("P:"))
-                        requirement.Type = RequirementType.PauseIf;
-                    else if (tokenizer.Match("A:"))
-                        requirement.Type = RequirementType.AddSource;
-                    else if (tokenizer.Match("B:"))
-                        requirement.Type = RequirementType.SubSource;
-                    else if (tokenizer.Match("C:"))
-                        requirement.Type = RequirementType.AddHits;
-                    else if (tokenizer.Match("D:"))
-                        requirement.Type = RequirementType.SubHits;
-                    else if (tokenizer.Match("N:"))
-                        requirement.Type = RequirementType.AndNext;
-                    else if (tokenizer.Match("O:"))
-                        requirement.Type = RequirementType.OrNext;
-                    else if (tokenizer.Match("I:"))
-                        requirement.Type = RequirementType.AddAddress;
-                    else if (tokenizer.Match("M:"))
-                        requirement.Type = RequirementType.Measured;
-                    else if (tokenizer.Match("G:"))
-                        requirement.Type = RequirementType.MeasuredPercent;
-                    else if (tokenizer.Match("Q:"))
-                        requirement.Type = RequirementType.MeasuredIf;
-                    else if (tokenizer.Match("Z:"))
-                        requirement.Type = RequirementType.ResetNextIf;
-                    else if (tokenizer.Match("T:"))
-                        requirement.Type = RequirementType.Trigger;
-
-                    requirement.Left = Field.Deserialize(tokenizer);
-
-                    requirement.Operator = ReadOperator(tokenizer);
-                    if (requirement.Operator != RequirementOperator.None)
-                        requirement.Right = Field.Deserialize(tokenizer);
-
-                    if (requirement.IsScalable && requirement.IsComparison)
-                    {
-                        requirement.Operator = RequirementOperator.None;
-                        requirement.Right = new Field();
-                    }
-
-                    if (tokenizer.NextChar == '.')
-                    {
-                        tokenizer.Advance(); // first period
-                        requirement.HitCount = ReadNumber(tokenizer);
-                        tokenizer.Advance(); // second period
-                    }
-                    else if (tokenizer.NextChar == '(') // old format
-                    {
-                        tokenizer.Advance(); // '('
-                        requirement.HitCount = ReadNumber(tokenizer);
-                        tokenizer.Advance(); // ')'
-                    }
-
-                    current.Add(requirement);
-                }
-
-                switch (tokenizer.NextChar)
-                {
-                    default:
-                        return;
-
-                    case '_': // &&
-                        tokenizer.Advance();
-                        continue;
-
-                    case 'S': // ||
-                    case '$': // max_of
-                        tokenizer.Advance();
-                        if (ReferenceEquals(current, _core) || current.Count != 0)
-                        {
-                            current = new List<Requirement>();
-                            _alts.Add(current);
-                        }
-                        continue;
-                }
-
-            } while (true);
+            foreach (var alt in trigger.Alts)
+                _alts.Add(new List<Requirement>(alt.Requirements));
         }
 
         public void ParseValue(Tokenizer tokenizer)
         {
-            var current = _core;
-            do
-            {
-                do
-                {
-                    var requirement = new Requirement();
-                    requirement.Type = RequirementType.AddSource;
+            var value = Value.Deserialize(tokenizer);
+            _core.AddRange(value.Values.First().Requirements);
 
-                    requirement.Left = Field.Deserialize(tokenizer);
-
-                    requirement.Operator = ReadOperator(tokenizer);
-                    if (requirement.Operator != RequirementOperator.None &&
-                        !requirement.IsComparison)
-                    {
-                        requirement.Right = Field.Deserialize(tokenizer);
-                        if (requirement.Right.Type == FieldType.Value &&
-                            (requirement.Right.Value & 0x80000000) != 0)
-                        {
-                            requirement.Type = RequirementType.SubSource;
-                            if (requirement.Right.Value == 0xFFFFFFFF)
-                            {
-                                requirement.Operator = RequirementOperator.None;
-                                requirement.Right = new Field { Type = FieldType.Value, Value = 1 };
-                            }
-                            else
-                            {
-                                requirement.Right = new Field
-                                {
-                                    Type = FieldType.Value,
-                                    Value = (uint)(-(int)requirement.Right.Value)
-                                };
-                            }
-                        }
-                    }
-
-                    current.Add(requirement);
-
-                    if (tokenizer.NextChar != '_')
-                        break;
-
-                    tokenizer.Advance();
-                } while (true);
-
-                var lastAddSource = current.Last();
-                if (lastAddSource.Type != RequirementType.AddSource)
-                {
-                    lastAddSource = current.Last(r => r.Type == RequirementType.AddSource);
-                    current.Remove(lastAddSource);
-                    current.Add(lastAddSource);
-                }
-                lastAddSource.Type = RequirementType.None;
-
-                if (tokenizer.NextChar != '$')
-                    break;
-
-                tokenizer.Advance();
-
-                if (current.Count != 0)
-                {
-                    current = new List<Requirement>();
-                    _alts.Add(current);
-                }
-            } while (true);
-        }
-
-        private static uint ReadNumber(Tokenizer tokenizer)
-        {
-            uint value = 0;
-            while (tokenizer.NextChar >= '0' && tokenizer.NextChar <= '9')
-            {
-                value *= 10;
-                value += (uint)(tokenizer.NextChar - '0');
-                tokenizer.Advance();
-            }
-
-            return value;
-        }
-
-        private static RequirementOperator ReadOperator(Tokenizer tokenizer)
-        {
-            switch (tokenizer.NextChar)
-            {
-                case '=':
-                    tokenizer.Advance();
-                    return RequirementOperator.Equal;
-
-                case '!':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        return RequirementOperator.NotEqual;
-                    }
-                    break;
-
-                case '<':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        return RequirementOperator.LessThanOrEqual;
-                    }
-                    return RequirementOperator.LessThan;
-
-                case '>':
-                    tokenizer.Advance();
-                    if (tokenizer.NextChar == '=')
-                    {
-                        tokenizer.Advance();
-                        return RequirementOperator.GreaterThanOrEqual;
-                    }
-                    return RequirementOperator.GreaterThan;
-
-                case '*':
-                    tokenizer.Advance();
-                    return RequirementOperator.Multiply;
-
-                case '/':
-                    tokenizer.Advance();
-                    return RequirementOperator.Divide;
-
-                case '&':
-                    tokenizer.Advance();
-                    return RequirementOperator.BitwiseAnd;
-            }
-
-            return RequirementOperator.None;
+            foreach (var alt in value.Values.Skip(1))
+                _alts.Add(new List<Requirement>(alt.Requirements));
         }
 
         public static double GetMinimumVersion(Achievement achievement)
         {
-            var minimumVersion = MinimumVersion(achievement.CoreRequirements);
-            foreach (var group in achievement.AlternateRequirements)
-            {
-                var altMinimumVersion = MinimumVersion(group);
-                if (altMinimumVersion > minimumVersion)
-                    minimumVersion = altMinimumVersion;
-            }
-
-            return minimumVersion;
-        }
-
-        private static double GetMinimumVersion(string trigger)
-        {
-            var achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
-            return GetMinimumVersion(achievementBuilder.ToAchievement());
+            return achievement.Trigger.MinimumVersion();
         }
 
         public static double GetMinimumVersion(Leaderboard leaderboard)
         {
-            var minimumVersion = GetMinimumVersion(leaderboard.Start);
-            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Cancel));
-            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Submit));
-            minimumVersion = Math.Max(minimumVersion, GetMinimumVersion(leaderboard.Value));
+            var trigger = Trigger.Deserialize(leaderboard.Start);
+            var minimumVersion = trigger.MinimumVersion();
+
+            trigger = Trigger.Deserialize(leaderboard.Cancel);
+            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
+
+            trigger = Trigger.Deserialize(leaderboard.Submit);
+            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
+
+            var value = Value.Deserialize(leaderboard.Value);
+            minimumVersion = Math.Max(minimumVersion, value.MinimumVersion());
+
             return minimumVersion;
-        }
-
-        private static double MinimumVersion(IEnumerable<Requirement> requirements)
-        {
-            double minVer = 0.30;
-
-            foreach (var requirement in requirements)
-                minVer = Math.Max(minVer, requirement.MinimumVersion());
-
-            return minVer;
         }
 
         /// <summary>
@@ -368,7 +150,8 @@ namespace RATools.Parser
         /// </summary>
         public string SerializeRequirements()
         {
-            return SerializeRequirements(_core, _alts);
+            var trigger = new Trigger(_core, _alts);
+            return trigger.Serialize();
         }
 
         /// <summary>
@@ -376,53 +159,7 @@ namespace RATools.Parser
         /// </summary>
         public static string SerializeRequirements(Achievement achievement)
         {
-            return SerializeRequirements(achievement.CoreRequirements, achievement.AlternateRequirements);
-        }
-
-        internal static string SerializeRequirements(IEnumerable<Requirement> core, IEnumerable<IEnumerable<Requirement>> alts)
-        {
-            var builder = new StringBuilder();
-
-            // if no new features are found, prefer the legacy format for greatest compatibility with older versions of RetroArch
-            var minimumVersion = MinimumVersion(core);
-            foreach (var group in alts)
-            {
-                var altMinimumVersion = MinimumVersion(group);
-                if (altMinimumVersion > minimumVersion)
-                    minimumVersion = altMinimumVersion;
-            }
-
-            foreach (Requirement requirement in core)
-            {
-                requirement.Serialize(builder, minimumVersion);
-                builder.Append('_');
-            }
-
-            if (builder.Length > 0)
-            {
-                builder.Length--; // remove last _
-            }
-            else if (alts.Any())
-            {
-                // if core is empty and any alts exist, add an always_true condition to the core for compatibility
-                // with legacy RetroArch parsing
-                builder.Append("1=1");
-            }
-
-            foreach (IEnumerable<Requirement> alt in alts)
-            {
-                builder.Append('S');
-
-                foreach (Requirement requirement in alt)
-                {
-                    requirement.Serialize(builder, minimumVersion);
-                    builder.Append('_');
-                }
-
-                builder.Length--; // remove last _
-            }
-
-            return builder.ToString();
+            return achievement.Trigger.Serialize();
         }
 
         public static void AppendStringGroup(StringBuilder builder, IEnumerable<Requirement> requirements,
@@ -521,6 +258,20 @@ namespace RATools.Parser
 
                 return builder.ToString();
             }
+        }
+
+        /// <summary>
+        /// Determines if two achievements have the same requirements.
+        /// </summary>
+        /// <returns><c>true</c> if the requirements match, <c>false</c> if not.</returns>
+        public static bool AreRequirementsSame(Achievement left, Achievement right)
+        {
+            var builder1 = new AchievementBuilder(left);
+            builder1.Optimize();
+            var builder2 = new AchievementBuilder(right);
+            builder2.Optimize();
+
+            return builder1.AreRequirementsSame(builder2);
         }
 
         internal bool AreRequirementsSame(AchievementBuilder right)
