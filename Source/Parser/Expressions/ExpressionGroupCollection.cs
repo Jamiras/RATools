@@ -13,35 +13,44 @@ namespace RATools.Parser.Expressions
     {
         public ExpressionGroupCollection()
         {
-            Groups = new List<ExpressionGroup>();
+            _groups = new List<ExpressionGroup>();
             _evaluationErrors = new List<ErrorExpression>();
         }
 
-        public List<ExpressionGroup> Groups { get; private set; }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly List<ExpressionGroup> _groups;
+
+        public IEnumerable<ExpressionGroup> Groups { get { return _groups; } }
+
         public InterpreterScope Scope { get; set; }
 
         private readonly List<ErrorExpression> _evaluationErrors;
 
         public void Parse(Tokenizer tokenizer)
         {
-            Groups.Clear();
+            _groups.Clear();
 
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
-            ParseGroups(expressionTokenizer, Groups);
+            ParseGroups(expressionTokenizer, _groups, CreateGroup);
 
-            foreach (var group in Groups)
+            foreach (var group in _groups)
             {
                 group.UpdateMetadata();
                 group.MarkForEvaluation();
             }
         }
 
-        private static void ParseGroups(ExpressionTokenizer tokenizer, List<ExpressionGroup> groups)
+        protected virtual ExpressionGroup CreateGroup()
+        {
+            return new ExpressionGroup();
+        }
+
+        private static void ParseGroups(ExpressionTokenizer tokenizer, List<ExpressionGroup> groups, Func<ExpressionGroup> createGroup)
         {
             while (tokenizer.NextChar != '\0')
             {
                 // create a separate group for comments
-                var newGroup = new ExpressionGroup();
+                var newGroup = createGroup();
                 groups.Add(newGroup);
                 tokenizer.ChangeExpressionGroup(newGroup);
                 ExpressionBase.SkipWhitespace(tokenizer);
@@ -49,7 +58,7 @@ namespace RATools.Parser.Expressions
                 // if comments were found, start a new group
                 if (!newGroup.IsEmpty)
                 {
-                    newGroup = new ExpressionGroup();
+                    newGroup = createGroup();
                     groups.Add(newGroup);
                     tokenizer.ChangeExpressionGroup(newGroup);
                 }
@@ -97,15 +106,15 @@ namespace RATools.Parser.Expressions
             if (affectedLines.Any())
             {
                 var nextUpdatedLine = affectedLines.Min();
-                LOG_UPDATE("Updating lines {0}-{1} (searching {2} groups)", nextUpdatedLine, affectedLines.Max(), Groups.Count);
+                LOG_UPDATE("Updating lines {0}-{1} (searching {2} groups)", nextUpdatedLine, affectedLines.Max(), _groups.Count);
 
-                while (groupStart < Groups.Count && nextUpdatedLine > Groups[groupStart].LastLine)
+                while (groupStart < _groups.Count && nextUpdatedLine > _groups[groupStart].LastLine)
                     ++groupStart;
 
-                if (groupStart < Groups.Count)
+                if (groupStart < _groups.Count)
                 {
-                    LOG_UPDATE("Found line {0} in group {1} (first line of group is {2})", nextUpdatedLine, groupStart, Groups[groupStart].FirstLine);
-                    nextUpdatedLine = Math.Min(Groups[groupStart].FirstLine, nextUpdatedLine);
+                    LOG_UPDATE("Found line {0} in group {1} (first line of group is {2})", nextUpdatedLine, groupStart, _groups[groupStart].FirstLine);
+                    nextUpdatedLine = Math.Min(_groups[groupStart].FirstLine, nextUpdatedLine);
                 }
 
                 expressionTokenizer.PushState();
@@ -131,7 +140,7 @@ namespace RATools.Parser.Expressions
                     if (needPreviousGroup)
                     {
                         --groupStart;
-                        nextUpdatedLine = Groups[groupStart].FirstLine;
+                        nextUpdatedLine = _groups[groupStart].FirstLine;
 
                         LOG_UPDATE("Also processing group {0} (first line of group is {1})", groupStart, nextUpdatedLine);
                         expressionTokenizer.PopState();
@@ -141,24 +150,24 @@ namespace RATools.Parser.Expressions
             }
             else
             {
-                LOG_UPDATE("Updating all lines ({0} groups)", Groups.Count);
+                LOG_UPDATE("Updating all lines ({0} groups)", _groups.Count);
             }
 
             LOG_GROUPS(groupStart - 2, groupStart + 2);
 
             // parse whatever is remaining
             var newGroups = new List<ExpressionGroup>();
-            ParseGroups(expressionTokenizer, newGroups);
+            ParseGroups(expressionTokenizer, newGroups, CreateGroup);
 
             // attempt to match the end of the script
-            int groupStop = Groups.Count;
+            int groupStop = _groups.Count;
             int newGroupStop = newGroups.Count;
 
             if (newGroupStop > 0)
             {
                 while (groupStop > groupStart)
                 {
-                    var existingGroup = Groups[--groupStop];
+                    var existingGroup = _groups[--groupStop];
                     var newGroup = newGroups[--newGroupStop];
 
                     if (!existingGroup.ExpressionsMatch(newGroup))
@@ -177,16 +186,7 @@ namespace RATools.Parser.Expressions
                     var adjustment = existingGroup.FirstLine - firstLine;
                     if (adjustment != 0)
                     {
-                        if (existingGroup.GeneratedAchievements != null)
-                        {
-                            foreach (var achievement in existingGroup.GeneratedAchievements)
-                                achievement.SourceLine += adjustment;
-                        }
-                        if (existingGroup.GeneratedLeaderboards != null)
-                        {
-                            foreach (var leaderboard in existingGroup.GeneratedLeaderboards)
-                                leaderboard.SourceLine += adjustment;
-                        }
+                        existingGroup.AdjustSourceLines(adjustment);
 
                         foreach (var error in _evaluationErrors)
                         {
@@ -220,7 +220,7 @@ namespace RATools.Parser.Expressions
             var affectedVariables = new HashSet<string>();
             for (int i = groupStart; i < groupStop; ++i)
             {
-                var group = Groups[i];
+                var group = _groups[i];
                 foreach (var variable in group.Modifies)
                 {
                     affectedVariables.Add(variable);
@@ -259,12 +259,12 @@ namespace RATools.Parser.Expressions
             // perform the swap
             if (newGroupStop == 0)
             {
-                if (groupStart < Groups.Count)
+                if (groupStart < _groups.Count)
                 {
                     LOG_UPDATE("Removing groups {0}-{1} (lines {2}-{3})",
-                        groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine);
+                        groupStart, groupStop - 1, _groups[groupStart].FirstLine, _groups[groupStop - 1].LastLine);
 
-                    Groups.RemoveRange(groupStart, groupStop - groupStart);
+                    _groups.RemoveRange(groupStart, groupStop - groupStart);
                 }
             }
             else if (groupStop == groupStart)
@@ -272,16 +272,16 @@ namespace RATools.Parser.Expressions
                 LOG_UPDATE("Adding {0} groups (lines {1}-{2})",
                     newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
 
-                Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
+                _groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
             else
             {
                 LOG_UPDATE("Replacing groups {0}-{1} (lines {2}-{3}) with {4} groups (lines {5}-{6})",
-                    groupStart, groupStop - 1, Groups[groupStart].FirstLine, Groups[groupStop - 1].LastLine,
+                    groupStart, groupStop - 1, _groups[groupStart].FirstLine, _groups[groupStop - 1].LastLine,
                     newGroupStop, newGroups[0].FirstLine, newGroups[newGroupStop - 1].LastLine);
 
-                Groups.RemoveRange(groupStart, groupStop - groupStart);
-                Groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
+                _groups.RemoveRange(groupStart, groupStop - groupStart);
+                _groups.InsertRange(groupStart, newGroups.Take(newGroupStop));
             }
 
             LOG_GROUPS(groupStart - 2, groupStart + newGroupStop + 2);
@@ -320,9 +320,9 @@ namespace RATools.Parser.Expressions
         {
             for (int i = start; i < end; ++i)
             {
-                if (i >= 0 && i < Groups.Count)
+                if (i >= 0 && i < _groups.Count)
                 {
-                    var group = Groups[i].ToString();
+                    var group = _groups[i].ToString();
                     int index = group.IndexOf('\n');
                     if (index >= 0)
                     {
@@ -332,7 +332,7 @@ namespace RATools.Parser.Expressions
                         else
                             group = group.Substring(index).Trim();
                     }
-                    LOG_UPDATE("{0}-{1}: {2}", Groups[i].FirstLine, Groups[i].LastLine, group);
+                    LOG_UPDATE("{0}-{1}: {2}", _groups[i].FirstLine, _groups[i].LastLine, group);
                 }
             }
         }
@@ -344,7 +344,7 @@ namespace RATools.Parser.Expressions
             {
                 count = affectedVariables.Count;
 
-                foreach (var group in Groups)
+                foreach (var group in _groups)
                 {
                     // this group is already flagged for evaluation - ignore
                     if (group.NeedsEvaluated)
@@ -377,7 +377,7 @@ namespace RATools.Parser.Expressions
             get {  return _evaluationErrors.Count > 0; }
         }
 
-        public void AddEvaluationError(ErrorExpression error)
+        internal void AddEvaluationError(ErrorExpression error)
         {
             lock (_evaluationErrors)
             {
@@ -385,7 +385,7 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        public void ResetErrors()
+        internal void ResetErrors()
         {
             lock (_evaluationErrors)
             {
@@ -397,7 +397,7 @@ namespace RATools.Parser.Expressions
         {
             get
             {
-                foreach (var group in Groups)
+                foreach (var group in _groups)
                 {
                     foreach (var error in group.ParseErrors)
                         yield return error;
@@ -465,12 +465,12 @@ namespace RATools.Parser.Expressions
         public IEnumerable<ExpressionGroup> GetGroupsForLine(int line)
         {
             int left = 0;
-            int right = Groups.Count;
+            int right = _groups.Count;
 
             while (left != right)
             {
                 int mid = (left + right) / 2;
-                var group = Groups[mid];
+                var group = _groups[mid];
                 if (line < group.FirstLine)
                 {
                     right = mid;
@@ -482,12 +482,12 @@ namespace RATools.Parser.Expressions
                 else
                 {
                     var index = mid;
-                    while (index >= left && index > 0 && Groups[index - 1].LastLine >= line)
+                    while (index >= left && index > 0 && _groups[index - 1].LastLine >= line)
                         index--;
 
                     while (index < right)
                     {
-                        group = Groups[index++];
+                        group = _groups[index++];
                         if (group.FirstLine > line)
                             break;
 

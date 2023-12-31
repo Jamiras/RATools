@@ -21,8 +21,8 @@ namespace RATools.Parser
     {
         public AchievementScriptInterpreter()
         {
-            _achievements = new List<Achievement>();
-            _leaderboards = new List<Leaderboard>();
+            _achievements = new Dictionary<Achievement, int>();
+            _leaderboards = new Dictionary<Leaderboard, int>();
             _richPresence = new RichPresenceBuilder();
         }
 
@@ -37,10 +37,21 @@ namespace RATools.Parser
         /// </summary>
         public IEnumerable<Achievement> Achievements
         {
-            get { return _achievements; }
+            get { return _achievements.Keys; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private List<Achievement> _achievements;
+        private readonly Dictionary<Achievement, int> _achievements;
+
+        public int GetSourceLine(Achievement achievement)
+        {
+            return _achievements[achievement];
+        }
+
+        // for unit tests
+        internal void AddAchievement(Achievement achievement)
+        {
+            _achievements[achievement] = 0;
+        }
 
         /// <summary>
         /// Gets the game identifier from the script.
@@ -64,12 +75,35 @@ namespace RATools.Parser
         /// </summary>
         public IEnumerable<Leaderboard> Leaderboards
         {
-            get { return _leaderboards; }
+            get { return _leaderboards.Keys; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private List<Leaderboard> _leaderboards;
+        private readonly Dictionary<Leaderboard, int> _leaderboards;
 
-        public static InterpreterScope GetGlobalScope()
+        public int GetSourceLine(Leaderboard leaderboard)
+        {
+            return _leaderboards[leaderboard];
+        }
+
+        // for unit tests
+        internal void AddLeaderboard(Leaderboard leaderboard)
+        {
+            _leaderboards[leaderboard] = 0;
+        }
+
+        public static ExpressionGroupCollection CreateExpressionGroupCollection()
+        {
+            return new AssetExpressionGroupCollection() { Scope = CreateScope() };
+        }
+
+        public static InterpreterScope CreateScope()
+        {
+            var scope = new InterpreterScope(GetGlobalScope());
+            scope.Context = new AchievementScriptContext();
+            return scope;
+        }
+
+        internal static InterpreterScope GetGlobalScope()
         {
             if (_globalScope == null)
             {
@@ -174,85 +208,6 @@ namespace RATools.Parser
 
         internal ErrorExpression Error { get; private set; }
 
-        public string GetFormattedErrorMessage(Tokenizer tokenizer)
-        {
-            var neededLines = new List<int>();
-            var error = Error;
-            while (error != null)
-            {
-                for (int i = error.Location.Start.Line; i <= error.Location.End.Line; i++)
-                {
-                    if (!neededLines.Contains(i))
-                        neededLines.Add(i);
-                }
-
-                error = error.InnerError;
-            }
-
-            neededLines.Sort();
-
-            var lineDictionary = new TinyDictionary<int, string>();
-            var positionalTokenizer = new PositionalTokenizer(tokenizer);
-            int lineIndex = 0;
-            while (lineIndex < neededLines.Count)
-            {
-                while (positionalTokenizer.NextChar != '\0' && positionalTokenizer.Line != neededLines[lineIndex])
-                {
-                    positionalTokenizer.ReadTo('\n');
-                    positionalTokenizer.Advance();
-                }
-
-                lineDictionary[neededLines[lineIndex]] = positionalTokenizer.ReadTo('\n').TrimRight().ToString();
-                lineIndex++;
-            }
-
-            var builder = new StringBuilder();
-            error = Error;
-            while (error != null)
-            {
-                builder.AppendFormat("{0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
-                builder.AppendLine();
-                //for (int i = error.Line; i <= error.EndLine; i++)
-                int i = error.Location.Start.Line; // TODO: show all lines associated to error?
-                {
-                    var line = lineDictionary[error.Location.Start.Line];
-
-                    builder.Append(":: ");
-                    var startColumn = 0;
-                    while (Char.IsWhiteSpace(line[startColumn]))
-                        startColumn++;
-
-                    if (i == error.Location.Start.Line)
-                    {
-                        builder.Append("{{color|#C0C0C0|");
-                        builder.Append(line.Substring(startColumn, error.Location.Start.Column - startColumn - 1));
-                        builder.Append("}}");
-                        startColumn = error.Location.Start.Column - 1;
-                    }
-
-                    if (i == error.Location.End.Line)
-                    {
-                        builder.Append(line.Substring(startColumn, error.Location.End.Column - startColumn));
-                        builder.Append("{{color|#C0C0C0|");
-                        builder.Append(line.Substring(error.Location.End.Column));
-                        builder.Append("}}");
-                    }
-                    else
-                    {
-                        builder.Append(line.Substring(startColumn));
-                    }
-                    builder.AppendLine();
-                }
-                builder.AppendLine();
-                error = error.InnerError;
-            }
-
-            while (builder.Length > 0 && Char.IsWhiteSpace(builder[builder.Length - 1]))
-                builder.Length--;
-
-            return builder.ToString();
-        }
-
         /// <summary>
         /// Processes the provided script.
         /// </summary>
@@ -262,7 +217,7 @@ namespace RATools.Parser
         /// </returns>
         public bool Run(Tokenizer input)
         {
-            var expressionGroups = new ExpressionGroupCollection();
+            var expressionGroups = new AssetExpressionGroupCollection();
             expressionGroups.Parse(input);
 
             if (Error == null)
@@ -314,9 +269,9 @@ namespace RATools.Parser
                 if (expressionGroup.NeedsEvaluated)
                 {
                     if (scriptContext.Achievements == null)
-                        scriptContext.Achievements = new List<Achievement>();
+                        scriptContext.Achievements = new Dictionary<Achievement, int>();
                     if (scriptContext.Leaderboards == null)
-                        scriptContext.Leaderboards = new List<Leaderboard>();
+                        scriptContext.Leaderboards = new Dictionary<Leaderboard, int>();
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
@@ -329,31 +284,9 @@ namespace RATools.Parser
                         result = false;
                     }
 
-                    if (scriptContext.Achievements.Count > 0)
-                    {
-                        expressionGroup.GeneratedAchievements = scriptContext.Achievements;
-                        scriptContext.Achievements = null;
-                    }
-                    else if (expressionGroup.GeneratedAchievements != null)
-                    {
-                        expressionGroup.GeneratedAchievements = null;
-                    }
-
-                    if (scriptContext.Leaderboards.Count > 0)
-                    {
-                        expressionGroup.GeneratedLeaderboards = scriptContext.Leaderboards;
-                        scriptContext.Leaderboards = null;
-                    }
-                    else if (expressionGroup.GeneratedLeaderboards != null)
-                    {
-                        expressionGroup.GeneratedLeaderboards = null;
-                    }
-
-                    if (!scriptContext.RichPresence.IsEmpty)
-                    {
-                        expressionGroup.GeneratedRichPresence = scriptContext.RichPresence;
-                        scriptContext.RichPresence = null;
-                    }
+                    var assetExpressionGroup = expressionGroup as AssetExpressionGroup;
+                    if (assetExpressionGroup != null)
+                        assetExpressionGroup.CaptureGeneratedAssets(scriptContext);
 
                     expressionGroup.MarkEvaluated();
                 }
@@ -374,13 +307,19 @@ namespace RATools.Parser
             _leaderboards.Clear();
             _richPresence.Clear();
 
-            foreach (var expressionGroup in expressionGroups.Groups)
+            foreach (var expressionGroup in expressionGroups.Groups.OfType<AssetExpressionGroup>())
             {
                 if (expressionGroup.GeneratedAchievements != null)
-                    _achievements.AddRange(expressionGroup.GeneratedAchievements);
+                {
+                    foreach (var kvp in expressionGroup.GeneratedAchievements)
+                        _achievements[kvp.Key] = kvp.Value;
+                }
 
                 if (expressionGroup.GeneratedLeaderboards != null)
-                    _leaderboards.AddRange(expressionGroup.GeneratedLeaderboards);
+                {
+                    foreach (var kvp in expressionGroup.GeneratedLeaderboards)
+                        _leaderboards[kvp.Key] = kvp.Value;
+                }
 
                 if (expressionGroup.GeneratedRichPresence != null)
                 {
@@ -394,14 +333,14 @@ namespace RATools.Parser
             }
 
             double minimumVersion = 0.30;
-            foreach (var achievement in _achievements)
+            foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
                 if (achievementMinimumVersion > minimumVersion)
                     minimumVersion = achievementMinimumVersion;
             }
 
-            foreach (var leaderboard in _leaderboards)
+            foreach (var leaderboard in _leaderboards.Keys)
             {
                 var leaderboardMinimumVersion = AchievementBuilder.GetMinimumVersion(leaderboard);
                 if (leaderboardMinimumVersion > minimumVersion)

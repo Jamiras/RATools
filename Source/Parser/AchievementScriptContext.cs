@@ -5,8 +5,8 @@ namespace RATools.Parser
 {
     public class AchievementScriptContext
     {
-        public ICollection<Achievement> Achievements { get; set; }
-        public ICollection<Leaderboard> Leaderboards { get; set; }
+        public Dictionary<Achievement, int> Achievements { get; set; }
+        public Dictionary<Leaderboard, int> Leaderboards { get; set; }
         public RichPresenceBuilder RichPresence { get; set; }
     }
 }

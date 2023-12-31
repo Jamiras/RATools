@@ -51,10 +51,5 @@ namespace RATools.Data
         {
             get { return false; }
         }
-
-        /// <summary>
-        /// Gets the script line associated to creating the asset.
-        /// </summary>
-        public int SourceLine { get; set; }
     }
 }

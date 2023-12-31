@@ -133,8 +133,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -150,7 +149,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(0));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -163,8 +161,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAssetUnofficial(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -180,7 +177,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(0));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -193,8 +189,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -210,7 +205,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(0));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -231,8 +225,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
             {
-                BadgeName = "BadgeG",
-                SourceLine = 65
+                BadgeName = "BadgeG"
             };
 
             vmAsset.Refresh();
@@ -248,7 +241,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Local));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
@@ -261,8 +253,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAssetUnofficial(1235, "TitleG", "DescriptionG")
             {
-                BadgeName = "BadgeG",
-                SourceLine = 65
+                BadgeName = "BadgeG"
             };
             vmAsset.Local.Asset = new TestAsset(1234, "TitleL", "DescriptionL")
             {
@@ -270,8 +261,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
             {
-                BadgeName = "BadgeG",
-                SourceLine = 65
+                BadgeName = "BadgeG"
             };
 
             vmAsset.Refresh();
@@ -287,7 +277,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Local));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
@@ -304,8 +293,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
             {
-                BadgeName = "BadgeG",
-                SourceLine = 65
+                BadgeName = "BadgeG"
             };
 
             vmAsset.Refresh();
@@ -321,7 +309,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Local));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
@@ -342,8 +329,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -359,7 +345,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -380,8 +365,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -397,7 +381,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -414,8 +397,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -431,7 +413,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -444,8 +425,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -461,7 +441,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -478,8 +457,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -495,7 +473,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -512,8 +489,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -529,7 +505,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -546,8 +521,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -563,7 +537,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -584,8 +557,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -601,7 +573,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -622,8 +593,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "0",
-                SourceLine = 65
+                BadgeName = "0"
             };
 
             vmAsset.Refresh();
@@ -639,7 +609,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
@@ -660,8 +629,7 @@ namespace RATools.Tests.ViewModels
             };
             vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
             {
-                BadgeName = "Badge",
-                SourceLine = 65
+                BadgeName = "Badge"
             };
 
             vmAsset.Refresh();
@@ -677,7 +645,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
-            Assert.That(vmAsset.SourceLine, Is.EqualTo(65));
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));

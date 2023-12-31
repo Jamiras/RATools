@@ -226,9 +226,9 @@ namespace RATools.ViewModels
                     var richPresenceViewModel = new RichPresenceViewModel(this);
                     richPresenceViewModel.Generated.Asset = new RichPresence
                     {
-                        Script = interpreter.RichPresence,
-                        SourceLine = interpreter.RichPresenceLine
+                        Script = interpreter.RichPresence
                     };
+                    richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
                     editors.Add(richPresenceViewModel);
                 }
 
@@ -236,6 +236,7 @@ namespace RATools.ViewModels
                 {
                     var achievementViewModel = new AchievementViewModel(this);
                     achievementViewModel.Generated.Asset = achievement;
+                    achievementViewModel.SourceLine = interpreter.GetSourceLine(achievement);
                     editors.Add(achievementViewModel);
                 }
 
@@ -243,6 +244,7 @@ namespace RATools.ViewModels
                 {
                     var leaderboardViewModel = new LeaderboardViewModel(this);
                     leaderboardViewModel.Generated.Asset = leaderboard;
+                    leaderboardViewModel.SourceLine = interpreter.GetSourceLine(leaderboard);
                     editors.Add(leaderboardViewModel);
                 }
             }
