@@ -19,15 +19,19 @@ namespace RATools.Tests.Parser.Functions
         {
             var def = new AsciiStringEqualsFunction();
             Assert.That(def.Name.Name, Is.EqualTo("ascii_string_equals"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(3));
+            Assert.That(def.Parameters.Count, Is.EqualTo(4));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("address"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("string"));
             Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("length"));
+            Assert.That(def.Parameters.ElementAt(3).Name, Is.EqualTo("transform"));
 
-            Assert.That(def.DefaultParameters.Count, Is.EqualTo(1));
+            Assert.That(def.DefaultParameters.Count, Is.EqualTo(2));
             Assert.That(def.DefaultParameters.ElementAt(0).Key, Is.EqualTo("length"));
             Assert.That(def.DefaultParameters.ElementAt(0).Value, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)def.DefaultParameters.ElementAt(0).Value).Value, Is.EqualTo(int.MaxValue));
+            Assert.That(def.DefaultParameters.ElementAt(1).Key, Is.EqualTo("transform"));
+            Assert.That(def.DefaultParameters.ElementAt(1).Value, Is.InstanceOf<FunctionReferenceExpression>());
+            Assert.That(((FunctionReferenceExpression)def.DefaultParameters.ElementAt(1).Value).Name, Is.EqualTo("identity_transform"));
         }
 
         [Test]
@@ -54,6 +58,41 @@ namespace RATools.Tests.Parser.Functions
             var expression = new FunctionCallExpression("ascii_string_equals", parameters);
             var scope = new InterpreterScope();
             scope.AddFunction(new AsciiStringEqualsFunction());
+            scope.AddFunction(new IdentityTransformFunction());
+
+            ExpressionBase result;
+            Assert.IsTrue(expression.Evaluate(scope, out result));
+
+            Assert.That(result, Is.InstanceOf<RequirementClauseExpression>());
+            TriggerExpressionTests.AssertSerialize((RequirementClauseExpression)result, expected);
+        }
+
+        [Test]
+        [TestCase("0x1234", "test", 4, "d0xX001234=1953719668")] // 0x74736574
+        [TestCase("0x1234", "test", 3, "d0xW001234=7562612")] // 0x736574
+        [TestCase("0x1234", "test", 5, "d0xX001234=1953719668_d0xH001238=0")] // 0x74736574 00
+        [TestCase("0x1234", "test1", 6, "d0xX001234=1953719668_d0x 001238=49")] // 0x74736574 3100
+        [TestCase("0x1234", "Testing1234", 11, "d0xX001234=1953719636_d0xX001238=828862057_d0xW00123c=3420978")] // 0x74736554 31676E69 343332
+        [TestCase("0x1234", "", 1, "d0xH001234=0")] // 0x00
+        [TestCase("0x1234", "test1", Int32.MaxValue, "d0xX001234=1953719668_d0xH001238=49")] // 0x74736574 31
+        [TestCase("dword(0x1234)", "test1", 6,
+            "I:0xX001234_d0xX000000=1953719668_I:0xX001234_d0x 000004=49")] // 0x74736574 3100
+        [TestCase("dword(0x1234) + 32", "Testing1234", 11,
+            "I:0xX001234_d0xX000020=1953719636_I:0xX001234_d0xX000024=828862057_I:0xX001234_d0xW000028=3420978")] // 0x74736554 31676E69 343332
+        [TestCase("dword(dword(0x1234) + 8) + 0x2c", "test1", 6,
+            "I:0xX001234_I:0xX000008_d0xX00002c=1953719668_I:0xX001234_I:0xX000008_d0x 000030=49")] // 0x74736574 3100
+        public void TestEvaluatePrev(string address, string input, int length, string expected)
+        {
+            var parameters = new List<ExpressionBase>();
+            parameters.Add(ExpressionTests.Parse(address));
+            parameters.Add(new StringConstantExpression(input));
+            parameters.Add(new IntegerConstantExpression(length));
+            parameters.Add(new FunctionReferenceExpression("prev"));
+
+            var expression = new FunctionCallExpression("ascii_string_equals", parameters);
+            var scope = new InterpreterScope();
+            scope.AddFunction(new AsciiStringEqualsFunction());
+            scope.AddFunction(new PrevPriorFunction("prev", RATools.Data.FieldType.PreviousValue));
 
             ExpressionBase result;
             Assert.IsTrue(expression.Evaluate(scope, out result));
@@ -85,6 +124,7 @@ namespace RATools.Tests.Parser.Functions
             var expression = new FunctionCallExpression("ascii_string_equals", parameters);
             var scope = new InterpreterScope();
             scope.AddFunction(new AsciiStringEqualsFunction());
+            scope.AddFunction(new IdentityTransformFunction());
 
             ExpressionBase result;
             Assert.IsFalse(expression.Evaluate(scope, out result));

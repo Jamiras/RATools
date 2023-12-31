@@ -2,6 +2,7 @@
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
@@ -13,8 +14,10 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("address"));
             Parameters.Add(new VariableDefinitionExpression("string"));
             Parameters.Add(new VariableDefinitionExpression("length"));
+            Parameters.Add(new VariableDefinitionExpression("transform"));
 
             DefaultParameters["length"] = new IntegerConstantExpression(int.MaxValue);
+            DefaultParameters["transform"] = new FunctionReferenceExpression("identity_transform");
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
@@ -42,6 +45,22 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            var transform = GetFunctionParameter(scope, "transform", out result);
+            if (transform == null)
+                return false;
+
+            if ((transform.Parameters.Count - transform.DefaultParameters.Count) != 1)
+            {
+                result = new ErrorExpression("transform function must accept a single parameter");
+                return false;
+            }
+
+            var transformScope = transform.CreateCaptureScope(scope);
+
+            var transformParameter = new VariableExpression(transform.Parameters.First().Name);
+            foreach (var kvp in transform.DefaultParameters)
+                transformScope.AssignVariable(new VariableExpression(kvp.Key), kvp.Value);
+
             var str = stringExpression.Value;
             var remaining = (length.Value == int.MaxValue) ? str.Length : length.Value;
             var offset = 0;
@@ -63,9 +82,13 @@ namespace RATools.Parser.Functions
                 var scan = address.Clone();
                 scan.Field = new Field { Type = address.Field.Type, Size = size, Value = address.Field.Value + (uint)offset * 2 };
 
+                transformScope.AssignVariable(transformParameter, scan);
+                if (!transform.Evaluate(transformScope, out result))
+                    return false;
+
                 var condition = new RequirementConditionExpression()
                 {
-                    Left = scan,
+                    Left = result,
                     Comparison = ComparisonOperation.Equal,
                     Right = new IntegerConstantExpression(value),
                 };
