@@ -16,15 +16,20 @@
 
   <ItemGroup>
     <Compile Remove="Data\**" />
+    <Compile Remove="Parser\**" />
     <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Parser\**" />
     <None Remove="Data\**" />
+    <None Remove="Parser\**" />
     <Page Remove="Data\**" />
+    <Page Remove="Parser\**" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Core\Core\Source\Jamiras.Core.csproj" />
     <ProjectReference Include="..\Core\UI\WPF\Source\Jamiras.UI.WPF.csproj" />
     <ProjectReference Include="Data\RATools.Data.csproj" />
+    <ProjectReference Include="Parser\RATools.Parser.csproj" />
   </ItemGroup>
 
   <ItemGroup>

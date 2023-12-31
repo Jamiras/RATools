@@ -13,18 +13,13 @@
 
   <ItemGroup>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-    <_Parameter1>RATools.Parser</_Parameter1>
-    </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-    <_Parameter1>RATools.Tests</_Parameter1>
-    </AssemblyAttribute>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-    <_Parameter1>RATools.Data.Tests</_Parameter1>
+    <_Parameter1>RATools.Parser.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Core\Source\Jamiras.Core.csproj" />
+    <ProjectReference Include="..\Data\RATools.Data.csproj" />
   </ItemGroup>
 
 </Project>
