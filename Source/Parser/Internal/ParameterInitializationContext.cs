@@ -1,9 +1,8 @@
 ﻿using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Parser
+namespace RATools.Parser.Internal
 {
     internal class ParameterInitializationContext
     {

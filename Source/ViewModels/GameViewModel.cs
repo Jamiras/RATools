@@ -226,9 +226,9 @@ namespace RATools.ViewModels
                     var richPresenceViewModel = new RichPresenceViewModel(this);
                     richPresenceViewModel.Generated.Asset = new RichPresence
                     {
-                        Script = interpreter.RichPresence,
-                        SourceLine = interpreter.RichPresenceLine
+                        Script = interpreter.RichPresence
                     };
+                    richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
                     editors.Add(richPresenceViewModel);
                 }
 
@@ -236,6 +236,7 @@ namespace RATools.ViewModels
                 {
                     var achievementViewModel = new AchievementViewModel(this);
                     achievementViewModel.Generated.Asset = achievement;
+                    achievementViewModel.SourceLine = interpreter.GetSourceLine(achievement);
                     editors.Add(achievementViewModel);
                 }
 
@@ -243,6 +244,7 @@ namespace RATools.ViewModels
                 {
                     var leaderboardViewModel = new LeaderboardViewModel(this);
                     leaderboardViewModel.Generated.Asset = leaderboard;
+                    leaderboardViewModel.SourceLine = interpreter.GetSourceLine(leaderboard);
                     editors.Add(leaderboardViewModel);
                 }
             }
@@ -649,12 +651,12 @@ namespace RATools.ViewModels
                         builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
                         builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
                         builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
+                        builder.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
 
                         var builtAchievement = builder.ToAchievement();
                         builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
                         builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
 
-                        builtAchievement.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
                         if (builtAchievement.Category == 5)
                         {
                             _publishedAchievements.Add(builtAchievement);

@@ -1,13 +1,12 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Parser;
-using RATools.Parser.Internal;
-using System.Text;
-using System.Linq;
-using System.Collections.Generic;
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
-namespace RATools.Tests.Parser.Expressions
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class DictionaryExpressionTests

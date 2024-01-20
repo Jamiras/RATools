@@ -1,4 +1,6 @@
-﻿namespace RATools.Parser.Internal
+﻿using RATools.Parser.Expressions;
+
+namespace RATools.Parser.Internal
 {
     internal interface IUpconvertibleExpression
     {

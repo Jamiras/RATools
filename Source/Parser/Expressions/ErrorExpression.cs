@@ -1,10 +1,9 @@
 ﻿using Jamiras.Components;
-using RATools.Parser.Internal;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class ErrorExpression : ExpressionBase
+    public class ErrorExpression : ExpressionBase
     {
         public ErrorExpression(string message)
             : base(ExpressionType.Error)

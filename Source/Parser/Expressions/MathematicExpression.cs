@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class MathematicExpression : LeftRightExpressionBase, 
+    public class MathematicExpression : LeftRightExpressionBase, 
         IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public MathematicExpression(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
@@ -613,7 +613,7 @@ namespace RATools.Parser.Expressions
     /// <summary>
     /// Specifies how the two sides of the <see cref="MathematicExpression"/> should be combined.
     /// </summary>
-    internal enum MathematicOperation
+    public enum MathematicOperation
     {
         /// <summary>
         /// Unspecified

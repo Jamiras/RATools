@@ -1,16 +1,16 @@
 ﻿using Jamiras.Components;
-using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser.Expressions
 {
     /// <summary>
     /// Base class for a part of an expression.
     /// </summary>
-    internal abstract class ExpressionBase
+    public abstract class ExpressionBase
     {
         protected ExpressionBase(ExpressionType type)
         {

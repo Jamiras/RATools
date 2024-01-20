@@ -1,13 +1,11 @@
-﻿using RATools.Data;
-using RATools.Parser.Expressions;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Parser.Internal
+namespace RATools.Parser.Expressions
 {
-    internal class ExpressionGroup
+    public class ExpressionGroup
     {
         public ExpressionGroup()
         {
@@ -19,13 +17,9 @@ namespace RATools.Parser.Internal
         private HashSet<string> _dependencies;
         private HashSet<string> _modifies;
 
-        public ICollection<Achievement> GeneratedAchievements { get; set; }
-        public ICollection<Leaderboard> GeneratedLeaderboards { get; set; }
-        public RichPresenceBuilder GeneratedRichPresence { get; set; }
+        internal bool NeedsEvaluated { get; private set; }
 
-        public bool NeedsEvaluated { get; private set; }
-
-        public void MarkForEvaluation()
+        internal void MarkForEvaluation()
         {
             if (_parseErrors != null)
             {
@@ -39,7 +33,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public void MarkEvaluated()
+        internal void MarkEvaluated()
         {
             NeedsEvaluated = false;
         }
@@ -55,7 +49,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public void AddParseError(ErrorExpression error)
+        internal void AddParseError(ErrorExpression error)
         {
             if (_parseErrors == null)
                 _parseErrors = new List<ErrorExpression>();
@@ -77,7 +71,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public void AddExpression(ExpressionBase expression)
+        internal void AddExpression(ExpressionBase expression)
         {
             if (_expressions == null)
             {
@@ -109,6 +103,11 @@ namespace RATools.Parser.Internal
             _expressions.Insert(insertAt, expression);
         }
 
+        protected virtual ExpressionGroup CreateGroup()
+        {
+            return new ExpressionGroup();
+        }
+
         internal ExpressionGroup ExtractTrailingComments(ExpressionBase expression)
         {
             if (_expression != null)
@@ -117,7 +116,7 @@ namespace RATools.Parser.Internal
                     return null;
                 // ASSERT: comment must be the last thing on a line, so we don't have to check columns
 
-                var newGroup = new ExpressionGroup();
+                var newGroup = CreateGroup();
                 newGroup._expression = _expression;
                 _expression = null;
                 return newGroup;
@@ -132,7 +131,7 @@ namespace RATools.Parser.Internal
 
             if (index != _expressions.Count)
             {
-                var newGroup = new ExpressionGroup();
+                var newGroup = CreateGroup();
                 if (index == 1)
                 {
                     _expression = _expressions[0];
@@ -158,7 +157,11 @@ namespace RATools.Parser.Internal
             return null;
         }
 
-        public bool IsDependentOn(string name)
+        internal virtual void AdjustSourceLines(int adjustment)
+        {
+        }
+
+        internal bool IsDependentOn(string name)
         {
             if (_dependencies == null)
                 return false;
@@ -166,7 +169,7 @@ namespace RATools.Parser.Internal
             return _dependencies.Contains(name);
         }
 
-        public bool IsDependentOn(HashSet<string> names)
+        internal bool IsDependentOn(HashSet<string> names)
         {
             if (_dependencies != null)
             {
@@ -180,7 +183,7 @@ namespace RATools.Parser.Internal
             return false;
         }
 
-        public IEnumerable<string> Modifies
+        internal IEnumerable<string> Modifies
         {
             get
             {
@@ -199,7 +202,7 @@ namespace RATools.Parser.Internal
         public int FirstLine { get; internal set; }
         public int LastLine { get; internal set; }
 
-        public void UpdateMetadata()
+        internal void UpdateMetadata()
         {
             if (!IsEmpty)
             {
@@ -281,7 +284,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        public bool ExpressionsMatch(ExpressionGroup that)
+        internal bool ExpressionsMatch(ExpressionGroup that)
         {
             if (_expression != null)
                 return (_expression == that._expression);
@@ -305,7 +308,7 @@ namespace RATools.Parser.Internal
             return true;
         }
 
-        public void ReplaceExpressions(ExpressionGroup that, bool updateDependencies)
+        internal void ReplaceExpressions(ExpressionGroup that, bool updateDependencies)
         {
             _expression = that._expression;
             _expressions = that._expressions;

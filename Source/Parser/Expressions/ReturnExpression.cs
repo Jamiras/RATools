@@ -1,10 +1,9 @@
-﻿using RATools.Parser.Internal;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class ReturnExpression : ExpressionBase, INestedExpressions
+    public class ReturnExpression : ExpressionBase, INestedExpressions
     {
         public ReturnExpression(ExpressionBase value)
             : base(ExpressionType.Return)

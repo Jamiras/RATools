@@ -1,13 +1,12 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Data;
-using RATools.Parser;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Text;
 
-namespace RATools.Tests.Parser.Expressions
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class ConditionalExpressionTests

@@ -74,14 +74,15 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            var sourceLine = 0;
             var newAchievement = achievement.ToAchievement();
             var functionCall = scope.GetOutermostContext<FunctionCallExpression>();
             if (functionCall != null)
-                newAchievement.SourceLine = functionCall.Location.Start.Line;
+                sourceLine = functionCall.Location.Start.Line;
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
-            context.Achievements.Add(newAchievement);
+            context.Achievements[newAchievement] = sourceLine;
             return true;
         }
     }

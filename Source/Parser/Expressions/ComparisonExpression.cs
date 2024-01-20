@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class ComparisonExpression : LeftRightExpressionBase
+    public class ComparisonExpression : LeftRightExpressionBase
     {
         public ComparisonExpression(ExpressionBase left, ComparisonOperation operation, ExpressionBase right)
             : base(left, right, ExpressionType.Comparison)

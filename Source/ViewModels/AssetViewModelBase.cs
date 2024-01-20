@@ -326,10 +326,7 @@ namespace RATools.ViewModels
             return false;
         }
 
-        public int SourceLine
-        {
-            get { return (Generated.Asset != null) ? Generated.Asset.SourceLine : 0; }
-        }
+        public int SourceLine { get; internal set; }
 
         private void UpdateLocal()
         {

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Tests.Parser.Expressions
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class FunctionDefinitionExpressionTests

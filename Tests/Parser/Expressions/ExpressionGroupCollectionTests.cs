@@ -5,7 +5,7 @@ using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Internal
+namespace RATools.Parser.Tests.Expressions
 {
     [TestFixture]
     class ExpressionGroupCollectionTests
@@ -97,28 +97,28 @@ namespace RATools.Tests.Parser.Internal
             // parser after the last valid token into a separate group.
 
             // group0: a = 3
-            var group0 = group.Groups[0];
+            var group0 = group.Groups.ElementAt(0);
             Assert.That(group0.Expressions.Count(), Is.EqualTo(1));
             Assert.That(group0.FirstLine, Is.EqualTo(1));
             Assert.That(group0.LastLine, Is.EqualTo(1));
 
             // comment extracted from group 0
             // group1: // test1\n//test2
-            var group1 = group.Groups[1];
+            var group1 = group.Groups.ElementAt(1);
             Assert.That(group1.Expressions.Count(), Is.EqualTo(2));
             Assert.That(group1.FirstLine, Is.EqualTo(1));
             Assert.That(group1.LastLine, Is.EqualTo(2));
 
             // no comment
             // group2: b = 4
-            var group2 = group.Groups[2];
+            var group2 = group.Groups.ElementAt(2);
             Assert.That(group2.Expressions.Count(), Is.EqualTo(1));
             Assert.That(group2.FirstLine, Is.EqualTo(3));
             Assert.That(group2.LastLine, Is.EqualTo(3));
 
             // final group spans around a comment, so that shouldn't be extracted
             // group3: c = // test3\n 5
-            var group3 = group.Groups[3];
+            var group3 = group.Groups.ElementAt(3);
             Assert.That(group3.Expressions.Count(), Is.EqualTo(2)); // "c = 5" and "// test3"
             Assert.That(group3.FirstLine, Is.EqualTo(4));
             Assert.That(group3.LastLine, Is.EqualTo(5));
@@ -133,12 +133,12 @@ namespace RATools.Tests.Parser.Internal
                               "b = 4\n");
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
-            Assert.That(group.Groups[0].FirstLine, Is.EqualTo(1));
-            Assert.That(group.Groups[0].LastLine, Is.EqualTo(1));
-            Assert.That(group.Groups[1].FirstLine, Is.EqualTo(2));
-            Assert.That(group.Groups[1].LastLine, Is.EqualTo(3));
-            Assert.That(group.Groups[2].FirstLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].LastLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(0).FirstLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(0).LastLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(1).FirstLine, Is.EqualTo(2));
+            Assert.That(group.Groups.ElementAt(1).LastLine, Is.EqualTo(3));
+            Assert.That(group.Groups.ElementAt(2).FirstLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(2).LastLine, Is.EqualTo(4));
 
             var updatedInput = "a = 3\n" +
                                "// test1\n" +
@@ -149,14 +149,14 @@ namespace RATools.Tests.Parser.Internal
             Assert.That(needsEvaluated, Is.False);
 
             Assert.That(group.Groups.Count, Is.EqualTo(4));
-            Assert.That(group.Groups[0].FirstLine, Is.EqualTo(1));
-            Assert.That(group.Groups[0].LastLine, Is.EqualTo(1));
-            Assert.That(group.Groups[1].FirstLine, Is.EqualTo(2));
-            Assert.That(group.Groups[1].LastLine, Is.EqualTo(3));
-            Assert.That(group.Groups[2].FirstLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].LastLine, Is.EqualTo(4));
-            Assert.That(group.Groups[3].FirstLine, Is.EqualTo(5));
-            Assert.That(group.Groups[3].LastLine, Is.EqualTo(5));
+            Assert.That(group.Groups.ElementAt(0).FirstLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(0).LastLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(1).FirstLine, Is.EqualTo(2));
+            Assert.That(group.Groups.ElementAt(1).LastLine, Is.EqualTo(3));
+            Assert.That(group.Groups.ElementAt(2).FirstLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(2).LastLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(3).FirstLine, Is.EqualTo(5));
+            Assert.That(group.Groups.ElementAt(3).LastLine, Is.EqualTo(5));
         }
 
         [Test]
@@ -168,12 +168,12 @@ namespace RATools.Tests.Parser.Internal
                               "b = 4\n");
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
-            Assert.That(group.Groups[0].FirstLine, Is.EqualTo(1));
-            Assert.That(group.Groups[0].LastLine, Is.EqualTo(1));
-            Assert.That(group.Groups[1].FirstLine, Is.EqualTo(2));
-            Assert.That(group.Groups[1].LastLine, Is.EqualTo(3));
-            Assert.That(group.Groups[2].FirstLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].LastLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(0).FirstLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(0).LastLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(1).FirstLine, Is.EqualTo(2));
+            Assert.That(group.Groups.ElementAt(1).LastLine, Is.EqualTo(3));
+            Assert.That(group.Groups.ElementAt(2).FirstLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(2).LastLine, Is.EqualTo(4));
 
             var updatedInput = "a = 3\n" +
                                "// test1\n" +
@@ -184,17 +184,17 @@ namespace RATools.Tests.Parser.Internal
             Assert.That(needsEvaluated, Is.True);
 
             Assert.That(group.Groups.Count, Is.EqualTo(4));
-            Assert.That(group.Groups[0].FirstLine, Is.EqualTo(1));
-            Assert.That(group.Groups[0].LastLine, Is.EqualTo(1));
-            Assert.That(group.Groups[0].NeedsEvaluated, Is.False);
-            Assert.That(group.Groups[1].FirstLine, Is.EqualTo(2));
-            Assert.That(group.Groups[1].LastLine, Is.EqualTo(3));
-            Assert.That(group.Groups[2].FirstLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].LastLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].NeedsEvaluated, Is.True);
-            Assert.That(group.Groups[3].FirstLine, Is.EqualTo(5));
-            Assert.That(group.Groups[3].LastLine, Is.EqualTo(5));
-            Assert.That(group.Groups[3].NeedsEvaluated, Is.False);
+            Assert.That(group.Groups.ElementAt(0).FirstLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(0).LastLine, Is.EqualTo(1));
+            Assert.That(group.Groups.ElementAt(0).NeedsEvaluated, Is.False);
+            Assert.That(group.Groups.ElementAt(1).FirstLine, Is.EqualTo(2));
+            Assert.That(group.Groups.ElementAt(1).LastLine, Is.EqualTo(3));
+            Assert.That(group.Groups.ElementAt(2).FirstLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(2).LastLine, Is.EqualTo(4));
+            Assert.That(group.Groups.ElementAt(2).NeedsEvaluated, Is.True);
+            Assert.That(group.Groups.ElementAt(3).FirstLine, Is.EqualTo(5));
+            Assert.That(group.Groups.ElementAt(3).LastLine, Is.EqualTo(5));
+            Assert.That(group.Groups.ElementAt(3).NeedsEvaluated, Is.False);
         }
 
         [Test]
@@ -213,10 +213,10 @@ namespace RATools.Tests.Parser.Internal
             Assert.That(needsEvaluated, Is.True);
 
             Assert.That(group.Groups.Count, Is.EqualTo(4));
-            Assert.That(group.Groups[0].NeedsEvaluated, Is.True); // modified
-            Assert.That(group.Groups[1].NeedsEvaluated, Is.True); // depedendent on group 0
-            Assert.That(group.Groups[2].NeedsEvaluated, Is.True); // depedendent on group 1
-            Assert.That(group.Groups[3].NeedsEvaluated, Is.False); // not depedendent
+            Assert.That(group.Groups.ElementAt(0).NeedsEvaluated, Is.True); // modified
+            Assert.That(group.Groups.ElementAt(1).NeedsEvaluated, Is.True); // depedendent on group 0
+            Assert.That(group.Groups.ElementAt(2).NeedsEvaluated, Is.True); // depedendent on group 1
+            Assert.That(group.Groups.ElementAt(3).NeedsEvaluated, Is.False); // not depedendent
         }
 
         [Test]
@@ -226,16 +226,18 @@ namespace RATools.Tests.Parser.Internal
                         "achievement(\"t\", \"d\", 5, byte(0x1234) == a)\n" +
                         "leaderboard(\"t\", \"d\", byte(0x1234) == a, byte(0x1234) == a + 1, byte(0x1234) == a + 2, byte(0x2345))\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
-            var group = new ExpressionGroupCollection();
-            group.Scope = RATools.Parser.AchievementScriptInterpreter.GetGlobalScope();
+            var group = new AssetExpressionGroupCollection();
+            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
             group.Parse(tokenizer);
 
-            var interpreter = new RATools.Parser.AchievementScriptInterpreter();
+            var interpreter = new AchievementScriptInterpreter();
             interpreter.Run(group, null);
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
-            Assert.That(group.Groups[1].GeneratedAchievements.First().SourceLine, Is.EqualTo(2));
-            Assert.That(group.Groups[2].GeneratedLeaderboards.First().SourceLine, Is.EqualTo(3));
+            var assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(1);
+            Assert.That(assetGroup.GeneratedAchievements.First().Value, Is.EqualTo(2));
+            assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(2);
+            Assert.That(assetGroup.GeneratedLeaderboards.First().Value, Is.EqualTo(3));
 
             var updatedInput = "a = 3\n" +
                                "\n" +
@@ -245,14 +247,18 @@ namespace RATools.Tests.Parser.Internal
             group.Update(Tokenizer.CreateTokenizer(updatedInput), new int[] { 2, 3 });
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
-            Assert.That(group.Groups[1].GeneratedAchievements.First().SourceLine, Is.EqualTo(4));
-            Assert.That(group.Groups[2].GeneratedLeaderboards.First().SourceLine, Is.EqualTo(5));
+            assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(1);
+            Assert.That(assetGroup.GeneratedAchievements.First().Value, Is.EqualTo(4));
+            assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(2);
+            Assert.That(assetGroup.GeneratedLeaderboards.First().Value, Is.EqualTo(5));
 
             group.Update(Tokenizer.CreateTokenizer(input), new int[] { 2, 3 });
 
             Assert.That(group.Groups.Count, Is.EqualTo(3));
-            Assert.That(group.Groups[1].GeneratedAchievements.First().SourceLine, Is.EqualTo(2));
-            Assert.That(group.Groups[2].GeneratedLeaderboards.First().SourceLine, Is.EqualTo(3));
+            assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(1);
+            Assert.That(assetGroup.GeneratedAchievements.First().Value, Is.EqualTo(2));
+            assetGroup = (AssetExpressionGroup)group.Groups.ElementAt(2);
+            Assert.That(assetGroup.GeneratedLeaderboards.First().Value, Is.EqualTo(3));
         }
 
         [Test]
@@ -264,10 +270,10 @@ namespace RATools.Tests.Parser.Internal
                         ")\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var group = new ExpressionGroupCollection();
-            group.Scope = RATools.Parser.AchievementScriptInterpreter.GetGlobalScope();
+            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
             group.Parse(tokenizer);
 
-            var interpreter = new RATools.Parser.AchievementScriptInterpreter();
+            var interpreter = new AchievementScriptInterpreter();
             interpreter.Run(group, null);
 
             Assert.That(group.HasEvaluationErrors, Is.True);

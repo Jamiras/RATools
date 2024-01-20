@@ -80,13 +80,14 @@ namespace RATools.Parser.Functions
                 return false;
             leaderboard.Id = integerExpression.Value;
 
+            int sourceLine = 0;
             var functionCall = scope.GetContext<FunctionCallExpression>();
             if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
-                leaderboard.SourceLine = functionCall.Location.Start.Line;
+                sourceLine = functionCall.Location.Start.Line;
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
-            context.Leaderboards.Add(leaderboard);
+            context.Leaderboards[leaderboard] = sourceLine;
             return true;
         }
 

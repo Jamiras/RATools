@@ -1,13 +1,12 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace RATools.Parser
+namespace RATools.Parser.Internal
 {
 
     internal class ValueBuilderContext : TriggerBuilderContext
@@ -34,7 +33,7 @@ namespace RATools.Parser
             if (integerConstant != null)
             {
                 result = null;
-                return String.Format("v{0}", (int)integerConstant.Value);
+                return string.Format("v{0}", integerConstant.Value);
             }
 
             var trigger = expression as ITriggerExpression;
@@ -133,7 +132,7 @@ namespace RATools.Parser
                     continue;
                 }
 
-                var factor = (requirement.Type == RequirementType.SubSource) ? -1.0 : 1.0;
+                var factor = requirement.Type == RequirementType.SubSource ? -1.0 : 1.0;
                 if (requirement.Operator == RequirementOperator.Multiply)
                     factor *= requirement.Right.Type == FieldType.Float ? requirement.Right.Float : (int)requirement.Right.Value;
 
@@ -142,7 +141,7 @@ namespace RATools.Parser
                 {
                     value.Append('*');
 
-                    if ((factor % 1.0f) == 0)
+                    if (factor % 1.0f == 0)
                     {
                         // factor is a whole number, just output it
                         value.Append((int)(uint)factor);

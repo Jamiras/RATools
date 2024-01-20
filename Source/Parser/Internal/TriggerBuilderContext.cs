@@ -2,12 +2,11 @@
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
-namespace RATools.Parser
+namespace RATools.Parser.Internal
 {
     internal class TriggerBuilderContext
     {
@@ -239,7 +238,7 @@ namespace RATools.Parser
                             term.field = FieldFactory.CreateField(memoryValue.ExtractConstant());
                             if (term.field.Type == FieldType.Value && (int)term.field.Value < 0)
                             {
-                                term.field.Value = (uint)(-(int)term.field.Value);
+                                term.field.Value = (uint)-(int)term.field.Value;
                                 term.multiplier = FieldFactory.NegateValue(term.multiplier);
                             }
                             terms.Add(term);

@@ -1,11 +1,9 @@
-﻿using RATools.Parser.Internal;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class IndexedVariableExpression : VariableExpression, INestedExpressions
+    public class IndexedVariableExpression : VariableExpression, INestedExpressions
     {
         public IndexedVariableExpression(VariableExpression variable, ExpressionBase index)
             : base(string.Empty)

@@ -134,9 +134,7 @@ namespace RATools.ViewModels
             var tokenizer = Tokenizer.CreateTokenizer(e.Content);
             if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
-                _parsedContent = new ExpressionGroupCollection();
-                _parsedContent.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-                _parsedContent.Scope.Context = new AchievementScriptContext();
+                _parsedContent = AchievementScriptInterpreter.CreateExpressionGroupCollection();
 
                 lock (_parsedContent)
                 {

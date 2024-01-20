@@ -199,7 +199,7 @@ namespace RATools.Tests.ViewModels
                 Description = name
             };
 
-            ((List<Achievement>)interpreter.Achievements).Add(achievement);
+            interpreter.AddAchievement(achievement);
             return achievement;
         }
 
@@ -215,7 +215,7 @@ namespace RATools.Tests.ViewModels
                 Value = "1"
             };
 
-            ((List<Leaderboard>)interpreter.Leaderboards).Add(leaderboard);
+            interpreter.AddLeaderboard(leaderboard);
             return leaderboard;
         }
 

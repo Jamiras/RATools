@@ -1,10 +1,9 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Parser;
 using RATools.Parser.Functions;
 using System.Linq;
 
-namespace RATools.Tests.Parser.Functions
+namespace RATools.Parser.Tests.Functions
 {
     [TestFixture]
     class TallyOfFunctionTests

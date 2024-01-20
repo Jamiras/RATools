@@ -1,10 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
-using RATools.Parser;
+using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
-using RATools.Tests.Parser.Expressions;
+using RATools.Parser.Tests.Expressions;
 
-namespace RATools.Tests.Parser
+namespace RATools.Parser.Tests.Internal
 {
     [TestFixture]
     class TriggerBuilderContextTests

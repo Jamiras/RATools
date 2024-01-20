@@ -149,7 +149,7 @@ namespace RATools.Data
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
         /// </summary>
-        internal void AppendString(StringBuilder builder, NumberFormat numberFormat, 
+        public void AppendString(StringBuilder builder, NumberFormat numberFormat, 
             string addSources = null, string subSources = null, string addHits = null, 
             string andNext = null, string addAddress = null, string measuredIf = null,
             string resetNextIf = null)

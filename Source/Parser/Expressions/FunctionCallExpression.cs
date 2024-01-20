@@ -1,12 +1,11 @@
 ﻿using RATools.Parser.Internal;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    internal class FunctionCallExpression : ExpressionBase, INestedExpressions
+    public class FunctionCallExpression : ExpressionBase, INestedExpressions
     {
         public FunctionCallExpression(string functionName, ICollection<ExpressionBase> parameters)
             : this(new FunctionNameExpression(functionName), parameters)
@@ -493,7 +492,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class FunctionNameExpression : VariableExpressionBase, INestedExpressions
+    public class FunctionNameExpression : VariableExpressionBase, INestedExpressions
     {
         public FunctionNameExpression(string name)
             : base(name)

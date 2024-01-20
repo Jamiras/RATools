@@ -1,8 +1,8 @@
 ﻿using NUnit.Framework;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
 
-namespace RATools.Tests.Parser.Expressions.Trigger
+namespace RATools.Parser.Tests.Expressions.Trigger
 {
     [TestFixture]
     class ModifiedMemoryAccessorExpressionTests

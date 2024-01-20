@@ -9,10 +9,13 @@
 
   <ItemGroup>
     <Compile Remove="Data\**" />
+    <Compile Remove="Parser\**" />
     <Compile Remove="Regressions\**" />
     <EmbeddedResource Remove="Data\**" />
+    <EmbeddedResource Remove="Parser\**" />
     <EmbeddedResource Remove="Regressions\**" />
     <None Remove="Data\**" />
+    <None Remove="Parser\**" />
     <None Remove="Regressions\**" />
   </ItemGroup>
 
@@ -26,6 +29,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Core\UI\WPF\Source\Jamiras.UI.WPF.csproj" />
     <ProjectReference Include="..\Source\Data\RATools.Data.csproj" />
+    <ProjectReference Include="..\Source\Parser\RATools.Parser.csproj" />
     <ProjectReference Include="..\Source\RATools.csproj" />
     <ProjectReference Include="Data\RATools.Data.Tests.csproj" />
   </ItemGroup>
