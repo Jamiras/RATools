@@ -200,13 +200,25 @@ namespace RATools.Data
                 if (index > 0 && Char.IsLetter(token[index - 1]))
                     break;
 
-                token = token.SubToken(index + 5);
-                if (token.Length == 0 || token[0] == ']' || token[0] == ')' || token.StartsWith("32"))
+                var subtoken = token.SubToken(index + 5);
+                if (subtoken.StartsWith("BE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.StartsWith("-BE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.StartsWith(" BE", StringComparison.OrdinalIgnoreCase) ||
+                    subtoken.Contains("BigEndian", StringComparison.OrdinalIgnoreCase))
+                {
+                    _length = 4;
+                    _fieldSize = FieldSize.BigEndianFloat;
+                    return;
+                }
+
+                if (subtoken.Length == 0 || subtoken[0] == ']' || subtoken[0] == ')' || subtoken.StartsWith("32"))
                 {
                     _length = 4;
                     _fieldSize = FieldSize.Float;
                     return;
                 }
+
+                token = subtoken;
             } while (true);
         }
     }

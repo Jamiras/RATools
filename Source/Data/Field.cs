@@ -215,6 +215,7 @@ namespace RATools.Data
                 case FieldSize.Float: return "float";
                 case FieldSize.MBF32: return "mbf32";
                 case FieldSize.LittleEndianMBF32: return "mbf32_le";
+                case FieldSize.BigEndianFloat: return "float_be";
                 default: return size.ToString();
             }
         }
@@ -291,6 +292,7 @@ namespace RATools.Data
                 switch (Size)
                 {
                     case FieldSize.Float:
+                    case FieldSize.BigEndianFloat:
                     case FieldSize.MBF32:
                     case FieldSize.LittleEndianMBF32:
                         return true;
@@ -362,6 +364,7 @@ namespace RATools.Data
                 case FieldSize.Float: builder.Append("fF"); break;
                 case FieldSize.MBF32: builder.Append("fM"); break;
                 case FieldSize.LittleEndianMBF32: builder.Append("fL"); break;
+                case FieldSize.BigEndianFloat: builder.Append("fB"); break;
             }
 
             switch (addressWidth)
@@ -431,6 +434,9 @@ namespace RATools.Data
                     case 'F':
                         tokenizer.Advance();
                         return new Field { Size = FieldSize.Float, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    case 'B':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.BigEndianFloat, Type = fieldType, Value = ReadHexNumber(tokenizer) };
                     case 'M':
                         tokenizer.Advance();
                         return new Field { Size = FieldSize.MBF32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
@@ -834,5 +840,10 @@ namespace RATools.Data
         /// 32-bit Microsoft Binary Format floating point number in little-endian mode.
         /// </summary>
         LittleEndianMBF32,
+
+        /// <summary>
+        /// 32-bit IEE-754 floating point number in big-endian mode
+        /// </summary>
+        BigEndianFloat,
     }
 }
