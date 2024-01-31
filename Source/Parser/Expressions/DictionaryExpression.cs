@@ -303,7 +303,7 @@ namespace RATools.Parser.Expressions
 
                     if (!value.IsConstant)
                     {
-                        result = new ErrorExpression("Dictionary key must evaluate to a constant", key);
+                        result = new ErrorExpression("Dictionary key must evaluate to a string or numeric constant", key);
                         return false;
                     }
 

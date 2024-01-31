@@ -151,7 +151,25 @@ namespace RATools.Parser.Tests.Expressions
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Dictionary key must evaluate to a constant"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Dictionary key must evaluate to a string or numeric constant"));
+        }
+
+        [Test]
+        public void TestReplaceVariablesArray()
+        {
+            var arrayDefinition = new ArrayExpression();
+            arrayDefinition.Entries.Add(new IntegerConstantExpression(2));
+
+            var value1 = new IntegerConstantExpression(98);
+            var expr = new DictionaryExpression();
+            expr.Add(arrayDefinition, value1);
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            ExpressionBase result;
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Dictionary key must evaluate to a string or numeric constant"));
         }
 
         [Test]
