@@ -675,7 +675,8 @@ namespace RATools.Parser.Expressions.Trigger
             foreach (var memoryAccessor in newMemoryAccessors)
             {
                 if (memoryAccessor.ModifyingOperator == RequirementOperator.None &&
-                    memoryAccessor.MemoryAccessor.Field.IsMemoryReference)
+                    memoryAccessor.MemoryAccessor.Field.IsMemoryReference &&
+                    memoryAccessor.MemoryAccessor is not BitwiseInvertExpression)
                 {
                     byte mask = BitReference.GetMask(memoryAccessor);
                     if (mask == 0)
