@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using Jamiras.Core.Tests;
 using NUnit.Framework;
 using System;
 using System.Globalization;
@@ -273,33 +274,5 @@ namespace RATools.Data.Tests
             Assert.That(field1 != field3);
             Assert.That(!field1.Equals(field3));
         }
-    }
-
-    public class CultureOverride : IDisposable
-    {
-        public CultureOverride(string name)
-        {
-            try
-            {
-                // CurrentCulture is readonly prior to .NET 4.5.2. Use reflection to change it.
-                Type cultureInfoType = typeof(CultureInfo);
-                _defaultCultureField = cultureInfoType.GetField("s_userDefaultCulture", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-                _oldCulture = (CultureInfo)_defaultCultureField.GetValue(null);
-                _defaultCultureField.SetValue(null, CultureInfo.CreateSpecificCulture(name));
-            }
-            catch
-            {
-                Assert.Fail("Could not change current culture");
-            }
-        }
-
-        public void Dispose()
-        {
-            if (_defaultCultureField != null)
-                _defaultCultureField.SetValue(null, _oldCulture);
-        }
-
-        private CultureInfo _oldCulture;
-        private System.Reflection.FieldInfo _defaultCultureField;
     }
 }

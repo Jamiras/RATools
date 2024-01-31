@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Core.Tests;
+using NUnit.Framework;
 using RATools.Data.Tests;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;

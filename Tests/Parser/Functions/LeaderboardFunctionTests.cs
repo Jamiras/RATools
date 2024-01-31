@@ -100,6 +100,24 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueRaw()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "byte(0x1234) * 3)");
+            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3"));
+        }
+
+        [Test]
+        public void TestValueComparison()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "byte(0x1234) == 3)");
+            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234=3"));
+        }
+
+        [Test]
         public void TestValueMaxOf()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
@@ -147,6 +165,20 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueMeasuredFrameCount()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(always_true()))");
+            Assert.That(leaderboard.Value, Is.EqualTo("M:1=1"));
+
+            leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "measured(tally(0, always_true())))");
+            Assert.That(leaderboard.Value, Is.EqualTo("M:1=1"));
+        }
+
+        [Test]
         public void TestValueMeasuredAndNext()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
@@ -156,7 +188,7 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        public void TestValueMeasuredRaw()
+        public void TestValueMeasuredPercent()
         {
             Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +

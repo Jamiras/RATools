@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Core\Tests\Jamiras.Core.Tests.csproj" />
     <ProjectReference Include="..\..\Core\UI\WPF\Source\Jamiras.UI.WPF.csproj" />
     <ProjectReference Include="..\..\Source\Data\RATools.Data.csproj" />
   </ItemGroup>

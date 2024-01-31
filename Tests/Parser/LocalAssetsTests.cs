@@ -1,4 +1,5 @@
-﻿using Jamiras.Services;
+﻿using Jamiras.Core.Tests;
+using Jamiras.Services;
 using Moq;
 using NUnit.Framework;
 using RATools.Data;
