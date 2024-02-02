@@ -5,6 +5,29 @@
         <ResourceDictionary Source="AssetViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
+    <Style x:Key="achievementTypeStyle" TargetType="{x:Type TextBlock}" BasedOn="{StaticResource editorSubtitle}">
+        <Setter Property="Margin" Value="2,0,2,0" />
+        <Setter Property="Text">
+            <Setter.Value>
+                <Binding Path="AchievementType" />
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsAchievementTypeModified}" Value="True">
+                <Setter Property="Foreground" Value="{Binding DataContext.Resources.DiffAddedBrush, ElementName=gameGrid}" />
+                <Setter Property="ToolTip">
+                    <Setter.Value>
+                        <TextBlock>
+                            <TextBlock Text="{Binding Other.Source}" />
+                            <TextBlock Text=": " />
+                            <TextBlock Text="{Binding OtherAssetAchievementType}" />
+                        </TextBlock>
+                    </Setter.Value>
+                </Setter>
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
     <DataTemplate DataType="{x:Type vm:AchievementViewModel}">
         <Border Style="{StaticResource editorBorder}">
             <Grid VerticalAlignment="Stretch">
@@ -22,7 +45,11 @@
                 <StackPanel Grid.Column="1">
                     <TextBlock Style="{StaticResource assetTitleStyle}" />
                     <TextBlock Style="{StaticResource assetDescriptionStyle}" />
-                    <TextBlock Style="{StaticResource assetPointsStyle}" />
+                    <TextBlock Style="{StaticResource editorSubtitle}">
+                        <TextBlock Style="{StaticResource assetPointsStyle}" />
+                        <Run> | </Run>
+                        <TextBlock Style="{StaticResource achievementTypeStyle}" />                    
+                    </TextBlock>
                     <TextBlock Style="{StaticResource assetIDStyle}" />
                 </StackPanel>
                 

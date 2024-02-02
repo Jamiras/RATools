@@ -57,15 +57,22 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
 
                             <TextBlock FontSize="26" FontWeight="Medium"
                                        Foreground="#828194" Margin="0,-4,0,-4">
                                 <TextBlock Text="{Binding Title}" /><Run Text=" (" /><TextBlock Text="{Binding Points}" /><Run Text=" points)" />
                             </TextBlock>
-                            <TextBlock Grid.Row="1" FontSize="18" FontWeight="Medium"
+
+                            <Image Grid.Column="1" Width="20" Height="20" Source="{Binding TypeImage}" />
+
+                            <TextBlock Grid.Row="1" Grid.ColumnSpan="2" FontSize="18" FontWeight="Medium"
                                        Foreground="#706A69" Text="{Binding Description}" />
 
-                            <Grid Grid.Row="2" Margin="0,-2,0,0">
+                            <Grid Grid.Row="2" Grid.ColumnSpan="2" Margin="0,-2,0,0">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="600" />
                                     <ColumnDefinition Width="*" />
