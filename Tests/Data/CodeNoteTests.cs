@@ -83,6 +83,10 @@ namespace RATools.Data.Tests
         [TestCase("[MBF40 LE] Test", 5, FieldSize.LittleEndianMBF32)]
         [TestCase("[MBF32 LittleEndian] Test", 4, FieldSize.LittleEndianMBF32)]
         [TestCase("[MBF40 LittleEndian] Test", 5, FieldSize.LittleEndianMBF32)]
+        [TestCase("[floatBE] Test", 4, FieldSize.BigEndianFloat)]
+        [TestCase("[float BE] Test", 4, FieldSize.BigEndianFloat)]
+        [TestCase("[float-BE] Test", 4, FieldSize.BigEndianFloat)]
+        [TestCase("[float BigEndian] Test", 4, FieldSize.BigEndianFloat)]
 
         [TestCase("42=bitten", 1, FieldSize.None)]
         [TestCase("42-bitten", 1, FieldSize.None)]

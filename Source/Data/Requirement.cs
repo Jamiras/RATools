@@ -617,6 +617,12 @@ namespace RATools.Data
                             minVer = 1.1;
                         break;
 
+                    case FieldSize.BigEndianFloat:
+                        // 1.3 TBD
+                        if (minVer < 1.3)
+                            minVer = 1.3;
+                        break;
+
                     default:
                         break;
                 }

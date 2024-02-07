@@ -35,6 +35,7 @@ namespace RATools.Data.Tests
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "byte(0x123456)")]
         [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "float(0x123456)")]
+        [TestCase(FieldSize.BigEndianFloat, FieldType.MemoryAddress, 0x123456, "float_be(0x123456)")]
         [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "mbf32(0x123456)")]
         [TestCase(FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456, "mbf32_le(0x123456)")]
         public void TestToString(FieldSize fieldSize, FieldType fieldType, int value, string expected)
@@ -131,6 +132,7 @@ namespace RATools.Data.Tests
         [TestCase(FieldSize.Word, FieldType.Value, 0x1234, "4660")]
         [TestCase(FieldSize.Byte, FieldType.MemoryAddress, 0x123456, "0xH123456")]
         [TestCase(FieldSize.Float, FieldType.MemoryAddress, 0x123456, "fF123456")]
+        [TestCase(FieldSize.BigEndianFloat, FieldType.MemoryAddress, 0x123456, "fB123456")]
         [TestCase(FieldSize.MBF32, FieldType.MemoryAddress, 0x123456, "fM123456")]
         [TestCase(FieldSize.MBF32, FieldType.PreviousValue, 0x123456, "dfM123456")]
         [TestCase(FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456, "fL123456")]
@@ -168,6 +170,7 @@ namespace RATools.Data.Tests
         [TestCase("h4660", FieldSize.None, FieldType.Value, 0x4660U)]
         [TestCase("0xH123456", FieldSize.Byte, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("fF123456", FieldSize.Float, FieldType.MemoryAddress, 0x123456U)]
+        [TestCase("fB123456", FieldSize.BigEndianFloat, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("fM123456", FieldSize.MBF32, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("dfM123456", FieldSize.MBF32, FieldType.PreviousValue, 0x123456U)]
         [TestCase("fL123456", FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456U)]
