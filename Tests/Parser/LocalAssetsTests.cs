@@ -3,7 +3,6 @@ using Jamiras.Services;
 using Moq;
 using NUnit.Framework;
 using RATools.Data;
-using RATools.Data.Tests;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -130,7 +129,7 @@ namespace RATools.Parser.Tests
             achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.099\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.099\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -158,7 +157,7 @@ namespace RATools.Parser.Tests
             achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.030\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.030\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -186,7 +185,7 @@ namespace RATools.Parser.Tests
             achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.030\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.030\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -215,7 +214,7 @@ namespace RATools.Parser.Tests
             achievements.Commit("Test", null, null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -246,8 +245,36 @@ namespace RATools.Parser.Tests
                 achievements.Commit("Test", null, null);
 
                 var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-                Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : : :Test:1:0:0:0:0:\r\n"));
+                Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
             }
+        }
+
+        [Test]
+        public void TestCommitMissable()
+        {
+            var memoryStream = new MemoryStream();
+            var achievements = Initialize("0.099\nTitle\n", memoryStream);
+            Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
+
+            var builder = new AchievementBuilder();
+            builder.Title = "T";
+            builder.Description = "D";
+            builder.Points = 1;
+            builder.CoreRequirements.Add(new Requirement
+            {
+                Left = new Field { Size = FieldSize.Byte, Type = FieldType.MemoryAddress, Value = 0x1234 },
+                Operator = RequirementOperator.Equal,
+                Right = new Field { Type = FieldType.Value, Value = 1 }
+            });
+            builder.Type = AchievementType.Missable;
+            var achievement = builder.ToAchievement();
+
+            achievements.Replace(null, achievement);
+
+            achievements.Commit("Test", null, null);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo("1.30\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : :missable:Test:1:0:0:0:0:\r\n"));
         }
     }
 }

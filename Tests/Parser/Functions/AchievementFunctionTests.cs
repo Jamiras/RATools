@@ -16,7 +16,7 @@ namespace RATools.Parser.Tests.Functions
         {
             var def = new AchievementFunction();
             Assert.That(def.Name.Name, Is.EqualTo("achievement"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(8));
+            Assert.That(def.Parameters.Count, Is.EqualTo(9));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("title"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("description"));
             Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("points"));
@@ -25,6 +25,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(5).Name, Is.EqualTo("published"));
             Assert.That(def.Parameters.ElementAt(6).Name, Is.EqualTo("modified"));
             Assert.That(def.Parameters.ElementAt(7).Name, Is.EqualTo("badge"));
+            Assert.That(def.Parameters.ElementAt(8).Name, Is.EqualTo("type"));    
 
             Assert.That(def.DefaultParameters.Count(), Is.EqualTo(4));
             Assert.That(def.DefaultParameters["id"], Is.InstanceOf<IntegerConstantExpression>());
@@ -35,6 +36,8 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(((StringConstantExpression)def.DefaultParameters["modified"]).Value, Is.EqualTo(""));
             Assert.That(def.DefaultParameters["badge"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("0"));
+            Assert.That(def.DefaultParameters["type"], Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)def.DefaultParameters["type"]).Value, Is.EqualTo(""));
         }
 
         private Achievement Evaluate(string input, string expectedError = null)
@@ -182,6 +185,20 @@ namespace RATools.Parser.Tests.Functions
                 "3:1 achievement call failed\r\n" +
                 "- 3:26 trigger is not a requirement\r\n" +
                 "- 1:17 Cannot convert memoryaccessor to requirement"));
+        }
+
+        [Test]
+        [TestCase("", AchievementType.None)]
+        [TestCase("progression", AchievementType.Progression)]
+        [TestCase("win_condition", AchievementType.WinCondition)]
+        [TestCase("missable", AchievementType.Missable)]
+        public void TestType(string type, AchievementType expectedType)
+        {
+            var achievement = Evaluate("achievement(\"T\", \"D\", 5, byte(0x1234) == 1, type=\"" + type + "\")");
+            Assert.That(achievement.Type, Is.EqualTo(expectedType));
+
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.Type, Is.EqualTo(expectedType));
         }
     }
 }

@@ -26,6 +26,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\missable.png" />
+    <None Remove="Resources\progression.png" />
+    <None Remove="Resources\win-condition.png" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Core\Core\Source\Jamiras.Core.csproj" />
     <ProjectReference Include="..\Core\UI\WPF\Source\Jamiras.UI.WPF.csproj" />
     <ProjectReference Include="Data\RATools.Data.csproj" />
@@ -46,8 +52,11 @@
     <Resource Include="Resources\achievement.png" />
     <Resource Include="Resources\Icon.png" />
     <Resource Include="Resources\leaderboard.png" />
+    <Resource Include="Resources\missable.png" />
+    <Resource Include="Resources\progression.png" />
     <Resource Include="Resources\rich_presence.png" />
     <Resource Include="Resources\script.png" />
+    <Resource Include="Resources\win-condition.png" />
   </ItemGroup>
 
   <ItemGroup>

@@ -184,7 +184,8 @@ namespace RATools.Parser
             tokenizer.ReadTo(':'); // deprecated
             tokenizer.Advance();
 
-            tokenizer.ReadTo(':'); // deprecated
+            var type = tokenizer.ReadTo(':'); // type
+            achievement.Type = Achievement.ParseType(type.Trim().ToString());
             tokenizer.Advance();
 
             tokenizer.ReadTo(':'); // author
@@ -578,7 +579,7 @@ namespace RATools.Parser
             }
         }
 
-        private void WriteAchievement(StreamWriter writer, string author, Achievement achievement, StringBuilder warning)
+        private static void WriteAchievement(StreamWriter writer, string author, Achievement achievement, StringBuilder warning)
         {
             writer.Write(achievement.Id);
             writer.Write(":\"");
@@ -599,7 +600,10 @@ namespace RATools.Parser
             WriteEscaped(writer, achievement.Description);
             writer.Write("\":");
 
-            writer.Write(" : : :"); // discontinued features
+            writer.Write(" : :"); // discontinued features
+
+            writer.Write(Achievement.GetTypeString(achievement.Type));
+            writer.Write(':');
 
             writer.Write(author); // author
             writer.Write(':');
@@ -613,7 +617,7 @@ namespace RATools.Parser
             writer.WriteLine();
         }
 
-        private void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard, StringBuilder warning)
+        private static void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard, StringBuilder warning)
         {
             writer.Write('L');
             writer.Write(leaderboard.Id);

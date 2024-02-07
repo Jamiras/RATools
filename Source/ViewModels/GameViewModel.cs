@@ -653,6 +653,10 @@ namespace RATools.ViewModels
                         builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
                         builder.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
 
+                        var typeField = publishedAchievement.GetField("Type");
+                        if (!String.IsNullOrEmpty(typeField.StringValue))
+                            builder.Type = Achievement.ParseType(typeField.StringValue);
+
                         var builtAchievement = builder.ToAchievement();
                         builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
                         builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());

@@ -1287,6 +1287,12 @@ namespace RATools.ViewModels
                 stream.Write(EscapeString(achievementData.Title));
                 stream.Write("\", points = ");
                 stream.Write(achievementData.Points);
+                if (achievementData.Type != AchievementType.Standard)
+                {
+                    stream.Write(", type=\"");
+                    stream.Write(Achievement.GetTypeString(achievementData.Type));
+                    stream.Write("\"");
+                }
                 stream.WriteLine(",");
 
                 stream.Write("    description = \"");

@@ -20,6 +20,7 @@ namespace RATools.Parser
             Title = String.Empty;
             Description = String.Empty;
             BadgeName = String.Empty;
+            Type = AchievementType.Standard;
 
             _core = new List<Requirement>();
             _alts = new List<ICollection<Requirement>>();
@@ -33,6 +34,7 @@ namespace RATools.Parser
             Points = source.Points;
             Id = source.Id;
             BadgeName = source.BadgeName;
+            Type = source.Type;
 
             _core.AddRange(source.CoreRequirements);
             foreach (var alt in source.AlternateRequirements)
@@ -68,6 +70,11 @@ namespace RATools.Parser
         /// Gets or sets the name of the badge for the achievement.
         /// </summary>
         public string BadgeName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the type of achievement type classification.
+        /// </summary>
+        public AchievementType Type { get; set; }
 
         /// <summary>
         /// Gets the core requirements collection.
@@ -110,7 +117,8 @@ namespace RATools.Parser
                 Trigger = trigger,
                 Category = Category,
                 Id = Id,
-                BadgeName = BadgeName
+                BadgeName = BadgeName,
+                Type = Type,
             };
             return achievement;
         }
@@ -138,7 +146,12 @@ namespace RATools.Parser
 
         public static double GetMinimumVersion(Achievement achievement)
         {
-            return achievement.Trigger.MinimumVersion();
+            var minimumVersion = achievement.Trigger.MinimumVersion();
+
+            if (achievement.Type != AchievementType.Standard)
+                minimumVersion = Math.Max(minimumVersion, 1.3);
+
+            return minimumVersion;
         }
 
         public static double GetMinimumVersion(Leaderboard leaderboard)

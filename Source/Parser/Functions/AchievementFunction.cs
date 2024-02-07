@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Expressions;
+﻿using RATools.Data;
+using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Diagnostics;
 
@@ -24,6 +25,8 @@ namespace RATools.Parser.Functions
             DefaultParameters["modified"] = new StringConstantExpression("");
             Parameters.Add(new VariableDefinitionExpression("badge"));
             DefaultParameters["badge"] = new StringConstantExpression("0");
+            Parameters.Add(new VariableDefinitionExpression("type"));
+            DefaultParameters["type"] = new StringConstantExpression("");
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
@@ -58,6 +61,16 @@ namespace RATools.Parser.Functions
             stringExpression = GetStringParameter(scope, "published", out result);
             if (stringExpression != null && !string.IsNullOrEmpty(stringExpression.Value))
                 achievement.IsDumped = true;
+
+            stringExpression = GetStringParameter(scope, "type", out result);
+            if (stringExpression == null)
+                return false;
+            achievement.Type = Achievement.ParseType(stringExpression.Value);
+            if (achievement.Type == AchievementType.None)
+            {
+                result = new ErrorExpression(stringExpression.Value + " is not a supported achievement type", stringExpression);
+                return false;
+            }
 
             var trigger = GetRequirementParameter(scope, "trigger", out result);
             if (trigger == null)

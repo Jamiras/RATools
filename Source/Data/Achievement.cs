@@ -33,6 +33,40 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets the type classification of the achievement.
+        /// </summary>
+        public AchievementType Type {  get; internal set; }
+
+        /// <summary>
+        /// Converts a type string to an <see cref="AchievementType"/>.
+        /// </summary>
+        /// <param name="type">The type as a string.</param>
+        /// <returns>The type as an <see cref="AchievementType"/>, None if not valid.</returns>
+        public static AchievementType ParseType(string type)
+        {
+            switch (type.ToLower())
+            {
+                case "": return AchievementType.Standard;
+                case "progression": return AchievementType.Progression;
+                case "win_condition": return AchievementType.WinCondition;
+                case "missable": return AchievementType.Missable;
+                default: return AchievementType.None;
+            }
+        }
+
+        public static string GetTypeString(AchievementType type)
+        {
+            switch (type)
+            {
+                case AchievementType.Standard: return "";
+                case AchievementType.Progression: return "progression";
+                case AchievementType.WinCondition: return "win_condition";
+                case AchievementType.Missable: return "missable";
+                default: return "unknown";
+            }
+        }
+
+        /// <summary>
         /// Gets the core requirements for the achievement.
         /// </summary>
         public IEnumerable<Requirement> CoreRequirements
@@ -51,5 +85,14 @@ namespace RATools.Data
                     yield return alt.Requirements;
             }
         }
+    }
+
+    public enum AchievementType
+    {
+        None = 0,
+        Standard,
+        Missable,
+        Progression,
+        WinCondition,
     }
 }
