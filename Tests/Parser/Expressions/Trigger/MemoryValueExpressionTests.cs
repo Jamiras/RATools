@@ -449,6 +449,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("b0I + b1I + b2I + b3I + b4I + b5I + b6I + b7I", "kI")] // with pointer
         [TestCase("b0I + b1I + b2J + b3I + b4I + b5I + b6I + b7I", null)] // differing pointers
         [TestCase("b0I + b1I + b2I + b3I + b4A + b5I + b6I + b7I", null)] // with a non-pointer
+        [TestCase("b0A + b1A + b2A + ~b3A + b4A + b5A + b6A + b7A", null)] // partially inverted
+        [TestCase("~b0A + ~b1A + ~b2A + ~b3A + ~b4A + ~b5A + ~b6A + ~b7A", null)] // wholly inverted
         public void TestMergeBitCount(string input, string normalized)
         {
             Func<string, string> replacePlaceholders = (string i) =>
@@ -464,6 +466,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                         case 'd': builder.Append("prev("); wrapped = true; break;
                         case 'p': builder.Append("prior("); wrapped = true; break;
                         case 'k': builder.Append("bitcount"); break;
+                        case '~': builder.Append('~'); break;
                         case 'A':
                         case 'B':
                         case 'C':
