@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Data;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
@@ -84,6 +85,24 @@ namespace RATools.Parser.Expressions
             }
 
             return value.ReplaceVariables(scope, out result);
+        }
+
+        /// <summary>
+        /// Determines whether the expression evaluates to true for the provided <paramref name="scope"/>
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values.</param>
+        /// <param name="error">[out] The error that prevented evaluation (or null if successful).</param>
+        /// <returns>The result of evaluating the expression</returns>
+        public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
+        {
+            ExpressionBase value;
+            if (!ReplaceVariables(scope, out value))
+            {
+                error = value as ErrorExpression;
+                return null;
+            }
+
+            return value.IsTrue(scope, out error);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
