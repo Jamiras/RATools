@@ -438,6 +438,8 @@ namespace RATools.Parser.Tests
                   "trigger_when(repeated(3, byte(0x001234) == 1 && never(byte(0x002345) == 2)))")]
         [TestCase("trigger_when(repeated(3, byte(0x1234) == 1) && never(byte(0x2345) == 2)) && byte(0x3456) == 3", // don't convert ResetNextIf to ResetIf when attached to a challenge indicator
                   "trigger_when(repeated(3, byte(0x001234) == 1 && never(byte(0x002345) == 2))) && byte(0x003456) == 3")]
+        [TestCase("byte(0x001234) == 1 || (unless(byte(0x002345) == 1) && never(always_true()))", // ResetIf guarded by PauseIf should be kept
+                  "byte(0x001234) == 1 || (unless(byte(0x002345) == 1) && never(always_true()))")]
         public void TestOptimizeNormalizeResetIfsAndPauseIfs(string input, string expected)
         {
             var achievement = CreateAchievement(input);

@@ -604,6 +604,10 @@ namespace RATools.Parser
                         }
                         else if (requirement.Type == RequirementType.ResetIf)
                         {
+                            // ResetIf(true) guarded by PauseIf should be kept
+                            if (requirements.Any(r => r.Type == RequirementType.PauseIf))
+                                continue;
+
                             // a ResetIf for a condition that is always true will invalidate the trigger (not just the group).
                             // since we can't fully invalidate the trigger from here, replace the entire group with a ResetIf(always_true())
                             requirementEx.Requirements[0] = alwaysTrueRequirement; // this discards HitCounts
@@ -754,7 +758,7 @@ namespace RATools.Parser
             return true;
         }
 
-        private bool NormalizeResetIfs(List<List<RequirementEx>> groups)
+        private static bool NormalizeResetIfs(List<List<RequirementEx>> groups)
         {
             // a ResetIf condition in an achievement without any HitCount conditions is the same as a non-ResetIf 
             // condition for the opposite comparison (i.e. ResetIf val = 0 is the same as val != 0). Some developers 
@@ -766,6 +770,13 @@ namespace RATools.Parser
             {
                 foreach (var requirementEx in group.Where(r => r.Type == RequirementType.ResetIf))
                 {
+                    if (requirementEx.Evaluate() == true)
+                    {
+                        // ResetIf(true) guarded by a PauseIf. There's still merit to keeping the ResetIf
+                        if (group.Any(r => r.Type == RequirementType.PauseIf))
+                            continue;
+                    }
+
                     if (InvertRequirementLogic(requirementEx))
                     {
                         var lastRequirement = requirementEx.Requirements.Last();
@@ -779,7 +790,7 @@ namespace RATools.Parser
             return converted;
         }
 
-        private void NormalizePauseIfs(List<List<RequirementEx>> groups)
+        private static void NormalizePauseIfs(List<List<RequirementEx>> groups)
         {
             // a PauseIf condition in an group that's not guarding anything is the same as a non-PauseIf
             // condition for the opposite comparison (i.e. PauseIf val = 0 is the same as val != 0).

@@ -115,7 +115,17 @@ namespace RATools.Parser.Expressions.Trigger
                         return new AlwaysTrueExpression();
 
                     if (optimized is AlwaysTrueExpression)
+                    {
+                        if (Behavior == RequirementType.ResetIf)
+                        {
+                            // ResetIf(true) should be allowed if guarded by a PauseIf
+                            var achievementBuilderContext = context as AchievementBuilderContext;
+                            if (achievementBuilderContext != null && achievementBuilderContext.HasPauseIf == true)
+                                break;
+                        }
+
                         return new AlwaysFalseExpression();
+                    }
 
                     break;
 

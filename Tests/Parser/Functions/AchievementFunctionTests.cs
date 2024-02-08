@@ -27,7 +27,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(7).Name, Is.EqualTo("badge"));
             Assert.That(def.Parameters.ElementAt(8).Name, Is.EqualTo("type"));    
 
-            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(4));
+            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(5));
             Assert.That(def.DefaultParameters["id"], Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)def.DefaultParameters["id"]).Value, Is.EqualTo(0));
             Assert.That(def.DefaultParameters["published"], Is.InstanceOf<StringConstantExpression>());
@@ -188,7 +188,7 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        [TestCase("", AchievementType.None)]
+        [TestCase("", AchievementType.Standard)]
         [TestCase("progression", AchievementType.Progression)]
         [TestCase("win_condition", AchievementType.WinCondition)]
         [TestCase("missable", AchievementType.Missable)]
