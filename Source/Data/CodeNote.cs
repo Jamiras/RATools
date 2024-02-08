@@ -77,6 +77,7 @@ namespace RATools.Data
                         if (Char.IsLetter(c) && c != 's' && c != 'S')
                         {
                             bitIndex = token.IndexOf("bit", StringComparison.OrdinalIgnoreCase);
+                            byteIndex = token.IndexOf("byte", StringComparison.OrdinalIgnoreCase);
                             continue;
                         }
                     }
