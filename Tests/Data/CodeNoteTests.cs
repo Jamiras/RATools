@@ -98,6 +98,8 @@ namespace RATools.Data.Tests
 
         [TestCase("100 32-bit pointers [400 bytes]", 400, FieldSize.DWord)]
         [TestCase("[400 bytes] 100 32-bit pointers", 400, FieldSize.None)]
+
+        [TestCase("Bitflags (array of ~40 bytes)", 40, FieldSize.None)]
         public void TestGetSizeFromNote(string note, int expectedLength, FieldSize expectedFieldSize)
         {
             var n = new CodeNote(1, note);
