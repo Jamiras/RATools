@@ -122,6 +122,22 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestParseBooleanVariable()
+        {
+            var expr = Parse("if (someBoolean) { j = i }");
+
+            Assert.That(expr.Condition, Is.InstanceOf<VariableExpression>());
+            Assert.That(((VariableExpression)expr.Condition).Name, Is.EqualTo("someBoolean"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(0));
+
+            var builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+        }
+
+        [Test]
         public void TestNestedExpressions()
         {
             var expr = Parse("if (a == 3) { b = c + 4 } else { d = e }");

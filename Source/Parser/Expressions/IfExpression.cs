@@ -41,9 +41,33 @@ namespace RATools.Parser.Expressions
         {
             SkipWhitespace(tokenizer);
 
-            var condition = ExpressionBase.Parse(tokenizer);
-            if (condition.Type == ExpressionType.Error)
-                return condition;
+            ExpressionBase condition;
+            if (tokenizer.NextChar == '(')
+            {
+                // special implementation of ExpressionBase.ParseClauseCore for '(' to avoid a
+                // variable reference being classified as the an anonymous function parameter list
+                tokenizer.Advance();
+
+                condition = ExpressionBase.Parse(tokenizer);
+                if (condition.Type == ExpressionType.Error)
+                    return condition;
+
+                if (tokenizer.NextChar != ')')
+                {
+                    if (tokenizer.NextChar == '\0')
+                        return ParseError(tokenizer, "No closing parenthesis found");
+
+                    return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
+                }
+                tokenizer.Advance();
+                condition.IsLogicalUnit = true;
+            }
+            else
+            {
+                condition = ExpressionBase.Parse(tokenizer);
+                if (condition.Type == ExpressionType.Error)
+                    return condition;
+            }
 
             var ifExpression = new IfExpression(condition);
             ifExpression._keyword = new KeywordExpression("if", line, column);

@@ -77,6 +77,55 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestIsTrueBooleanTrue()
+        {
+            var variable = new VariableExpression("variable");
+            var value = new BooleanConstantExpression(true);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, value);
+
+            ErrorExpression error;
+            Assert.That(variable.IsTrue(scope, out error), Is.True);
+        }
+
+        [Test]
+        public void TestIsTrueBooleanFalse()
+        {
+            var variable = new VariableExpression("variable");
+            var value = new BooleanConstantExpression(false);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, value);
+
+            ErrorExpression error;
+            Assert.That(variable.IsTrue(scope, out error), Is.False);
+        }
+
+        [Test]
+        public void TestIsTrueInteger()
+        {
+            var variable = new VariableExpression("variable");
+            var value = new IntegerConstantExpression(0);
+
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, value);
+
+            ErrorExpression error;
+            Assert.That(variable.IsTrue(scope, out error), Is.Null);
+        }
+
+        [Test]
+        public void TestIsTrueUndefined()
+        {
+            var variable = new VariableExpression("variable");
+            var scope = new InterpreterScope();
+
+            ErrorExpression error;
+            Assert.That(variable.IsTrue(scope, out error), Is.Null);
+        }
+
+        [Test]
         public void TestNestedExpressions()
         {
             var expr = new VariableExpression("variable1");
