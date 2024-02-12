@@ -2,10 +2,12 @@
 using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using RATools.Data;
+using RATools.Parser;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Net.Mime;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -133,34 +135,36 @@ namespace RATools.ViewModels
                     break;
             }
 
+            var context = new ScriptBuilderContext { NumberFormat = numberFormat };
             if (IsValueDependentOnPreviousRequirement)
             {
                 var builder2 = new StringBuilder();
-                requirement.AppendString(builder2, numberFormat, "~", "~");
-                var i = 0;
-                while (i < builder2.Length - 1)
-                {
-                    if (builder2[i+1] == '~' && builder2[i] == '(')
-                    {
-                        builder2.Remove(i, 2); // remove "(~"
-                        break;
-                    }
-                    i++;
-                }
-                while (i < builder2.Length)
-                {
-                    if (builder2[i] == '~' && builder2[i + 1] == ')')
-                    {
-                        builder2.Remove(i, 2); // remove "~)"
-                        break;
-                    }
-                    i++;
-                }
+                context.AppendRequirement(builder2, requirement);
+                //requirement.AppendString(builder2, numberFormat, "~", "~");
+                //var i = 0;
+                //while (i < builder2.Length - 1)
+                //{
+                //    if (builder2[i+1] == '~' && builder2[i] == '(')
+                //    {
+                //        builder2.Remove(i, 2); // remove "(~"
+                //        break;
+                //    }
+                //    i++;
+                //}
+                //while (i < builder2.Length)
+                //{
+                //    if (builder2[i] == '~' && builder2[i + 1] == ')')
+                //    {
+                //        builder2.Remove(i, 2); // remove "~)"
+                //        break;
+                //    }
+                //    i++;
+                //}
                 builder.Append(builder2);
             }
             else
             {
-                requirement.AppendString(builder, numberFormat);
+                context.AppendRequirement(builder, requirement);
             }
 
             if (requirement.Type == RequirementType.SubSource)

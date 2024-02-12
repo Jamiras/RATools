@@ -9,6 +9,7 @@ using Jamiras.ViewModels.Fields;
 using Jamiras.ViewModels.Grid;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -1833,7 +1834,7 @@ namespace RATools.ViewModels
                     stream.Write(new string(' ', indent));
                     first = false;
 
-                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent + 2);
+                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent);
                 }
 
                 indent -= 4;
@@ -1853,8 +1854,13 @@ namespace RATools.ViewModels
             const int MaxWidth = 120;
 
             var definition = new StringBuilder();
-            AchievementBuilder.AppendStringGroup(definition,
-                requirementGroupViewModel.Requirements.Select(r => r.Requirement), numberFormat, MaxWidth, indent);
+            var context = new ScriptBuilderContext
+            { 
+                NumberFormat = numberFormat, 
+                Indent = indent,
+                WrapWidth = MaxWidth
+            };
+            context.AppendRequirements(definition, requirementGroupViewModel.Requirements.Select(r => r.Requirement));
 
             foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
             {

@@ -5,6 +5,7 @@ using RATools.Data;
 using RATools.Parser;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.ViewModels
 {
@@ -81,8 +82,15 @@ namespace RATools.ViewModels
 
         private static Achievement CreateValue(string definition)
         {
+            var valueBuilder = new ValueBuilder();
+            valueBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
+
             var achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
+            foreach (var requirement in valueBuilder.Values.First())
+                achievementBuilder.CoreRequirements.Add(requirement);
+            foreach (var alternateValue in valueBuilder.Values.Skip(1))
+                achievementBuilder.AlternateRequirements.Add(alternateValue);
+
             return achievementBuilder.ToAchievement();
         }
     }

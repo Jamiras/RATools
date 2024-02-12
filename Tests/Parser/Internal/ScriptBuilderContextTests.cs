@@ -1,10 +1,11 @@
 ﻿using NUnit.Framework;
+using RATools.Data;
 using System.Text;
 
-namespace RATools.Data.Tests
+namespace RATools.Parser.Internal.Tests
 {
     [TestFixture]
-    class RequirementExTests
+    class ScriptBuilderContextTests
     {
         [Test]
         [TestCase("0xH001234=1", "byte(0x001234) == 1")]
@@ -14,8 +15,10 @@ namespace RATools.Data.Tests
         [TestCase("0xH001234=1.99.", "repeated(99, byte(0x001234) == 1)")]
         [TestCase("0xH001234=1_0xH002345=2", "byte(0x001234) == 1|byte(0x002345) == 2")]
         [TestCase("A:0xH001234=0_0xH002345=2", "(byte(0x001234) + byte(0x002345)) == 2")]
+        [TestCase("B:0xH001234=0_0xH002345=2", "(byte(0x002345) - byte(0x001234)) == 2")]
         [TestCase("A:0xH001234=0_R:0xH002345=2", "never((byte(0x001234) + byte(0x002345)) == 2)")]
         [TestCase("I:0x 001234_0xH002345=2", "byte(word(0x001234) + 0x002345) == 2")]
+        [TestCase("I:0x 001234_I:0x 002222_0xH002345=2", "byte(word(word(0x001234) + 0x002222) + 0x002345) == 2")]
         [TestCase("O:0xH001234=1_0xH002345=2", "(byte(0x001234) == 1 || byte(0x002345) == 2)")]
         [TestCase("O:0xH001234=1_0=1", "byte(0x001234) == 1")]
         [TestCase("O:0=1_0xH002345=2", "byte(0x002345) == 2")]
@@ -61,10 +64,11 @@ namespace RATools.Data.Tests
                   "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
         [TestCase("O:0xH001234=1_M:0xH002345=2",
                   "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
-        public void TestAppendString(string input, string expected)
+        public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
             var groups = RequirementEx.Combine(trigger.Core.Requirements);
+            var context = new ScriptBuilderContext();
 
             var builder = new StringBuilder();
             foreach (var group in groups)
@@ -72,7 +76,7 @@ namespace RATools.Data.Tests
                 if (builder.Length > 0)
                     builder.Append('|');
 
-                group.AppendString(builder, NumberFormat.Decimal);
+                context.AppendRequirements(builder, group.Requirements);
             }
 
             Assert.That(builder.ToString(), Is.EqualTo(expected));

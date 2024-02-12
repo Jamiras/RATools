@@ -189,7 +189,8 @@ namespace RATools.Parser.Tests.Functions
             var requirements = Evaluate(input);
 
             var builder = new StringBuilder();
-            AchievementBuilder.AppendStringGroup(builder, requirements, NumberFormat.Hexadecimal);
+            var context = new ScriptBuilderContext { NumberFormat = NumberFormat.Hexadecimal };
+            context.AppendRequirements(builder, requirements);
 
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }

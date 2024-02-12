@@ -514,7 +514,7 @@ namespace RATools.Parser
 
             foreach (var leaderboard in _leaderboards)
             {
-                var leaderboardMinimumVersion = AchievementBuilder.GetMinimumVersion(leaderboard);
+                var leaderboardMinimumVersion = LeaderboardBuilder.GetMinimumVersion(leaderboard);
                 if (leaderboardMinimumVersion > version)
                     version = leaderboardMinimumVersion;
             }
