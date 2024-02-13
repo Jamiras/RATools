@@ -1834,7 +1834,7 @@ namespace RATools.ViewModels
                     stream.Write(new string(' ', indent));
                     first = false;
 
-                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent);
+                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent, true);
                 }
 
                 indent -= 4;
@@ -1844,12 +1844,12 @@ namespace RATools.ViewModels
             }
             else
             {
-                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), numberFormat, indent);
+                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), numberFormat, indent, true);
             }
         }
 
         private static void DumpPublishedRequirements(StreamWriter stream, DumpAsset dumpAsset,
-            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent)
+            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent, bool isValue = false)
         {
             const int MaxWidth = 120;
 
@@ -1858,7 +1858,8 @@ namespace RATools.ViewModels
             { 
                 NumberFormat = numberFormat, 
                 Indent = indent,
-                WrapWidth = MaxWidth
+                WrapWidth = MaxWidth,
+                IsValue = isValue,
             };
             context.AppendRequirements(definition, requirementGroupViewModel.Requirements.Select(r => r.Requirement));
 

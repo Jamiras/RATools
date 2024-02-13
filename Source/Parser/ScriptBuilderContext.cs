@@ -2,9 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace RATools.Parser
 {
@@ -22,6 +20,8 @@ namespace RATools.Parser
         public int WrapWidth { get; set; }
 
         public int Indent { get; set; }
+
+        public bool IsValue { get; set; }
 
         private StringBuilder _addSources;
         private StringBuilder _subSources;
@@ -409,9 +409,9 @@ namespace RATools.Parser
                 case RequirementType.MeasuredPercent:
                     builder.Append("measured(");
 
-                    // if there's no HitTarget and there's an AndNext or OrNext clause, assume we're counting
-                    // complex conditions for a Value clause and wrap it in a "tally(0, ...)"
-                    if (requirement.HitCount == 0 && !NullOrEmpty(_andNext))
+                    // if there's no HitTarget and we're in a Value clause, wrap it in a "tally(0, ...)"
+                    if (requirement.HitCount == 0 && IsValue &&
+                        requirement.Operator != RequirementOperator.None)
                     {
                         var measuredClause = new StringBuilder();
                         AppendRepeatedCondition(measuredClause, requirement);
