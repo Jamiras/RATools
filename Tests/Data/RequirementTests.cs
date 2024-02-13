@@ -43,12 +43,12 @@ namespace RATools.Data.Tests
         [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.GreaterThan, TestField.Value99, 0, "byte(0x001234) > 99")]
         [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.GreaterThanOrEqual, TestField.Value99, 0, "byte(0x001234) >= 99")]
         [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Byte2345, 0, "byte(0x001234) == byte(0x002345)")]
-        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 1, "once(byte(0x001234) == 99)")]
-        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 2, "repeated(2, byte(0x001234) == 99)")]
-        [TestCase(RequirementType.ResetIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "never(byte(0x001234) == 99)")]
-        [TestCase(RequirementType.PauseIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "unless(byte(0x001234) == 99)")]
-        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "byte(0x001234) + ")]
-        [TestCase(RequirementType.SubSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, " - byte(0x001234)")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 1, "byte(0x001234) == 99 (1)")]
+        [TestCase(RequirementType.None, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 2, "byte(0x001234) == 99 (2)")]
+        [TestCase(RequirementType.ResetIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "ResetIf byte(0x001234) == 99")]
+        [TestCase(RequirementType.PauseIf, TestField.Byte1234, RequirementOperator.Equal, TestField.Value99, 0, "PauseIf byte(0x001234) == 99")]
+        [TestCase(RequirementType.AddSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "AddSource byte(0x001234)")]
+        [TestCase(RequirementType.SubSource, TestField.Byte1234, RequirementOperator.None, TestField.None, 0, "SubSource byte(0x001234)")]
         public void TestToString(RequirementType requirementType, TestField left, RequirementOperator requirementOperator, TestField right, int hitCount, string expected)
         {
             var requirement = new Requirement

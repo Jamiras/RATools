@@ -145,10 +145,12 @@ namespace RATools.Parser
             if (requirementEx.Requirements.Last().HitCount > 0 &&
                 requirementEx.Requirements.Any(r => r.Type == RequirementType.AddHits))
             {
-                var nestedContext = new ScriptBuilderContext { NumberFormat = NumberFormat };
+                var nestedContext = CreatedNestedContext();
+                nestedContext.WrapWidth = Int32.MaxValue;
                 var tallyBuilder = new StringBuilder();
                 nestedContext.AppendTally(tallyBuilder, requirementEx.Requirements);
                 Append(builder, tallyBuilder);
+                _measuredIf = null;
                 return;
             }
 
@@ -865,9 +867,9 @@ namespace RATools.Parser
 
             if (WrapWidth != Int32.MaxValue)
             {
+                Indent -= 4;
                 builder.AppendLine();
                 builder.Append(' ', Indent);
-                Indent -= 4;
             }
 
             builder.Append(remaining);
