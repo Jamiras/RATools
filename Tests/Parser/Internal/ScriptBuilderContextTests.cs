@@ -60,15 +60,36 @@ namespace RATools.Parser.Internal.Tests
                   "once((byte(0x001234) == 1 || byte(0x002345) == 2) && never(byte(0x004567) == 4))")]
         [TestCase("N:0xH001234=1_M:0xH002345=2.100.",
                   "measured(repeated(100, byte(0x001234) == 1 && byte(0x002345) == 2))")]
-        [TestCase("N:0xH001234=1_M:0xH002345=2",
-                  "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
-        [TestCase("O:0xH001234=1_M:0xH002345=2",
-                  "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
             var groups = RequirementEx.Combine(trigger.Core.Requirements);
             var context = new ScriptBuilderContext();
+
+            var builder = new StringBuilder();
+            foreach (var group in groups)
+            {
+                if (builder.Length > 0)
+                    builder.Append('|');
+
+                context.AppendRequirements(builder, group.Requirements);
+            }
+
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+
+            // make sure we didn't modify the source requirements
+            Assert.That(trigger.Serialize(), Is.EqualTo(input));
+        }
+
+        [TestCase("N:0xH001234=1_M:0xH002345=2",
+          "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
+        [TestCase("O:0xH001234=1_M:0xH002345=2",
+          "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
+        public void TestAppendRequirementsValue(string input, string expected)
+        {
+            var trigger = Trigger.Deserialize(input);
+            var groups = RequirementEx.Combine(trigger.Core.Requirements);
+            var context = new ScriptBuilderContext() { IsValue = true };
 
             var builder = new StringBuilder();
             foreach (var group in groups)
