@@ -5,9 +5,8 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <Platforms>AnyCPU</Platforms>
-    <TargetFramework>net6.0-windows</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <Nullable>disable</Nullable>
-    <UseWPF>true</UseWPF>
     <BaseOutputPath>..\..\bin\</BaseOutputPath>
   </PropertyGroup>
 

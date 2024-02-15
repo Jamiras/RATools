@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Data
 {
@@ -84,6 +86,42 @@ namespace RATools.Data
                 foreach (var alt in Trigger.Alts)
                     yield return alt.Requirements;
             }
+        }
+
+        public static Achievement FindMergeAchievement(IEnumerable<Achievement> achievements, Achievement achievement)
+        {
+            Achievement match;
+
+            // first pass - look for ID match
+            if (achievement.Id != 0)
+            {
+                match = achievements.FirstOrDefault(a => a.Id == achievement.Id);
+                if (match != null)
+                    return match;
+
+                if (achievement.Id < FirstLocalId) // explicit non-local ID can only match a non-local ID
+                    return null;
+            }
+
+            // second pass - look for title match
+            if (!String.IsNullOrEmpty(achievement.Title))
+            {
+                match = achievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
+                if (match != null)
+                    return match;
+            }
+
+            // third pass - look for description match
+            if (!String.IsNullOrEmpty(achievement.Description))
+            {
+                match = achievements.FirstOrDefault(a => String.Compare(a.Description, achievement.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+                if (match != null)
+                    return match;
+            }
+
+            // TODO: attempt to match requirements
+
+            return null;
         }
     }
 

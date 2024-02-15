@@ -1,4 +1,8 @@
-﻿namespace RATools.Data
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace RATools.Data
 {
     /// <summary>
     /// Defines a leaderboard.
@@ -145,6 +149,42 @@
                 default:
                     return "UNKNOWN";
             }
+        }
+
+        public static Leaderboard FindMergeLeaderboard(IEnumerable<Leaderboard> leaderboards, Leaderboard leaderboard)
+        {
+            Leaderboard match;
+
+            // first pass - look for ID match
+            if (leaderboard.Id != 0)
+            {
+                match = leaderboards.FirstOrDefault(l => l.Id == leaderboard.Id);
+                if (match != null)
+                    return match;
+
+                if (leaderboard.Id < FirstLocalId) // explicit non-local ID can only match a non-local ID
+                    return null;
+            }
+
+            // second pass - look for title match
+            if (!String.IsNullOrEmpty(leaderboard.Title))
+            {
+                match = leaderboards.FirstOrDefault(l => String.Compare(l.Title, leaderboard.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
+                if (match != null)
+                    return match;
+            }
+
+            // third pass - look for description match
+            if (!String.IsNullOrEmpty(leaderboard.Description))
+            {
+                match = leaderboards.FirstOrDefault(l => String.Compare(l.Description, leaderboard.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+                if (match != null)
+                    return match;
+            }
+
+            // TODO: attempt to match requirements
+
+            return null;
         }
     }
 

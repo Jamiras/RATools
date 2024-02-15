@@ -17,12 +17,16 @@
   <ItemGroup>
     <Compile Remove="Data\**" />
     <Compile Remove="Parser\**" />
+    <Compile Remove="rascript-cli\**" />
     <EmbeddedResource Remove="Data\**" />
     <EmbeddedResource Remove="Parser\**" />
+    <EmbeddedResource Remove="rascript-cli\**" />
     <None Remove="Data\**" />
     <None Remove="Parser\**" />
+    <None Remove="rascript-cli\**" />
     <Page Remove="Data\**" />
     <Page Remove="Parser\**" />
+    <Page Remove="rascript-cli\**" />
   </ItemGroup>
 
   <ItemGroup>

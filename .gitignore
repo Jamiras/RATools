@@ -13,3 +13,4 @@
 .vs
 lib
 /Tests/Regressions
+**/launchSettings.json

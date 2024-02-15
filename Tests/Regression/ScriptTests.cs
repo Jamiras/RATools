@@ -1,12 +1,10 @@
-﻿using Jamiras.Components;
-using Jamiras.Services;
-using Moq;
+﻿using Jamiras.Services;
 using NUnit.Framework;
-using RATools.Parser;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Enumeration;
+
+// $ for file in *; do mv "${file}" "${file/.updated/}"; done
 
 namespace RATools.Tests.Regression
 {
@@ -205,6 +203,95 @@ namespace RATools.Tests.Regression
             TestScript(scriptFileName, scriptPath);
         }
 
+        private class RAScriptTestHarness : RAScriptCLI, IFileSystemService
+        {
+            public RAScriptTestHarness(string path)
+                : base((IFileSystemService)null)
+            {
+                _writer = new StringWriter();
+                OutputStream = ErrorStream = _writer;
+
+                _inputFileName = path;
+                InputFile = File.ReadAllText(path);
+
+                _fileSystemService = this;
+                _quiet = true;
+            }
+
+            private readonly StringWriter _writer;
+
+            private class StringWriterStream : MemoryStream
+            {
+                public StringWriterStream(StringWriter writer)
+                {
+                    _writer = writer;
+                }
+
+                private bool _isClosed = false;
+
+                public override void Close()
+                {
+                    if (!_isClosed)
+                    {
+                        _isClosed = true;
+
+                        Position = 0;
+                        using (var reader = new StreamReader(this))
+                        {
+                            _writer.Write(reader.ReadToEnd());
+                        }
+                    }
+
+                    base.Close();
+                }
+
+                private readonly StringWriter _writer;
+            }
+
+            public string GenerateContents()
+            {
+                return _writer.ToString();
+            }
+
+            Stream IFileSystemService.CreateFile(string path)
+            {
+                if (path.EndsWith("-Rich.txt"))
+                    _writer.WriteLine("=== Rich Presence ===");
+
+                return new StringWriterStream(_writer);
+            }
+
+            Stream IFileSystemService.OpenFile(string path, OpenFileMode mode)
+            {
+                throw new NotImplementedException();
+            }
+
+            bool IFileSystemService.FileExists(string path)
+            {
+                return false;
+            }
+
+            bool IFileSystemService.DirectoryExists(string path)
+            {
+                throw new NotImplementedException();
+            }
+
+            bool IFileSystemService.CreateDirectory(string path)
+            {
+                throw new NotImplementedException();
+            }
+
+            long IFileSystemService.GetFileSize(string path)
+            {
+                throw new NotImplementedException();
+            }
+
+            DateTime IFileSystemService.GetFileLastModified(string path)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
         private void TestScript(string scriptFileName, string scriptPath)
         {
             if (scriptFileName == RegressionTests.NoScriptsError)
@@ -240,67 +327,23 @@ namespace RATools.Tests.Regression
                 ++i;
             }
 
+            var harness = new RAScriptTestHarness(scriptPath);
+            harness.Run();
+
             expectedFileName = Path.Combine(RegressionTests.RegressionDir, "results", expectedFileName + ".txt");
+            var expectedFileContents = File.Exists(expectedFileName) ? File.ReadAllText(expectedFileName) : "[Results file not found]";
+
             var outputFileName = Path.ChangeExtension(expectedFileName, ".updated.txt");
-
-            var interpreter = new AchievementScriptInterpreter();
-            var content = File.ReadAllText(scriptPath);
-            interpreter.Run(Tokenizer.CreateTokenizer(content));
-
-            if (!String.IsNullOrEmpty(interpreter.ErrorMessage))
+            var outputFileContents = harness.GenerateContents();
+            if (expectedFileContents != outputFileContents)
             {
-                using (var file = File.Open(outputFileName, FileMode.Create))
-                {
-                    using (var fileWriter = new StreamWriter(file))
-                        fileWriter.Write(interpreter.ErrorMessage);
-                }
+                File.WriteAllText(outputFileName, outputFileContents);
 
-                if (!File.Exists(expectedFileName))
-                    Assert.IsNull(interpreter.ErrorMessage);
-            }
-            else
-            {
-                var mockFileSystemService = new Mock<IFileSystemService>();
-                mockFileSystemService.Setup(s => s.CreateFile(It.IsAny<string>())).Returns((string path) => File.Create(path));
-
-                var localAchievements = new LocalAssets(outputFileName, mockFileSystemService.Object);
-                localAchievements.Title = Path.GetFileNameWithoutExtension(scriptFileName);
-                foreach (var achievement in interpreter.Achievements)
-                    localAchievements.Replace(null, achievement);
-                foreach (var leaderboard in interpreter.Leaderboards)
-                    localAchievements.Replace(null, leaderboard);
-                localAchievements.Commit("Author", null, null);
-
-                if (!String.IsNullOrEmpty(interpreter.RichPresence))
-                {
-                    using (var file = File.Open(outputFileName, FileMode.Append))
-                    {
-                        using (var fileWriter = new StreamWriter(file))
-                        {
-                            fileWriter.WriteLine("=== Rich Presence ===");
-
-                            var minimumVersion = Double.Parse(localAchievements.Version, System.Globalization.NumberFormatInfo.InvariantInfo);
-                            if (minimumVersion < 1.0)
-                            {
-                                interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
-
-                                if (minimumVersion < 0.79)
-                                    interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
-
-                                fileWriter.WriteLine(interpreter.RichPresenceBuilder.ToString());
-                            }
-                            else
-                            {
-                                fileWriter.WriteLine(interpreter.RichPresence);
-                            }
-                        }
-                    }
-                }
-
-                Assert.IsTrue(File.Exists(expectedFileName), expectedFileName + " not found");
+                RegressionTests.AssertContents(expectedFileContents, outputFileContents);
             }
 
-            RegressionTests.AssertFileContents(outputFileName, expectedFileName);
+            // file matched, delete temporary file
+            File.Delete(outputFileName);
         }
     }
 }

@@ -23,6 +23,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RATools.Parser", "Source\Pa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RATools.Parser.Tests", "Tests\Parser\RATools.Parser.Tests.csproj", "{38F7E1F1-D759-4E0A-81B7-BF1EC773D9D2}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rascript-cli", "Source\rascript-cli\rascript-cli.csproj", "{6679BB28-DE37-4586-A4D6-0DA196C28380}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,18 @@ Global
 		{38F7E1F1-D759-4E0A-81B7-BF1EC773D9D2}.Release|x64.Build.0 = Release|Any CPU
 		{38F7E1F1-D759-4E0A-81B7-BF1EC773D9D2}.Release|x86.ActiveCfg = Release|Any CPU
 		{38F7E1F1-D759-4E0A-81B7-BF1EC773D9D2}.Release|x86.Build.0 = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|x64.Build.0 = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Debug|x86.Build.0 = Debug|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|x64.ActiveCfg = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|x64.Build.0 = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|x86.ActiveCfg = Release|Any CPU
+		{6679BB28-DE37-4586-A4D6-0DA196C28380}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

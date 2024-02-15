@@ -51,5 +51,10 @@ namespace RATools.Data
         {
             get { return false; }
         }
+
+        /// <summary>
+        /// Gets the first unique identifier reserved for locally generated assets.
+        /// </summary>
+        public static readonly int FirstLocalId = 111000001;
     }
 }
