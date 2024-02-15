@@ -170,7 +170,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
-        private static ComparisonOperation ConvertToComparisonOperation(RequirementOperator op)
+        internal static ComparisonOperation ConvertToComparisonOperation(RequirementOperator op)
         {
             switch (op)
             {

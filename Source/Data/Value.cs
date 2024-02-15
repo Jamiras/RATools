@@ -16,6 +16,15 @@ namespace RATools.Data
             Values = Enumerable.Empty<RequirementGroup>();
         }
 
+        public Value(IEnumerable<IEnumerable<Requirement>> values)
+        {
+            var list = new List<RequirementGroup>();
+            foreach (var value in values)
+                list.Add(new RequirementGroup(value));
+
+            Values = list;
+        }
+
         /// <summary>
         /// Gets the possible value definitions.
         /// </summary>

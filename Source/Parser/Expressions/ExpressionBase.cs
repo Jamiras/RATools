@@ -205,6 +205,11 @@ namespace RATools.Parser.Expressions
             return clause;
         }
 
+        internal static ExpressionBase ParseClauseExtension(ExpressionBase clause, PositionalTokenizer tokenizer)
+        {
+            return ParseClauseExtension(clause, tokenizer, OperationPriority.None);
+        }
+
         private static ExpressionBase ParseClauseExtension(ExpressionBase clause, PositionalTokenizer tokenizer, OperationPriority priority)
         {
             do

@@ -29,8 +29,11 @@ jobs:
     - name: Build
       run: msbuild.exe RATools.sln -p:Configuration=Release -p:Platform="Any CPU"
 
-    - name: Run Tests
-      run: |
-        dotnet test Tests\Data\bin\Release\net6.0-windows\RATools.Data.Tests.dll
-        dotnet test Tests\Parser\bin\Release\net6.0-windows\RATools.Parser.Tests.dll
-        dotnet test Tests\bin\Release\net6.0-windows\RATools.Tests.dll
+    - name: Run Data Tests
+      run: dotnet test Tests\Data\bin\Release\net6.0-windows\RATools.Data.Tests.dll
+
+    - name: Run Parser Tests
+      run: dotnet test Tests\Parser\bin\Release\net6.0-windows\RATools.Parser.Tests.dll
+
+    - name: Run RATools Tests
+      run: dotnet test Tests\bin\Release\net6.0-windows\RATools.Tests.dll

@@ -122,6 +122,57 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestParseNoParentheses()
+        {
+            var expr = Parse("if j == 0 { j = i }");
+
+            var builder = new StringBuilder();
+            expr.Condition.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j == 0"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(0));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+        }
+
+        [Test]
+        public void TestParseNoParenthesesMultipleClauses()
+        {
+            var expr = Parse("if j == 0 || j == 1 { j = i }");
+
+            var builder = new StringBuilder();
+            expr.Condition.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j == 0 || j == 1"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(0));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+        }
+
+        [Test]
+        public void TestParseParenthesesMultipleClauses()
+        {
+            var expr = Parse("if (j == 0) || (j == 1) { j = i }");
+
+            var builder = new StringBuilder();
+            expr.Condition.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("(j == 0) || (j == 1)"));
+
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+            Assert.That(expr.ElseExpressions.Count, Is.EqualTo(0));
+
+            builder = new StringBuilder();
+            expr.Expressions.First().AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("j = i"));
+        }
+
+        [Test]
         public void TestParseBooleanVariable()
         {
             var expr = Parse("if (someBoolean) { j = i }");

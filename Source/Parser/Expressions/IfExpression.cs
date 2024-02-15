@@ -61,6 +61,12 @@ namespace RATools.Parser.Expressions
                 }
                 tokenizer.Advance();
                 condition.IsLogicalUnit = true;
+
+                condition = ExpressionBase.ParseClauseExtension(condition, tokenizer);
+                if (condition.Type == ExpressionType.Error)
+                    return condition;
+
+                condition.IsLogicalUnit = true;
             }
             else
             {

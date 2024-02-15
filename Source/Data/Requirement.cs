@@ -142,307 +142,38 @@ namespace RATools.Data
         public override string ToString()
         {
             var builder = new StringBuilder();
-            AppendString(builder, NumberFormat.Decimal);
+
+            if (Type != RequirementType.None)
+            {
+                builder.Append(Type.ToString());
+                builder.Append(' ');
+            }
+
+            Left.AppendString(builder, NumberFormat.Decimal);
+
+            if (Operator != RequirementOperator.None)
+            {
+                switch (Operator)
+                {
+                    case RequirementOperator.Equal: builder.Append(" == "); break;
+                    case RequirementOperator.NotEqual: builder.Append(" != "); break;
+                    case RequirementOperator.LessThan: builder.Append(" < "); break;
+                    case RequirementOperator.LessThanOrEqual: builder.Append(" <= "); break;
+                    case RequirementOperator.GreaterThan: builder.Append(" > "); break;
+                    case RequirementOperator.GreaterThanOrEqual: builder.Append(" >= "); break;
+                    case RequirementOperator.Multiply: builder.Append(" * "); break;
+                    case RequirementOperator.Divide: builder.Append(" / "); break;
+                    case RequirementOperator.BitwiseAnd: builder.Append(" & "); break;
+                    case RequirementOperator.BitwiseXor: builder.Append(" ^ "); break;
+                }
+
+                Right.AppendString(builder, NumberFormat.Decimal);
+            }
+
+            if (HitCount > 0)
+                builder.AppendFormat(" ({0})", HitCount);
+
             return builder.ToString();
-        }
-
-        /// <summary>
-        /// Appends the textual representation of this expression to <paramref name="builder"/>.
-        /// </summary>
-        public void AppendString(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null, 
-            string andNext = null, string addAddress = null, string measuredIf = null,
-            string resetNextIf = null)
-        {
-            switch (Type)
-            {
-                case RequirementType.ResetIf:
-                    builder.Append("never(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(')');
-                    break;
-
-                case RequirementType.PauseIf:
-                    if (resetNextIf != null)
-                    {
-                        var comparison = new StringBuilder();
-                        AppendRepeatedCondition(comparison, numberFormat, addSources, subSources, addHits, andNext, addAddress, null);
-                        if (HitCount == 1)
-                        {
-                            comparison.Remove(0, 5); // "once("
-                            comparison.Length--;     // ")"
-                        }
-
-                        builder.Append("disable_when(");
-                        builder.Append(comparison.ToString());
-                        builder.Append(", until=");
-                        builder.Append(resetNextIf);
-                        builder.Append(')');
-                    }
-                    else
-                    {
-                        builder.Append("unless(");
-                        AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                        builder.Append(')');
-                    }
-                    break;
-
-                case RequirementType.Measured:
-                case RequirementType.MeasuredPercent:
-                    builder.Append("measured(");
-
-                    // if there's no HitTarget and there's an AndNext or OrNext clause, assume we're counting
-                    // complex conditions for a Value clause and wrap it in a "tally(0, ...)"
-                    if (HitCount == 0 && !String.IsNullOrEmpty(andNext))
-                    {
-                        var measuredClause = new StringBuilder();
-                        AppendRepeatedCondition(measuredClause, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-
-                        builder.Append("tally(0, ");
-                        builder.Append(RemoveOuterParentheses(measuredClause.ToString()));
-                        builder.Append(')');
-                    }
-                    else
-                    {
-                        AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    }
-
-                    if (measuredIf != null)
-                    {
-                        builder.Append(", when=");
-                        builder.Append(measuredIf);
-                    }
-                    if (Type == RequirementType.MeasuredPercent)
-                        builder.Append(", format=\"percent\"");
-                    builder.Append(')');
-                    break;
-
-                case RequirementType.MeasuredIf:
-                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
-                    builder.Append("measured_if(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(')');
-                    break;
-
-                case RequirementType.AddAddress:
-                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
-                    builder.Append("addaddress(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(") ->");
-                    break;
-
-                case RequirementType.ResetNextIf:
-                    // this is displayed in the achievement details page and doesn't accurately represent the syntax
-                    builder.Append("resetnext_if(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(')');
-                    break;
-
-                case RequirementType.Trigger:
-                    builder.Append("trigger_when(");
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    builder.Append(')');
-                    break;
-
-                default:
-                    AppendRepeatedCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress, resetNextIf);
-                    break;
-            }
-        }
-
-        private void AppendRepeatedCondition(StringBuilder builder, NumberFormat numberFormat,
-            string addSources, string subSources, string addHits, string andNext, string addAddress, string resetNextIf)
-        {
-            if (HitCount == 0 && addHits == null)
-            {
-                bool wrapInParenthesis = false;
-
-                if (!string.IsNullOrEmpty(andNext) && andNext[0] != '(' &&
-                    (andNext.Contains(" && ") || andNext.Contains(" || ")))
-                {
-                    wrapInParenthesis = true;
-                }
-
-                if (wrapInParenthesis)
-                    builder.Append('(');
-
-                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
-
-                if (resetNextIf != null)
-                {
-                    builder.Append(" && never(");
-                    builder.Append(RemoveOuterParentheses(resetNextIf));
-                    builder.Append(")");
-                }
-
-                if (wrapInParenthesis)
-                    builder.Append(')');
-            }
-            else
-            {
-                if (HitCount == 1)
-                    builder.Append("once(");
-                else if (addHits != null)
-                    builder.AppendFormat("tally({0}, ", HitCount);
-                else
-                    builder.AppendFormat("repeated({0}, ", HitCount);
-
-                bool needsParenthesis = (resetNextIf != null && andNext != null && andNext.LastIndexOf(" || ") > andNext.LastIndexOf(')'));
-                if (needsParenthesis)
-                    builder.Append('(');
-
-                AppendCondition(builder, numberFormat, addSources, subSources, addHits, andNext, addAddress);
-
-                if (resetNextIf != null)
-                {
-                    if (needsParenthesis)
-                        builder.Append(')');
-
-                    builder.Append(" && never(");
-                    builder.Append(RemoveOuterParentheses(resetNextIf));
-                    builder.Append(')');
-                }
-
-                builder.Append(')');
-            }
-        }
-
-        private static string RemoveOuterParentheses(string input)
-        {
-            while (input.Length > 2 && input[0] == '(' && input[input.Length - 1] == ')')
-                input = input.Substring(1, input.Length - 2);
-
-            return input;
-        }
-
-        internal void AppendCondition(StringBuilder builder, NumberFormat numberFormat, 
-            string addSources = null, string subSources = null, string addHits = null, 
-            string andNext = null, string addAddress = null)
-        {
-            if (!string.IsNullOrEmpty(andNext))
-            {
-                builder.Append(andNext);
-            }
-
-            if (!string.IsNullOrEmpty(addSources))
-            {
-                builder.Append('(');
-                builder.Append(addSources);
-            }
-            else if (!string.IsNullOrEmpty(subSources))
-            {
-                builder.Append('(');
-            }
-            else if (!string.IsNullOrEmpty(addHits))
-            {
-                builder.Append(addHits);
-            }
-
-            string suffix = null;
-            switch (Type)
-            {
-                case RequirementType.AddSource:
-                    Left.AppendString(builder, numberFormat);
-                    suffix = " + ";
-                    break;
-
-                case RequirementType.SubSource:
-                    builder.Append(" - ");
-                    Left.AppendString(builder, numberFormat);
-                    break;
-
-                default:
-                    if (Operator != RequirementOperator.None &&
-                        string.IsNullOrEmpty(subSources) && string.IsNullOrEmpty(addSources))
-                    {
-                        var clone = new Requirement
-                        {
-                            Left = this.Left,
-                            Operator = this.Operator,
-                            Right = this.Right
-                        };
-                        var result = clone.Evaluate();
-                        if (result == true)
-                        {
-                            builder.Append("always_true()");
-                            return;
-                        }
-                        else if (result == false)
-                        {
-                            builder.Append("always_false()");
-                            return;
-                        }
-                    }
-
-                    Left.AppendString(builder, numberFormat, addAddress);
-                    break;
-            }
-
-            // scaling operators need to be appended before chained operations
-            switch (Operator)
-            {
-                case RequirementOperator.Multiply:
-                    builder.Append(" * ");
-                    Right.AppendString(builder, numberFormat, addAddress);
-                    break;
-                case RequirementOperator.Divide:
-                    builder.Append(" / ");
-                    Right.AppendString(builder, numberFormat, addAddress);
-                    break;
-                case RequirementOperator.BitwiseAnd:
-                    builder.Append(" & ");
-                    Right.AppendString(builder, numberFormat, addAddress);
-                    break;
-            }
-
-            // append chained operations
-            if (!string.IsNullOrEmpty(subSources))
-            {
-                builder.Append(subSources);
-                builder.Append(')');
-            }
-            else if (!string.IsNullOrEmpty(addSources))
-            {
-                builder.Append(')');
-            }
-
-            // handle comparison operators
-            switch (Operator)
-            {
-                case RequirementOperator.Equal:
-                    builder.Append(" == ");
-                    break;
-                case RequirementOperator.NotEqual:
-                    builder.Append(" != ");
-                    break;
-                case RequirementOperator.LessThan:
-                    builder.Append(" < ");
-                    break;
-                case RequirementOperator.LessThanOrEqual:
-                    builder.Append(" <= ");
-                    break;
-                case RequirementOperator.GreaterThan:
-                    builder.Append(" > ");
-                    break;
-                case RequirementOperator.GreaterThanOrEqual:
-                    builder.Append(" >= ");
-                    break;
-
-                case RequirementOperator.Multiply:
-                case RequirementOperator.Divide:
-                case RequirementOperator.BitwiseAnd:
-                    // handled above, treat like none
-
-                case RequirementOperator.None:
-                    if (suffix != null)
-                        builder.Append(suffix);
-                    return;
-            }
-
-            Right.AppendString(builder, numberFormat, addAddress);
-
-            if (suffix != null)
-                builder.Append(suffix);
         }
 
         public void Serialize(StringBuilder builder, double minimumVersion = 0.0, int addressWidth = 6)
