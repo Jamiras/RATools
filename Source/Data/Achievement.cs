@@ -96,17 +96,17 @@ namespace RATools.Data
             if (achievement.Id != 0)
             {
                 match = achievements.FirstOrDefault(a => a.Id == achievement.Id);
-                if (match != null)
+                if (match != null) // exact ID match, don't check anything else
                     return match;
-
-                if (achievement.Id < FirstLocalId) // explicit non-local ID can only match a non-local ID
-                    return null;
             }
+
+            // ignore achievements with non-local IDs. they're only eligible for matching by ID.
+            var localAchievements = achievements.Where(a => a.Id == 0 || a.Id >= FirstLocalId);
 
             // second pass - look for title match
             if (!String.IsNullOrEmpty(achievement.Title))
             {
-                match = achievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
+                match = localAchievements.FirstOrDefault(a => String.Compare(a.Title, achievement.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
                 if (match != null)
                     return match;
             }
@@ -114,7 +114,7 @@ namespace RATools.Data
             // third pass - look for description match
             if (!String.IsNullOrEmpty(achievement.Description))
             {
-                match = achievements.FirstOrDefault(a => String.Compare(a.Description, achievement.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+                match = localAchievements.FirstOrDefault(a => String.Compare(a.Description, achievement.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
                 if (match != null)
                     return match;
             }

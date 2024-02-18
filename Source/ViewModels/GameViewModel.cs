@@ -793,20 +793,31 @@ namespace RATools.ViewModels
                 for (int i = assetEditors.Count - 1; i >= 0; i--)
                 {
                     var assetEditor = assetEditors[i];
-                    if (ReferenceEquals(assetEditor.Published.Asset, match) ||
-                        ReferenceEquals(assetEditor.Generated.Asset, match))
+                    if (ReferenceEquals(assetEditor.Published.Asset, match))
                     {
-                        assign(assetEditor, mergeAsset);
-
-                        if (achievement != null)
-                            achievements.Remove(achievement);
-                        else if (leaderboard != null)
-                            leaderboards.Remove(leaderboard);
-
-                        mergeAssets.Remove(mergeAsset);
-                        assetEditors.RemoveAt(i);
-                        break;
+                        achievement = assetEditor.Published.Asset as Achievement;
+                        leaderboard = assetEditor.Published.Asset as Leaderboard;
                     }
+                    else if (ReferenceEquals(assetEditor.Generated.Asset, match))
+                    {
+                        achievement = assetEditor.Generated.Asset as Achievement;
+                        leaderboard = assetEditor.Generated.Asset as Leaderboard;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    assign(assetEditor, mergeAsset);
+
+                    if (achievement != null)
+                        achievements.Remove(achievement);
+                    else if (leaderboard != null)
+                        leaderboards.Remove(leaderboard);
+
+                    mergeAssets.Remove(mergeAsset);
+                    assetEditors.RemoveAt(i);
+                    break;
                 }
             }
 
