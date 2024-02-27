@@ -82,8 +82,10 @@ namespace RATools.Parser
 
         public static double GetMinimumVersion(Leaderboard leaderboard)
         {
+            var minimumVersion = GetMinimumVersion(leaderboard.Format);
+
             var trigger = Trigger.Deserialize(leaderboard.Start);
-            var minimumVersion = trigger.MinimumVersion();
+            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
 
             trigger = Trigger.Deserialize(leaderboard.Cancel);
             minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
@@ -95,6 +97,35 @@ namespace RATools.Parser
             minimumVersion = Math.Max(minimumVersion, value.MinimumVersion());
 
             return minimumVersion;
+        }
+
+        private static double GetMinimumVersion(ValueFormat format)
+        {
+            switch (format)
+            {
+                case ValueFormat.TimeMinutes:
+                case ValueFormat.TimeSecsAsMins:
+                    return 0.77;
+
+                case ValueFormat.Float1:
+                case ValueFormat.Float2:
+                case ValueFormat.Float3:
+                case ValueFormat.Float4:
+                case ValueFormat.Float5:
+                case ValueFormat.Float6:
+                    return 1.0;
+
+                case ValueFormat.Thousands:
+                case ValueFormat.Hundreds:
+                case ValueFormat.Tens:
+                case ValueFormat.Fixed1:
+                case ValueFormat.Fixed2:
+                case ValueFormat.Fixed3:
+                    return 1.3;
+
+                default:
+                    return 0.0;
+            }
         }
     }
 }

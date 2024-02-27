@@ -25,7 +25,7 @@ namespace RATools.Parser.Functions
                     return ValueFormat.Score;
 
                 case "Centiseconds":
-                    return ValueFormat.TimeMillisecs;
+                    return ValueFormat.TimeCentisecs;
 
                 case "Seconds":
                     return ValueFormat.TimeSecs;
@@ -35,6 +35,15 @@ namespace RATools.Parser.Functions
 
                 case "Minutes":
                     return ValueFormat.TimeMinutes;
+
+                case "Fixed1":
+                    return ValueFormat.Fixed1;
+
+                case "Fixed2":
+                    return ValueFormat.Fixed2;
+
+                case "Fixed3":
+                    return ValueFormat.Fixed3;
 
                 case "Float1":
                     return ValueFormat.Float1;

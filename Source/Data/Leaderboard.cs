@@ -66,16 +66,35 @@ namespace RATools.Data
 
                 case "CENTISECS": // not valid in runtime. converted to MILLISECS when serialized
                 case "MILLISECS":
-                    return ValueFormat.TimeMillisecs;
+                    return ValueFormat.TimeCentisecs;
 
                 case "MINUTES":
                     return ValueFormat.TimeMinutes;
 
                 case "SECS_AS_MINS":
+                case "SECSASMINS":
                     return ValueFormat.TimeSecsAsMins;
 
                 case "OTHER": // valid in runtime - maps to SCORE
                     return ValueFormat.Other;
+
+                case "THOUSANDS":
+                    return ValueFormat.Thousands;
+
+                case "HUNDREDS":
+                    return ValueFormat.Hundreds;
+
+                case "TENS":
+                    return ValueFormat.Tens;
+
+                case "FIXED1":
+                    return ValueFormat.Fixed1;
+
+                case "FIXED2":
+                    return ValueFormat.Fixed2;
+
+                case "FIXED3":
+                    return ValueFormat.Fixed3;
 
                 case "FLOAT1":
                     return ValueFormat.Float1;
@@ -113,8 +132,8 @@ namespace RATools.Data
                 case ValueFormat.TimeSecs:
                     return "SECS";
 
-                case ValueFormat.TimeMillisecs:
-                    return "MILLISECS";
+                case ValueFormat.TimeCentisecs:
+                    return "MILLISECS"; // server enum is incorrect
 
                 case ValueFormat.TimeFrames:
                     return "FRAMES";
@@ -127,6 +146,24 @@ namespace RATools.Data
 
                 case ValueFormat.Other:
                     return "OTHER";
+
+                case ValueFormat.Thousands:
+                    return "THOUSANDS";
+
+                case ValueFormat.Hundreds:
+                    return "HUNDREDS";
+
+                case ValueFormat.Tens:
+                    return "TENS";
+
+                case ValueFormat.Fixed1:
+                    return "FIXED1";
+
+                case ValueFormat.Fixed2:
+                    return "FIXED2";
+
+                case ValueFormat.Fixed3:
+                    return "FIXED3";
 
                 case ValueFormat.Float1:
                     return "FLOAT1";
@@ -219,7 +256,7 @@ namespace RATools.Data
         /// <summary>
         /// Convert the value (in hundredths of a second) to minutes/seconds/hundredths - %02d:%02d.%02d
         /// </summary>
-        TimeMillisecs,
+        TimeCentisecs,
 
         /// <summary>
         /// Convert the value (in sixtieths of a second) to minutes/seconds/hundredths - %02d:%02d.%02d
@@ -270,6 +307,36 @@ namespace RATools.Data
         /// A floating point value with six digits after the decimal
         /// </summary>
         Float6,
+
+        /// <summary>
+        /// A fixed-point value with one digit after the decimal
+        /// </summary>
+        Fixed1,
+
+        /// <summary>
+        /// A fixed-point value with two digits after the decimal
+        /// </summary>
+        Fixed2,
+
+        /// <summary>
+        /// A fixed-point value with three digits after the decimal
+        /// </summary>
+        Fixed3,
+
+        /// <summary>
+        /// A number padded with a trailing zero
+        /// </summary>
+        Tens,
+
+        /// <summary>
+        /// A number padded with two trailing zeroes
+        /// </summary>
+        Hundreds,
+
+        /// <summary>
+        /// A number padded with three trailing zeroes
+        /// </summary>
+        Thousands,
 
         /// <summary>
         /// Virtual format for ASCII char lookup table
