@@ -48,9 +48,23 @@ namespace RATools.Tests.Regression
             var expectedFileContents = File.ReadAllText(expectedFileName);
             var outputFileContents = File.ReadAllText(outputFileName);
 
-            // file didn't match, report first difference
+            if (expectedFileContents != outputFileContents) 
+            {
+                AssertContents(outputFileContents, expectedFileContents);
+
+                // failed to find differing line, fallback to nunit assertion
+                FileAssert.AreEqual(expectedFileName, outputFileName);
+            }
+
+            // file matched, delete temporary file
+            File.Delete(outputFileName);
+        }
+
+        public static void AssertContents(string outputFileContents, string expectedFileContents)
+        {
             if (expectedFileContents != outputFileContents)
             {
+                // contents don't match. report first difference
                 var expectedFileTokenizer = Tokenizer.CreateTokenizer(expectedFileContents);
                 var outputFileTokenizer = Tokenizer.CreateTokenizer(outputFileContents);
 
@@ -63,14 +77,6 @@ namespace RATools.Tests.Regression
                     if (expectedFileLine != outputFileLine)
                     {
                         var message = "Line " + line;
-
-                        if (line == 1)
-                        {
-                            // if the first line is not a version, it's an error, dump the entire error
-                            if (outputFileLine.Contains(':'))
-                                message += "\n" + outputFileContents;
-                        }
-
                         Assert.AreEqual(expectedFileLine.ToString(), outputFileLine.ToString(), message);
                     }
 
@@ -79,13 +85,7 @@ namespace RATools.Tests.Regression
 
                     ++line;
                 } while (expectedFileTokenizer.NextChar != '\0' || outputFileTokenizer.NextChar != '\0');
-
-                // failed to find differing line, fallback to nunit assertion
-                FileAssert.AreEqual(expectedFileName, outputFileName);
             }
-
-            // file matched, delete temporary file
-            File.Delete(outputFileName);
         }
     }
 }

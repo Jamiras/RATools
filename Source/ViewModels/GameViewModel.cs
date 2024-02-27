@@ -268,7 +268,7 @@ namespace RATools.ViewModels
         private void UpdateTemporaryIds(List<ViewerViewModelBase> editors)
         {
             // find the maximum temporary id already assigned
-            int nextLocalId = 111000001;
+            int nextLocalId = AssetBase.FirstLocalId;
             foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
             {
                 var id = assetViewModel.Local.Id;
@@ -746,61 +746,80 @@ namespace RATools.ViewModels
             else
                 assetEditors.AddRange(editors.OfType<LeaderboardViewModel>());
 
-            // first pass - look for ID matches
-            for (int i = assetEditors.Count - 1; i >= 0; i--)
+            var achievements = new List<Achievement>();
+            var leaderboards = new List<Leaderboard>();
+            foreach (var editor in assetEditors)
             {
-                AssetBase mergeAsset = null;
-                var assetEditor = assetEditors[i];
-
-                if (assetEditor.Generated.Id > 0)
-                    mergeAsset = mergeAssets.FirstOrDefault(a => a.Id == assetEditor.Generated.Id);
-                if (mergeAsset == null && assetEditor.Published.Id > 0)
-                    mergeAsset = mergeAssets.FirstOrDefault(a => a.Id == assetEditor.Published.Id);
-
-                if (mergeAsset != null)
+                if (editor is AchievementViewModel)
                 {
+                    var achievement = editor.Published.Asset as Achievement;
+                    if (achievement != null)
+                        achievements.Add(achievement);
+                    achievement = editor.Generated.Asset as Achievement;
+                    if (achievement != null)
+                        achievements.Add(achievement);
+                }
+                else if (editor is LeaderboardViewModel)
+                {
+                    var leaderboard = editor.Published.Asset as Leaderboard;
+                    if (leaderboard != null)
+                        leaderboards.Add(leaderboard);
+                    leaderboard = editor.Generated.Asset as Leaderboard;
+                    if (leaderboard != null)
+                        leaderboards.Add(leaderboard);
+                }
+            }
+
+            int j = 0;
+            while (j < mergeAssets.Count && assetEditors.Count > 0)
+            {
+                var mergeAsset = mergeAssets[j];
+
+                AssetBase match = null;
+                var achievement = mergeAsset as Achievement;
+                if (achievement != null)
+                    match = Achievement.FindMergeAchievement(achievements, achievement);
+
+                var leaderboard = mergeAsset as Leaderboard;
+                if (leaderboard != null)
+                    match = Leaderboard.FindMergeLeaderboard(leaderboards, leaderboard);
+
+                if (match == null)
+                {
+                    j++;
+                    continue;
+                }
+
+                for (int i = assetEditors.Count - 1; i >= 0; i--)
+                {
+                    var assetEditor = assetEditors[i];
+                    if (ReferenceEquals(assetEditor.Published.Asset, match))
+                    {
+                        achievement = assetEditor.Published.Asset as Achievement;
+                        leaderboard = assetEditor.Published.Asset as Leaderboard;
+                    }
+                    else if (ReferenceEquals(assetEditor.Generated.Asset, match))
+                    {
+                        achievement = assetEditor.Generated.Asset as Achievement;
+                        leaderboard = assetEditor.Generated.Asset as Leaderboard;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
                     assign(assetEditor, mergeAsset);
+
+                    if (achievement != null)
+                        achievements.Remove(achievement);
+                    else if (leaderboard != null)
+                        leaderboards.Remove(leaderboard);
 
                     mergeAssets.Remove(mergeAsset);
                     assetEditors.RemoveAt(i);
+                    break;
                 }
             }
-
-            // second pass - look for title matches
-            for (int i = mergeAssets.Count - 1; i >= 0; i--)
-            {
-                var mergeAsset = mergeAssets[i];
-                var assetEditor = assetEditors.FirstOrDefault(a =>
-                    (String.Compare(a.Generated.Title.Text, mergeAsset.Title, StringComparison.InvariantCultureIgnoreCase) == 0 ||
-                     String.Compare(a.Published.Title.Text, mergeAsset.Title, StringComparison.InvariantCultureIgnoreCase) == 0)
-                );
-
-                if (assetEditor != null)
-                {
-                    assign(assetEditor, mergeAsset);
-
-                    mergeAssets.RemoveAt(i);
-                    assetEditors.Remove(assetEditor);
-                }
-            }
-
-            // third pass - look for description matches
-            for (int i = mergeAssets.Count - 1; i >= 0; i--)
-            {
-                var mergeAsset = mergeAssets[i];
-                var assetEditor = assetEditors.FirstOrDefault(a =>
-                    String.Compare(a.Generated.Description.Text, mergeAsset.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
-
-                if (assetEditor != null)
-                {
-                    assign(assetEditor, mergeAsset);
-
-                    mergeAssets.RemoveAt(i);
-                    assetEditors.Remove(assetEditor);
-                }
-            }
-
-            // TODO: attempt to match requirements
 
             // create new entries for each remaining unmerged achievement
             foreach (var mergeAsset in mergeAssets)

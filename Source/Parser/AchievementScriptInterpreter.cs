@@ -210,26 +210,12 @@ namespace RATools.Parser
         internal ErrorExpression Error { get; private set; }
 
         /// <summary>
-        /// Processes the provided script.
+        /// Converts the provided script to a collection of expressions.
         /// </summary>
-        /// <returns>
-        /// <c>true</c> if the script was successfully processed, 
-        /// <c>false</c> if not - in which case <see cref="ErrorMessage"/> will indicate why.
-        /// </returns>
-        public bool Run(Tokenizer input)
+        public ExpressionGroupCollection Parse(Tokenizer input)
         {
             var expressionGroups = new AssetExpressionGroupCollection();
             expressionGroups.Parse(input);
-
-            if (Error == null)
-            {
-                foreach (var group in expressionGroups.Groups)
-                {
-                    Error = group.ParseErrors.FirstOrDefault();
-                    if (Error != null)
-                        return false;
-                }
-            }
 
             GameTitle = null;
             foreach (var comment in expressionGroups.Groups.First().Expressions.OfType<CommentExpression>())
@@ -242,6 +228,30 @@ namespace RATools.Parser
                 else if (GameTitle == null)
                 {
                     GameTitle = comment.Value.Substring(2).Trim();
+                }
+            }
+
+            return expressionGroups;
+        }
+
+        /// <summary>
+        /// Processes the provided script.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c> if the script was successfully processed, 
+        /// <c>false</c> if not - in which case <see cref="ErrorMessage"/> will indicate why.
+        /// </returns>
+        public bool Run(Tokenizer input)
+        {
+            var expressionGroups = Parse(input);
+
+            if (Error == null)
+            {
+                foreach (var group in expressionGroups.Groups)
+                {
+                    Error = group.ParseErrors.FirstOrDefault();
+                    if (Error != null)
+                        return false;
                 }
             }
 
