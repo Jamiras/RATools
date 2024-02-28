@@ -76,16 +76,25 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Determines whether the specified <see cref="DictionaryExpression" /> is equal to this instance.
+        /// Determines whether the specified <see cref="ArrayExpression" /> is equal to this instance.
         /// </summary>
-        /// <param name="obj">The <see cref="DictionaryExpression" /> to compare with this instance.</param>
+        /// <param name="obj">The <see cref="ArrayExpression" /> to compare with this instance.</param>
         /// <returns>
-        ///   <c>true</c> if the specified <see cref="DictionaryExpression" /> is equal to this instance; otherwise, <c>false</c>.
+        ///   <c>true</c> if the specified <see cref="ArrayExpression" /> is equal to this instance; otherwise, <c>false</c>.
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as ArrayExpression;
-            return that != null && Entries == that.Entries;
+            if (that == null || Entries.Count != that.Entries.Count)
+                return false;
+
+            for (int i = 0; i < Entries.Count; i++)
+            {
+                if (Entries[i] != that.Entries[i])
+                    return false;
+            }
+
+            return true;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions

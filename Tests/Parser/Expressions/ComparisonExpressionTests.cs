@@ -146,9 +146,9 @@ namespace RATools.Parser.Tests.Expressions
         [TestCase("\"bbb\" <= \"bbbb\"", true)]
         [TestCase("\"bbb\" > \"bbbb\"", false)]
         [TestCase("\"bbb\" >= \"bbbb\"", false)]
-        [TestCase("\"bbb\" == 0", null)]
-        [TestCase("\"bbb\" == -2.0", null)]
-        [TestCase("1 == \"bbb\"", null)]
+        [TestCase("\"bbb\" == 0", false)]
+        [TestCase("\"bbb\" == -2.0", false)]
+        [TestCase("1 == \"bbb\"", false)]
         [TestCase("2.0 == -2.0", false)]
         public void TestIsTrue(string input, bool? expected)
         {
@@ -160,6 +160,69 @@ namespace RATools.Parser.Tests.Expressions
             ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.EqualTo(expected));
             Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        [TestCase("a == a", true, null)]  // 1 == 1
+        [TestCase("a == b", false, null)] // 1 == 2
+        [TestCase("a == c", true, null)]  // 1 == 1
+        [TestCase("a == d", false, null)] // 1 == "1"
+        [TestCase("a == x", false, null)] // 1 == [1]
+        [TestCase("x == x", true, null)]  // [1] == [1]
+        [TestCase("x == y", true, null)]  // [1] == [1]
+        [TestCase("x == z", false, null)] // [1] == [1,2]
+        [TestCase("x == a", false, null)] // [1] == 1
+        [TestCase("x == d", false, null)] // [1] == "1"
+        [TestCase("a != b", true, null)]  // 1 != 2
+        [TestCase("a != c", false, null)] // 1 != 1
+        [TestCase("a != d", true, null)]  // 1 != "1"
+        [TestCase("a != x", true, null)]  // 1 != [1]
+        [TestCase("a <= b", true, null)]  // 1 <= 2
+        [TestCase("a <= c", true, null)]  // 1 <= 1
+        [TestCase("x != z", true, null)]  // [1] != [1,2]
+        [TestCase("x <  z", null, "Cannot perform relative comparison on Array")] // [1] < [1,2]
+        [TestCase("x >  z", null, "Cannot perform relative comparison on Array")] // [1] > [1,2]
+        [TestCase("x <= z", null, "Cannot perform relative comparison on Array")] // [1] <= [1,2]
+        [TestCase("x >= z", null, "Cannot perform relative comparison on Array")] // [1] >= [1,2]
+        [TestCase("a <= d", null, "Cannot compare IntegerConstant and StringConstant")] // 1 <= "1"
+        [TestCase("a <= x", null, "Cannot compare IntegerConstant and Array")]  // 1 <= [1]
+        [TestCase("a == g", null, "Unknown variable: g")]
+        [TestCase("g == a", null, "Unknown variable: g")]
+        public void TestIsTrueVariables(string input, bool? expected, string expectedError)
+        {
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new TriggerBuilderContext();
+            scope.DefineVariable(new VariableDefinitionExpression("a"), new IntegerConstantExpression(1));
+            scope.DefineVariable(new VariableDefinitionExpression("b"), new IntegerConstantExpression(2));
+            scope.DefineVariable(new VariableDefinitionExpression("c"), new IntegerConstantExpression(1));
+            scope.DefineVariable(new VariableDefinitionExpression("d"), new StringConstantExpression("1"));
+
+            var array1 = new ArrayExpression();
+            array1.Entries.Add(new IntegerConstantExpression(1));
+            scope.DefineVariable(new VariableDefinitionExpression("x"), array1);
+            var array2 = new ArrayExpression();
+            array2.Entries.Add(new IntegerConstantExpression(1));
+            scope.DefineVariable(new VariableDefinitionExpression("y"), array2);
+            var array3 = new ArrayExpression();
+            array3.Entries.Add(new IntegerConstantExpression(1));
+            array3.Entries.Add(new IntegerConstantExpression(2));
+            scope.DefineVariable(new VariableDefinitionExpression("z"), array3);
+
+            ErrorExpression error;
+            Assert.That(expr.IsTrue(scope, out error), Is.EqualTo(expected));
+
+            if (expectedError != null)
+            {
+                Assert.That(error, Is.Not.Null);
+                Assert.That(error.Message, Is.EqualTo(expectedError));
+            }
+            else
+            {
+                Assert.That(error, Is.Null);
+            }
         }
 
         [Test]
