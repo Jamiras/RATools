@@ -89,7 +89,7 @@ namespace RATools.Parser.Tests.Functions
             var dict = new DictionaryExpression();
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
-            Evaluate("array_push(dict, 1)", scope, "array did not evaluate to an array");
+            Evaluate("array_push(dict, 1)", scope, "array: cannot convert dictionary to array");
         }
 
         private void AddHappyFunction(InterpreterScope scope)

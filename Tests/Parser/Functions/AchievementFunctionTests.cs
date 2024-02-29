@@ -150,8 +150,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
                 "2:1 achievement call failed\r\n" +
-                "- 2:26 trigger is not a requirement\r\n" +
-                "- 1:17 Cannot convert memoryaccessor to requirement"));
+                "- 2:26 trigger: cannot convert memory accessor to requirement"));
         }
 
         [Test]
@@ -166,9 +165,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
                 "3:1 achievement call failed\r\n" +
-                "- 3:26 trigger is not a requirement\r\n" +
-                // this actually reports the entire "a() + 1" as invalid
-                "- 2:17 Cannot convert memoryaccessor to requirement"));
+                "- 3:26 trigger: cannot convert memory accessor to requirement"));
         }
 
         [Test]
@@ -183,8 +180,8 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
                 "3:1 achievement call failed\r\n" +
-                "- 3:26 trigger is not a requirement\r\n" +
-                "- 1:17 Cannot convert memoryaccessor to requirement"));
+                "- 3:26 trigger: cannot convert conditional expression to requirement\r\n" +
+                "- 2:17 memory accessor is not a requirement"));
         }
 
         [Test]

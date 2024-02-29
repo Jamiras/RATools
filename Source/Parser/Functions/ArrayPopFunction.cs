@@ -12,16 +12,9 @@ namespace RATools.Parser.Functions
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var arrayExpression = GetReferenceParameter(scope, "array", out result);
-            if (arrayExpression == null)
-                return false;
-
-            var array = arrayExpression.Expression as ArrayExpression;
+            var array = GetArrayParameter(scope, "array", out result);
             if (array == null)
-            {
-                result = new ErrorExpression("array did not evaluate to an array", arrayExpression);
                 return false;
-            }
 
             if (array.Entries.Count == 0)
             {

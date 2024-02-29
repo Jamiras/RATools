@@ -414,7 +414,7 @@ namespace RATools.Parser.Tests
         public void TestOnceMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 Cannot convert memoryaccessor to requirement"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison: cannot convert memory accessor to requirement"));
         }
 
         [Test]
@@ -803,7 +803,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback is not a string"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback: cannot convert integer to string"));
         }
 
         [Test]
@@ -811,7 +811,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, dict))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback is not a string"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback: cannot convert dictionary to string"));
         }
 
         /*
@@ -845,7 +845,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("tens = word(0x1234) == 3\n" +
                                "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor: cannot convert requirement to memory accessor"));
         }
 
         [TestCase("word(0x1234) * 10 == 10000", true, "word(0x001234) == 1000")]

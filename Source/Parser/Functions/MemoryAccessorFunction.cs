@@ -90,11 +90,7 @@ namespace RATools.Parser.Functions
                 return result;
             }
 
-            var builder = new StringBuilder();
-            builder.Append("Cannot convert to an address: ");
-            address.AppendString(builder);
-
-            return new ErrorExpression(builder.ToString(), address);
+            return new ConversionErrorExpression(address, "memory address", address.Location);
         }
 
         private static MemoryAccessorExpression CreateMemoryAccessorExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor)

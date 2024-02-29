@@ -80,7 +80,7 @@ namespace RATools.Parser.Tests.Functions
         public void TestPrevMalformed()
         {
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor did not evaluate to a memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor: cannot convert requirement to memory accessor"));
         }
 
         [Test]

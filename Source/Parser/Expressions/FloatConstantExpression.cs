@@ -98,7 +98,7 @@ namespace RATools.Parser.Expressions
                     break;
 
                 default:
-                    return new ErrorExpression("Cannot convert to float", expression);
+                    return new ConversionErrorExpression(expression, ExpressionType.FloatConstant);
             }
 
             expression.CopyLocation(floatExpression);

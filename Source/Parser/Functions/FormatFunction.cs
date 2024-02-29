@@ -88,7 +88,7 @@ namespace RATools.Parser.Functions
                 }
                 else
                 {
-                    result = new ErrorExpression("Cannot convert expression to string", result);
+                    result = new ConversionErrorExpression(result, ExpressionType.StringConstant);
                     return false;
                 }
             }
