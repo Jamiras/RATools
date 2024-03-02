@@ -75,7 +75,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var scope = TriggerExpressionTests.CreateScope();
             scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
 
-            TriggerExpressionTests.AssertParseError(input, scope, "comparison: cannot convert " + unsupportedType + " to requirement");
+            TriggerExpressionTests.AssertParseError(input, scope, "comparison: Cannot convert " + unsupportedType + " to requirement");
         }
 
         [Test]

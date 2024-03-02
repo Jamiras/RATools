@@ -136,7 +136,7 @@ namespace RATools.Parser.Expressions
         }
 
         public ConversionErrorExpression(ExpressionBase value, string expectedType, TextRange location, string parameterName)
-            : base(String.Format("{0}: cannot convert {1} to {2}", parameterName, value.Type.ToLowerString(), expectedType), location)
+            : base(String.Format("{0}: Cannot convert {1} to {2}", parameterName, value.Type.ToLowerString(), expectedType), location)
         {
         }
     }

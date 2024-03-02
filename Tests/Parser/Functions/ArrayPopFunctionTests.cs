@@ -97,7 +97,7 @@ namespace RATools.Parser.Tests.Functions
             dict.Add(new IntegerConstantExpression(1), new StringConstantExpression("One"));
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
-            Evaluate("array_push(dict)", scope, "array: cannot convert dictionary to array");
+            Evaluate("array_push(dict)", scope, "array: Cannot convert dictionary to array");
         }
 
         [Test]
