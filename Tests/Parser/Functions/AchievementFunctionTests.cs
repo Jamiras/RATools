@@ -120,7 +120,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
                 "2:26 Invalid value for parameter: trigger\r\n" +
-                "- 2:26 Cannot compare function reference and IntegerConstant"));
+                "- 2:26 Cannot compare function reference and integer"));
         }
 
         [Test]
@@ -136,7 +136,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.ErrorMessage, Is.EqualTo(
                 "3:26 Invalid value for parameter: trigger\r\n" +
                 "- 3:26 b call failed\r\n" +
-                "- 2:17 Cannot compare function reference and IntegerConstant"));
+                "- 2:17 Cannot compare function reference and integer"));
         }
 
         [Test]

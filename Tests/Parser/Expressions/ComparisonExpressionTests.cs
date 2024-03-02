@@ -213,21 +213,21 @@ namespace RATools.Parser.Tests.Expressions
             var expr5 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr5.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and integer"));
 
             // invalid indirect comparison
             tokenizer = Tokenizer.CreateTokenizer("c == 1");
             var expr6 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr6.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and integer"));
 
             // invalid direct comparison reversed
             tokenizer = Tokenizer.CreateTokenizer("b() == a");
             var expr7 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr7.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare IntegerConstant and function reference"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare integer and function reference"));
         }
     }
 }
