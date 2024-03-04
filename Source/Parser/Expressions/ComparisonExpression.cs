@@ -117,9 +117,9 @@ namespace RATools.Parser.Expressions
                 }
 
                 if (funcRefLeft != null)
-                    result = new ErrorExpression(string.Format("Cannot compare function reference and {0}", right.Type), this.Location);
+                    result = new ErrorExpression(string.Format("Cannot compare function reference and {0}", right.Type.ToLowerString()), this.Location);
                 else
-                    result = new ErrorExpression(string.Format("Cannot compare {0} and function reference", left.Type), this.Location);
+                    result = new ErrorExpression(string.Format("Cannot compare {0} and function reference", left.Type.ToLowerString()), this.Location);
                 return false;
             }
 

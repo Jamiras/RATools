@@ -37,7 +37,7 @@ namespace RATools.Parser.Functions
                     memoryValue = MemoryAccessorExpressionBase.WrapInMemoryValue(comparison);
                     if (memoryValue == null)
                     {
-                        result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+                        result = InvalidParameter(comparison, scope, "comparison", ExpressionType.Comparison);
                         return false;
                     }
                 }
@@ -46,16 +46,9 @@ namespace RATools.Parser.Functions
                 memoryValue.CopyLocation(expression);
             }
 
-            var when = GetParameter(scope, "when", out result);
+            var when = GetRequirementParameter(scope, "when", out result);
             if (when == null)
                 return false;
-
-            var whenExpression = when as RequirementExpressionBase;
-            if (whenExpression == null)
-            {
-                result = new ErrorExpression("when did not evaluate to a valid comparison", when);
-                return false;
-            }
 
             var formatStr = GetStringParameter(scope, "format", out result);
             if (formatStr == null)
@@ -72,7 +65,7 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            result = new MeasuredRequirementExpression() { Condition = expression, When = whenExpression, Format = format };
+            result = new MeasuredRequirementExpression() { Condition = expression, When = when, Format = format };
             CopyLocation(result);
             return true;
         }

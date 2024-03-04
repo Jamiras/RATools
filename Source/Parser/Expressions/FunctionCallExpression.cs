@@ -144,14 +144,31 @@ namespace RATools.Parser.Expressions
                 functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
-            if (result != null && result.Location.Start.Line == 0)
-                CopyLocation(result);
-
             var error = result as ErrorExpression;
             if (error != null)
             {
+                if (error.Location.End.Line == 0)
+                    CopyLocation(error);
+
                 result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
+            }
+
+            if (result != null)
+            {
+                if (!result.IsReadOnly || result.Location.End.Line == 0)
+                {
+                    CopyLocation(result);
+                }
+                else if (!result.Location.RangeEquals(Location))
+                {
+                    var cloneable = result as ICloneableExpression;
+                    if (cloneable != null)
+                    {
+                        result = cloneable.Clone();
+                        CopyLocation(result);
+                    }
+                }
             }
 
             var functionCall = result as FunctionCallExpression;

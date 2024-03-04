@@ -2,6 +2,7 @@
 using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -136,6 +137,20 @@ namespace RATools.Parser.Expressions
             return true;
         }
 
+        protected ErrorExpression InvalidParameter(ExpressionBase parameter,
+            InterpreterScope scope, string name, string expectedType)
+        {
+            var originalParameter = LocateParameter(scope, name) ?? parameter;
+            return new ConversionErrorExpression(parameter, expectedType, originalParameter.Location, name);
+        }
+
+        protected ErrorExpression InvalidParameter(ExpressionBase parameter,
+            InterpreterScope scope, string name, ExpressionType expectedType)
+        {
+            var originalParameter = LocateParameter(scope, name) ?? parameter;
+            return new ConversionErrorExpression(parameter, expectedType, originalParameter.Location, name);
+        }
+
         /// <summary>
         /// Gets a parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
         /// </summary>
@@ -143,7 +158,7 @@ namespace RATools.Parser.Expressions
         /// <param name="name">The name of the parameter.</param>
         /// <param name="parseError">[out] The error that occurred.</param>
         /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
-        protected ExpressionBase GetParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        protected static ExpressionBase GetParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
         {
             var parameter = scope.GetVariable(name);
             if (parameter == null)
@@ -167,6 +182,12 @@ namespace RATools.Parser.Expressions
             var functionCall = scope.GetContext<FunctionCallExpression>();
             if (functionCall != null)
             {
+                foreach (var assignment in functionCall.Parameters.OfType<AssignmentExpression>())
+                {
+                    if (assignment.Variable.Name == name)
+                        return assignment.Value;
+                }
+
                 var nameEnumerator = Parameters.GetEnumerator();
                 var valueEnumerator = functionCall.Parameters.GetEnumerator();
                 while (nameEnumerator.MoveNext() && valueEnumerator.MoveNext())
@@ -195,11 +216,7 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as IntegerConstantExpression;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
-
-                parseError = new ErrorExpression(name + " is not an integer", parameter);
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.IntegerConstant);
                 return null;
             }
 
@@ -223,11 +240,7 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as StringConstantExpression;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
-
-                parseError = new ErrorExpression(name + " is not a string", parameter);
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.StringConstant);
                 return null;
             }
 
@@ -251,11 +264,7 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as BooleanConstantExpression;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
-
-                parseError = new ErrorExpression(name + " is not a boolean", parameter);
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.BooleanConstant);
                 return null;
             }
 
@@ -279,11 +288,31 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as DictionaryExpression;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.Dictionary);
+                return null;
+            }
 
-                parseError = new ErrorExpression(name + " is not a dictionary", parameter);
+            parseError = null;
+            return typedParameter;
+        }
+
+        /// <summary>
+        /// Gets the array parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// </summary>
+        /// <param name="scope">The scope.</param>
+        /// <param name="name">The name of the parameter.</param>
+        /// <param name="parseError">[out] The error that occurred.</param>
+        /// <returns>The parameter value, or <c>null</c> if an error occurred.</b></returns>
+        protected ArrayExpression GetArrayParameter(InterpreterScope scope, string name, out ExpressionBase parseError)
+        {
+            var parameter = GetParameter(scope, name, out parseError);
+            if (parameter == null)
+                return null;
+
+            var typedParameter = parameter as ArrayExpression;
+            if (typedParameter == null)
+            {
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.Array);
                 return null;
             }
 
@@ -340,11 +369,7 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            var originalParameter = LocateParameter(scope, name);
-            if (originalParameter != null)
-                parameter = originalParameter;
-
-            parseError = new ErrorExpression(name + " is not a memory address", parameter);
+            parseError = InvalidParameter(parameter, scope, name, "memory address");
             return null;
         }
 
@@ -367,11 +392,7 @@ namespace RATools.Parser.Expressions
             var typedParameter = parameter as VariableReferenceExpression;
             if (typedParameter == null)
             {
-                var originalParameter = LocateParameter(scope, name);
-                if (originalParameter != null)
-                    parameter = originalParameter;
-
-                parseError = new ErrorExpression(name + " is not a reference", parameter);
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.VariableReference);
                 return null;
             }
 
@@ -394,7 +415,7 @@ namespace RATools.Parser.Expressions
                 var functionReference = parameter as FunctionReferenceExpression;
                 if (functionReference == null)
                 {
-                    parseError = new ErrorExpression(name + " must be a function reference");
+                    parseError = InvalidParameter(parameter, scope, name, "function reference");
                     return null;
                 }
 
@@ -411,7 +432,7 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Gets the requriement parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
+        /// Gets the requirement parameter from the <paramref name="scope"/> or <see cref="DefaultParameters"/> collections.
         /// </summary>
         /// <param name="scope">The scope.</param>
         /// <param name="name">The name of the parameter.</param>
@@ -451,15 +472,14 @@ namespace RATools.Parser.Expressions
                     }
                 }
 
-                var parameterError = new ErrorExpression(name + " is not a requirement", originalParameter ?? parameter);
+                parseError = InvalidParameter(parameter, scope, name, ExpressionType.Requirement);
 
-                if (invalidClause != null)
+                if (invalidClause != parameter)
                 {
-                    parameterError.InnerError =
-                        new ErrorExpression("Cannot convert " + invalidClause.Type.ToString().ToLower() + " to requirement", invalidClause);
+                    ((ErrorExpression)parseError).InnerError = new ErrorExpression(
+                        String.Format("{0} is not a {1}", invalidClause.Type.ToLowerString(), ExpressionType.Requirement.ToLowerString()),
+                        invalidClause);
                 }
-
-                parseError = parameterError;
                 return null;
             }
 
