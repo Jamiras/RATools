@@ -1,5 +1,6 @@
 ﻿using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using System;
 using System.Diagnostics;
 using System.Text;
 
@@ -323,28 +324,50 @@ namespace RATools.Parser.Expressions
             error = null;
 
             var normalizeComparison = left as IComparisonNormalizeExpression;
-            if (left != null)
+            if (normalizeComparison != null)
             {
                 var result = normalizeComparison.NormalizeComparison(right, Operation, true);
                 var boolResult = result as BooleanConstantExpression;
-                return (boolResult != null) ? boolResult.Value : null;
+                if (boolResult != null)
+                    return boolResult.Value;
+
+                // memory reference (or something similar) that can't be determined at processing time
+                if (!left.IsLiteralConstant)
+                    return null;
             }
 
-            if (left == right)
+            // type doesn't implement IComparisonNormalizeExpression, or comparison didn't collapse to
+            // a boolean expression. if both sides have the same type, do a strict equality comparison
+            if (left.Type == right.Type)
             {
                 switch (Operation)
                 {
                     case ComparisonOperation.Equal:
-                    case ComparisonOperation.GreaterThanOrEqual:
-                    case ComparisonOperation.LessThanOrEqual:
-                        return true;
+                        return (left == right);
+
+                    case ComparisonOperation.NotEqual:
+                        return !(left == right);
 
                     default:
-                        return false;
+                        error = new ErrorExpression(String.Format("Cannot perform relative comparison on {0}", left.Type.ToLowerString()), this);
+                        return null;
                 }
             }
 
-            return null;
+            // different types are always not equal to each other, even if they could be coerced.
+            // allow a direct equality/inequality check, but error if a relative comparison is being attemped.
+            switch (Operation)
+            {
+                case ComparisonOperation.Equal:
+                    return false;
+
+                case ComparisonOperation.NotEqual:
+                    return true;
+
+                default:
+                    error = new ErrorExpression(String.Format("Cannot compare {0} and {1}", left.Type.ToLowerString(), right.Type.ToLowerString()), this);
+                    return null;
+            }
         }
 
         /// <summary>
