@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
+using System;
 using System.Linq;
 
 namespace RATools.Parser.Functions
@@ -167,9 +168,22 @@ namespace RATools.Parser.Functions
                 functionName = "measured";
 
             if (functionName != null)
+            {
                 result = new ErrorExpression(functionName + " not allowed in subclause", comparison);
+            }
             else
+            {
                 result = new ErrorExpression("comparison did not evaluate to a valid comparison", comparison);
+
+                var comparisonExpression = comparison as ComparisonExpression;
+                if (comparisonExpression != null && comparisonExpression.Left.Type != comparisonExpression.Right.Type)
+                {
+                    ((ErrorExpression)result).InnerError =
+                        new ErrorExpression(String.Format("Cannot compare {0} and {1}",
+                            comparisonExpression.Left.Type.ToLowerString(),
+                            comparisonExpression.Right.Type.ToLowerString()), comparison);
+                }
+            }
 
             return false;
         }

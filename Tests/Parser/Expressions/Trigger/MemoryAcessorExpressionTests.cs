@@ -30,8 +30,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(word(dword(0x002345) + 10) + 4660)", "I:0xX002345_I:0x 00000a_0xH001234")]
         [TestCase("byte(4660 + word(dword(0x002345) + 10))", "I:0xX002345_I:0x 00000a_0xH001234")]
         [TestCase("word((dword(0x002345) & 0x1FFFFFF) + 4660)", "I:0xX002345&33554431_0x 001234")]
+        [TestCase("byte(0x001234 + byte(0x2345))", "I:0xH002345_0xH001234")]
+        [TestCase("byte(0x001234 - byte(0x2345))", "I:0xH002345*4294967295_0xH001234")]
         [TestCase("byte(0x001234 + byte(0x2345) * 0x10)", "I:0xH002345*16_0xH001234")]
+        [TestCase("byte(0x001234 - byte(0x2345) * 0x10)", "I:0xH002345*4294967280_0xH001234")]
         [TestCase("byte(0x001234 + (byte(0x2345) - 1) * 0x10)", "I:0xH002345*16_0xH001224")]
+        [TestCase("byte(0x001234 + 0x10 * byte(0x2345))", "I:0xH002345*16_0xH001234")]
         [TestCase("prev(high4(0x001234))", "d0xU001234")]
         [TestCase("prior(bit0(0x001234))", "p0xM001234")]
         public void TestBuildTrigger(string input, string expected)

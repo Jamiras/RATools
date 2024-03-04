@@ -1,5 +1,6 @@
 ﻿using RATools.Parser.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -144,14 +145,31 @@ namespace RATools.Parser.Expressions
                 functionDefinition.Evaluate(functionParametersScope, out result);
             }
 
-            if (result != null && result.Location.Start.Line == 0)
-                CopyLocation(result);
-
             var error = result as ErrorExpression;
             if (error != null)
             {
+                if (error.Location.End.Line == 0)
+                    CopyLocation(error);
+
                 result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
+            }
+
+            if (result != null)
+            {
+                if (!result.IsReadOnly || result.Location.End.Line == 0)
+                {
+                    CopyLocation(result);
+                }
+                else if (!result.Location.RangeEquals(Location))
+                {
+                    var cloneable = result as ICloneableExpression;
+                    if (cloneable != null)
+                    {
+                        result = cloneable.Clone();
+                        CopyLocation(result);
+                    }
+                }
             }
 
             var functionCall = result as FunctionCallExpression;
@@ -201,25 +219,16 @@ namespace RATools.Parser.Expressions
             var variable = value as VariableExpression;
             if (variable != null)
             {
-                value = scope.GetVariable(variable.Name);
+                value = variable.GetValue(scope);
 
-                if (value == null)
-                {
-                    // could not find variable, fallback to VariableExpression.ReplaceVariables generating an error
-                    value = assignment.Value;
-                }
-                else
-                {
-                    // when a parameter is assigned to a variable that is an array or dictionary,
-                    // assume it has already been evaluated and pass it by reference. this is magnitudes
-                    // more performant, and allows the function to modify the data in the container.
-                    if (value.Type == ExpressionType.Dictionary || value.Type == ExpressionType.Array)
-                    {
-                        value = scope.GetVariableReference(variable.Name);
-                        assignment.Value.CopyLocation(value);
-                        return value;
-                    }
-                }
+                var error = value as ErrorExpression;
+                if (error != null)
+                    return new ErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+
+                if (value is VariableReferenceExpression)
+                    return value;
+
+                Debug.Assert(value != null);
             }
 
             if (value.IsConstant)

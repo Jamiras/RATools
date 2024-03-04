@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using Jamiras.Controls;
 using Jamiras.Services;
+using Jamiras.ViewModels;
 using RATools.ViewModels;
 using System;
 using System.ComponentModel;
@@ -44,6 +45,9 @@ namespace RATools.Views
             CoreServices.RegisterServices();
             UIServices.RegisterServices();
 
+            var exceptionDispatcher = ServiceRepository.Instance.FindService<IExceptionDispatcher>();
+            exceptionDispatcher.SetExceptionHandler(UnhandledExceptionHandler);
+
             var dialogService = ServiceRepository.Instance.FindService<IDialogService>();
             dialogService.MainWindow = this;
             dialogService.DefaultWindowTitle = "RA Tools";
@@ -70,6 +74,36 @@ namespace RATools.Views
             DataContext = viewModel;
 
             base.OnInitialized(e);
+        }
+
+        private static void UnhandledExceptionHandler(object sender, DispatchExceptionEventArgs e)
+        {
+            var innerException = e.Exception;
+            while (innerException.InnerException != null)
+                innerException = innerException.InnerException;
+            var stackTrace = innerException.StackTrace;
+
+            try
+            {
+                var logService = ServiceRepository.Instance.FindService<ILogService>();
+                var logger = logService.GetLogger("Jamiras.Core");
+                logger.WriteError(innerException.Message + "\n" + stackTrace);
+            }
+            catch
+            {
+                // ignore exception trying to log exception
+            }
+
+            string title = "RA Tools - ";
+            if (e.IsUnhandled)
+                title += "Unhandled ";
+            title += innerException.GetType().Name;
+
+            string detail = "More detail may be in the log file.";
+            if (e.ShouldTerminate)
+                detail += "\n\nThe application will now terminate.";
+
+            TaskDialogViewModel.ShowErrorMessage(innerException.Message, detail, title);
         }
 
         protected override void OnClosing(CancelEventArgs e)

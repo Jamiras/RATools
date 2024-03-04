@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using System;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -113,6 +114,29 @@ namespace RATools.Parser.Expressions
     {
         public UnknownVariableParseErrorExpression(string message, ExpressionBase expression)
             : base(message, expression)
+        {
+        }
+    }
+
+    internal class ConversionErrorExpression : ErrorExpression
+    {
+        public ConversionErrorExpression(ExpressionBase value, ExpressionType expectedType)
+            : this(value, expectedType.ToLowerString(), value.Location)
+        {
+        }
+
+        public ConversionErrorExpression(ExpressionBase value, string expectedType, TextRange location)
+            : base(String.Format("Cannot convert {0} to {1}", value.Type.ToLowerString(), expectedType), location)
+        {
+        }
+
+        public ConversionErrorExpression(ExpressionBase value, ExpressionType expectedType, TextRange location, string parameterName)
+            : this(value, expectedType.ToLowerString(), location, parameterName)
+        {
+        }
+
+        public ConversionErrorExpression(ExpressionBase value, string expectedType, TextRange location, string parameterName)
+            : base(String.Format("{0}: Cannot convert {1} to {2}", parameterName, value.Type.ToLowerString(), expectedType), location)
         {
         }
     }

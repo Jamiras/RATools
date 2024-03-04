@@ -192,7 +192,7 @@ namespace RATools.Parser.Tests.Functions
         {
             Assert.That(EvaluateError("{0}", new ExpressionBase[] {
                 new ComparisonExpression(new IntegerConstantExpression(1), ComparisonOperation.LessThan, new StringConstantExpression("banana"))
-            }), Is.EqualTo("Cannot convert expression to string"));
+            }), Is.EqualTo("Cannot convert comparison to string"));
         }
     }
 }

@@ -118,9 +118,9 @@ namespace RATools.Parser.Expressions
                 }
 
                 if (funcRefLeft != null)
-                    result = new ErrorExpression(string.Format("Cannot compare function reference and {0}", right.Type), this.Location);
+                    result = new ErrorExpression(string.Format("Cannot compare function reference and {0}", right.Type.ToLowerString()), this.Location);
                 else
-                    result = new ErrorExpression(string.Format("Cannot compare {0} and function reference", left.Type), this.Location);
+                    result = new ErrorExpression(string.Format("Cannot compare {0} and function reference", left.Type.ToLowerString()), this.Location);
                 return false;
             }
 
@@ -349,7 +349,7 @@ namespace RATools.Parser.Expressions
                         return !(left == right);
 
                     default:
-                        error = new ErrorExpression(String.Format("Cannot perform relative comparison on {0}", left.Type), this);
+                        error = new ErrorExpression(String.Format("Cannot perform relative comparison on {0}", left.Type.ToLowerString()), this);
                         return null;
                 }
             }
@@ -365,7 +365,7 @@ namespace RATools.Parser.Expressions
                     return true;
 
                 default:
-                    error = new ErrorExpression(String.Format("Cannot compare {0} and {1}", left.Type, right.Type), this);
+                    error = new ErrorExpression(String.Format("Cannot compare {0} and {1}", left.Type.ToLowerString(), right.Type.ToLowerString()), this);
                     return null;
             }
         }

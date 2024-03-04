@@ -61,7 +61,7 @@ namespace RATools.Parser.Functions
                     break;
             }
 
-            result = new ErrorExpression("accessor did not evaluate to a memory accessor", parameter);
+            result = InvalidParameter(parameter, scope, "accessor", ExpressionType.MemoryAccessor);
             return false;
         }
 

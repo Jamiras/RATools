@@ -76,15 +76,15 @@ namespace RATools.Parser.Tests.Functions
             TriggerExpressionTests.AssertSerialize(clause, expected);
         }
 
-        [TestCase("repeated(5, 6+2)", "integerconstant")] // numeric
-        [TestCase("repeated(5, byte(0x1234))", "memoryaccessor")] // no comparison
+        [TestCase("repeated(5, 6+2)", "integer")] // numeric
+        [TestCase("repeated(5, byte(0x1234))", "memory accessor")] // no comparison
         [TestCase("repeated(5, f)", "variable")] // function reference
         public void TestUnsupportedComparisons(string input, string unsupportedType)
         {
             var scope = TriggerExpressionTests.CreateScope();
             scope.AssignVariable(new VariableExpression("f"), new FunctionReferenceExpression("f2"));
 
-            TriggerExpressionTests.AssertParseError(input, scope, "Cannot convert " + unsupportedType + " to requirement");
+            TriggerExpressionTests.AssertParseError(input, scope, "comparison: Cannot convert " + unsupportedType + " to requirement");
         }
 
         [Test]

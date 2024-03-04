@@ -20,7 +20,7 @@ namespace RATools.Parser.Functions
             var array = arrayExpression.Expression as ArrayExpression;
             if (array == null)
             {
-                result = new ErrorExpression("array did not evaluate to an array", arrayExpression);
+                result = InvalidParameter(arrayExpression.Expression, scope, "array", ExpressionType.Array);
                 return false;
             }
 

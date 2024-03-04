@@ -180,12 +180,12 @@ namespace RATools.Parser.Tests.Expressions
         [TestCase("a <= b", true, null)]  // 1 <= 2
         [TestCase("a <= c", true, null)]  // 1 <= 1
         [TestCase("x != z", true, null)]  // [1] != [1,2]
-        [TestCase("x <  z", null, "Cannot perform relative comparison on Array")] // [1] < [1,2]
-        [TestCase("x >  z", null, "Cannot perform relative comparison on Array")] // [1] > [1,2]
-        [TestCase("x <= z", null, "Cannot perform relative comparison on Array")] // [1] <= [1,2]
-        [TestCase("x >= z", null, "Cannot perform relative comparison on Array")] // [1] >= [1,2]
-        [TestCase("a <= d", null, "Cannot compare IntegerConstant and StringConstant")] // 1 <= "1"
-        [TestCase("a <= x", null, "Cannot compare IntegerConstant and Array")]  // 1 <= [1]
+        [TestCase("x <  z", null, "Cannot perform relative comparison on array")] // [1] < [1,2]
+        [TestCase("x >  z", null, "Cannot perform relative comparison on array")] // [1] > [1,2]
+        [TestCase("x <= z", null, "Cannot perform relative comparison on array")] // [1] <= [1,2]
+        [TestCase("x >= z", null, "Cannot perform relative comparison on array")] // [1] >= [1,2]
+        [TestCase("a <= d", null, "Cannot compare integer and string")] // 1 <= "1"
+        [TestCase("a <= x", null, "Cannot compare integer and array")]  // 1 <= [1]
         [TestCase("a == g", null, "Unknown variable: g")]
         [TestCase("g == a", null, "Unknown variable: g")]
         public void TestIsTrueVariables(string input, bool? expected, string expectedError)
@@ -276,21 +276,21 @@ namespace RATools.Parser.Tests.Expressions
             var expr5 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr5.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and integer"));
 
             // invalid indirect comparison
             tokenizer = Tokenizer.CreateTokenizer("c == 1");
             var expr6 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr6.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and IntegerConstant"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare function reference and integer"));
 
             // invalid direct comparison reversed
             tokenizer = Tokenizer.CreateTokenizer("b() == a");
             var expr7 = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
             Assert.That(expr7.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare IntegerConstant and function reference"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare integer and function reference"));
         }
     }
 }

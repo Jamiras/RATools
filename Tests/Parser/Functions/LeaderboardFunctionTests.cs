@@ -72,11 +72,38 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        public void TestFormat()
+        [TestCase("VALUE", ValueFormat.Value)]
+        [TestCase("SECS", ValueFormat.TimeSecs)]
+        [TestCase("TIMESECS", ValueFormat.TimeSecs)]
+        [TestCase("FRAMES", ValueFormat.TimeFrames)]
+        [TestCase("TIME", ValueFormat.TimeFrames)]
+        [TestCase("POINTS", ValueFormat.Score)]
+        [TestCase("SCORE", ValueFormat.Score)]
+        [TestCase("CENTISECS", ValueFormat.TimeCentisecs)]
+        [TestCase("MILLISECS", ValueFormat.TimeCentisecs)]
+        [TestCase("MINUTES", ValueFormat.TimeMinutes)]
+        [TestCase("SECS_AS_MINS", ValueFormat.TimeSecsAsMins)]
+        [TestCase("SECSASMINS", ValueFormat.TimeSecsAsMins)]
+        [TestCase("OTHER", ValueFormat.Other)]
+        [TestCase("THOUSANDS", ValueFormat.Thousands)]
+        [TestCase("HUNDREDS", ValueFormat.Hundreds)]
+        [TestCase("TENS", ValueFormat.Tens)]
+        [TestCase("FIXED1", ValueFormat.Fixed1)]
+        [TestCase("FIXED2", ValueFormat.Fixed2)]
+        [TestCase("FIXED3", ValueFormat.Fixed3)]
+        [TestCase("FLOAT1", ValueFormat.Float1)]
+        [TestCase("FLOAT2", ValueFormat.Float2)]
+        [TestCase("FLOAT3", ValueFormat.Float3)]
+        [TestCase("FLOAT4", ValueFormat.Float4)]
+        [TestCase("FLOAT5", ValueFormat.Float5)]
+        [TestCase("FLOAT6", ValueFormat.Float6)]
+        [TestCase("Frames", ValueFormat.TimeFrames)] // value is case insensitive
+        [TestCase("frames", ValueFormat.TimeFrames)] // value is case insensitive
+        public void TestFormat(string format, ValueFormat expected)
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
-                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), \"secs\")");
-            Assert.That(leaderboard.Format, Is.EqualTo(ValueFormat.TimeSecs));
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), \"" + format + "\")");
+            Assert.That(leaderboard.Format, Is.EqualTo(expected));
         }
 
         [Test]

@@ -339,7 +339,7 @@ namespace RATools.Tests.Regression
             {
                 File.WriteAllText(outputFileName, outputFileContents);
 
-                RegressionTests.AssertContents(expectedFileContents, outputFileContents);
+                RegressionTests.AssertContents(outputFileContents, expectedFileContents);
             }
 
             // file matched, delete temporary file
