@@ -68,23 +68,47 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            ExpressionBase value = scope.GetVariable(Name);
-            if (value == null)
+            ExpressionBase value = GetValue(scope);
+            if (value == null || value is ErrorExpression)
             {
-                var func = scope.GetFunction(Name);
-                if (func != null)
-                {
-                    // special wrapper for returning a function as a variable
-                    result = new FunctionReferenceExpression(Name);
-                    CopyLocation(result);
-                    return true;
-                }
-
-                result = new UnknownVariableParseErrorExpression("Unknown variable: " + Name, this);
+                result = value;
                 return false;
             }
 
             return value.ReplaceVariables(scope, out result);
+        }
+
+        /// <summary>
+        /// Gets the un-evaluated value of the variable.
+        /// </summary>
+        public virtual ExpressionBase GetValue(InterpreterScope scope)
+        {
+            ExpressionBase value = scope.GetVariable(Name);
+            if (value != null)
+            {
+                // when a parameter is assigned to a variable that is an array or dictionary,
+                // assume it has already been evaluated and pass it by reference. this is magnitudes
+                // more performant, and allows the function to modify the data in the container.
+                if (value.Type == ExpressionType.Dictionary || value.Type == ExpressionType.Array)
+                {
+                    var reference = scope.GetVariableReference(Name);
+                    CopyLocation(reference);
+                    return reference;
+                }
+
+                return value;
+            }
+
+            var func = scope.GetFunction(Name);
+            if (func != null)
+            {
+                // special wrapper for returning a function as a variable
+                var result = new FunctionReferenceExpression(Name);
+                CopyLocation(result);
+                return result;
+            }
+
+            return new UnknownVariableParseErrorExpression("Unknown variable: " + Name, this);
         }
 
         /// <summary>

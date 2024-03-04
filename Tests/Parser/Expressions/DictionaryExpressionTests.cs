@@ -1,10 +1,13 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
+using RATools.Parser.Tests.Expressions.Trigger;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Windows.Input;
 
 namespace RATools.Parser.Tests.Expressions
 {
@@ -349,6 +352,34 @@ namespace RATools.Parser.Tests.Expressions
             ((INestedExpressions)expr).GetModifications(modifications);
 
             Assert.That(modifications.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestAddNestedEntry()
+        {
+            var dict = new DictionaryExpression();
+            var subdict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(1);
+            dict.Add(key, subdict);
+
+            var scope = new InterpreterScope();
+            scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
+
+            var assignment = ExpressionTests.Parse<AssignmentExpression>("dict[1][2] = 3");
+            Assert.That(assignment.Evaluate(scope), Is.Null);
+
+            Assert.That(subdict.Entries.Count, Is.EqualTo(1));
+            var entry = subdict.Entries.First();
+            Assert.That(entry.Key, Is.EqualTo(new IntegerConstantExpression(2)));
+            Assert.That(entry.Value, Is.EqualTo(new IntegerConstantExpression(3)));
+
+            assignment = ExpressionTests.Parse<AssignmentExpression>("dict[1][2] = 4");
+            Assert.That(assignment.Evaluate(scope), Is.Null);
+
+            Assert.That(subdict.Entries.Count, Is.EqualTo(1));
+            entry = subdict.Entries.First();
+            Assert.That(entry.Key, Is.EqualTo(new IntegerConstantExpression(2)));
+            Assert.That(entry.Value, Is.EqualTo(new IntegerConstantExpression(4)));
         }
     }
 }

@@ -83,8 +83,19 @@ namespace RATools.Parser.Expressions
             }
             else
             {
-                if (!Value.ReplaceVariables(assignmentScope, out result))
-                    return (ErrorExpression)result;
+                var variable = Value as VariableExpression;
+                if (variable != null)
+                {
+                    result = variable.GetValue(assignmentScope);
+                    var error = result as ErrorExpression;
+                    if (error != null)
+                        return error;
+                }
+                else
+                {
+                    if (!Value.ReplaceVariables(assignmentScope, out result))
+                        return (ErrorExpression)result;
+                }
             }
 
             return scope.AssignVariable(Variable, result);

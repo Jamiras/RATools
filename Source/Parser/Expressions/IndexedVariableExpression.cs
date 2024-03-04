@@ -37,57 +37,43 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Replaces the variables in the expression with values from <paramref name="scope" />.
+        /// Gets the un-evaluated value at the referenced index.
         /// </summary>
-        /// <param name="scope">The scope object containing variable values.</param>
-        /// <param name="result">[out] The new expression containing the replaced variables.</param>
-        /// <returns>
-        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
-        /// </returns>
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        public override ExpressionBase GetValue(InterpreterScope scope)
         {
-            ExpressionBase container, index;
+            StringBuilder builder;
+            ExpressionBase container, index, result;
+
             GetContainerIndex(scope, out container, out index);
 
             switch (container.Type)
             {
                 case ExpressionType.Dictionary:
                     result = ((DictionaryExpression)container).GetEntry(index);
-                    if (result == null)
-                    {
-                        var builder = new StringBuilder();
-                        builder.Append("No entry in dictionary for key: ");
-                        index.AppendString(builder);
-                        result = new ErrorExpression(builder.ToString(), Index);
-                        return false;
-                    }
-                    break;
+                    if (result != null)
+                        return result;
+
+                    builder = new StringBuilder();
+                    builder.Append("No entry in dictionary for key: ");
+                    index.AppendString(builder);
+                    return new ErrorExpression(builder.ToString(), Index);
 
                 case ExpressionType.Array:
-                    result = ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
-                    break;
+                    // ASSERT: index was validated in GetContainerIndex
+                    return ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
 
                 case ExpressionType.Error:
-                    result = container;
-                    return false;
+                    return container;
 
                 default:
-                    {
-                        var builder = new StringBuilder();
-                        builder.Append("Cannot index: ");
-                        Variable.AppendString(builder);
-                        builder.Append(" (");
-                        builder.Append(container.Type);
-                        builder.Append(')');
-                        result = new ErrorExpression(builder.ToString(), Variable);
-                    }
-                    return false;
+                    builder = new StringBuilder();
+                    builder.Append("Cannot index: ");
+                    Variable.AppendString(builder);
+                    builder.Append(" (");
+                    builder.Append(container.Type);
+                    builder.Append(')');
+                    return new ErrorExpression(builder.ToString(), Variable);
             }
-
-            if (result == null)
-                return false;
-
-            return result.ReplaceVariables(scope, out result);
         }
 
         public ErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
@@ -102,6 +88,7 @@ namespace RATools.Parser.Expressions
                     break;
 
                 case ExpressionType.Array:
+                    // ASSERT: index was validated in GetContainerIndex
                     ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value] = newValue;
                     break;
 
@@ -138,19 +125,9 @@ namespace RATools.Parser.Expressions
                 return;
             }
 
-            var indexed = Variable as IndexedVariableExpression;
-            if (indexed != null)
-            {
-                indexed.ReplaceVariables(scope, out container);
+            container = Variable.GetValue(scope);
+            if (container is ErrorExpression)
                 return;
-            }
-
-            container = scope.GetVariable(Variable.Name);
-            if (container == null)
-            {
-                container = new UnknownVariableParseErrorExpression("Unknown variable: " + Variable.Name, Variable);
-                return;
-            }
 
             var variableReference = container as VariableReferenceExpression;
             if (variableReference != null)
