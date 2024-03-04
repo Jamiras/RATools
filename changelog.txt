@@ -1,3 +1,24 @@
+v1.13.0 - 4 Mar 2024
+* add `float_be` function
+* add `type` parameter to `achievement` function
+* add `transform` parameter to `ascii_string_equals` and `unicode_string_equals` to support prev/prior logic
+* add `rascript-cli.exe` for command line processing of scripts
+* add leaderboard/rich presence value formats: `TENS`,`HUNDREDS`,`THOUSANDS`,`FIXED1`,`FIXED2`,`FIXED3`
+* support for `trigger_when(measured(...))` via alt groups
+* allow `max_of()` to be called with an array of expressions
+* improved error messages for invalid function parameters
+* improved error message when trying to use a complex object as a dictionary key
+* fix assigning values to nested dictionaries
+* fix anonymous function error using boolean directly in if statement
+* fix "Input string was not in the correct format" on machines with locales using comma as a decimal separator
+* fix find at end of file not wrapping to start of file
+* fix mutually exclusive alts being collapsed into an `always_true()` clause
+* fix inverted bits being collapsed into a bitcount
+* fix `never(always_true())` being discarded when guarded by an `unless()`
+* fix pointer offset calculation when subtracting a memory reference
+* fix exception comparing dictionary to value
+* fix exception processing code note containing both "bit" and "byte" substrings
+
 v1.12.2 - 7 Oct 2023
 * ensure `tally` with `deduct` has at least one unbounded condition for total hit target
 * fix achievement containing only a modification to an AddSource constant not appearing modified
