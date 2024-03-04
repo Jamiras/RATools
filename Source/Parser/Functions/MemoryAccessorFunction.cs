@@ -62,9 +62,12 @@ namespace RATools.Parser.Functions
             var memoryValue = address as MemoryValueExpression;
             if (memoryValue != null)
             {
-                if (memoryValue.MemoryAccessors.Count() == 1)
+                if (memoryValue.MemoryAccessors.Count() > 1)
+                    return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
+
+                var result = CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First());
+                if (result != null)
                 {
-                    var result = CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First());
                     result.Field = new Field
                     {
                         Type = FieldType.MemoryAddress,
@@ -73,21 +76,22 @@ namespace RATools.Parser.Functions
                     };
                     return result;
                 }
-
-                return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
             }
 
             var modifiedMemoryAccessor = address as ModifiedMemoryAccessorExpression;
             if (modifiedMemoryAccessor != null)
             {
                 var result = CreateMemoryAccessorExpression(modifiedMemoryAccessor);
-                result.Field = new Field
+                if (result != null)
                 {
-                    Type = FieldType.MemoryAddress,
-                    Size = Size,
-                    Value = 0 // no offset
-                };
-                return result;
+                    result.Field = new Field
+                    {
+                        Type = FieldType.MemoryAddress,
+                        Size = Size,
+                        Value = 0 // no offset
+                    };
+                    return result;
+                }
             }
 
             return new ConversionErrorExpression(address, "memory address", address.Location);
@@ -95,6 +99,32 @@ namespace RATools.Parser.Functions
 
         private static MemoryAccessorExpression CreateMemoryAccessorExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
         {
+            if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
+            {
+                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.Multiply ||
+                    modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.Divide)
+                {
+                    Field negativeValue = FieldFactory.NegateValue(modifiedMemoryAccessor.Modifier);
+                    if (negativeValue.Type != FieldType.None)
+                    {
+                        var negativeMemoryAccessor = modifiedMemoryAccessor.Clone();
+                        negativeMemoryAccessor.Modifier = negativeValue;
+                        negativeMemoryAccessor.CombiningOperator = RequirementType.AddSource;
+                        return CreateMemoryAccessorExpression(negativeMemoryAccessor);
+                    }
+                }
+                else if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
+                {
+                    var multipliedMemoryAccessor = modifiedMemoryAccessor.Clone();
+                    multipliedMemoryAccessor.Modifier = FieldFactory.CreateField(new IntegerConstantExpression(-1));
+                    multipliedMemoryAccessor.ModifyingOperator = RequirementOperator.Multiply;
+                    multipliedMemoryAccessor.CombiningOperator = RequirementType.AddSource;
+                    return CreateMemoryAccessorExpression(multipliedMemoryAccessor);
+                }
+
+                return null;
+            }
+
             var result = new MemoryAccessorExpression();
 
             var requirements = new List<Requirement>();
