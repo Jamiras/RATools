@@ -78,6 +78,8 @@ namespace RATools.ViewModels
         internal string RACacheDirectory { get; private set; }
         internal Dictionary<int, string> Notes { get; private set; }
 
+        public string LocalFilePath { get { return _localAssets.Filename; } }
+
         public ScriptViewModel Script { get; protected set; }
 
         public CommandBase<int> GoToSourceCommand { get; private set; }
