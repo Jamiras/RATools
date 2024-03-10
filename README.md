@@ -48,18 +48,19 @@ displayParameters = [
 
 rich_presence_display(stringToFormat, displayParameters)
 ```
-> Output in rich presence: `Stage 1: Downtown | Heading to 3: Garden | Time left: 02:21`
+> Output in rich presence: `Stage 1: Downtown | Heading to 3: Garden`
 - [`rich_presence_conditional_display(condition, format_string, parameters...)`](https://github.com/Jamiras/RATools/wiki/Rich-Presence-Functions#rich_presence_conditional_displaycondition-format_string-parameters "rich_presence_conditional_display function RATools documentation")
 ```
-stringToFormat = "Area {0}: {1} | Heading to area {2}: {3} | Time left: {4}"
-function isTravelling() => word(0xACF6) == 0x3
+stringToFormat = "Area {0}: {1} | Heading to area {2}: {3} | Fuel left: {4}"
+function isTravelling() => bit0(0xACF6) == 1
 displayParameters = [
     rich_presence_value("currentAreaNr", getCurrentStageNumber()),
     rich_presence_lookup("currentAreaName", getCurrentStageNumber(), stage_names),
     rich_presence_value("nextAreaNr", getNextAreaNumber()),
     rich_presence_lookup("nextAreaName", getNextAreaNumber(), stage_names),
-    rich_presence_macro("Seconds", getTimeLeft()),
+    rich_presence_macro("Fixed2", getCurrentFuel()),
 ]
 
 rich_presence_conditional_display(isTravelling(), stringToFormat, displayParameters)
 ```
+> Output in rich presence: `Stage 1: Downtown | Heading to 3: Garden | Fuel left: 02:21`
