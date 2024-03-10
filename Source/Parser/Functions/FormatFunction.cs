@@ -30,7 +30,7 @@ namespace RATools.Parser.Functions
             if (stringExpression == null)
                 return false;
 
-            var varargs = GetVarArgsParameter(scope, out result, stringExpression);
+            var varargs = GetVarArgsParameter(scope, out result, stringExpression, true);
             if (varargs == null)
                 return false;
 
@@ -66,7 +66,7 @@ namespace RATools.Parser.Functions
 
                 Int32 parameterIndex;
                 if (!Int32.TryParse(index.ToString(), out parameterIndex)
-                    || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
+                   || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
                 {
                     result = new ErrorExpression("Invalid parameter index: " + index.ToString(),
                                                       stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
