@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 
 namespace RATools.Parser.Internal.Tests
@@ -465,7 +466,7 @@ namespace RATools.Parser.Internal.Tests
                 "trigger_when(byte(0x2345) == 2 && byte(0x2346) == 3 && (byte(0x2347) == 0 || byte(0x2347) == 1)) && " +
                 "never(byte(0x3456) == 2)");
             achievement.Optimize();
-            Assert.That(achievement.SerializeRequirements(), 
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()), 
                 Is.EqualTo("0xH001234=1.1._T:0xH002345=2_T:0xH002346=3_R:0xH003456=2ST:0xH002347=0ST:0xH002347=1"));
         }
 
@@ -475,7 +476,7 @@ namespace RATools.Parser.Internal.Tests
             var achievement = CreateAchievement("(byte(0x1234) == 1 || byte(0x1234) == 2) && " +
                 "never(byte(0x2345) == 3) && once(byte(0x3456) == 4)");
             achievement.Optimize();
-            Assert.That(achievement.SerializeRequirements(),
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("R:0xH002345=3_0xH003456=4.1.S0xH001234=1S0xH001234=2"));
         }
 
@@ -487,7 +488,7 @@ namespace RATools.Parser.Internal.Tests
                 " never(byte(0x2345) == 2) && unless(byte(0x3456) == 3))) && " +
                 "(byte(0x4567) == 1 || byte(0x004567) == 2)");
             achievement.Optimize();
-            Assert.That(achievement.SerializeRequirements(),
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("0xH001234=1.1.S0xH004567=1S0xH004567=2SR:0xH002345=2_P:0xH003456=3_0=1"));
         }
 
@@ -496,7 +497,7 @@ namespace RATools.Parser.Internal.Tests
         {
             var achievement = CreateAchievement("byte(0x1234) == 1 && trigger_when(measured(repeated(3, byte(0x2345) == 6)))");
             achievement.Optimize();
-            Assert.That(achievement.SerializeRequirements(),
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("0xH001234=1SM:0xH002345=6.3.ST:0=1"));
         }
     }

@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using RATools.Parser.Tests.Expressions;
@@ -31,7 +32,7 @@ namespace RATools.Parser.Tests.Internal
             ExpressionBase processed;
             Assert.That(expression.ReplaceVariables(scope, out processed), Is.True);
 
-            var result = TriggerBuilderContext.GetConditionString(processed, scope, out error);
+            var result = TriggerBuilderContext.GetConditionString(processed, scope, new SerializationContext(), out error);
             if (error != null)
             {
                 ExpressionTests.AssertError(error, expected);

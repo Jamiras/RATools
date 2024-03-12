@@ -27,7 +27,7 @@ namespace RATools.Tests.ViewModels
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
 
             var requirement = builder.ToAchievement().CoreRequirements.First();
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
             var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo(expected));
@@ -46,7 +46,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("0xH4567", "This note\nis multiple\nlines.")]
         public void TestNotes(string serialized, string expected)
         {
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
             notes[0x1234] = "Addr1";
             notes[0x2345] = "Addr2";
             notes[0x3456] = "This note is long enough that it will need to be wrapped.";
@@ -65,7 +65,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("0xH2345=7", "Addr2")]
         public void TestNoteShortening(string serialized, string expected)
         {
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
             notes[0x1234] = "Addr1";
             notes[0x2345] = "Addr2\r\n0=True\r\n1=False";
 

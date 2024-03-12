@@ -91,6 +91,11 @@ namespace RATools.Parser
             _leaderboards[leaderboard] = 0;
         }
 
+        /// <summary>
+        /// Gets the serialization context of the interpreted script.
+        /// </summary>
+        public SerializationContext SerializationContext { get; private set; }
+
         public static ExpressionGroupCollection CreateExpressionGroupCollection()
         {
             return new AssetExpressionGroupCollection() { Scope = CreateScope() };
@@ -272,6 +277,8 @@ namespace RATools.Parser
                 scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
             }
 
+            SerializationContext = scriptContext.SerializationContext;
+
             expressionGroups.ResetErrors();
 
             bool result = true;
@@ -343,23 +350,21 @@ namespace RATools.Parser
                 }
             }
 
-            double minimumVersion = 0.30;
+            SoftwareVersion minimumVersion = Data.Version.Uninitialized;
             foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
-                if (achievementMinimumVersion > minimumVersion)
-                    minimumVersion = achievementMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(achievementMinimumVersion);
             }
 
             foreach (var leaderboard in _leaderboards.Keys)
             {
                 var leaderboardMinimumVersion = LeaderboardBuilder.GetMinimumVersion(leaderboard);
-                if (leaderboardMinimumVersion > minimumVersion)
-                    minimumVersion = leaderboardMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(leaderboardMinimumVersion);
             }
 
-            _richPresence.DisableLookupCollapsing = (minimumVersion < 0.79);
-            _richPresence.DisableBuiltInMacros = (minimumVersion < 1.0);
+            _richPresence.DisableLookupCollapsing = (minimumVersion < Data.Version._0_79);
+            _richPresence.DisableBuiltInMacros = (minimumVersion < Data.Version._1_0);
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
             {

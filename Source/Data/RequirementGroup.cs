@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Jamiras.Components;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -21,39 +22,35 @@ namespace RATools.Data
 
         public override string ToString()
         {
-            return Serialize(0.0, 4);
+            return Serialize(new SerializationContext { AddressWidth = 4 });
         }
 
         /// <summary>
         /// Creates a serialized string from the requirement group.
         /// </summary>
-        /// <param name="minimumVersion">DLL version to target.</param>
-        /// <param name="addressWidth">Number of hex characters to use for addresses.</param>
         /// <returns>Serialized requirement group string.</returns>
-        public string Serialize(double minimumVersion = 0.0, int addressWidth = 6)
+        public string Serialize(SerializationContext serializationContext)
         {
             var builder = new StringBuilder();
-            Serialize(builder, minimumVersion, addressWidth);
+            Serialize(builder, serializationContext);
             return builder.ToString();
         }
 
         /// <summary>
         /// Creates a serialized string from the requirement group.
         /// </summary>
-        /// <param name="minimumVersion">DLL version to target.</param>
-        /// <param name="addressWidth">Number of hex characters to use for addresses.</param>
         /// <returns>Serialized requirement group string.</returns>
-        public void Serialize(StringBuilder builder, double minimumVersion = 0.0, int addressWidth = 6)
+        public void Serialize(StringBuilder builder, SerializationContext serializationContext)
         {
-            if (minimumVersion == 0.0)
-                minimumVersion = MinimumVersion();
+            if (serializationContext.MinimumVersion == Version.Uninitialized)
+                serializationContext = serializationContext.WithVersion(MinimumVersion());
 
             var enumerator = Requirements.GetEnumerator();
             if (enumerator.MoveNext())
             {
                 do
                 {
-                    enumerator.Current.Serialize(builder, minimumVersion, addressWidth);
+                    enumerator.Current.Serialize(builder, serializationContext);
 
                     if (!enumerator.MoveNext())
                         break;
@@ -63,24 +60,13 @@ namespace RATools.Data
             }
         }
 
-        public double MinimumVersion()
+        public SoftwareVersion MinimumVersion()
         {
-            double minimumVersion = 0.0;
+            var minimumVersion = Version.MinimumVersion;
             foreach (var requirement in Requirements)
-                minimumVersion = Math.Max(minimumVersion, requirement.MinimumVersion());
+                minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
 
             return minimumVersion;
-        }
-
-        public bool IsMinimumVersionRequiredAtLeast(double minimumVersion)
-        {
-            foreach (var requirement in Requirements)
-            {
-                if (requirement.MinimumVersion() >= minimumVersion)
-                    return true;
-            }
-
-            return false;
         }
     }
 }

@@ -61,10 +61,10 @@ namespace RATools.Parser
         /// <summary>
         /// Creates a serialized requirements string from the core and alt groups.
         /// </summary>
-        public string SerializeRequirements()
+        public string SerializeRequirements(SerializationContext serializationContext)
         {
             var value = new Value(_values);
-            return value.Serialize();
+            return value.Serialize(serializationContext);
         }
 
 

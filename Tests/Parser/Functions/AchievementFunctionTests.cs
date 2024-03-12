@@ -71,7 +71,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(achievement.Points, Is.EqualTo(5));
 
             var builder = new AchievementBuilder(achievement);
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo("0xH001234=1"));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo("0xH001234=1"));
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace RATools.Parser.Tests.Functions
                 expected.AppendFormat("S0x {0:x6}=10_d0x {0:x6}<10", i + 0x1000);
 
             var builder = new AchievementBuilder(achievement);
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected.ToString()));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected.ToString()));
         }
 
         [Test]
@@ -106,7 +106,7 @@ namespace RATools.Parser.Tests.Functions
                 expected.AppendFormat("S0x {0:x6}=10_d0x {0:x6}<10", i + 0x1000);
 
             var builder = new AchievementBuilder(achievement);
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected.ToString()));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected.ToString()));
         }
 
         [Test]

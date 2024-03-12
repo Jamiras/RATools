@@ -47,7 +47,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             var builder = new AchievementBuilder(achievement);
-            return builder.SerializeRequirements();
+            return builder.SerializeRequirements(new SerializationContext());
         }
 
         private static string GetInnerErrorMessage(AchievementScriptInterpreter parser)

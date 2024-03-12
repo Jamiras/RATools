@@ -94,10 +94,10 @@ namespace RATools.Parser
         /// <summary>
         /// Creates a serialized requirements string from the core and alt groups.
         /// </summary>
-        public string SerializeRequirements()
+        public string SerializeRequirements(SerializationContext serializationContext)
         {
             var trigger = new Trigger(_core, _alts);
-            return trigger.Serialize();
+            return trigger.Serialize(serializationContext);
         }
 
         internal string RequirementsDebugString

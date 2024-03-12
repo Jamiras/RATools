@@ -34,7 +34,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestInitialize()
         {
-            var achievements = Initialize("0.099\nTitle\n0:0xH0000c5=0_0xH0000b9=1:I Need Your Help:Talk to the ghost to begin your quest: : : :Jamiras:5:0:0:0:0:53352\n", null);
+            var achievements = Initialize("0.99\nTitle\n0:0xH0000c5=0_0xH0000b9=1:I Need Your Help:Talk to the ghost to begin your quest: : : :Jamiras:5:0:0:0:0:53352\n", null);
             Assert.That(achievements.Title, Is.EqualTo("Title"));
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(1));
 
@@ -52,7 +52,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestReplace()
         {
-            var achievements = Initialize("0.099\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
+            var achievements = Initialize("0.99\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = achievements.Achievements.First();
@@ -73,7 +73,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestReplaceAppend()
         {
-            var achievements = Initialize("0.099\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
+            var achievements = Initialize("0.99\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = achievements.Achievements.First();
@@ -95,7 +95,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestReplaceRemove()
         {
-            var achievements = Initialize("0.099\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
+            var achievements = Initialize("0.99\nTitle\n0:0xH001234=0:A:B: : : :U:5:0:0:D:R:B\n", null);
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = achievements.Achievements.First();
@@ -110,7 +110,7 @@ namespace RATools.Parser.Tests
         public void TestCommit()
         {
             var memoryStream = new MemoryStream();
-            var achievements = Initialize("0.099\nTitle\n", memoryStream);
+            var achievements = Initialize("0.99\nTitle\n", memoryStream);
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
 
             var builder = new AchievementBuilder();
@@ -126,10 +126,10 @@ namespace RATools.Parser.Tests
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test", null, null);
+            achievements.Commit("Test", null, new SerializationContext(), null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.099\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.99\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -154,10 +154,10 @@ namespace RATools.Parser.Tests
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test", null, null);
+            achievements.Commit("Test", null, new SerializationContext(),null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.030\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.30\r\nFromScript\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -182,10 +182,10 @@ namespace RATools.Parser.Tests
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test", null, null);
+            achievements.Commit("Test", null, new SerializationContext(),null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("0.030\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("0.30\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
         }
 
         [Test]
@@ -211,7 +211,7 @@ namespace RATools.Parser.Tests
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test", null, null);
+            achievements.Commit("Test", null, new SerializationContext(),null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
             Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
@@ -242,7 +242,7 @@ namespace RATools.Parser.Tests
 
                 achievements.Replace(null, achievement);
 
-                achievements.Commit("Test", null, null);
+                achievements.Commit("Test", null, new SerializationContext(),null);
 
                 var output = Encoding.UTF8.GetString(memoryStream.ToArray());
                 Assert.That(output, Is.EqualTo("0.79\r\nTitle\r\n0:\"T:0xH001234=1\":\"T\":\"D\": : ::Test:1:0:0:0:0:\r\n"));
@@ -253,7 +253,7 @@ namespace RATools.Parser.Tests
         public void TestCommitMissable()
         {
             var memoryStream = new MemoryStream();
-            var achievements = Initialize("0.099\nTitle\n", memoryStream);
+            var achievements = Initialize("0.99\nTitle\n", memoryStream);
             Assert.That(achievements.Achievements.Count(), Is.EqualTo(0));
 
             var builder = new AchievementBuilder();
@@ -271,10 +271,10 @@ namespace RATools.Parser.Tests
 
             achievements.Replace(null, achievement);
 
-            achievements.Commit("Test", null, null);
+            achievements.Commit("Test", null, new SerializationContext(),null);
 
             var output = Encoding.UTF8.GetString(memoryStream.ToArray());
-            Assert.That(output, Is.EqualTo("1.30\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : :missable:Test:1:0:0:0:0:\r\n"));
+            Assert.That(output, Is.EqualTo("1.3\r\nTitle\r\n0:\"0xH001234=1\":\"T\":\"D\": : :missable:Test:1:0:0:0:0:\r\n"));
         }
     }
 }

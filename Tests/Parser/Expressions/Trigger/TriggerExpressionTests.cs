@@ -107,7 +107,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             foreach (var requirement in requirements)
                 builder.CoreRequirements.Add(requirement);
 
-            return builder.SerializeRequirements();
+            return builder.SerializeRequirements(new SerializationContext());
         }
 
         public static void AssertSerialize(ITriggerExpression expression, string expected)
@@ -127,7 +127,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             foreach (var requirement in requirements)
                 builder.CoreRequirements.Add(requirement);
 
-            return builder.SerializeRequirements();
+            return builder.SerializeRequirements(new SerializationContext());
         }
 
         public static void AssertSerializeValue(ITriggerExpression expression, string expected)
@@ -142,7 +142,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var result = expression.BuildTrigger(context);
             Assert.That(result, Is.Null);
 
-            return context.Achievement.SerializeRequirements();
+            return context.Achievement.SerializeRequirements(new SerializationContext());
         }
 
         public static void AssertSerializeAchievement(ITriggerExpression expression, string expected)

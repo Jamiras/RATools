@@ -555,7 +555,7 @@ namespace RATools.ViewModels
             }
 
             string notes;
-            if (!_game.Notes.TryGetValue((int)field.Value, out notes))
+            if (!_game.Notes.TryGetValue(field.Value, out notes))
                 return null;
 
             var item = new MemoryItem(field.Value, field.Size, notes.Replace("\r\n", " ").Replace('\n', ' '));
@@ -828,7 +828,7 @@ namespace RATools.ViewModels
                 if (functionNameStyle != FunctionNameStyle.None)
                 {
                     string note;
-                    if (_game.Notes.TryGetValue((int)memoryItem.Address, out note))
+                    if (_game.Notes.TryGetValue(memoryItem.Address, out note))
                         memoryItem.UpdateFunctionName(functionNameStyle, note);
                 }
 
@@ -851,7 +851,7 @@ namespace RATools.ViewModels
                 var memoryItem = (MemoryItem)row.Model;
 
                 string note;
-                if (_game.Notes.TryGetValue((int)memoryItem.Address, out note))
+                if (_game.Notes.TryGetValue(memoryItem.Address, out note))
                     memoryItem.UpdateFunctionName(functionNameStyle, note);
             }
         }
@@ -1130,7 +1130,7 @@ namespace RATools.ViewModels
                 string notes = null;
                 if (dumpNotes != NoteDump.None)
                 {
-                    if (_game.Notes.TryGetValue((int)memoryItem.Address, out notes))
+                    if (_game.Notes.TryGetValue(memoryItem.Address, out notes))
                     {
                         if (String.IsNullOrEmpty(memoryItem.FunctionName))
                         {
@@ -1435,7 +1435,7 @@ namespace RATools.ViewModels
         private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, NumberFormat numberFormat)
         {
             int index;
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
 
             foreach (var line in displayMacro.DisplayLines)
             {

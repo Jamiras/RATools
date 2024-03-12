@@ -25,7 +25,7 @@ namespace RATools.Tests.ViewModels
         public void TestDefinitions(string leftSerialized, string rightSerialized, 
             string expectedDefinition, string expectedOtherDefinition, bool expectedModified)
         {
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(leftSerialized));
@@ -45,7 +45,7 @@ namespace RATools.Tests.ViewModels
         [Test]
         public void TestAddedRequirement()
         {
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer("0xH1234=7"));
@@ -61,7 +61,7 @@ namespace RATools.Tests.ViewModels
         [Test]
         public void TestRemovedRequirement()
         {
-            var notes = new Dictionary<int, string>();
+            var notes = new Dictionary<uint, string>();
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer("0xH1234=7"));

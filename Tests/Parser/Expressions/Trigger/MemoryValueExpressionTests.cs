@@ -410,7 +410,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var achievementBuilder = new ScriptInterpreterAchievementBuilder();
             achievementBuilder.PopulateFromExpression(result);
-            var serialized = achievementBuilder.SerializeRequirements();
+            var serialized = achievementBuilder.SerializeRequirements(new SerializationContext());
             Assert.That(serialized, Is.EqualTo(expectedSerialized));
         }
 

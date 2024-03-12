@@ -1,4 +1,5 @@
-﻿using RATools.Data;
+﻿using Jamiras.Components;
+using RATools.Data;
 using System;
 using System.Diagnostics;
 
@@ -82,12 +83,12 @@ namespace RATools.Parser
             };
         }
 
-        public static double GetMinimumVersion(Achievement achievement)
+        public static SoftwareVersion GetMinimumVersion(Achievement achievement)
         {
             var minimumVersion = achievement.Trigger.MinimumVersion();
 
             if (achievement.Type != AchievementType.Standard)
-                minimumVersion = Math.Max(minimumVersion, 1.3);
+                minimumVersion = minimumVersion.OrNewer(Data.Version._1_3);
 
             return minimumVersion;
         }
@@ -95,9 +96,9 @@ namespace RATools.Parser
         /// <summary>
         /// Creates a serialized requirements string from the core and alt groups of a provided <see cref="Achievement"/>.
         /// </summary>
-        public static string SerializeRequirements(Achievement achievement)
+        public static string SerializeRequirements(Achievement achievement, SerializationContext serializationContext)
         {
-            return achievement.Trigger.Serialize();
+            return achievement.Trigger.Serialize(serializationContext);
         }
 
         /// <summary>

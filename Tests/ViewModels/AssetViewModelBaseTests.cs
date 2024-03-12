@@ -42,7 +42,7 @@ namespace RATools.Tests.ViewModels
             {
                 return new TriggerViewModel[]
                 {
-                    new TriggerViewModel("Trigger" + Id, (Achievement)null, NumberFormat.Decimal, new Dictionary<int, string>())
+                    new TriggerViewModel("Trigger" + Id, (Achievement)null, NumberFormat.Decimal, new Dictionary<uint, string>())
                 };
             }
 

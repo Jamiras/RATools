@@ -18,7 +18,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope.</param>
         /// <param name="result">[out] The error if not successful.</param>
         /// <returns>The string if successful, <c>null</c> if not.</returns>
-        public static string GetValueString(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
+        public static string GetValueString(ExpressionBase expression, InterpreterScope scope, SerializationContext serializationContext, out ExpressionBase result)
         {
             var requirements = new List<Requirement>();
             var context = new ValueBuilderContext { Trigger = requirements };
@@ -91,12 +91,12 @@ namespace RATools.Parser.Internal
             });
 
             if (mustBeMeasured)
-                return GetMeasuredValueString(requirements);
+                return GetMeasuredValueString(requirements, serializationContext);
 
-            return GetLegacyValueString(requirements);
+            return GetLegacyValueString(requirements, serializationContext);
         }
 
-        private static string GetLegacyValueString(List<Requirement> requirements)
+        private static string GetLegacyValueString(List<Requirement> requirements, SerializationContext serializationContext)
         {
             // convert all division to multiplication
             foreach (var requirement in requirements.Where(r => r.Operator == RequirementOperator.Divide))
@@ -113,9 +113,12 @@ namespace RATools.Parser.Internal
                 }
             }
 
-            var minVer = 0.0;
+            var minVer = Data.Version.Uninitialized;
             foreach (var requirement in requirements)
-                minVer = Math.Max(minVer, requirement.MinimumVersion());
+                minVer = minVer.OrNewer(requirement.MinimumVersion());
+
+            if (minVer > serializationContext.MinimumVersion)
+                serializationContext = serializationContext.WithVersion(minVer);
 
             var value = new StringBuilder();
             var adjustment = 0;
@@ -136,7 +139,7 @@ namespace RATools.Parser.Internal
                 if (requirement.Operator == RequirementOperator.Multiply)
                     factor *= requirement.Right.Type == FieldType.Float ? requirement.Right.Float : (int)requirement.Right.Value;
 
-                requirement.Left.Serialize(value);
+                requirement.Left.Serialize(value, serializationContext);
                 if (factor != 1.0)
                 {
                     value.Append('*');
@@ -174,7 +177,7 @@ namespace RATools.Parser.Internal
             return value.ToString();
         }
 
-        private static string GetMeasuredValueString(List<Requirement> requirements)
+        private static string GetMeasuredValueString(List<Requirement> requirements, SerializationContext serializationContext)
         {
             MeasuredRequirementExpression.EnsureHasMeasuredRequirement(requirements);
 
@@ -182,7 +185,7 @@ namespace RATools.Parser.Internal
             foreach (var requirement in requirements)
                 achievement.CoreRequirements.Add(requirement);
 
-            return achievement.SerializeRequirements();
+            return achievement.SerializeRequirements(serializationContext);
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Jamiras.Core.Tests;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Data.Tests;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
@@ -70,7 +71,7 @@ namespace RATools.Parser.Tests.Internal
 
             ExpressionBase error;
             InterpreterScope scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            var serialized = ValueBuilderContext.GetValueString(clause, scope, out error);
+            var serialized = ValueBuilderContext.GetValueString(clause, scope, new SerializationContext(), out error);
             Assert.That(serialized, Is.EqualTo(expected));
         }
 
@@ -91,7 +92,7 @@ namespace RATools.Parser.Tests.Internal
             {
                 ExpressionBase error;
                 InterpreterScope scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-                var serialized = ValueBuilderContext.GetValueString(clause, scope, out error);
+                var serialized = ValueBuilderContext.GetValueString(clause, scope, new SerializationContext(), out error);
                 Assert.That(serialized, Is.EqualTo(expected));
             }
         }

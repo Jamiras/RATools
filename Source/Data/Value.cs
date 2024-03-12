@@ -167,22 +167,20 @@ namespace RATools.Data
 
         public override string ToString()
         {
-            return Serialize(0.0, 4);
+            return Serialize(new SerializationContext { AddressWidth = 4 });
         }
 
         /// <summary>
         /// Creates a serialized string from the value.
         /// </summary>
-        /// <param name="minimumVersion">DLL version to target.</param>
-        /// <param name="addressWidth">Number of hex characters to use for addresses.</param>
         /// <returns>Serialized value string.</returns>
-        public string Serialize(double minimumVersion = 0.0, int addressWidth = 6)
+        public string Serialize(SerializationContext serializationContext)
         {
             bool isLegacy = false;
 
-            if (minimumVersion < 0.77) // Measured
+            if (serializationContext.MinimumVersion < Version._0_77) // Measured
             {
-                if (!IsMinimumVersionRequiredAtLeast(0.77))
+                if (!IsMinimumVersionRequiredAtLeast(Version._0_77))
                     isLegacy = true;
             }
 
@@ -194,9 +192,9 @@ namespace RATools.Data
                 do
                 {
                     if (isLegacy)
-                        SerializeLegacyRequirements(enumerator.Current.Requirements, builder, minimumVersion, addressWidth);
+                        SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
                     else
-                        enumerator.Current.Serialize(builder, minimumVersion, addressWidth);
+                        enumerator.Current.Serialize(builder, serializationContext);
 
                     if (!enumerator.MoveNext())
                         break;
@@ -208,7 +206,7 @@ namespace RATools.Data
             return builder.ToString();
         }
 
-        private static void SerializeLegacyRequirements(IEnumerable<Requirement> requirements, StringBuilder builder, double minimumVersion, int addressWidth)
+        private static void SerializeLegacyRequirements(IEnumerable<Requirement> requirements, StringBuilder builder, SerializationContext serializationContext)
         {
             var enumerator = requirements.GetEnumerator();
             if (enumerator.MoveNext())
@@ -217,7 +215,7 @@ namespace RATools.Data
                 {
                     if (enumerator.Current.Left.IsMemoryReference)
                     {
-                        enumerator.Current.Left.Serialize(builder, addressWidth);
+                        enumerator.Current.Left.Serialize(builder, serializationContext);
 
                         double multiplier = 1.0;
                         if (enumerator.Current.Type == RequirementType.SubSource)
@@ -256,17 +254,17 @@ namespace RATools.Data
             }
         }
 
-        public double MinimumVersion()
+        public SoftwareVersion MinimumVersion()
         {
-            double minimumVersion = 0.0;
+            SoftwareVersion minimumVersion = Version.MinimumVersion;
 
             foreach (var value in Values)
-                minimumVersion = Math.Max(minimumVersion, value.MinimumVersion());
+                minimumVersion = minimumVersion.OrNewer(value.MinimumVersion());
 
             return minimumVersion;
         }
 
-        public bool IsMinimumVersionRequiredAtLeast(double minimumVersion)
+        private bool IsMinimumVersionRequiredAtLeast(SoftwareVersion minimumVersion)
         {
             foreach (var value in Values)
             {

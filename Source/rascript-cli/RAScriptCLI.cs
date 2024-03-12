@@ -266,7 +266,7 @@ namespace RATools
                 }
                 localAchievements.Replace(existingLeaderboard, leaderboard);
             }
-            localAchievements.Commit(Author, null, null);
+            localAchievements.Commit(Author, null, interpreter.SerializationContext, null);
 
             if (!_quiet)
             {
@@ -277,12 +277,12 @@ namespace RATools
             if (!String.IsNullOrEmpty(interpreter.RichPresence))
             {
                 string richPresence;
-                var minimumVersion = Double.Parse(localAchievements.Version, System.Globalization.NumberFormatInfo.InvariantInfo);
-                if (minimumVersion < 1.0)
+                var minimumVersion = localAchievements.Version;
+                if (minimumVersion < Data.Version._1_0)
                 {
                     interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
 
-                    if (minimumVersion < 0.79)
+                    if (minimumVersion < Data.Version._0_79)
                         interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
 
                     richPresence = interpreter.RichPresenceBuilder.ToString();

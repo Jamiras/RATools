@@ -512,7 +512,7 @@ namespace RATools.Parser.Internal
         /// <param name="scope">The scope.</param>
         /// <param name="result">[out] The error if not successful.</param>
         /// <returns><c>true</c> if successful, <c>false</c> if not.</returns>
-        public static string GetConditionString(ExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
+        public static string GetConditionString(ExpressionBase expression, InterpreterScope scope, SerializationContext serializationContext, out ExpressionBase result)
         {
             var requirement = expression as RequirementExpressionBase;
             if (requirement == null)
@@ -525,7 +525,7 @@ namespace RATools.Parser.Internal
             if (!ProcessAchievementConditions(achievement, requirement, scope, out result))
                 return null;
 
-            return achievement.SerializeRequirements();
+            return achievement.SerializeRequirements(serializationContext);
         }
     }
 
