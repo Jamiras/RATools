@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using System.Linq;
@@ -68,7 +69,8 @@ namespace RATools.Parser.Tests.Functions
         public void TestMacro(string macro)
         {
             var rp = Evaluate("rich_presence_macro(\"" + macro + "\", byte(0x1234))");
-            Assert.That(rp.ToString(), Is.EqualTo("Display:\r\n@" + macro  +"(0xH001234)\r\n"));
+            var serializationContext = new SerializationContext { MinimumVersion = Version._1_0 };
+            Assert.That(rp.Serialize(serializationContext), Is.EqualTo("Display:\r\n@" + macro  +"(0xH001234)\r\n"));
         }
 
         [Test]

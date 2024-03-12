@@ -248,6 +248,12 @@ namespace RATools.Data
 
             switch (Type)
             {
+                case RequirementType.ResetIf:
+                case RequirementType.PauseIf:
+                    if (HitCount > 0)
+                        minimumVersion = Version._0_73;
+                    break;
+
                 case RequirementType.AndNext:
                     minimumVersion = Version._0_76;
                     break;

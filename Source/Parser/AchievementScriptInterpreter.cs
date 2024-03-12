@@ -277,8 +277,6 @@ namespace RATools.Parser
                 scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
             }
 
-            SerializationContext = scriptContext.SerializationContext;
-
             expressionGroups.ResetErrors();
 
             bool result = true;
@@ -350,7 +348,7 @@ namespace RATools.Parser
                 }
             }
 
-            SoftwareVersion minimumVersion = Data.Version.Uninitialized;
+            SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion;
             foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
@@ -363,12 +361,13 @@ namespace RATools.Parser
                 minimumVersion = minimumVersion.OrNewer(leaderboardMinimumVersion);
             }
 
-            _richPresence.DisableLookupCollapsing = (minimumVersion < Data.Version._0_79);
-            _richPresence.DisableBuiltInMacros = (minimumVersion < Data.Version._1_0);
+            minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
+
+            SerializationContext = scriptContext.SerializationContext.WithVersion(minimumVersion);
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
             {
-                RichPresence = _richPresence.ToString();
+                RichPresence = _richPresence.Serialize(SerializationContext);
                 RichPresenceLine = _richPresence.Line;
             }
 

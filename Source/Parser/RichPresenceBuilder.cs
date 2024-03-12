@@ -40,10 +40,6 @@ namespace RATools.Parser
         public string DisplayString { get; set; }
         public int Line { get; set; }
 
-        public bool DisableLookupCollapsing { get; set; }
-
-        public bool DisableBuiltInMacros { get; set; }
-
         public static ValueFormat GetValueFormat(string macro)
         {
             return RichPresenceMacroFunction.GetValueFormat(macro);
@@ -94,7 +90,34 @@ namespace RATools.Parser
             return null;
         }
 
+        public SoftwareVersion MinimumVersion()
+        {
+            if (String.IsNullOrEmpty(DisplayString))
+                return Data.Version.Uninitialized;
+
+            var minimumVersion = Data.Version.MinimumVersion;
+
+            if (_valueFields.Any(f => f.Value.Format == ValueFormat.ASCIIChar || f.Value.Format == ValueFormat.UnicodeChar))
+                minimumVersion = minimumVersion.OrNewer(Data.Version._1_0);
+
+            foreach (var lookup in _lookupFields)
+            {
+                if (lookup.Value.Fallback != null && lookup.Value.Fallback.Value.Length > 0)
+                {
+                    minimumVersion = minimumVersion.OrNewer(Data.Version._0_73);
+                    break;
+                }
+            }
+
+            return minimumVersion;
+        }
+
         public override string ToString()
+        {
+            return Serialize(new SerializationContext());
+        }
+
+        public string Serialize(SerializationContext serializationContext)
         {
             if (String.IsNullOrEmpty(DisplayString))
                 return "[No display string]";
@@ -107,7 +130,7 @@ namespace RATools.Parser
                 builder.AppendLine(lookup.Key);
 
                 var fallback = (lookup.Value.Fallback != null && lookup.Value.Fallback.Value.Length > 0) ? lookup.Value.Fallback.Value : null;
-                AppendRichPresenceLookupEntries(builder, lookup.Value.Entries, fallback);
+                AppendRichPresenceLookupEntries(builder, lookup.Value.Entries, serializationContext, fallback);
 
                 if (fallback != null)
                 {
@@ -118,7 +141,7 @@ namespace RATools.Parser
                 builder.AppendLine();
             }
 
-            bool disableBuiltInMacros = DisableBuiltInMacros && _valueFields.All(f => f.Value.Format != ValueFormat.ASCIIChar && f.Value.Format != ValueFormat.UnicodeChar);
+            bool disableBuiltInMacros = serializationContext.MinimumVersion < Data.Version._1_0;
             foreach (var value in _valueFields)
             {
                 if (!disableBuiltInMacros)
@@ -144,13 +167,13 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries, string fallback)
+        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries, SerializationContext serializationContext, string fallback)
         {
             // determine how many entries have the same values
             var sharedValues = new HashSet<string>();
             var sharedValueCount = 0;
 
-            if (!DisableLookupCollapsing)
+            if (serializationContext.MinimumVersion >= Data.Version._0_79)
             {
                 var uniqueValues = new HashSet<string>();
                 foreach (var value in entries.Values)

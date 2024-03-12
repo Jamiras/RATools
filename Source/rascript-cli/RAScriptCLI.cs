@@ -276,33 +276,17 @@ namespace RATools
 
             if (!String.IsNullOrEmpty(interpreter.RichPresence))
             {
-                string richPresence;
-                var minimumVersion = localAchievements.Version;
-                if (minimumVersion < Data.Version._1_0)
-                {
-                    interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
-
-                    if (minimumVersion < Data.Version._0_79)
-                        interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
-
-                    richPresence = interpreter.RichPresenceBuilder.ToString();
-                }
-                else
-                {
-                    richPresence = interpreter.RichPresence;
-                }
-
                 outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-Rich.txt", interpreter.GameId));
                 using (var stream = _fileSystemService.CreateFile(outputFileName))
                 {
                     using (var writer = new StreamWriter(stream))
                     {
-                        writer.Write(richPresence);
+                        writer.Write(interpreter.RichPresence);
                     }
                 }
 
                 if (!_quiet)
-                    OutputStream.WriteLine("Wrote {0} bytes to {1}-Rich.txt", richPresence.Length, interpreter.GameId);
+                    OutputStream.WriteLine("Wrote {0} bytes to {1}-Rich.txt", interpreter.RichPresence.Length, interpreter.GameId);
             }
 
             return ReturnCode.Success;
