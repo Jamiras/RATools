@@ -176,14 +176,6 @@ namespace RATools.Data
         /// <returns>Serialized value string.</returns>
         public string Serialize(SerializationContext serializationContext)
         {
-            bool isLegacy = false;
-
-            if (serializationContext.MinimumVersion < Version._0_77) // Measured
-            {
-                if (!IsMinimumVersionRequiredAtLeast(Version._0_77))
-                    isLegacy = true;
-            }
-
             var builder = new StringBuilder();
 
             var enumerator = Values.GetEnumerator();
@@ -191,7 +183,7 @@ namespace RATools.Data
             {
                 do
                 {
-                    if (isLegacy)
+                    if (serializationContext.MinimumVersion < Version._0_77) // Measured leaderboard format
                         SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
                     else
                         enumerator.Current.Serialize(builder, serializationContext);
@@ -222,9 +214,19 @@ namespace RATools.Data
                             multiplier = -1.0;
 
                         if (enumerator.Current.Operator == RequirementOperator.Multiply)
-                            multiplier *= enumerator.Current.Right.Float;
+                        {
+                            if (enumerator.Current.Right.IsFloat)
+                                multiplier *= enumerator.Current.Right.Float;
+                            else
+                                multiplier *= enumerator.Current.Right.Value;
+                        }
                         else if (enumerator.Current.Operator == RequirementOperator.Divide)
-                            multiplier /= enumerator.Current.Right.Float;
+                        {
+                            if (enumerator.Current.Right.IsFloat)
+                                multiplier /= enumerator.Current.Right.Float;
+                            else
+                                multiplier /= enumerator.Current.Right.Value;
+                        }
 
                         if (multiplier != 1.0)
                         {
@@ -259,20 +261,25 @@ namespace RATools.Data
             SoftwareVersion minimumVersion = Version.MinimumVersion;
 
             foreach (var value in Values)
-                minimumVersion = minimumVersion.OrNewer(value.MinimumVersion());
-
-            return minimumVersion;
-        }
-
-        private bool IsMinimumVersionRequiredAtLeast(SoftwareVersion minimumVersion)
-        {
-            foreach (var value in Values)
             {
-                if (value.MinimumVersion() >= minimumVersion)
-                    return true;
+                foreach (var requirement in value.Requirements)
+                {
+                    if (requirement.Operator == RequirementOperator.Multiply ||
+                        requirement.Operator == RequirementOperator.Divide)
+                    {
+                        // Multiply/Divide in trigger logic requires 0.78, but can be used in leaderboard values long before that.
+                        var clone = requirement.Clone();
+                        clone.Operator = RequirementOperator.None;
+                        minimumVersion = minimumVersion.OrNewer(clone.MinimumVersion());
+                    }
+                    else
+                    {
+                        minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
+                    }
+                }
             }
 
-            return false;
+            return minimumVersion;
         }
     }
 }
