@@ -24,6 +24,11 @@ namespace RATools.Parser
         public ValueBuilder(Value source)
             : this()
         {
+            var values = new List<ICollection<Requirement>>();
+            foreach (var value in source.Values)
+                values.Add(value.Requirements.ToArray());
+
+            _values = values;
         }
 
         /// <summary>
@@ -34,7 +39,7 @@ namespace RATools.Parser
             get { return _values; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private List<ICollection<Requirement>> _values;
+        private readonly List<ICollection<Requirement>> _values;
 
         /// <summary>
         /// Constructs a <see cref="Value"/> from the current state of the builder.

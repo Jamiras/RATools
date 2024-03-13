@@ -16,6 +16,9 @@ namespace RATools.Parser.Tests
         [TestCase("0xO20770f*-1_0xN20770f*6", "(bit1(0x20770F) * 6 - bit2(0x20770F))")]
         [TestCase("0xN20770f*6_0xO20770f*-5", "(bit1(0x20770F) * 6 - bit2(0x20770F) * 5)")]
         [TestCase("0xO20770f*-5_0xN20770f*6", "(bit1(0x20770F) * 6 - bit2(0x20770F) * 5)")]
+        [TestCase("0xH1234_v-1", "(byte(0x001234) - 1)")]
+        [TestCase("0xH1234=0_0xH2345", "(byte(0x001234) + byte(0x002345))")]
+        [TestCase("0xH1234&7_0xH2345", "(byte(0x001234) & 0x07 + byte(0x002345))")]
         public void TestParseValue(string input, string expected)
         {
             var builder = new ValueBuilder();

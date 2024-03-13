@@ -1447,11 +1447,8 @@ namespace RATools.ViewModels
                     index = line.IndexOf('?', 1);
                     if (index != -1)
                     {
-                        var trigger = line.Substring(1, index - 1);
-                        var achievement = new AchievementBuilder();
-                        achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
-
-                        var vmTrigger = new TriggerViewModel("RichPresence", achievement.ToAchievement(), numberFormat, notes);
+                        var trigger = Trigger.Deserialize(line.Substring(1, index - 1));
+                        var vmTrigger = new TriggerViewModel("RichPresence", trigger, numberFormat, notes);
 
                         stream.Write("rich_presence_conditional_display(");
                         DumpTrigger(stream, numberFormat, dumpRichPresence, vmTrigger, 4);
@@ -1521,28 +1518,14 @@ namespace RATools.ViewModels
                         stream.Write("\", ");
                     }
 
-                    var parameter = kvp.Value;
-                    if (String.IsNullOrEmpty(parameter))
+                    var value = Value.Deserialize(kvp.Value);
+                    if (value.Values.Any())
                     {
-                        stream.Write("0");
+                        var measured = value.Values.First().Requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
+                        if (measured != null)
+                            measured.Type = RequirementType.None; // measured() is implicit
                     }
-                    else if (parameter.Length > 2 && parameter[1] == ':')
-                    {
-                        var achievement = new AchievementBuilder();
-                        achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
-
-                        if (achievement.CoreRequirements.Count > 0 && achievement.CoreRequirements.Last().Type == RequirementType.Measured)
-                            achievement.CoreRequirements.Last().Type = RequirementType.None;
-
-                        var vmAchievement = new AssetSourceViewModel(new AchievementViewModel(null), "Rich Presence");
-                        vmAchievement.Asset = achievement.ToAchievement();
-
-                        DumpValue(stream, numberFormat, dumpRichPresence, vmAchievement.TriggerList.First(), 32);
-                    }
-                    else
-                    {
-                        DumpLegacyExpression(stream, parameter, dumpRichPresence);
-                    }
+                    DumpLegacyExpression(stream, value, dumpRichPresence);
 
                     if (macro == null)
                     {
@@ -1592,115 +1575,27 @@ namespace RATools.ViewModels
             }
         }
 
-        private static void DumpLegacyExpression(StreamWriter stream, string parameter, DumpAsset dumpAsset)
+        private static void DumpLegacyExpression(StreamWriter stream, Value value, DumpAsset dumpAsset)
         {
-            if (String.IsNullOrEmpty(parameter))
+            if (!value.Values.Any())
             {
                 stream.Write('0');
                 return;
             }
 
-            var builder = new StringBuilder();
+            var context = new ScriptBuilderContext();
+            var script = new ValueBuilder(value).ToScript(context);
+            if (script.Length > 2 && script[0] == '(' && script[script.Length - 1] == ')')
+                script = script.Substring(1, script.Length - 2);
 
-            var parts = parameter.Split('_');
-            for (int i = 0; i < parts.Length; ++i)
+            foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
             {
-                if (i > 0)
-                    builder.Append(" + ");
-
-                var operands = parts[i].Split('*');
-                for (int j = 0; j < operands.Length; ++j)
-                {
-                    if (j > 0)
-                        builder.Append(" * ");
-
-                    var operand = operands[j];
-                    if (operand[0] == 'v' || operand[0] == 'V')
-                    {
-                        operand = operand.Substring(1);
-                        if (operand[0] == '-')
-                        {
-                            if (builder[builder.Length - 2] == '+')
-                            {
-                                builder[builder.Length - 2] = '-';
-                                operand = operand.Substring(1);
-                            }
-                        }
-
-                        builder.Append(operand);
-                    }
-                    else if (operand[0] == 'h' || operand[0] == 'H')
-                    {
-                        builder.Append("0x");
-                        builder.Append(operand.Substring(1));
-                    }
-                    else if (operand.Length > 2 && operand[1] == '.' && operand[0] == '0' && builder[builder.Length - 2] == '*')
-                    {
-                        bool isDivisor = false;
-                        var f = Double.Parse(operand, System.Globalization.NumberFormatInfo.InvariantInfo);
-                        if (f > 0.0)
-                        {
-                            var divisor = 1 / f;
-                            if (Math.Abs(Math.Round(divisor) - divisor) < 0.000001)
-                            {
-                                isDivisor = true;
-                                builder[builder.Length - 2] = '/';
-                                builder.Append((int)divisor);
-                            }
-                        }
-
-                        if (!isDivisor)
-                            builder.Append(operand);
-                    }
-                    else
-                    {
-                        var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
-
-                        bool needsClosingParenthesis = true;
-                        switch (field.Type)
-                        {
-                            case FieldType.PreviousValue:
-                                builder.Append("prev(");
-                                break;
-
-                            case FieldType.PriorValue:
-                                builder.Append("prior(");
-                                break;
-
-                            case FieldType.BinaryCodedDecimal:
-                                builder.Append("bcd(");
-                                break;
-
-                            default:
-                                needsClosingParenthesis = false;
-                                break;
-                        }
-
-                        if (field.IsMemoryReference)
-                        {
-                            var memoryItem = dumpAsset.MemoryAddresses.FirstOrDefault(m => m.Address == field.Value && m.Size == field.Size);
-                            if (memoryItem != null && !String.IsNullOrEmpty(memoryItem.FunctionName))
-                            {
-                                builder.Append(memoryItem.FunctionName);
-                                builder.Append("()");
-                            }
-                            else
-                            {
-                                builder.Append(Field.GetMemoryReference(field.Value, field.Size));
-                            }
-                        }
-                        else
-                        {
-                            builder.Append(operand);
-                        }
-
-                        if (needsClosingParenthesis)
-                            builder.Append(')');
-                    }
-                }
+                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                var functionCall = memoryItem.FunctionName + "()";
+                script = script.Replace(memoryReference, functionCall);
             }
 
-            stream.Write(builder.ToString());
+            stream.Write(script);
         }
 
         private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)

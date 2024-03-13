@@ -138,11 +138,28 @@ namespace RATools.Data
             requirement.Left = Field.Deserialize(tokenizer);
 
             requirement.Operator = Requirement.ReadOperator(tokenizer);
-            if (requirement.Operator != RequirementOperator.None &&
-                !requirement.IsComparison)
+            if (requirement.Operator == RequirementOperator.None)
+            {
+                if (requirement.Left.Type == FieldType.Value &&
+                    (requirement.Left.Value & 0x80000000) != 0)
+                {
+                    requirement.Type = RequirementType.SubSource;
+                    requirement.Left = new Field
+                    {
+                        Type = FieldType.Value,
+                        Value = (uint)(-((int)requirement.Left.Value))
+                    };
+                }
+            }
+            else
             {
                 requirement.Right = Field.Deserialize(tokenizer);
-                if (requirement.Right.Type == FieldType.Value &&
+
+                if (requirement.IsComparison)
+                {
+                    requirement.Operator = RequirementOperator.None;
+                }
+                else if (requirement.Right.Type == FieldType.Value &&
                     (requirement.Right.Value & 0x80000000) != 0)
                 {
                     requirement.Type = RequirementType.SubSource;
@@ -280,15 +297,6 @@ namespace RATools.Data
             }
 
             return minimumVersion;
-        }
-
-        public uint MaximumAddress()
-        {
-            uint maximumAddress = 0;
-            foreach (var value in Values)
-                maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
-
-            return maximumAddress;
         }
 
         public uint MaximumAddress()

@@ -26,10 +26,10 @@ namespace RATools.Parser
             Description = source.Description;
             Format = source.Format;
 
-            Start = new TriggerBuilder(Trigger.Deserialize(source.Start));
-            Submit = new TriggerBuilder(Trigger.Deserialize(source.Submit));
-            Cancel = new TriggerBuilder(Trigger.Deserialize(source.Cancel));
-            Value = new ValueBuilder(Data.Value.Deserialize(source.Value));
+            Start = new TriggerBuilder(source.Start);
+            Submit = new TriggerBuilder(source.Submit);
+            Cancel = new TriggerBuilder(source.Cancel);
+            Value = new ValueBuilder(source.Value);
         }
 
         /// <summary>
@@ -85,34 +85,20 @@ namespace RATools.Parser
         {
             var minimumVersion = GetMinimumVersion(leaderboard.Format);
 
-            var trigger = Trigger.Deserialize(leaderboard.Start);
-            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
-
-            trigger = Trigger.Deserialize(leaderboard.Cancel);
-            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
-
-            trigger = Trigger.Deserialize(leaderboard.Submit);
-            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
-
-            var value = Data.Value.Deserialize(leaderboard.Value);
-            minimumVersion = minimumVersion.OrNewer(value.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(leaderboard.Start.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(leaderboard.Cancel.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(leaderboard.Submit.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(leaderboard.Value.MinimumVersion());
 
             return minimumVersion;
         }
 
         public static uint GetMaximumAddress(Leaderboard leaderboard)
         {
-            var trigger = Trigger.Deserialize(leaderboard.Start);
-            var maximumAddress = trigger.MaximumAddress();
-
-            trigger = Trigger.Deserialize(leaderboard.Cancel);
-            maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
-
-            trigger = Trigger.Deserialize(leaderboard.Submit);
-            maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
-
-            var value = Data.Value.Deserialize(leaderboard.Value);
-            maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
+            var maximumAddress = leaderboard.Start.MaximumAddress();
+            maximumAddress = Math.Max(maximumAddress, leaderboard.Cancel.MaximumAddress());
+            maximumAddress = Math.Max(maximumAddress, leaderboard.Submit.MaximumAddress());
+            maximumAddress = Math.Max(maximumAddress, leaderboard.Value.MaximumAddress());
 
             return maximumAddress;
         }

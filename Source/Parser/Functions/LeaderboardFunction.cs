@@ -3,7 +3,6 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace RATools.Parser.Functions
 {
@@ -93,20 +92,33 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        private string ProcessTrigger(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
+        private Trigger ProcessTrigger(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
         {
             var expression = GetRequirementParameter(scope, parameter, out result);
             if (expression == null)
                 return null;
 
-            return TriggerBuilderContext.GetConditionString(expression, scope, serializationContext, out result);
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext() { Trigger = requirements };
+            var error = ((ITriggerExpression)expression).BuildTrigger(context);
+            if (error != null)
+            {
+                result = error;
+                return null;
+            }
+ 
+            return new Trigger(requirements);
         }
 
-        private static string ProcessValue(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
+        private static Value ProcessValue(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
         {
             var expression = GetParameter(scope, parameter, out result);
             if (expression == null)
                 return null;
+
+            var requirements = new List<Requirement>();
+            var context = new ValueBuilderContext { Trigger = requirements };
+            var triggerBuilderScope = new InterpreterScope(scope) { Context = context };
 
             var functionCallExpression = expression as FunctionCallExpression;
             if (functionCallExpression != null)
@@ -114,19 +126,40 @@ namespace RATools.Parser.Functions
                 var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
                 if (functionDefinition is MaxOfFunction)
                 {
-                    var builder = new StringBuilder();
+                    var values = new List<IEnumerable<Requirement>>();
+
                     foreach (var value in functionCallExpression.Parameters)
                     {
-                        if (builder.Length > 0)
-                            builder.Append('$');
+                        if (!value.ReplaceVariables(triggerBuilderScope, out expression))
+                        {
+                            result = expression;
+                            return null;
+                        }
 
-                        builder.Append(ValueBuilderContext.GetValueString(value, scope, serializationContext, out result));
+                        result = ((ITriggerExpression)expression).BuildTrigger(context);
+                        if (result != null)
+                            return null;
+
+                        values.Add(requirements);
+                        requirements = new List<Requirement>();
+                        context.Trigger = requirements;
                     }
-                    return builder.ToString();
+
+                    return new Value(values);
                 }
             }
 
-            return ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
+            if (!expression.ReplaceVariables(triggerBuilderScope, out expression))
+            {
+                result = expression;
+                return null;
+            }
+
+            result = ((ITriggerExpression)expression).BuildTrigger(context);
+            if (result != null)
+                return null;
+
+            return new Value(new IEnumerable<Requirement>[] { requirements });
         }
     }
 
