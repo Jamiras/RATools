@@ -290,5 +290,14 @@ namespace RATools.Data
 
             return maximumAddress;
         }
+
+        public uint MaximumAddress()
+        {
+            uint maximumAddress = 0;
+            foreach (var value in Values)
+                maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
+
+            return maximumAddress;
+        }
     }
 }
