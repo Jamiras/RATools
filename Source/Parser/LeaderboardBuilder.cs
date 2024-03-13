@@ -100,6 +100,23 @@ namespace RATools.Parser
             return minimumVersion;
         }
 
+        public static uint GetMaximumAddress(Leaderboard leaderboard)
+        {
+            var trigger = Trigger.Deserialize(leaderboard.Start);
+            var maximumAddress = trigger.MaximumAddress();
+
+            trigger = Trigger.Deserialize(leaderboard.Cancel);
+            maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
+
+            trigger = Trigger.Deserialize(leaderboard.Submit);
+            maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
+
+            var value = Data.Value.Deserialize(leaderboard.Value);
+            maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
+
+            return maximumAddress;
+        }
+
         private static SoftwareVersion GetMinimumVersion(ValueFormat format)
         {
             switch (format)

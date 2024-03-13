@@ -112,6 +112,50 @@ namespace RATools.Parser
             return minimumVersion;
         }
 
+        public uint MaximumAddress()
+        {
+            if (String.IsNullOrEmpty(DisplayString))
+                return 0;
+
+            uint maximumAddress = GetMaximumAddress(DisplayString);
+
+            foreach (var conditionalString in _conditionalDisplayStrings)
+            {
+                var parts = conditionalString.Split('?');
+                var trigger = Trigger.Deserialize(parts[1]);
+                maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
+                maximumAddress = Math.Max(maximumAddress, GetMaximumAddress(parts[2]));
+            }
+
+            return maximumAddress;
+        }
+
+        private static uint GetMaximumAddress(string displayString)
+        {
+            uint maximumAddress = 0;
+            var index = 0;
+            do
+            {
+                index = displayString.IndexOf('@', index);
+                if (index == -1)
+                    break;
+                var index2 = displayString.IndexOf('(', index);
+                if (index2 == -1)
+                    break;
+                var index3 = displayString.IndexOf(')', index2);
+                if (index3 == -1)
+                    break;
+
+                var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
+                var value = Value.Deserialize(parameter);
+                maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
+
+                index = index2 + 1;
+            } while (true);
+
+            return maximumAddress;
+        }
+
         public override string ToString()
         {
             return Serialize(new SerializationContext());
