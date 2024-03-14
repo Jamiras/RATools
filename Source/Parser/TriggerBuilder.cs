@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser
 {
@@ -63,9 +62,21 @@ namespace RATools.Parser
             get { return _alts; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private List<ICollection<Requirement>> _alts;
+        private readonly List<ICollection<Requirement>> _alts;
 
         internal bool IsDumped { get; set; }
+
+        internal static Trigger BuildTrigger(ITriggerExpression triggerExpression, out ErrorExpression error)
+        {
+            var achievement = new AchievementBuilder();
+            var context = new AchievementBuilderContext(achievement);
+
+            error = triggerExpression.BuildTrigger(context);
+            if (error != null)
+                return null;
+
+            return context.Achievement.ToTrigger();
+        }
 
         /// <summary>
         /// Constructs a <see cref="Trigger"/> from the current state of the builder.

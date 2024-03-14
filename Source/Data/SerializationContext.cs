@@ -1,6 +1,5 @@
 ﻿using Jamiras.Components;
 using System;
-using System.Text;
 
 namespace RATools.Data
 {
@@ -45,6 +44,11 @@ namespace RATools.Data
                 default:
                     return String.Format("{0:x6}", address);
             }
+        }
+
+        public override string ToString()
+        {
+            return FormatAddress(0) + " (" + MinimumVersion + ")";
         }
     }
 }

@@ -379,7 +379,7 @@ namespace RATools.Parser
             else
                 SerializationContext.AddressWidth = 2;
 
-            if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+            if (_richPresence.IsValid)
             {
                 RichPresence = _richPresence.Serialize(SerializationContext);
                 RichPresenceLine = _richPresence.Line;

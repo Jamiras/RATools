@@ -2,14 +2,11 @@
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Functions;
 using RATools.Parser.Internal;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser
 {
@@ -29,6 +26,36 @@ namespace RATools.Parser
                 values.Add(value.Requirements.ToArray());
 
             _values = values;
+        }
+
+        public static Value BuildValue(ExpressionBase expression, out ErrorExpression error)
+        {
+            var integerConstant = expression as IntegerConstantExpression;
+            if (integerConstant != null)
+            {
+                error = null;
+
+                var requirement = new Requirement
+                {
+                    Left = FieldFactory.CreateField(integerConstant.Value)
+                };
+                return new Value(new[] { new[] { requirement } });
+            }
+
+            var trigger = expression as ITriggerExpression;
+            if (trigger == null)
+            {
+                error = new ErrorExpression("Cannot create value from " + expression.Type.ToLowerString(), expression);
+                return null;
+            }
+
+            var requirements = new List<Requirement>();
+            var context = new ValueBuilderContext { Trigger = requirements };
+            error = trigger.BuildTrigger(context);
+            if (error != null)
+                return null;
+
+            return new Value(new[] { requirements });
         }
 
         /// <summary>

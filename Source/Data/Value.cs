@@ -220,10 +220,17 @@ namespace RATools.Data
             var enumerator = requirements.GetEnumerator();
             if (enumerator.MoveNext())
             {
+                bool first = true;
+                int constant = 0;
                 do
                 {
                     if (enumerator.Current.Left.IsMemoryReference)
                     {
+                        if (first)
+                            first = false;
+                        else
+                            builder.Append('_');
+
                         enumerator.Current.Left.Serialize(builder, serializationContext);
 
                         double multiplier = 1.0;
@@ -261,15 +268,25 @@ namespace RATools.Data
                     }
                     else
                     {
-                        builder.Append('v');
-                        builder.Append(enumerator.Current.Left.Value);
+                        if (enumerator.Current.Type == RequirementType.SubSource)
+                            constant -= (int)enumerator.Current.Left.Value;
+                        else
+                            constant += (int)enumerator.Current.Left.Value;
                     }
+                } while (enumerator.MoveNext());
 
-                    if (!enumerator.MoveNext())
-                        break;
-
-                    builder.Append('_');
-                } while (true);
+                if (constant != 0)
+                {
+                    if (!first)
+                        builder.Append('_');
+                    builder.Append('v');
+                    if (constant < 0)
+                    {
+                        constant = -constant;
+                        builder.Append('-');
+                    }
+                    builder.Append(constant);
+                }
             }
         }
 

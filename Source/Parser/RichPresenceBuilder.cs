@@ -10,35 +10,190 @@ using System.Text;
 
 namespace RATools.Parser
 {
-    [DebuggerDisplay("{DisplayString}")]
+    [DebuggerDisplay("{_valueFields.Count} macros, {_lookupFields.Count} lookups, {_displayStrings.Count} display strings")]
     public class RichPresenceBuilder
     {
-        private class Lookup
-        {
-            public ExpressionBase Func { get; set; }
-            public IDictionary<int, string> Entries { get; set; }
-            public StringConstantExpression Fallback { get; set; }
-        };
-
-        private class ValueField
-        {
-            public ExpressionBase Func { get; set; }
-            public ValueFormat Format { get; set; }
-        }
-
         public RichPresenceBuilder()
         {
             _valueFields = new TinyDictionary<string, ValueField>();
             _lookupFields = new TinyDictionary<string, Lookup>();
-            _conditionalDisplayStrings = new List<string>();
+            _displayStrings = new List<ConditionalDisplayString>();
         }
 
-        private List<string> _conditionalDisplayStrings;
+        private List<ConditionalDisplayString> _displayStrings;
         private TinyDictionary<string, ValueField> _valueFields;
         private TinyDictionary<string, Lookup> _lookupFields;
 
-        public string DisplayString { get; set; }
+        /// <summary>
+        /// The line associated to the `rich_presence_display` call.
+        /// </summary>
         public int Line { get; set; }
+
+        /// <summary>
+        /// Defines a mapping macro.
+        /// </summary>
+        private class Lookup
+        {
+            /// <summary>
+            /// A reference to the function call that generated this lookup.
+            /// </summary>
+            public ExpressionBase Func { get; set; }
+
+            /// <summary>
+            /// The entries in the lookup.
+            /// </summary>
+            public IDictionary<int, string> Entries { get; set; }
+
+            /// <summary>
+            /// The string to display if an entry doesn't exist in the lookup.
+            /// </summary>
+            public StringConstantExpression Fallback { get; set; }
+        };
+
+        /// <summary>
+        /// Defines a formatting macro.
+        /// </summary>
+        [DebuggerDisplay("{Format}")]
+        private class ValueField
+        {
+            /// <summary>
+            /// A reference to the function call that generated this lookup.
+            /// </summary>
+            public ExpressionBase Func { get; set; }
+
+            /// <summary>
+            /// The format to apply when using this lookup.
+            /// </summary>
+            public ValueFormat Format { get; set; }
+        }
+
+        [DebuggerDisplay("@{Name}({Value})")]
+        private class DisplayStringParameter
+        {
+            /// <summary>
+            /// The name of the macro to use for this parameter.
+            /// </summary>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// The parameter to pass to the macro.
+            /// </summary>
+            public Value Value { get; set; }
+        }
+
+        public class ConditionalDisplayString
+        {
+            private ICollection<DisplayStringParameter> _parameters;
+
+            /// <summary>
+            /// The raw string with placeholders.
+            /// </summary>
+            public StringConstantExpression Format { get; set; }
+
+            /// <summary>
+            /// The condition when the string should be displayed.
+            /// </summary>
+            /// <remarks>If null, this is the default case.</remarks>
+            public Trigger Condition { get; set; }
+
+            public void AddParameter(string macro, Value parameter)
+            {
+                if (_parameters == null)
+                    _parameters = new List<DisplayStringParameter>();
+
+                _parameters.Add(new DisplayStringParameter { Name = macro, Value = parameter });
+            }
+
+            public void AddParameter(StringConstantExpression parameter)
+            {
+                if (_parameters == null)
+                    _parameters = new List<DisplayStringParameter>();
+
+                _parameters.Add(new DisplayStringParameter { Name = parameter.Value, Value = null });
+            }
+
+            /// <summary>
+            /// Merges the Parameters into the Format string.
+            /// </summary>
+            public string Serialize(SerializationContext serializationContext)
+            {
+                return Serialize(serializationContext, false);
+            }
+
+            public override string ToString()
+            {
+                return Serialize(new SerializationContext(), true);
+            }
+
+            private string Serialize(SerializationContext serializationContext, bool ignoreMissing)
+            {
+                var parameters = new ArrayExpression();
+                if (_parameters != null)
+                {
+                    foreach (var parameter in _parameters)
+                    {
+                        string formatted;
+                        if (parameter.Value == null)
+                        {
+                            // raw string, not a macro
+                            formatted = parameter.Name;
+                        }
+                        else
+                        {
+                            formatted = String.Format("@{0}({1})",
+                                parameter.Name, parameter.Value.Serialize(serializationContext));
+                        }
+
+                        parameters.Entries.Add(new StringConstantExpression(formatted));
+                    }
+                }
+
+                ExpressionBase result = FormatFunction.Evaluate(Format, parameters, ignoreMissing);
+                var stringResult = result as StringConstantExpression;
+                return (stringResult != null) ? stringResult.Value : "";
+            }
+
+            public SoftwareVersion MinimumVersion()
+            {
+                var minimumVersion = (Condition != null) ? Condition.MinimumVersion() : Data.Version.MinimumVersion;
+                if (_parameters != null)
+                {
+                    foreach (var parameter in _parameters)
+                        minimumVersion = minimumVersion.OrNewer(parameter.Value.MinimumVersion());
+                }
+
+                return minimumVersion;
+            }
+
+            public uint MaximumAddress()
+            {
+                uint maximumAddress = (Condition != null) ? Condition.MaximumAddress() : 0;
+                if (_parameters != null)
+                {
+                    foreach (var parmeter in _parameters)
+                        maximumAddress = Math.Max(maximumAddress, parmeter.Value.MaximumAddress());
+                }
+
+                return maximumAddress;
+            }
+        }
+
+        public bool IsValid
+        {
+            get { return _displayStrings.Any(d => d.Condition == null); }
+        }
+
+        public string DisplayString
+        {
+            get
+            {
+                var defaultDisplayString = _displayStrings.FirstOrDefault(d => d.Condition == null);
+                if (defaultDisplayString == null)
+                    return "[no default display string]";
+
+                return defaultDisplayString.Serialize(new SerializationContext());
+            }
+        }
 
         public static ValueFormat GetValueFormat(string macro)
         {
@@ -50,22 +205,31 @@ namespace RATools.Parser
             return RichPresenceValueFunction.GetFormatString(format);
         }
 
-        public void AddConditionalDisplayString(string condition, string displayString)
+        public ErrorExpression AddValueField(ExpressionBase func, StringConstantExpression name, ValueFormat format)
         {
-            _conditionalDisplayStrings.Add(String.Format("?{0}?{1}", condition, displayString));
-        }
+            ValueField field;
+            if (_valueFields.TryGetValue(name.Value, out field))
+            {
+                if (field.Format != format)
+                    return new ErrorExpression("Multiple rich_presence_value calls with the same name must have the same format", name);
 
-        public void AddValueField(ExpressionBase func, string name, ValueFormat format)
-        {
-            _valueFields[name] = new ValueField
+                return null;
+            }
+
+            _valueFields[name.Value] = new ValueField
             {
                 Func = func,
                 Format = format
             };
+
+            return null;
         }
 
-        public ErrorExpression AddLookupField(ExpressionBase func, string name, DictionaryExpression dict, StringConstantExpression fallback)
+        public ErrorExpression AddLookupField(ExpressionBase func, StringConstantExpression name, DictionaryExpression dict, StringConstantExpression fallback)
         {
+            if (_valueFields.ContainsKey(name.Value))
+                return new ErrorExpression("A rich_presence_value already exists for '" + name.Value + "'", name);
+
             var tinyDict = new TinyDictionary<int, string>();
             foreach (var entry in dict.Entries)
             {
@@ -80,7 +244,7 @@ namespace RATools.Parser
                 tinyDict[key.Value] = value.Value;
             }
 
-            _lookupFields[name] = new Lookup
+            _lookupFields[name.Value] = new Lookup
             {
                 Func = func,
                 Entries = tinyDict,
@@ -88,6 +252,18 @@ namespace RATools.Parser
             };
 
             return null;
+        }
+
+        public ConditionalDisplayString AddDisplayString(Trigger condition, StringConstantExpression formatString)
+        {
+            var displayString = new ConditionalDisplayString
+            {
+                Format = formatString,
+                Condition = condition,                
+            };
+
+            _displayStrings.Add(displayString);
+            return displayString;
         }
 
         public SoftwareVersion MinimumVersion()
@@ -109,49 +285,17 @@ namespace RATools.Parser
                 }
             }
 
+            foreach (var displayString in _displayStrings)
+                minimumVersion = minimumVersion.OrNewer(displayString.MinimumVersion());
+
             return minimumVersion;
         }
 
         public uint MaximumAddress()
         {
-            if (String.IsNullOrEmpty(DisplayString))
-                return 0;
-
-            uint maximumAddress = GetMaximumAddress(DisplayString);
-
-            foreach (var conditionalString in _conditionalDisplayStrings)
-            {
-                var parts = conditionalString.Split('?');
-                var trigger = Trigger.Deserialize(parts[1]);
-                maximumAddress = Math.Max(maximumAddress, trigger.MaximumAddress());
-                maximumAddress = Math.Max(maximumAddress, GetMaximumAddress(parts[2]));
-            }
-
-            return maximumAddress;
-        }
-
-        private static uint GetMaximumAddress(string displayString)
-        {
             uint maximumAddress = 0;
-            var index = 0;
-            do
-            {
-                index = displayString.IndexOf('@', index);
-                if (index == -1)
-                    break;
-                var index2 = displayString.IndexOf('(', index);
-                if (index2 == -1)
-                    break;
-                var index3 = displayString.IndexOf(')', index2);
-                if (index3 == -1)
-                    break;
-
-                var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
-                var value = Value.Deserialize(parameter);
-                maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
-
-                index = index2 + 1;
-            } while (true);
+            foreach (var displayString in _displayStrings)
+                maximumAddress = Math.Max(maximumAddress, displayString.MaximumAddress());
 
             return maximumAddress;
         }
@@ -163,7 +307,7 @@ namespace RATools.Parser
 
         public string Serialize(SerializationContext serializationContext)
         {
-            if (String.IsNullOrEmpty(DisplayString))
+            if (!IsValid)
                 return "[No display string]";
 
             var builder = new StringBuilder();
@@ -204,9 +348,16 @@ namespace RATools.Parser
             }
 
             builder.AppendLine("Display:");
-            foreach (var conditionalString in _conditionalDisplayStrings)
-                builder.AppendLine(conditionalString);
-            builder.AppendLine(DisplayString);
+            foreach (var displayString in _displayStrings.Where(d => d.Condition != null))
+            {
+                builder.Append('?');
+                builder.Append(displayString.Condition.Serialize(serializationContext));
+                builder.Append('?');
+                builder.AppendLine(displayString.Serialize(serializationContext));
+            }
+            var defaultDisplayString = _displayStrings.FirstOrDefault(d => d.Condition == null);
+            if (defaultDisplayString != null)
+                builder.AppendLine(defaultDisplayString.Serialize(serializationContext));
 
             return builder.ToString();
         }
@@ -327,28 +478,21 @@ namespace RATools.Parser
         {
             get
             {
-                return String.IsNullOrEmpty(DisplayString) && _valueFields.Count == 0 &&
-                    _lookupFields.Count == 0 && _conditionalDisplayStrings.Count == 0;
+                return _displayStrings.Count == 0 && _valueFields.Count == 0 &&
+                    _lookupFields.Count == 0;
             }
         }
 
         public void Clear()
         {
-            _conditionalDisplayStrings.Clear();
+            _displayStrings.Clear();
             _valueFields.Clear();
             _lookupFields.Clear();
-            DisplayString = null;
         }
 
         public ErrorExpression Merge(RichPresenceBuilder from)
         {
-            if (!String.IsNullOrEmpty(from.DisplayString))
-            {
-                DisplayString = from.DisplayString;
-                Line = from.Line;
-            }
-
-            _conditionalDisplayStrings.AddRange(from._conditionalDisplayStrings);
+            _displayStrings.AddRange(from._displayStrings);
 
             foreach (var kvp in from._valueFields)
             {
