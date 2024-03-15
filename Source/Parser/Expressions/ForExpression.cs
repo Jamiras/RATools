@@ -174,7 +174,7 @@ namespace RATools.Parser.Expressions
                 var loopScope = new InterpreterScope(scope);
                 loopScope.DefineVariable(iterator, key);
 
-                var error = AchievementScriptInterpreter.Evaluate(Expressions, loopScope);
+                var error = AchievementScriptInterpreter.Execute(Expressions, loopScope);
                 if (error != null)
                     return error;
 

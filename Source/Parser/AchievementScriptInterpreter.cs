@@ -286,7 +286,7 @@ namespace RATools.Parser
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
-                    var error = Evaluate(expressionGroup.Expressions, scope, callback);
+                    var error = Execute(expressionGroup.Expressions, scope, callback);
                     if (error != null)
                     {
                         expressionGroups.AddEvaluationError(error);
@@ -382,30 +382,49 @@ namespace RATools.Parser
             }
         }
 
-        internal static ErrorExpression Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope, IScriptInterpreterCallback callback = null)
+        private static ErrorExpression Execute(ExpressionBase expression, InterpreterScope scope)
         {
+            var executable = expression as IExecutableExpression;
+            if (executable != null)
+                return executable.Execute(scope);
+
+            return new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
+        }
+
+        internal static ErrorExpression Execute(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
+        {
+            foreach (var expression in expressions)
+            {
+                var error = Execute(expression, scope);
+                if (error != null)
+                    return error;
+
+                if (scope.IsComplete)
+                    break;
+            }
+
+            return null;
+        }
+
+        private static ErrorExpression Execute(IEnumerable<ExpressionBase> expressions, InterpreterScope scope, IScriptInterpreterCallback callback = null)
+        {
+            if (callback == null)
+                return Execute(expressions, scope);
+
             int i = 0;
             int count = expressions.Count();
 
             foreach (var expression in expressions)
             {
-                if (callback != null)
-                {
-                    if (callback.IsAborted)
-                        return new ErrorExpression("Processing aborted");
+                if (callback.IsAborted)
+                    return new ErrorExpression("Processing aborted");
 
-                    int progress = (i * 100 / count);
-                    if (progress > 0)
-                        callback.UpdateProgress(progress, expression.Location.Start.Line);
+                int progress = (i * 100 / count);
+                if (progress > 0)
+                    callback.UpdateProgress(progress, expression.Location.Start.Line);
+                i++;
 
-                    i++;
-                }
-
-                var executable = expression as IExecutableExpression;
-                if (executable == null)
-                    return new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
-
-                var error = executable.Execute(scope);
+                var error = Execute(expression, scope);
                 if (error != null)
                     return error;
 

@@ -211,7 +211,7 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            return AchievementScriptInterpreter.Evaluate(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+            return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
         }
 
         private static bool ContainsRuntimeLogic(ExpressionBase expression)

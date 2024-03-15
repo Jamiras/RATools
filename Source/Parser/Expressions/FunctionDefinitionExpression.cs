@@ -128,7 +128,7 @@ namespace RATools.Parser.Expressions
             var interpreter = new AchievementScriptInterpreter();
             var interpreterScope = new InterpreterScope(scope) { Context = interpreter };
 
-            result = AchievementScriptInterpreter.Evaluate(Expressions, interpreterScope);
+            result = AchievementScriptInterpreter.Execute(Expressions, interpreterScope);
             if (result != null)
                 return false;
 
