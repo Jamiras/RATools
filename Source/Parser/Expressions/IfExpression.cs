@@ -1,10 +1,12 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class IfExpression : ExpressionBase, INestedExpressions
+    public class IfExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public IfExpression(ExpressionBase condition)
             : base(ExpressionType.If)
@@ -188,5 +190,51 @@ namespace RATools.Parser.Expressions
                     nested.GetModifications(modifies);
             }
         }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            ErrorExpression error;
+            bool? result = Condition.IsTrue(scope, out error);
+            if (result == null)
+            {
+                ExpressionBase value;
+                if (!Condition.ReplaceVariables(scope, out value))
+                    return (ErrorExpression)value;
+
+                result = value.IsTrue(scope, out error);
+                if (result == null)
+                {
+                    if (ContainsRuntimeLogic(value))
+                        return new ErrorExpression("Comparison contains runtime logic.", Condition);
+
+                    return new ErrorExpression("Condition did not evaluate to a boolean.", Condition) { InnerError = error };
+                }
+            }
+
+            return AchievementScriptInterpreter.Evaluate(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+        }
+
+        private static bool ContainsRuntimeLogic(ExpressionBase expression)
+        {
+            switch (expression.Type)
+            {
+                case ExpressionType.MemoryAccessor:
+                case ExpressionType.Requirement:
+                    return true;
+
+                default:
+                    var nested = expression as INestedExpressions;
+                    if (nested != null)
+                    {
+                        foreach (var nestedExpression in nested.NestedExpressions)
+                        {
+                            if (ContainsRuntimeLogic(nestedExpression))
+                                return true;
+                        }
+                    }
+                    return false;
+            }
+        }
+
     }
 }

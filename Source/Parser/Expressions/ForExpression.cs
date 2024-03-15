@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ForExpression : ExpressionBase, INestedExpressions
+    public class ForExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public ForExpression(VariableDefinitionExpression iteratorName, ExpressionBase range)
             : base(ExpressionType.For)
@@ -147,6 +147,49 @@ namespace RATools.Parser.Expressions
                 if (nested != null)
                     nested.GetModifications(modifies);
             }
+        }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            ExpressionBase range;
+            if (!Range.ReplaceVariables(scope, out range))
+                return (ErrorExpression)range;
+
+            var iterableExpression = range as IIterableExpression;
+            if (iterableExpression == null)
+                return new ErrorExpression("Cannot iterate over " + Range.Type.ToLowerString(), Range);
+
+            var iterator = IteratorName;
+            var iteratorScope = new InterpreterScope(scope);
+            var iteratorVariable = new VariableExpression(iterator.Name);
+
+            foreach (var entry in iterableExpression.IterableExpressions())
+            {
+                iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
+
+                ExpressionBase key;
+                if (!entry.ReplaceVariables(iteratorScope, out key))
+                    return (ErrorExpression)key;
+
+                var loopScope = new InterpreterScope(scope);
+                loopScope.DefineVariable(iterator, key);
+
+                var error = AchievementScriptInterpreter.Evaluate(Expressions, loopScope);
+                if (error != null)
+                    return error;
+
+                if (loopScope.IsComplete)
+                {
+                    if (loopScope.ReturnValue != null)
+                    {
+                        scope.ReturnValue = loopScope.ReturnValue;
+                        scope.IsComplete = true;
+                    }
+                    break;
+                }
+            }
+
+            return null;
         }
     }
 

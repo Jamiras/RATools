@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class FunctionCallExpression : ExpressionBase, INestedExpressions
+    public class FunctionCallExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public FunctionCallExpression(string functionName, ICollection<ExpressionBase> parameters)
             : this(new FunctionNameExpression(functionName), parameters)
@@ -498,6 +499,24 @@ namespace RATools.Parser.Expressions
             }
 
             return result.IsTrue(scope, out error);
+        }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            bool success = Invoke(scope, out result);
+            if (!success)
+            {
+                if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
+                {
+                    var error = result as ErrorExpression;
+                    result = new ErrorExpression(FunctionName.Name + " call failed: " + error.Message, FunctionName) { InnerError = error };
+                }
+                return (ErrorExpression)result;
+            }
+
+            scope.ReturnValue = result;
+            return null;
         }
     }
 
