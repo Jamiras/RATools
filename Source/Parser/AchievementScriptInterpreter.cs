@@ -388,6 +388,14 @@ namespace RATools.Parser
             if (executable != null)
                 return executable.Execute(scope);
 
+            switch (expression.Type)
+            {
+                case ExpressionType.Comment:
+                    // comments aren't actually executable, but may appear in the middle of an executable
+                    // block of code. just ignore them.
+                    return null;
+            }
+
             return new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
         }
 
