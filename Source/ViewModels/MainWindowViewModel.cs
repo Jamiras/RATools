@@ -322,6 +322,7 @@ namespace RATools.ViewModels
                         logger.WriteVerbose("Found code notes in " + dataDirectory);
                         viewModel = new GameViewModel(gameId, gameTitle);
                         viewModel.AssociateRACacheDirectory(dataDirectory);
+                        break;
                     }
                 }
 
