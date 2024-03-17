@@ -30,7 +30,7 @@ namespace RATools.Parser.Functions
             if (stringExpression == null)
                 return false;
 
-            var varargs = GetVarArgsParameter(scope, out result, stringExpression, true);
+            var varargs = GetVarArgsParameter(scope, out result, stringExpression);
             if (varargs == null)
                 return false;
 
