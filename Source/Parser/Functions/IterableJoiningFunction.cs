@@ -59,7 +59,10 @@ namespace RATools.Parser.Functions
                 iteratorScope.AssignVariable(predicateParameter, result);
 
                 if (!predicate.Evaluate(iteratorScope, out result))
+                {
+                    result = new ErrorExpression(string.Format("predicate function did not return any value for the predicate input {0}", input.ToString()));
                     return false;
+                }
 
                 expression = Combine(expression, result);
                 if (expression.Type == ExpressionType.Error)

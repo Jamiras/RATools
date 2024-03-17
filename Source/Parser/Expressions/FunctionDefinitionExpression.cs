@@ -134,6 +134,9 @@ namespace RATools.Parser.Expressions
             }
 
             result = interpreterScope.ReturnValue;
+            if (result == null)
+                return false;
+
             return true;
         }
 
