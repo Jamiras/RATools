@@ -3,6 +3,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
@@ -110,50 +111,39 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return null;
 
-            var requirements = new List<Requirement>();
-            var context = new ValueBuilderContext { Trigger = requirements };
-            var triggerBuilderScope = new InterpreterScope(scope) { Context = context };
-
             var functionCallExpression = expression as FunctionCallExpression;
             if (functionCallExpression != null)
             {
                 var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
                 if (functionDefinition is MaxOfFunction)
-                {
-                    var values = new List<IEnumerable<Requirement>>();
-
-                    foreach (var value in functionCallExpression.Parameters)
-                    {
-                        if (!value.ReplaceVariables(triggerBuilderScope, out expression))
-                        {
-                            result = expression;
-                            return null;
-                        }
-
-                        result = ((ITriggerExpression)expression).BuildTrigger(context);
-                        if (result != null)
-                            return null;
-
-                        values.Add(requirements);
-                        requirements = new List<Requirement>();
-                        context.Trigger = requirements;
-                    }
-
-                    return new Value(values);
-                }
+                    return ValueFromMaxOf(functionCallExpression.Parameters, out result);
             }
 
-            if (!expression.ReplaceVariables(triggerBuilderScope, out expression))
+            ErrorExpression error;
+            var value = ValueBuilder.BuildValue(expression, out error);
+            result = error;
+            return value;
+        }
+
+        private static Value ValueFromMaxOf(IEnumerable<ExpressionBase> expressions, out ExpressionBase result)
+        {
+            var values = new List<IEnumerable<Requirement>>();
+            ErrorExpression error;
+
+            foreach (var expression in expressions)
             {
-                result = expression;
-                return null;
+                var value = ValueBuilder.BuildValue(expression, out error);
+                if (value == null)
+                {
+                    result = error;
+                    return null;
+                }
+
+                values.Add(value.Values.First().Requirements);
             }
 
-            result = ((ITriggerExpression)expression).BuildTrigger(context);
-            if (result != null)
-                return null;
-
-            return new Value(new IEnumerable<Requirement>[] { requirements });
+            result = null;
+            return new Value(values);
         }
     }
 

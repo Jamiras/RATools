@@ -298,18 +298,37 @@ namespace RATools.Data
             {
                 foreach (var requirement in value.Requirements)
                 {
+                    Requirement clone = null;
+
                     if (requirement.Operator == RequirementOperator.Multiply ||
                         requirement.Operator == RequirementOperator.Divide)
                     {
-                        // Multiply/Divide in trigger logic requires 0.78, but can be used in leaderboard values long before that.
-                        var clone = requirement.Clone();
-                        clone.Operator = RequirementOperator.None;
-                        minimumVersion = minimumVersion.OrNewer(clone.MinimumVersion());
+                        // Multiply/Divide in trigger logic requires 0.78, but can be used with constants
+                        // in legacy value expressions long before that.
+                        if (!requirement.Right.IsMemoryReference)
+                        {
+                            clone = requirement.Clone();
+                            clone.Operator = RequirementOperator.None;
+
+                            // float support in trigger logic requires 1.0
+                            if (clone.Right.Type == FieldType.Float)
+                                clone.Right = new Field { Type = FieldType.Value, Value = 1 };
+                        }
                     }
-                    else
+
+                    if (requirement.Type == RequirementType.Measured)
                     {
-                        minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
+                        // Measured in trigger logic requires 0.77, but we can construct a legacy expression
+                        // without it.
+                        if (clone == null)
+                            clone = requirement.Clone();
+                        clone.Type = RequirementType.None;
                     }
+
+                    if (clone != null)
+                        minimumVersion = minimumVersion.OrNewer(clone.MinimumVersion());
+                    else
+                        minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
                 }
             }
 

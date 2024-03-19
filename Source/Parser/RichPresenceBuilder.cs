@@ -138,6 +138,13 @@ namespace RATools.Parser
                             // raw string, not a macro
                             formatted = parameter.Name;
                         }
+                        else if (serializationContext.MinimumVersion >= Data.Version._0_77 &&
+                                 parameter.Value.MinimumVersion() < Data.Version._0_77)
+                        {
+                            // if the parameter can be represented without Measured syntax, do so.
+                            formatted = String.Format("@{0}({1})",
+                                parameter.Name, parameter.Value.Serialize(serializationContext.WithVersion(Data.Version._0_76)));
+                        }
                         else
                         {
                             formatted = String.Format("@{0}({1})",
@@ -159,7 +166,10 @@ namespace RATools.Parser
                 if (_parameters != null)
                 {
                     foreach (var parameter in _parameters)
-                        minimumVersion = minimumVersion.OrNewer(parameter.Value.MinimumVersion());
+                    {
+                        if (parameter.Value != null)
+                            minimumVersion = minimumVersion.OrNewer(parameter.Value.MinimumVersion());
+                    }
                 }
 
                 return minimumVersion;
@@ -170,8 +180,11 @@ namespace RATools.Parser
                 uint maximumAddress = (Condition != null) ? Condition.MaximumAddress() : 0;
                 if (_parameters != null)
                 {
-                    foreach (var parmeter in _parameters)
-                        maximumAddress = Math.Max(maximumAddress, parmeter.Value.MaximumAddress());
+                    foreach (var parameter in _parameters)
+                    {
+                        if (parameter.Value != null)
+                            maximumAddress = Math.Max(maximumAddress, parameter.Value.MaximumAddress());
+                    }
                 }
 
                 return maximumAddress;

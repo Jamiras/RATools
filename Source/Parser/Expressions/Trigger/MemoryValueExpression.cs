@@ -1453,11 +1453,8 @@ namespace RATools.Parser.Expressions.Trigger
                 accessor.BuildTrigger(context);
 
             // the last item will be flagged as an AddSource (or None if 0 was appended)
-            // make sure it's None or Measured before leaving
-            if (context is ValueBuilderContext)
-                context.LastRequirement.Type = RequirementType.Measured;
-            else
-                context.LastRequirement.Type = RequirementType.None;
+            // make sure it's None before leaving.
+            context.LastRequirement.Type = RequirementType.None;
 
             return null;
         }

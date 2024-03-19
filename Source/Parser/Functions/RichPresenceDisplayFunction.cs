@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceDisplayFunction : FormatFunction
+    internal class RichPresenceDisplayFunction : FunctionDefinitionExpression
     {
         public RichPresenceDisplayFunction()
             : this("rich_presence_display")
@@ -17,6 +17,11 @@ namespace RATools.Parser.Functions
         protected RichPresenceDisplayFunction(string name)
             : base(name)
         {
+        }
+
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        {
+            return Evaluate(scope, out result);
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
@@ -51,6 +56,57 @@ namespace RATools.Parser.Functions
                 context.RichPresence.Line = functionCall.Location.Start.Line;
 
             return true;
+        }
+
+        protected ArrayExpression EvaluateVarArgs(InterpreterScope scope, out ExpressionBase result, ExpressionBase lastExpression)
+        {
+            var varargs = GetVarArgsParameter(scope, out result, lastExpression);
+            if (varargs == null)
+                return null;
+
+            for (int parameterIndex = 0; parameterIndex < varargs.Entries.Count; parameterIndex++)
+            {
+                result = varargs.Entries[parameterIndex];
+                var functionCall = result as FunctionCallExpression;
+                if (functionCall != null)
+                {
+                    if (!functionCall.Evaluate(scope, out result))
+                        return null;
+
+                    varargs.Entries[parameterIndex] = result;
+                }
+                else
+                {
+                    var stringValue = result as StringConstantExpression;
+                    if (stringValue == null)
+                    {
+                        var combine = result as IMathematicCombineExpression;
+                        if (combine != null)
+                        {
+                            result = combine.Combine(new StringConstantExpression(""), MathematicOperation.Add);
+                            varargs.Entries[parameterIndex] = result;
+
+                            stringValue = result as StringConstantExpression;
+                        }
+
+                        if (stringValue == null)
+                            stringValue = new StringConstantExpression("{" + parameterIndex + "}");
+                    }
+
+                    var richPresenceContext = scope.GetContext<RichPresenceDisplayContext>();
+                    richPresenceContext.DisplayString.AddParameter(stringValue);
+                }
+            }
+
+            var stringExpression = lastExpression as StringConstantExpression;
+            if (stringExpression != null)
+            {
+                result = FormatFunction.Evaluate(stringExpression, varargs, false);
+                if (result is ErrorExpression)
+                    return null;
+            }
+
+            return varargs;
         }
 
         internal class RichPresenceDisplayContext

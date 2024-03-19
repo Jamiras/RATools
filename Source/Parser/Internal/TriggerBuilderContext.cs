@@ -565,6 +565,13 @@ namespace RATools.Parser.Internal
     }
 
     /// <summary>
+    /// <see cref="TriggerBuilderContext"/> for building a value.
+    /// </summary>
+    internal class ValueBuilderContext : TriggerBuilderContext
+    {
+    }
+
+    /// <summary>
     /// <see cref="TriggerBuilderContext"/> for building a subclause to be used in a once/repeated/tally
     /// </summary>
     internal class TallyBuilderContext : TriggerBuilderContext

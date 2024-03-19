@@ -55,6 +55,14 @@ namespace RATools.Parser
             if (error != null)
                 return null;
 
+            // ensure there's a Measured condition
+            if (!requirements.Any(r => r.Type == RequirementType.Measured))
+            {
+                var measured = requirements.LastOrDefault(r => r.Type == RequirementType.None);
+                if (measured != null)
+                    measured.Type = RequirementType.Measured;
+            }
+
             return new Value(new[] { requirements });
         }
 

@@ -38,7 +38,7 @@ namespace RATools.Parser.Functions
             return (result is StringConstantExpression);
         }
 
-        protected ArrayExpression EvaluateVarArgs(InterpreterScope scope, out ExpressionBase result, ExpressionBase lastExpression)
+        private ArrayExpression EvaluateVarArgs(InterpreterScope scope, out ExpressionBase result, ExpressionBase lastExpression)
         {
             var varargs = GetVarArgsParameter(scope, out result, lastExpression);
             if (varargs == null)
@@ -61,7 +61,7 @@ namespace RATools.Parser.Functions
             if (stringExpression != null)
             {
                 result = Evaluate(stringExpression, varargs, false);
-                if (result != null)
+                if (result is ErrorExpression)
                     return null;
             }
 
