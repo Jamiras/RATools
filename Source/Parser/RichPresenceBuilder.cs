@@ -160,6 +160,28 @@ namespace RATools.Parser
                 return (stringResult != null) ? stringResult.Value : "";
             }
 
+            public bool UsesMacro(string macroName)
+            {
+                if (_parameters != null)
+                {
+                    int i = 0;
+                    foreach (var parameter in _parameters)
+                    {
+                        if (parameter.Name == macroName)
+                        {
+                            var placeholder = "{" + i + "}";
+
+                            if (Format.Value.Contains(placeholder))
+                                return true;
+                        }
+
+                        ++i;
+                    }
+                }
+
+                return false;
+            }
+
             public SoftwareVersion MinimumVersion()
             {
                 var minimumVersion = (Condition != null) ? Condition.MinimumVersion() : Data.Version.MinimumVersion;
@@ -313,6 +335,17 @@ namespace RATools.Parser
             return maximumAddress;
         }
 
+        private bool IsMacroUsed(string macroName)
+        {
+            foreach (var displayString in _displayStrings)
+            {
+                if (displayString.UsesMacro(macroName))
+                    return true;
+            }
+
+            return false;
+        }
+
         public override string ToString()
         {
             return Serialize(new SerializationContext());
@@ -327,6 +360,9 @@ namespace RATools.Parser
 
             foreach (var lookup in _lookupFields)
             {
+                if (!IsMacroUsed(lookup.Key))
+                    continue;
+
                 builder.Append("Lookup:");
                 builder.AppendLine(lookup.Key);
 
@@ -350,6 +386,9 @@ namespace RATools.Parser
                     if (RichPresenceMacroFunction.GetValueFormat(value.Key) == value.Value.Format)
                         continue;
                 }
+
+                if (!IsMacroUsed(value.Key))
+                    continue;
 
                 builder.Append("Format:");
                 builder.AppendLine(value.Key);
@@ -375,7 +414,7 @@ namespace RATools.Parser
             return builder.ToString();
         }
 
-        private void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries, SerializationContext serializationContext, string fallback)
+        private static void AppendRichPresenceLookupEntries(StringBuilder builder, IDictionary<int, string> entries, SerializationContext serializationContext, string fallback)
         {
             // determine how many entries have the same values
             var sharedValues = new HashSet<string>();
