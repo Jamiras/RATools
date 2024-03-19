@@ -98,16 +98,10 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return null;
 
-            var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext() { Trigger = requirements };
-            var error = ((ITriggerExpression)expression).BuildTrigger(context);
-            if (error != null)
-            {
-                result = error;
-                return null;
-            }
- 
-            return new Trigger(requirements);
+            ErrorExpression error;
+            var trigger = TriggerBuilder.BuildTrigger(expression, out error);
+            result = error;
+            return trigger;
         }
 
         private static Value ProcessValue(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)

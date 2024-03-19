@@ -78,6 +78,10 @@ namespace RATools.Parser
                 Title = Title,
                 Description = Description,
                 Format = Format,
+                Start = Start.ToTrigger(),
+                Cancel = Cancel.ToTrigger(),
+                Submit = Submit.ToTrigger(),
+                Value = Value.ToValue()
             };
         }
 
