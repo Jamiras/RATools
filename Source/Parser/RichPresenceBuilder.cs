@@ -15,14 +15,14 @@ namespace RATools.Parser
     {
         public RichPresenceBuilder()
         {
-            _valueFields = new TinyDictionary<string, ValueField>();
-            _lookupFields = new TinyDictionary<string, Lookup>();
+            _valueFields = new SortedDictionary<string, ValueField>();
+            _lookupFields = new SortedDictionary<string, Lookup>();
             _displayStrings = new List<ConditionalDisplayString>();
         }
 
         private List<ConditionalDisplayString> _displayStrings;
-        private TinyDictionary<string, ValueField> _valueFields;
-        private TinyDictionary<string, Lookup> _lookupFields;
+        private SortedDictionary<string, ValueField> _valueFields;
+        private SortedDictionary<string, Lookup> _lookupFields;
 
         /// <summary>
         /// The line associated to the `rich_presence_display` call.
@@ -544,13 +544,17 @@ namespace RATools.Parser
 
         public ErrorExpression Merge(RichPresenceBuilder from)
         {
+            // only keep one default display string
+            if (from._displayStrings.Any(d => d.Condition == null))
+                _displayStrings.RemoveAll(d => d.Condition == null);
+
             _displayStrings.AddRange(from._displayStrings);
 
             foreach (var kvp in from._valueFields)
             {
                 ValueField field;
                 if (!_valueFields.TryGetValue(kvp.Key, out field))
-                    _valueFields.Add(kvp);
+                    _valueFields[kvp.Key] = kvp.Value;
                 else if (field.Format != kvp.Value.Format)
                     return new ErrorExpression("Multiple rich_presence_value calls with the same name must have the same format", field.Func);
             }
@@ -560,7 +564,7 @@ namespace RATools.Parser
                 Lookup existing;
                 if (!_lookupFields.TryGetValue(kvp.Key, out existing))
                 {
-                    _lookupFields.Add(kvp);
+                    _lookupFields[kvp.Key] = kvp.Value;
                 }
                 else
                 {

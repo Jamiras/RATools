@@ -202,6 +202,8 @@ namespace RATools.Data
                 {
                     if (serializationContext.MinimumVersion < Version._0_77) // Measured leaderboard format
                         SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
+                    else if (enumerator.Current.Requirements.Any(r => r.Type == RequirementType.None)) // raw value
+                        SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
                     else
                         enumerator.Current.Serialize(builder, serializationContext);
 
@@ -323,6 +325,11 @@ namespace RATools.Data
                         if (clone == null)
                             clone = requirement.Clone();
                         clone.Type = RequirementType.None;
+                    }
+                    else if (requirement.Type == RequirementType.AddHits)
+                    {
+                        // AddHits is supported pre-0.77, but cannot be used in value logic without a Measured flag.
+                        minimumVersion = minimumVersion.OrNewer(Version._0_77);
                     }
 
                     if (clone != null)
