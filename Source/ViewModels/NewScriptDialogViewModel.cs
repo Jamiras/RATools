@@ -9,7 +9,6 @@ using Jamiras.ViewModels.Fields;
 using Jamiras.ViewModels.Grid;
 using RATools.Data;
 using RATools.Parser;
-using RATools.Parser.Internal;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
@@ -1080,14 +1079,26 @@ namespace RATools.ViewModels
         {
             MemoryAddresses.Commit();
 
+            const int MaxWidth = 120;
+            var scriptBuilderContext = new ScriptBuilderContext
+            {
+                WrapWidth = MaxWidth,
+                NumberFormat = _settings.HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal,
+            };
+
+            foreach (var memoryItem in _memoryItems.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
+            {
+                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                var functionCall = memoryItem.FunctionName + "()";
+                scriptBuilderContext.AddAlias(memoryReference, functionCall);
+            }
+
             using (var stream = new StreamWriter(outStream))
             {
                 stream.Write("// ");
                 stream.WriteLine(_game.Title);
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
-
-                var numberFormat = _settings.HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
@@ -1096,13 +1107,13 @@ namespace RATools.ViewModels
                 foreach (var dumpLookup in lookupsToDump)
                     DumpLookup(stream, dumpLookup);
 
-                DumpAchievements(stream, numberFormat);
-                DumpLeaderboards(stream, numberFormat);
+                DumpAchievements(stream, scriptBuilderContext);
+                DumpLeaderboards(stream, scriptBuilderContext);
 
                 foreach (var dumpRichPresence in _assets.Where(a => a.Type == DumpAssetType.RichPresence && a.IsSelected))
                 {
                     var displayMacro = _macros.FirstOrDefault(m => m.DisplayLines != null);
-                    DumpRichPresence(stream, displayMacro, dumpRichPresence, numberFormat);
+                    DumpRichPresence(stream, displayMacro, dumpRichPresence, scriptBuilderContext);
                 }
             }
         }
@@ -1267,8 +1278,11 @@ namespace RATools.ViewModels
             }
         }
 
-        private void DumpAchievements(StreamWriter stream, NumberFormat numberFormat)
+        private void DumpAchievements(StreamWriter stream, ScriptBuilderContext scriptBuilderContext)
         {
+            var indentedContext = scriptBuilderContext.Clone();
+            indentedContext.Indent = 14; // "    trigger = ".length
+
             foreach (var dumpAchievement in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Achievement))
             {
                 var achievementViewModel = _game.Editors.OfType<AchievementViewModel>().FirstOrDefault(a => a.Id == dumpAchievement.Id);
@@ -1314,17 +1328,18 @@ namespace RATools.ViewModels
                 }
 
                 stream.Write("    trigger = ");
-                const int indent = 14; // "    trigger = ".length
-
-                DumpTrigger(stream, numberFormat, dumpAchievement, assetSource.TriggerList.First(), indent);
+                DumpTrigger(stream, indentedContext, dumpAchievement, assetSource.TriggerList.First());
                 stream.WriteLine();
 
                 stream.WriteLine(")");
             }
         }
 
-        private void DumpLeaderboards(StreamWriter stream, NumberFormat numberFormat)
+        private void DumpLeaderboards(StreamWriter stream, ScriptBuilderContext scriptBuilderContext)
         {
+            var indentedContext = scriptBuilderContext.Clone();
+            indentedContext.Indent = 13; // "    start  = ".length
+
             foreach (var dumpLeaderboard in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Leaderboard))
             {
                 var leaderboardViewModel = _game.Editors.OfType<LeaderboardViewModel>().FirstOrDefault(a => a.Id == dumpLeaderboard.Id);
@@ -1349,30 +1364,28 @@ namespace RATools.ViewModels
                 stream.Write(EscapeString(leaderboardData.Description));
                 stream.WriteLine("\",");
 
-                const int indent = 13; // "    start  = ".length
-
                 stream.Write("    start  = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.First(), indent);
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.First());
                 stream.WriteLine(",");
 
                 stream.Write("    cancel = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(1), indent);
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(1));
                 stream.WriteLine(",");
 
                 stream.Write("    submit = ");
-                DumpTrigger(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(2), indent);
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(2));
                 stream.WriteLine(",");
 
-                stream.Write("    value = ");
+                stream.Write("    value  = ");
                 var valueTrigger = assetSource.TriggerList.ElementAt(3);
                 if (valueTrigger.Groups.Count() > 1 ||
                     valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
                 {
-                    DumpValue(stream, numberFormat, dumpLeaderboard, assetSource.TriggerList.ElementAt(3), indent - 1);
+                    DumpValue(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(3));
                 }
                 else
                 {
-                    DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard);
+                    DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard, indentedContext);
                 }
                 stream.WriteLine(",");
 
@@ -1432,10 +1445,13 @@ namespace RATools.ViewModels
             stream.WriteLine("}");
         }
 
-        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, NumberFormat numberFormat)
+        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, ScriptBuilderContext scriptBuilderContext)
         {
             int index;
             var notes = new Dictionary<uint, string>();
+
+            var indentedContext = scriptBuilderContext.Clone();
+            indentedContext.Indent = 4;
 
             foreach (var line in displayMacro.DisplayLines)
             {
@@ -1448,10 +1464,11 @@ namespace RATools.ViewModels
                     if (index != -1)
                     {
                         var trigger = Trigger.Deserialize(line.Substring(1, index - 1));
-                        var vmTrigger = new TriggerViewModel("RichPresence", trigger, numberFormat, notes);
+                        var vmTrigger = new TriggerViewModel("RichPresence", trigger, scriptBuilderContext.NumberFormat, notes);
 
                         stream.Write("rich_presence_conditional_display(");
-                        DumpTrigger(stream, numberFormat, dumpRichPresence, vmTrigger, 4);
+                        indentedContext.Indent = 4;
+                        DumpTrigger(stream, indentedContext, dumpRichPresence, vmTrigger);
                         stream.Write(", \"");
                     }
 
@@ -1504,18 +1521,21 @@ namespace RATools.ViewModels
                         stream.Write("rich_presence_value(\"");
                         stream.Write(kvp.Key);
                         stream.Write("\", ");
+                        indentedContext.Indent = 24; // "    rich_presence_value(".length
                     }
                     else if (macro.LookupEntries != null)
                     {
                         stream.Write("rich_presence_lookup(\"");
                         stream.Write(macro.Name);
                         stream.Write("\", ");
+                        indentedContext.Indent = 25; // "    rich_presence_lookup(".length
                     }
                     else
                     {
                         stream.Write("rich_presence_value(\"");
                         stream.Write(macro.Name);
                         stream.Write("\", ");
+                        indentedContext.Indent = 24; // "    rich_presence_value(".length
                     }
 
                     var value = Value.Deserialize(kvp.Value);
@@ -1525,7 +1545,7 @@ namespace RATools.ViewModels
                         if (measured != null)
                             measured.Type = RequirementType.None; // measured() is implicit
                     }
-                    DumpLegacyExpression(stream, value, dumpRichPresence);
+                    DumpLegacyExpression(stream, value, dumpRichPresence, indentedContext);
 
                     if (macro == null)
                     {
@@ -1575,7 +1595,7 @@ namespace RATools.ViewModels
             }
         }
 
-        private static void DumpLegacyExpression(StreamWriter stream, Value value, DumpAsset dumpAsset)
+        private static void DumpLegacyExpression(StreamWriter stream, Value value, DumpAsset dumpAsset, ScriptBuilderContext scriptBuilderContext)
         {
             if (!value.Values.Any())
             {
@@ -1583,22 +1603,14 @@ namespace RATools.ViewModels
                 return;
             }
 
-            var context = new ScriptBuilderContext();
-            var script = new ValueBuilder(value).ToScript(context);
+            var script = new ValueBuilder(value).ToScript(scriptBuilderContext);
             if (script.Length > 2 && script[0] == '(' && script[script.Length - 1] == ')')
                 script = script.Substring(1, script.Length - 2);
-
-            foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
-            {
-                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                var functionCall = memoryItem.FunctionName + "()";
-                script = script.Replace(memoryReference, functionCall);
-            }
 
             stream.Write(script);
         }
 
-        private static void DumpTrigger(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)
+        private static void DumpTrigger(StreamWriter stream, ScriptBuilderContext scriptBuilderContext, DumpAsset dumpAsset, TriggerViewModel triggerViewModel)
         {
             var triggerWhenMeasuredGroups = new List<RequirementGroupViewModel>();
             if (triggerViewModel.Groups.Count() > 2)
@@ -1609,7 +1621,7 @@ namespace RATools.ViewModels
 
             bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
             if (!isCoreEmpty)
-                DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent);
+                DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, scriptBuilderContext);
 
             bool first = true;
             while (groupEnumerator.MoveNext())
@@ -1623,7 +1635,7 @@ namespace RATools.ViewModels
                     if (!isCoreEmpty)
                     {
                         stream.WriteLine(" &&");
-                        stream.Write(new string(' ', indent));
+                        stream.Write(new string(' ', scriptBuilderContext.Indent));
                     }
                     stream.Write('(');
                     first = false;
@@ -1637,20 +1649,24 @@ namespace RATools.ViewModels
                 else
                 {
                     stream.WriteLine(" ||");
-                    stream.Write(new string(' ', indent));
+                    stream.Write(new string(' ', scriptBuilderContext.Indent));
                     stream.Write(' ');
                 }
 
                 if (triggerWhenMeasuredGroups.Contains(groupEnumerator.Current))
                 {
                     stream.Write("trigger_when(");
-                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
+                    scriptBuilderContext.Indent += 2;
+                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, scriptBuilderContext);
+                    scriptBuilderContext.Indent -= 2;
                     stream.Write(')');
                 }
                 else
                 {
                     stream.Write('(');
-                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, numberFormat, indent + 2);
+                    scriptBuilderContext.Indent += 2;
+                    DumpPublishedRequirements(stream, dumpAsset, groupEnumerator.Current, scriptBuilderContext);
+                    scriptBuilderContext.Indent -= 2;
                     stream.Write(')');
                 }
             }
@@ -1713,12 +1729,12 @@ namespace RATools.ViewModels
                 triggerWhenMeasuredGroups.Clear();
         }
 
-        private static void DumpValue(StreamWriter stream, NumberFormat numberFormat, DumpAsset dumpAsset, TriggerViewModel triggerViewModel, int indent)
+        private static void DumpValue(StreamWriter stream, ScriptBuilderContext context, DumpAsset dumpAsset, TriggerViewModel triggerViewModel)
         {
             if (triggerViewModel.Groups.Count() > 1)
             {
                 stream.WriteLine("max_of(");
-                indent += 4;
+                context.Indent += 4;
 
                 bool first = true;
                 foreach (var value in triggerViewModel.Groups)
@@ -1726,36 +1742,29 @@ namespace RATools.ViewModels
                     if (!first)
                         stream.WriteLine(",");
 
-                    stream.Write(new string(' ', indent));
+                    stream.Write(new string(' ', context.Indent));
                     first = false;
 
-                    DumpPublishedRequirements(stream, dumpAsset, value, numberFormat, indent, true);
+                    DumpPublishedRequirements(stream, dumpAsset, value, context, true);
                 }
 
-                indent -= 4;
+                context.Indent -= 4;
                 stream.WriteLine();
-                stream.Write(new string(' ', indent));
+                stream.Write(new string(' ', context.Indent));
                 stream.Write(")");
             }
             else
             {
-                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), numberFormat, indent, true);
+                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), context, true);
             }
         }
 
         private static void DumpPublishedRequirements(StreamWriter stream, DumpAsset dumpAsset,
-            RequirementGroupViewModel requirementGroupViewModel, NumberFormat numberFormat, int indent, bool isValue = false)
+            RequirementGroupViewModel requirementGroupViewModel, ScriptBuilderContext scriptBuilderContext, bool isValue = false)
         {
-            const int MaxWidth = 120;
-
             var definition = new StringBuilder();
-            var context = new ScriptBuilderContext
-            { 
-                NumberFormat = numberFormat, 
-                Indent = indent,
-                WrapWidth = MaxWidth,
-                IsValue = isValue,
-            };
+            var context = scriptBuilderContext.Clone();
+            context.IsValue = isValue;
             context.AppendRequirements(definition, requirementGroupViewModel.Requirements.Select(r => r.Requirement));
 
             foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
