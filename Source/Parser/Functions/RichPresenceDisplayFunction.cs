@@ -36,6 +36,11 @@ namespace RATools.Parser.Functions
             var formatString = GetStringParameter(scope, "format_string", out result);
             if (formatString == null)
                 return false;
+            if (formatString.Value == "")
+            {
+                result = new ErrorExpression("Empty format string not allowed", formatString);
+                return false;
+            }
 
             var richPresenceContext = new RichPresenceDisplayContext
             {

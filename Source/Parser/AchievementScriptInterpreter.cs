@@ -380,8 +380,6 @@ namespace RATools.Parser
             else
                 SerializationContext.AddressWidth = 2;
 
-            SerializationContext.AddressWidth = 6;
-
             if (_richPresence.IsValid)
             {
                 RichPresence = _richPresence.Serialize(SerializationContext);

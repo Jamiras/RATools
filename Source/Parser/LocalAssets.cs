@@ -508,7 +508,7 @@ namespace RATools.Parser
         /// </summary>
         public void Commit(string author, StringBuilder warning, SerializationContext serializationContext, List<AssetBase> assetsToValidate)
         {
-            SoftwareVersion minimumVersion = Version;
+            SoftwareVersion minimumVersion = serializationContext.MinimumVersion.OrNewer(Version);
 
             foreach (var achievement in _achievements)
             {
