@@ -176,17 +176,20 @@ namespace RATools
                 stream.WriteLine(error.Message);
 
                 stream.WriteLine(_currentLineText);
-                stream.Write(new String(' ', error.Location.Front.Column - 1));
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                stream.Write('^');
-                if (error.Location.Front.Line == error.Location.Back.Line)
+                if (error.Location.Front.Column > 0)
                 {
-                    var distance = error.Location.Back.Column - error.Location.Front.Column;
-                    if (distance > 0)
-                        stream.Write(new String('~', distance));
+                    stream.Write(new String(' ', error.Location.Front.Column - 1));
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    stream.Write('^');
+                    if (error.Location.Front.Line == error.Location.Back.Line)
+                    {
+                        var distance = error.Location.Back.Column - error.Location.Front.Column;
+                        if (distance > 0)
+                            stream.Write(new String('~', distance));
+                    }
+                    Console.ResetColor();
+                    stream.WriteLine();
                 }
-                Console.ResetColor();
-                stream.WriteLine();
             }
         }
 
