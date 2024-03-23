@@ -1389,11 +1389,11 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             var sharedConditions = new List<RequirementExpressionBase>(thisConditions.Count);
-            var unsharedConditions = new List<RequirementExpressionBase>();
-            bool updated = false;
-
             for (int i = 0; i < thisConditions.Count; i++)
                 sharedConditions.Add(null);
+
+            var unsharedConditions = new List<RequirementExpressionBase>();
+            bool updated = false;
 
             // both sides use the same set of addresses, see if their logics can be combined
             // (A || B || C) && (A || B) => (A || B)
@@ -1403,23 +1403,68 @@ namespace RATools.Parser.Expressions.Trigger
             // (A && B) || (A && C) => A && (B || C)
 
             // first pass - look for exact matches
-            foreach (var thatCondition in thatConditions)
+            bool findExactMatches(Predicate<RequirementExpressionBase> shouldCheck)
             {
-                var found = false;
-                for (int i = 0; i < sharedConditions.Count; i++)
-                {
-                    if (sharedConditions[i] == null && thatCondition == thisConditions[i])
-                    {
-                        sharedConditions[i] = thisConditions[i];
-                        updated = true;
-                        found = true;
-                        break;
-                    }
-                }
+                var enumerator = thatConditions.Where(c => shouldCheck(c)).GetEnumerator();
+                if (!enumerator.MoveNext())
+                    return true;
 
-                if (!found)
-                    unsharedConditions.Add(thatCondition);
+                int start = 0;
+                int end = sharedConditions.Count;
+                while (start < end && (sharedConditions[start] != null || !shouldCheck(thisConditions[start])))
+                    start++;
+                while (end > start && (sharedConditions[end - 1] != null || !shouldCheck(thisConditions[end - 1])))
+                    end--;
+
+                do
+                {
+                    var thatCondition = enumerator.Current;
+
+                    var found = false;
+                    for (int i = start; i < end; i++)
+                    {
+                        if (sharedConditions[i] != null)
+                            continue;
+
+                        var thisCondition = thisConditions[i];
+                        if (shouldCheck(thisCondition) && thatCondition == thisCondition)
+                        {
+                            sharedConditions[i] = thisCondition;
+                            updated = true;
+                            found = true;
+
+                            if (i == start)
+                            {
+                                while (start < end && (sharedConditions[start] != null || !shouldCheck(thisConditions[start])))
+                                    start++;
+                            }
+                            else if (i == end - 1)
+                            {
+                                while (end > start && (sharedConditions[end - 1] != null || !shouldCheck(thisConditions[end - 1])))
+                                    end--;
+                            }
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        // if there's more than one unshared condition, we'll need to join them
+                        // with an AndNext or OrNext. bail if subclauses are not allowed.
+                        if (unsharedConditions.Count == 1 && !allowSubclause)
+                            return false;
+
+                        unsharedConditions.Add(thatCondition);
+                    }
+                } while (enumerator.MoveNext());
+
+                return true;
             }
+
+            if (!findExactMatches((c) => c is not RequirementClauseExpression))
+                return null;
+            if (!findExactMatches((c) => c is RequirementClauseExpression))
+                return null;
 
             // second pass - if there's a single unmatched item, try to merge it
             if (unsharedConditions.Count == 1 && thisConditions.Count == thatConditions.Count)

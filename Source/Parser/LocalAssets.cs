@@ -56,6 +56,8 @@ namespace RATools.Parser
         /// </summary>
         public string Title { get; set; }
 
+        public string Filename { get { return _filename; } }
+
         /// <summary>
         /// Gets the achievements read from the file.
         /// </summary>

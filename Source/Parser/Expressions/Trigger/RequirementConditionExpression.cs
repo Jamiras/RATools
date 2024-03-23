@@ -134,7 +134,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var trigger = left as ITriggerExpression;
                 if (trigger == null)
-                    return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", left.Type), left);
+                    return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", left.Type.ToLowerString()), left);
 
                 error = trigger.BuildTrigger(context);
             }
@@ -150,7 +150,7 @@ namespace RATools.Parser.Expressions.Trigger
                 lastRequirement.Right = FieldFactory.CreateField(right);
 
             if (lastRequirement.Right.Type == FieldType.None)
-                return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type), Right);
+                return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type.ToLowerString()), Right);
 
             lastRequirement.Operator = ConvertToRequirementOperator(comparison);
             return null;

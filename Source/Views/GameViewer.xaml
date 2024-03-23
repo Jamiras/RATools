@@ -165,7 +165,7 @@
                         <TextBlock Text="{Binding UnofficialAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
                         <Run Text="pts" />
                     </TextBlock>
-                    <TextBlock Grid.Column="2" Margin="4,0,4,0">
+                    <TextBlock Grid.Column="2" Margin="4,0,4,0" ToolTip="{Binding LocalFilePath}">
                         <TextBlock.Style>
                             <Style TargetType="{x:Type TextBlock}">
                                 <Style.Triggers>

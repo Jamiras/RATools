@@ -291,12 +291,10 @@ namespace RATools.Parser
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
-                    if (!Evaluate(expressionGroup.Expressions, scope, callback))
+                    var error = Execute(expressionGroup.Expressions, scope, callback);
+                    if (error != null)
                     {
-                        var error = Error;
-                        if (error != null)
-                            expressionGroups.AddEvaluationError(error);
-
+                        expressionGroups.AddEvaluationError(error);
                         result = false;
                     }
 
@@ -350,6 +348,7 @@ namespace RATools.Parser
 
             SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion;
             uint maxAddress = 0;
+
             foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
@@ -371,6 +370,8 @@ namespace RATools.Parser
             minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
             maxAddress = Math.Max(maxAddress, RichPresenceBuilder.MaximumAddress());
 
+            minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
+
             SerializationContext = scriptContext.SerializationContext.WithVersion(minimumVersion);
             if (maxAddress >= 0x10000)
                 SerializationContext.AddressWidth = 6;
@@ -378,6 +379,8 @@ namespace RATools.Parser
                 SerializationContext.AddressWidth = 4;
             else
                 SerializationContext.AddressWidth = 2;
+
+            SerializationContext.AddressWidth = 6;
 
             if (_richPresence.IsValid)
             {
@@ -402,236 +405,65 @@ namespace RATools.Parser
             }
         }
 
-        internal bool Evaluate(IEnumerable<ExpressionBase> expressions, InterpreterScope scope, IScriptInterpreterCallback callback = null)
+        private static ErrorExpression Execute(ExpressionBase expression, InterpreterScope scope)
         {
-            int i = 0;
-            int count = expressions.Count();
+            var executable = expression as IExecutableExpression;
+            if (executable != null)
+                return executable.Execute(scope);
 
+            switch (expression.Type)
+            {
+                case ExpressionType.Comment:
+                    // comments aren't actually executable, but may appear in the middle of an executable
+                    // block of code. just ignore them.
+                    return null;
+            }
+
+            return new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
+        }
+
+        internal static ErrorExpression Execute(IEnumerable<ExpressionBase> expressions, InterpreterScope scope)
+        {
             foreach (var expression in expressions)
             {
-                if (callback != null)
-                {
-                    if (callback.IsAborted)
-                        return false;
-
-                    int progress = (i * 100 / count);
-                    if (progress > 0)
-                        callback.UpdateProgress(progress, expression.Location.Start.Line);
-
-                    i++;
-                }
-
-                if (!Evaluate(expression, scope))
-                    return false;
+                var error = Execute(expression, scope);
+                if (error != null)
+                    return error;
 
                 if (scope.IsComplete)
                     break;
             }
 
-            return true;
+            return null;
         }
 
-        private bool Evaluate(ExpressionBase expression, InterpreterScope scope)
+        private static ErrorExpression Execute(IEnumerable<ExpressionBase> expressions, InterpreterScope scope, IScriptInterpreterCallback callback = null)
         {
-            switch (expression.Type)
+            if (callback == null)
+                return Execute(expressions, scope);
+
+            int i = 0;
+            int count = expressions.Count();
+
+            foreach (var expression in expressions)
             {
-                case ExpressionType.Assignment:
-                    Error = ((AssignmentExpression)expression).Evaluate(scope);
-                    return (Error == null);
+                if (callback.IsAborted)
+                    return new ErrorExpression("Processing aborted");
 
-                case ExpressionType.FunctionCall:
-                    return CallFunction((FunctionCallExpression)expression, scope);
+                int progress = (i * 100 / count);
+                if (progress > 0)
+                    callback.UpdateProgress(progress, expression.Location.Start.Line);
+                i++;
 
-                case ExpressionType.For:
-                    return EvaluateLoop((ForExpression)expression, scope);
+                var error = Execute(expression, scope);
+                if (error != null)
+                    return error;
 
-                case ExpressionType.If:
-                    return EvaluateIf((IfExpression)expression, scope);
-
-                case ExpressionType.Return:
-                    return EvaluateReturn((ReturnExpression)expression, scope);
-
-                case ExpressionType.Error:
-                    Error = expression as ErrorExpression;
-                    return false;
-
-                case ExpressionType.FunctionDefinition:
-                    return EvaluateFunctionDefinition((FunctionDefinitionExpression)expression, scope);
-
-                case ExpressionType.Comment:
-                    return true;
-
-                default:
-                    var executable = expression as IExecutableExpression;
-                    if (executable != null)
-                    {
-                        var error = executable.Execute(scope);
-                        if (error != null)
-                        {
-                            Error = error;
-                            return false;
-                        }
-
-                        return true;
-                    }
-
-                    Error = new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
-                    return false;
-            }
-        }
-
-        private bool EvaluateFunctionDefinition(FunctionDefinitionExpression expression, InterpreterScope scope)
-        {
-            scope.AddFunction(expression);
-            return true;
-        }
-
-        private bool EvaluateReturn(ReturnExpression expression, InterpreterScope scope)
-        {
-            ExpressionBase result;
-            var returnScope = new InterpreterScope(scope) { Context = new AssignmentExpression(new VariableExpression("@return"), expression.Value) };
-            if (!expression.Value.ReplaceVariables(returnScope, out result))
-            {
-                Error = result as ErrorExpression;
-                return false;
+                if (scope.IsComplete)
+                    break;
             }
 
-            var functionCall = result as FunctionCallExpression;
-            if (functionCall != null)
-            {
-                if (!CallFunction(functionCall, returnScope))
-                    return false;
-
-                scope.ReturnValue = returnScope.ReturnValue;
-            }
-            else
-            {
-                scope.ReturnValue = result;
-            }
-
-            scope.IsComplete = true;
-            return true;
-        }
-
-        private bool EvaluateLoop(ForExpression forExpression, InterpreterScope scope)
-        {
-            ExpressionBase range;
-            if (!forExpression.Range.ReplaceVariables(scope, out range))
-            {
-                Error = range as ErrorExpression;
-                return false;
-            }
-
-            var iterableExpression = range as IIterableExpression;
-            if (iterableExpression != null)
-            {
-                var iterator = forExpression.IteratorName;
-                var iteratorScope = new InterpreterScope(scope);
-                var iteratorVariable = new VariableExpression(iterator.Name);
-
-                foreach (var entry in iterableExpression.IterableExpressions())
-                {
-                    iteratorScope.Context = new AssignmentExpression(iteratorVariable, entry);
-
-                    ExpressionBase key;
-                    if (!entry.ReplaceVariables(iteratorScope, out key))
-                    {
-                        Error = key as ErrorExpression;
-                        return false;
-                    }
-
-                    var loopScope = new InterpreterScope(scope);
-                    loopScope.DefineVariable(iterator, key);
-
-                    if (!Evaluate(forExpression.Expressions, loopScope))
-                        return false;
-
-                    if (loopScope.IsComplete)
-                    {
-                        if (loopScope.ReturnValue != null)
-                        {
-                            scope.ReturnValue = loopScope.ReturnValue;
-                            scope.IsComplete = true;
-                        }
-                        break;
-                    }
-                }
-
-                return true;
-            }
-
-            Error = new ErrorExpression("Cannot iterate over " + forExpression.Range.ToString(), forExpression.Range);
-            return false;
-        }
-
-        private bool EvaluateIf(IfExpression ifExpression, InterpreterScope scope)
-        {
-            ErrorExpression error;
-            ExpressionBase value;
-            bool? result = ifExpression.Condition.IsTrue(scope, out error);
-            if (result == null)
-            {
-                if (!ifExpression.Condition.ReplaceVariables(scope, out value))
-                {
-                    Error = value as ErrorExpression;
-                    return false;
-                }
-
-                result = ifExpression.Condition.IsTrue(scope, out error);
-                if (result == null)
-                {
-                    if (ContainsRuntimeLogic(value))
-                        Error = new ErrorExpression("Comparison contains runtime logic.", ifExpression.Condition);
-                    else
-                        Error = new ErrorExpression("Condition did not evaluate to a boolean.", ifExpression.Condition) { InnerError = error };
-
-                    return false;
-                }
-            }
-
-            return Evaluate(result.GetValueOrDefault() ? ifExpression.Expressions : ifExpression.ElseExpressions, scope);
-        }
-
-        private static bool ContainsRuntimeLogic(ExpressionBase expression)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.MemoryAccessor:
-                case ExpressionType.Requirement:
-                    return true;
-
-                default:
-                    var nested = expression as INestedExpressions;
-                    if (nested != null)
-                    {
-                        foreach (var nestedExpression in nested.NestedExpressions)
-                        {
-                            if (ContainsRuntimeLogic(nestedExpression))
-                                return true;
-                        }
-                    }
-                    return false;
-            }
-        }
-
-        private bool CallFunction(FunctionCallExpression expression, InterpreterScope scope)
-        {
-            ExpressionBase result;
-            bool success = expression.Invoke(scope, out result);
-            if (!success)
-            {
-                if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
-                {
-                    var error = result as ErrorExpression;
-                    result = new ErrorExpression(expression.FunctionName.Name + " call failed: " + error.Message, expression.FunctionName) { InnerError = error };
-                }
-
-                Error = result as ErrorExpression;
-                return false;
-            }
-
-            scope.ReturnValue = result;
-            return true;
+            return null;
         }
     }
 }

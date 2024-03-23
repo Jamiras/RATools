@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ReturnExpression : ExpressionBase, INestedExpressions
+    public class ReturnExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public ReturnExpression(ExpressionBase value)
             : base(ExpressionType.Return)
@@ -94,6 +95,35 @@ namespace RATools.Parser.Expressions
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+        }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            var returnScope = new InterpreterScope(scope) 
+            { 
+                Context = new AssignmentExpression(new VariableExpression("@return"), Value) 
+            };
+
+            ExpressionBase result;
+            if (!Value.ReplaceVariables(returnScope, out result))
+                return result as ErrorExpression;
+
+            var functionCall = result as FunctionCallExpression;
+            if (functionCall != null)
+            {
+                var error = functionCall.Execute(returnScope);
+                if (error != null)
+                    return error;
+
+                scope.ReturnValue = returnScope.ReturnValue;
+            }
+            else
+            {
+                scope.ReturnValue = result;
+            }
+
+            scope.IsComplete = true;
+            return null;
         }
     }
 }
