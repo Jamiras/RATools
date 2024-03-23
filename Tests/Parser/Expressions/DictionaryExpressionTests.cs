@@ -1,13 +1,10 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
-using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using RATools.Parser.Tests.Expressions.Trigger;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Windows.Input;
 
 namespace RATools.Parser.Tests.Expressions
 {
@@ -366,7 +363,7 @@ namespace RATools.Parser.Tests.Expressions
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
             var assignment = ExpressionTests.Parse<AssignmentExpression>("dict[1][2] = 3");
-            Assert.That(assignment.Evaluate(scope), Is.Null);
+            Assert.That(assignment.Execute(scope), Is.Null);
 
             Assert.That(subdict.Entries.Count, Is.EqualTo(1));
             var entry = subdict.Entries.First();
@@ -374,7 +371,7 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(entry.Value, Is.EqualTo(new IntegerConstantExpression(3)));
 
             assignment = ExpressionTests.Parse<AssignmentExpression>("dict[1][2] = 4");
-            Assert.That(assignment.Evaluate(scope), Is.Null);
+            Assert.That(assignment.Execute(scope), Is.Null);
 
             Assert.That(subdict.Entries.Count, Is.EqualTo(1));
             entry = subdict.Entries.First();

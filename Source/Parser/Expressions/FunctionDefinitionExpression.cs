@@ -5,11 +5,12 @@ using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class FunctionDefinitionExpression : ExpressionBase, INestedExpressions
+    public class FunctionDefinitionExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public FunctionDefinitionExpression(string name)
             : this(new VariableDefinitionExpression(name))
@@ -127,11 +128,9 @@ namespace RATools.Parser.Expressions
             var interpreter = new AchievementScriptInterpreter();
             var interpreterScope = new InterpreterScope(scope) { Context = interpreter };
 
-            if (!interpreter.Evaluate(Expressions, interpreterScope))
-            {
-                result = interpreter.Error;
+            result = AchievementScriptInterpreter.Execute(Expressions, interpreterScope);
+            if (result != null)
                 return false;
-            }
 
             result = interpreterScope.ReturnValue;
             return true;
@@ -597,6 +596,12 @@ namespace RATools.Parser.Expressions
 
             foreach (var parameter in Parameters)
                 modifies.Remove(parameter.Name);
+        }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            scope.AddFunction(this);
+            return null;
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -6,7 +7,7 @@ namespace RATools.Parser.Expressions
     /// <summary>
     /// Represents an assignment within an expression tree.
     /// </summary>
-    public class AssignmentExpression : ExpressionBase, INestedExpressions
+    public class AssignmentExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="AssignmentExpression"/> class.
@@ -70,7 +71,7 @@ namespace RATools.Parser.Expressions
         /// <returns>
         ///   <c>null</c> if successful, or a <see cref="ErrorExpression" /> if not.
         /// </returns>
-        public ErrorExpression Evaluate(InterpreterScope scope)
+        public ErrorExpression Execute(InterpreterScope scope)
         {
             var assignmentScope = new InterpreterScope(scope) { Context = this };
             ExpressionBase result;

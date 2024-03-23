@@ -239,7 +239,7 @@ namespace RATools.Parser.Tests.Expressions
 
             tokenizer = Tokenizer.CreateTokenizer("c = a");
             var exprC = (AssignmentExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
-            exprC.Evaluate(scope);
+            exprC.Execute(scope);
 
             ExpressionBase result;
 
