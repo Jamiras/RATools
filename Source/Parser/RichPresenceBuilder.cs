@@ -138,17 +138,27 @@ namespace RATools.Parser
                             // raw string, not a macro
                             formatted = parameter.Name;
                         }
-                        else if (serializationContext.MinimumVersion >= Data.Version._0_77 &&
-                                 parameter.Value.MinimumVersion() < Data.Version._0_77)
-                        {
-                            // if the parameter can be represented without Measured syntax, do so.
-                            formatted = String.Format("@{0}({1})",
-                                parameter.Name, parameter.Value.Serialize(serializationContext.WithVersion(Data.Version._0_76)));
-                        }
                         else
                         {
+                            SerializationContext useSerializationContext = serializationContext;
+                            if (serializationContext.MinimumVersion >= Data.Version._0_77)
+                            {
+                                if (parameter.Value.Values.Count() == 1 &&
+                                    parameter.Value.Values.First().Requirements.Count() == 1 &&
+                                    !parameter.Value.Values.First().Requirements.First().IsComparison)
+                                {
+                                    // single field lookup - force legacy format, even if using sizes only available in 0.77+
+                                    useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                                }
+                                else if (parameter.Value.MinimumVersion() < Data.Version._0_77)
+                                {
+                                    // simple AddSource chain, just use legacy format
+                                    useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                                }
+                            }
+
                             formatted = String.Format("@{0}({1})",
-                                parameter.Name, parameter.Value.Serialize(serializationContext));
+                                parameter.Name, parameter.Value.Serialize(useSerializationContext));
                         }
 
                         parameters.Entries.Add(new StringConstantExpression(formatted));
@@ -303,7 +313,8 @@ namespace RATools.Parser
 
         public SoftwareVersion MinimumVersion()
         {
-            if (String.IsNullOrEmpty(DisplayString))
+            var defaultDisplayString = _displayStrings.FirstOrDefault(d => d.Condition == null);
+            if (defaultDisplayString == null || String.IsNullOrEmpty(defaultDisplayString.Format?.Value))
                 return Data.Version.Uninitialized;
 
             var minimumVersion = Data.Version.MinimumVersion;

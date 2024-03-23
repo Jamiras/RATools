@@ -256,15 +256,31 @@ namespace RATools.Data
 
                         if (multiplier != 1.0)
                         {
-                            if (enumerator.Current.Operator == RequirementOperator.Divide)
+                            if (multiplier == Math.Floor(multiplier) && multiplier <= 0xFFFFFFFF && multiplier >= -0x80000000)
                             {
-                                builder.Append('/');
-                                builder.Append(1.0 / multiplier);
+                                int scalar = (multiplier > 0x7FFFFFFF) ?
+                                    (int)(uint)multiplier : (int)multiplier;
+
+                                builder.Append('*');
+                                builder.Append(scalar);
                             }
                             else
                             {
-                                builder.Append('*');
-                                builder.Append(multiplier);
+                                if (enumerator.Current.Operator == RequirementOperator.Divide && multiplier < 1.0f)
+                                {
+                                    builder.Append('/');
+                                    multiplier = 1.0 / multiplier;
+                                }
+                                else
+                                {
+                                    builder.Append('*');
+                                }
+                                builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", multiplier);
+
+                                while (builder[builder.Length - 1] == '0')
+                                    builder.Length--;
+                                if (builder[builder.Length - 1] == '.')
+                                    builder.Length--;
                             }
                         }
                     }
@@ -277,7 +293,7 @@ namespace RATools.Data
                     }
                 } while (enumerator.MoveNext());
 
-                if (constant != 0)
+                if (constant != 0 || first)
                 {
                     if (!first)
                         builder.Append('_');
@@ -318,18 +334,24 @@ namespace RATools.Data
                         }
                     }
 
-                    if (requirement.Type == RequirementType.Measured)
+                    switch (requirement.Type)
                     {
-                        // Measured in trigger logic requires 0.77, but we can construct a legacy expression
-                        // without it.
-                        if (clone == null)
-                            clone = requirement.Clone();
-                        clone.Type = RequirementType.None;
-                    }
-                    else if (requirement.Type == RequirementType.AddHits)
-                    {
-                        // AddHits is supported pre-0.77, but cannot be used in value logic without a Measured flag.
-                        minimumVersion = minimumVersion.OrNewer(Version._0_77);
+                        case RequirementType.Measured:
+                            // non-comparison Measured can be converted to legacy syntax
+                            if (!requirement.IsComparison)
+                            {
+                                if (clone == null)
+                                    clone = requirement.Clone();
+                                clone.Type = RequirementType.None;
+                            }
+                            break;
+
+                        case RequirementType.AddHits:
+                        case RequirementType.ResetIf:
+                        case RequirementType.PauseIf:
+                            // these are supported pre-0.77, but cannot be used in value logic without a Measured flag.
+                            minimumVersion = minimumVersion.OrNewer(Version._0_77);
+                            break;
                     }
 
                     if (clone != null)
