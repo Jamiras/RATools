@@ -1,5 +1,6 @@
 using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
@@ -90,7 +91,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var result = clause.BuildSubclauseTrigger(context);
             Assert.That(result, Is.Null);
 
-            Assert.That(context.Achievement.SerializeRequirements(), Is.EqualTo(expected));
+            Assert.That(context.Achievement.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected));
         }
 
         [Test]
@@ -196,7 +197,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);
             builder.Optimize();
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected));
         }
 
         [Test]
@@ -236,7 +237,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);
             builder.Optimize();
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected));
         }
 
         [Test]
@@ -262,7 +263,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var builder = new ScriptInterpreterAchievementBuilder();
             builder.PopulateFromExpression(result);
             builder.Optimize();
-            Assert.That(builder.SerializeRequirements(), Is.EqualTo(expected));
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected));
         }
     }
 }

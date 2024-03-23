@@ -176,7 +176,7 @@ namespace RATools.Data
             return builder.ToString();
         }
 
-        public void Serialize(StringBuilder builder, double minimumVersion = 0.0, int addressWidth = 6)
+        public void Serialize(StringBuilder builder, SerializationContext serializationContext)
         {
             switch (Type)
             {
@@ -196,7 +196,7 @@ namespace RATools.Data
                 case RequirementType.Trigger: builder.Append("T:"); break;
             }
 
-            Left.Serialize(builder, addressWidth);
+            Left.Serialize(builder, serializationContext);
 
             if (IsScalable)
             {
@@ -207,12 +207,12 @@ namespace RATools.Data
                     case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
                     case RequirementOperator.BitwiseXor: builder.Append('^'); break;
                     default:
-                        if (minimumVersion < 0.77)
+                        if (serializationContext.MinimumVersion < Version._0_77)
                             builder.Append("=0");
                         return;
                 }
 
-                Right.Serialize(builder, addressWidth);
+                Right.Serialize(builder, serializationContext);
             }
             else
             {
@@ -231,7 +231,7 @@ namespace RATools.Data
                     case RequirementOperator.None: return;
                 }
 
-                Right.Serialize(builder, addressWidth);
+                Right.Serialize(builder, serializationContext);
             }
 
             if (HitCount > 0)
@@ -242,39 +242,40 @@ namespace RATools.Data
             }
         }
 
-        public double MinimumVersion()
+        public SoftwareVersion MinimumVersion()
         {
-            double minVer = 0.30;
+            var minimumVersion = Version.MinimumVersion;
 
             switch (Type)
             {
+                case RequirementType.ResetIf:
+                case RequirementType.PauseIf:
+                    if (HitCount > 0)
+                        minimumVersion = Version._0_73;
+                    break;
+
                 case RequirementType.AndNext:
-                    // 0.76 21 Jun 2019
-                    minVer = 0.76;
+                    minimumVersion = Version._0_76;
                     break;
 
                 case RequirementType.AddAddress:
                 case RequirementType.Measured:
-                    // 0.77 30 Nov 2019
-                    minVer = 0.77;
+                    minimumVersion = Version._0_77;
                     break;
 
                 case RequirementType.MeasuredIf:
                 case RequirementType.OrNext:
-                    // 0.78 18 May 2020
-                    minVer = 0.78;
+                    minimumVersion = Version._0_78;
                     break;
 
                 case RequirementType.ResetNextIf:
                 case RequirementType.Trigger:
                 case RequirementType.SubHits:
-                    // 0.79 22 May 2021
-                    minVer = 0.79;
+                    minimumVersion = Version._0_79;
                     break;
 
                 case RequirementType.MeasuredPercent:
-                    // 1.0 29 Jan 2022
-                    minVer = 1.0;
+                    minimumVersion = Version._1_0;
                     break;
 
                 default:
@@ -286,15 +287,11 @@ namespace RATools.Data
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
                 case RequirementOperator.BitwiseAnd:
-                    // 0.78 18 May 2020
-                    if (minVer < 0.78)
-                        minVer = 0.78;
+                    minimumVersion = minimumVersion.OrNewer(Version._0_78);
                     break;
 
                 case RequirementOperator.BitwiseXor:
-                    // 1.1 15 Nov 2022
-                    if (minVer < 1.1)
-                        minVer = 1.1;
+                    minimumVersion = minimumVersion.OrNewer(Version._1_1);
                     break;
 
                 default:
@@ -306,9 +303,7 @@ namespace RATools.Data
                 switch (type)
                 {
                     case FieldType.PriorValue:
-                        // 0.76 21 Jun 2019
-                        if (minVer < 0.76)
-                            minVer = 0.76;
+                        minimumVersion = minimumVersion.OrNewer(Version._0_76);
                         break;
 
                     default:
@@ -321,15 +316,11 @@ namespace RATools.Data
                 switch (size)
                 {
                     case FieldSize.TByte:
-                        // 0.77 30 Nov 2019
-                        if (minVer < 0.77)
-                            minVer = 0.77;
+                        minimumVersion = minimumVersion.OrNewer(Version._0_77);
                         break;
 
                     case FieldSize.BitCount:
-                        // 0.78 18 May 2020
-                        if (minVer < 0.78)
-                            minVer = 0.78;
+                        minimumVersion = minimumVersion.OrNewer(Version._0_78);
                         break;
 
                     case FieldSize.BigEndianWord:
@@ -337,21 +328,15 @@ namespace RATools.Data
                     case FieldSize.BigEndianDWord:
                     case FieldSize.Float:
                     case FieldSize.MBF32:
-                        // 1.0 29 Jan 2022
-                        if (minVer < 1.0)
-                            minVer = 1.0;
+                        minimumVersion = minimumVersion.OrNewer(Version._1_0);
                         break;
 
                     case FieldSize.LittleEndianMBF32:
-                        // 1.1 15 Nov 2022
-                        if (minVer < 1.1)
-                            minVer = 1.1;
+                        minimumVersion = minimumVersion.OrNewer(Version._1_1);
                         break;
 
                     case FieldSize.BigEndianFloat:
-                        // 1.3 TBD
-                        if (minVer < 1.3)
-                            minVer = 1.3;
+                        minimumVersion = minimumVersion.OrNewer(Version._1_3);
                         break;
 
                     default:
@@ -359,7 +344,7 @@ namespace RATools.Data
                 }
             }
 
-            return minVer;
+            return minimumVersion;
         }
 
         /// <summary>

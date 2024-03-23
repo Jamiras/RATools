@@ -15,7 +15,7 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Requirement}")]
     public class RequirementViewModel : ViewModelBase
     {
-        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<int, string> notes)
+        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<uint, string> notes)
         {
             Requirement = requirement;
 
@@ -30,10 +30,10 @@ namespace RATools.ViewModels
                         var builder = new StringBuilder();
 
                         string note;
-                        if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                        if (notes.TryGetValue(requirement.Left.Value, out note))
                             builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
 
-                        if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                        if (notes.TryGetValue(requirement.Right.Value, out note))
                         {
                             if (builder.Length > 0)
                                 builder.AppendLine();
@@ -45,14 +45,14 @@ namespace RATools.ViewModels
                     else
                     {
                         string note;
-                        if (notes.TryGetValue((int)requirement.Left.Value, out note))
+                        if (notes.TryGetValue(requirement.Left.Value, out note))
                             Notes = note;
                     }
                 }
                 else if (requirement.Right.IsMemoryReference)
                 {
                     string note;
-                    if (notes.TryGetValue((int)requirement.Right.Value, out note))
+                    if (notes.TryGetValue(requirement.Right.Value, out note))
                         Notes = note;
                 }
             }

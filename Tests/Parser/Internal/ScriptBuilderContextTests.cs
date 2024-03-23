@@ -78,7 +78,7 @@ namespace RATools.Parser.Internal.Tests
             Assert.That(builder.ToString(), Is.EqualTo(expected));
 
             // make sure we didn't modify the source requirements
-            Assert.That(trigger.Serialize(), Is.EqualTo(input));
+            Assert.That(trigger.Serialize(new SerializationContext()), Is.EqualTo(input));
         }
 
         [TestCase("N:0xH001234=1_M:0xH002345=2",
@@ -103,7 +103,7 @@ namespace RATools.Parser.Internal.Tests
             Assert.That(builder.ToString(), Is.EqualTo(expected));
 
             // make sure we didn't modify the source requirements
-            Assert.That(trigger.Serialize(), Is.EqualTo(input));
+            Assert.That(trigger.Serialize(new SerializationContext()), Is.EqualTo(input));
         }
     }
 }

@@ -12,7 +12,7 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Label}")]
     public class TriggerViewModel : ViewModelBase
     {
-        public TriggerViewModel(string label, Achievement achievement, NumberFormat numberFormat, IDictionary<int, string> notes)
+        public TriggerViewModel(string label, Achievement achievement, NumberFormat numberFormat, IDictionary<uint, string> notes)
         {
             Label = label;
 
@@ -49,7 +49,7 @@ namespace RATools.ViewModels
             Groups = groups.ToArray();
         }
 
-        public TriggerViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<int, string> notes)
+        public TriggerViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<uint, string> notes)
             : this(label, CreateAchievement(definition), numberFormat, notes)
         {
         }
@@ -75,7 +75,7 @@ namespace RATools.ViewModels
 
     public class ValueViewModel : TriggerViewModel
     {
-        public ValueViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<int, string> notes)
+        public ValueViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<uint, string> notes)
             : base(label, CreateValue(definition), numberFormat, notes)
         {
         }

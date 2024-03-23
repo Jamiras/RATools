@@ -309,7 +309,7 @@ namespace RATools.Data
         /// <remarks>
         /// This is a custom serialization format.
         /// </remarks>
-        public void Serialize(StringBuilder builder, int addressWidth = 6)
+        public void Serialize(StringBuilder builder, SerializationContext serializationContext)
         {
             switch (Type)
             {
@@ -367,20 +367,8 @@ namespace RATools.Data
                 case FieldSize.BigEndianFloat: builder.Append("fB"); break;
             }
 
-            switch (addressWidth)
-            {
-                case 2:
-                    builder.AppendFormat("{0:x2}", Value);
-                    break;
-                case 4:
-                    builder.AppendFormat("{0:x4}", Value);
-                    break;
-                default:
-                    builder.AppendFormat("{0:x6}", Value);
-                    break;
-            }
+            builder.Append(serializationContext.FormatAddress(Value));
         }
-
 
         /// <summary>
         /// Creates a <see cref="Field"/> from a serialized value.

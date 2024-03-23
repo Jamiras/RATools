@@ -35,11 +35,11 @@ namespace RATools.Parser
 
             _achievements = new List<Achievement>();
             _leaderboards = new List<Leaderboard>();
-            _notes = new Dictionary<int, string>();
+            _notes = new Dictionary<uint, string>();
             RichPresence = null;
 
             _filename = filename;
-            Version = "0.030";
+            Version = Data.Version.MinimumVersion;
 
             Read();
         }
@@ -49,7 +49,7 @@ namespace RATools.Parser
         private readonly List<string> _extraLines;
         private DateTime _lastSave;
 
-        public string Version { get; private set; }
+        public SoftwareVersion Version { get; private set; }
 
         /// <summary>
         /// Gets the title of the associated game.
@@ -81,12 +81,12 @@ namespace RATools.Parser
         /// <summary>
         /// Gets the notes read from the file.
         /// </summary>
-        public Dictionary<int, string> Notes
+        public Dictionary<uint, string> Notes
         {
             get { return _notes; }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private Dictionary<int, string> _notes;
+        private Dictionary<uint, string> _notes;
 
         public RichPresence RichPresence { get; private set; }
 
@@ -100,7 +100,10 @@ namespace RATools.Parser
 
                 using (var reader = new StreamReader(_fileSystemService.OpenFile(_filename, OpenFileMode.Read)))
                 {
-                    Version = reader.ReadLine();
+                    SoftwareVersion version;
+                    if (SoftwareVersion.TryParse(reader.ReadLine(), out version))
+                        Version = version;
+
                     Title = reader.ReadLine();
 
                     while (!reader.EndOfStream)
@@ -278,9 +281,9 @@ namespace RATools.Parser
 
             if (addressString.StartsWith("0x"))
             {
-                int address;
+                uint address;
                 addressString = addressString.SubToken(2);
-                if (Int32.TryParse(addressString.ToString(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out address))
+                if (UInt32.TryParse(addressString.ToString(), System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.CurrentCulture, out address))
                     _notes[address] = note.ToString();
             }
         }
@@ -503,46 +506,45 @@ namespace RATools.Parser
         /// <summary>
         /// Commits the asset list back to the 'XXX-User.txt' file.
         /// </summary>
-        public void Commit(string author, StringBuilder warning, List<AssetBase> assetsToValidate)
+        public void Commit(string author, StringBuilder warning, SerializationContext serializationContext, List<AssetBase> assetsToValidate)
         {
-            double version = 0.30;
+            SoftwareVersion minimumVersion = Version;
 
             foreach (var achievement in _achievements)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
-                if (achievementMinimumVersion > version)
-                    version = achievementMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(achievementMinimumVersion);
             }
 
             foreach (var leaderboard in _leaderboards)
             {
                 var leaderboardMinimumVersion = LeaderboardBuilder.GetMinimumVersion(leaderboard);
-                if (leaderboardMinimumVersion > version)
-                    version = leaderboardMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(leaderboardMinimumVersion);
             }
 
-            if (_notes.Count > 0 && version < 1.1)
-                Version = "1.1";
-            else if (version > 0.30)
-                Version = String.Format(System.Globalization.CultureInfo.InvariantCulture, "{0:F2}", version);
+            if (_notes.Count > 0)
+                minimumVersion = minimumVersion.OrNewer(Data.Version._1_1);
+
+            if (minimumVersion > serializationContext.MinimumVersion)
+                serializationContext = serializationContext.WithVersion(minimumVersion);
 
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
-                writer.WriteLine(Version);
+                writer.WriteLine(minimumVersion);
                 writer.WriteLine(Title);
 
                 foreach (var note in _notes)
                 {
-                    writer.Write("N0:0x{0:x6}:\"", note.Key);
+                    writer.Write("N0:0x{0}:\"", serializationContext.FormatAddress((uint)note.Key));
                     WriteEscaped(writer, note.Value);
                     writer.WriteLine("\"");
                 }
 
                 foreach (var achievement in _achievements)
-                    WriteAchievement(writer, author, achievement, (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
+                    WriteAchievement(writer, author, achievement, serializationContext, (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
 
                 foreach (var leaderboard in _leaderboards)
-                    WriteLeaderboard(writer, leaderboard, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
+                    WriteLeaderboard(writer, leaderboard, serializationContext, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
 
                 foreach (var line in _extraLines)
                     writer.WriteLine(line);
@@ -581,12 +583,12 @@ namespace RATools.Parser
             }
         }
 
-        private static void WriteAchievement(StreamWriter writer, string author, Achievement achievement, StringBuilder warning)
+        private static void WriteAchievement(StreamWriter writer, string author, Achievement achievement, SerializationContext serializationContext, StringBuilder warning)
         {
             writer.Write(achievement.Id);
             writer.Write(":\"");
 
-            var requirements = AchievementBuilder.SerializeRequirements(achievement);
+            var requirements = AchievementBuilder.SerializeRequirements(achievement, serializationContext);
             if (requirements.Length > AchievementMaxLength && warning != null)
             {
                 warning.AppendFormat("Achievement \"{0}\" exceeds serialized limit ({1}/{2})", achievement.Title, requirements.Length, AchievementMaxLength);
@@ -619,7 +621,7 @@ namespace RATools.Parser
             writer.WriteLine();
         }
 
-        private static void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard, StringBuilder warning)
+        private static void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard, SerializationContext serializationContext, StringBuilder warning)
         {
             writer.Write('L');
             writer.Write(leaderboard.Id);

@@ -1,4 +1,5 @@
-﻿using RATools.Data;
+﻿using Jamiras.Components;
+using RATools.Data;
 using System;
 using System.Diagnostics;
 
@@ -80,32 +81,32 @@ namespace RATools.Parser
             };
         }
 
-        public static double GetMinimumVersion(Leaderboard leaderboard)
+        public static SoftwareVersion GetMinimumVersion(Leaderboard leaderboard)
         {
             var minimumVersion = GetMinimumVersion(leaderboard.Format);
 
             var trigger = Trigger.Deserialize(leaderboard.Start);
-            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
 
             trigger = Trigger.Deserialize(leaderboard.Cancel);
-            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
 
             trigger = Trigger.Deserialize(leaderboard.Submit);
-            minimumVersion = Math.Max(minimumVersion, trigger.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(trigger.MinimumVersion());
 
             var value = Data.Value.Deserialize(leaderboard.Value);
-            minimumVersion = Math.Max(minimumVersion, value.MinimumVersion());
+            minimumVersion = minimumVersion.OrNewer(value.MinimumVersion());
 
             return minimumVersion;
         }
 
-        private static double GetMinimumVersion(ValueFormat format)
+        private static SoftwareVersion GetMinimumVersion(ValueFormat format)
         {
             switch (format)
             {
                 case ValueFormat.TimeMinutes:
                 case ValueFormat.TimeSecsAsMins:
-                    return 0.77;
+                    return Data.Version._0_77;
 
                 case ValueFormat.Float1:
                 case ValueFormat.Float2:
@@ -113,7 +114,7 @@ namespace RATools.Parser
                 case ValueFormat.Float4:
                 case ValueFormat.Float5:
                 case ValueFormat.Float6:
-                    return 1.0;
+                    return Data.Version._1_0;
 
                 case ValueFormat.Thousands:
                 case ValueFormat.Hundreds:
@@ -121,10 +122,10 @@ namespace RATools.Parser
                 case ValueFormat.Fixed1:
                 case ValueFormat.Fixed2:
                 case ValueFormat.Fixed3:
-                    return 1.3;
+                    return Data.Version._1_3;
 
                 default:
-                    return 0.0;
+                    return Data.Version.MinimumVersion;
             }
         }
     }

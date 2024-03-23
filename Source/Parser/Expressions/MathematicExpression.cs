@@ -252,7 +252,7 @@ namespace RATools.Parser.Expressions
 
         private static ErrorExpression CreateCannotCombineError(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
         {
-            return new ErrorExpression(string.Format("Cannot {0} {1} and {2}", GetOperatorVerb(operation), left.Type, right.Type));
+            return new ErrorExpression(string.Format("Cannot {0} {1} and {2}", GetOperatorVerb(operation), left.Type.ToLowerString(), right.Type.ToLowerString()));
         }
 
         private static bool MergeOperands(ExpressionBase left, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)

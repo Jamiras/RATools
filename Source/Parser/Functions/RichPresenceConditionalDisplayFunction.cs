@@ -1,5 +1,6 @@
 ﻿using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
+using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -19,7 +20,10 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            var condition = TriggerBuilderContext.GetConditionString(expression, scope, out result);
+            var scriptContext = scope.GetContext<AchievementScriptContext>();
+            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new Data.SerializationContext();
+
+            var condition = TriggerBuilderContext.GetConditionString(expression, scope, serializationContext, out result);
             if (condition == null)
                 return false;
 

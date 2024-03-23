@@ -110,57 +110,41 @@ namespace RATools.Data
 
         public override string ToString()
         {
-            return Serialize(0.0, 4);
+            return Serialize(new SerializationContext { AddressWidth = 4 });
         }
 
         /// <summary>
         /// Creates a serialized string from the trigger.
         /// </summary>
-        /// <param name="minimumVersion">DLL version to target.</param>
-        /// <param name="addressWidth">Number of hex characters to use for addresses.</param>
         /// <returns>Serialized trigger string.</returns>
-        public string Serialize(double minimumVersion = 0.0, int addressWidth = 6)
+        public string Serialize(SerializationContext serializationContext)
         {
-            if (minimumVersion == 0.0)
-                minimumVersion = MinimumVersion();
+            if (serializationContext.MinimumVersion == Version.Uninitialized)
+                serializationContext = serializationContext.WithVersion(MinimumVersion());
 
             var builder = new StringBuilder();
 
             if (Core.Requirements.Any())
-                Core.Serialize(builder, minimumVersion, addressWidth);
+                Core.Serialize(builder, serializationContext);
             else
                 builder.Append("1=1"); // provide always_true core group for legacy parsers
 
             foreach (var alt in Alts)
             {
                 builder.Append('S');
-                alt.Serialize(builder, minimumVersion, addressWidth);
+                alt.Serialize(builder, serializationContext);
             }
 
             return builder.ToString();
         }
 
-        public double MinimumVersion()
+        public SoftwareVersion MinimumVersion()
         {
-            double minimumVersion = Core.MinimumVersion();
+            var minimumVersion = Core.MinimumVersion();
             foreach (var alt in Alts)
-                minimumVersion = Math.Max(minimumVersion, alt.MinimumVersion());
+                minimumVersion = minimumVersion.OrNewer(alt.MinimumVersion());
 
             return minimumVersion;
-        }
-
-        public bool IsMinimumVersionRequiredAtLeast(double minimumVersion)
-        {
-            if (Core.MinimumVersion() >= minimumVersion)
-                return true;
-
-            foreach (var alt in Alts)
-            {
-                if (alt.MinimumVersion() >= minimumVersion)
-                    return true;
-            }
-
-            return false;
         }
     }
 }

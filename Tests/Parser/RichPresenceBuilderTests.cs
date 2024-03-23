@@ -25,7 +25,8 @@ namespace RATools.Parser.Tests
             builder.AddConditionalDisplayString("0xH1234=2", "Two");
             builder.DisplayString = "Something Else";
 
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Display:\n" +
                 "?0xH1234=1?One\n" +
                 "?0xH1234=2?Two\n" +
@@ -38,12 +39,11 @@ namespace RATools.Parser.Tests
         {
             // explicitly initialize out of order
             var builder = new RichPresenceBuilder();
-            builder.DisableBuiltInMacros = true;
             builder.AddValueField(null, "Val", ValueFormat.Value);
             builder.AddValueField(null, "Score", ValueFormat.Score);
             builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
 
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            Assert.That(builder.Serialize(new SerializationContext()).Replace("\r\n", "\n"), Is.EqualTo(
                 "Format:Val\n" +
                 "FormatType=VALUE\n" +
                 "\n" +
@@ -59,12 +59,12 @@ namespace RATools.Parser.Tests
         public void TestValueFieldsBuiltIn()
         {
             var builder = new RichPresenceBuilder();
-            builder.DisableBuiltInMacros = false;
             builder.AddValueField(null, "Val", ValueFormat.Value);
             builder.AddValueField(null, "Score", ValueFormat.Score);
             builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
 
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Data.Version._1_0 };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Format:Val\n" +
                 "FormatType=VALUE\n" +
                 "\n" +
@@ -88,7 +88,8 @@ namespace RATools.Parser.Tests
             Assert.That(builder.AddLookupField(null, "L", dict, new StringConstantExpression("")), Is.Null);
             builder.DisplayString = "@L(0xH1234)";
 
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:L\n" +
                 "1=One\n" +
                 "2=Two\n" +
@@ -116,7 +117,8 @@ namespace RATools.Parser.Tests
                 CreateDictionaryExpression(dict), new StringConstantExpression("?")), Is.Null);
             builder.DisplayString = "@YesNo(0xH1234)";
 
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:YesNo\n" +
                 "0=No\n" +
                 "1=Yes\n" +
@@ -145,7 +147,8 @@ namespace RATools.Parser.Tests
             builder.DisplayString = "@LCF(0xH1234)";
 
             // 4 of 5 items are unique - don't collapse
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
                 "2=Two\n" +
@@ -164,7 +167,7 @@ namespace RATools.Parser.Tests
             dict[9] = "Three";
             Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
                 new StringConstantExpression("")), Is.Null);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
                 "2=Two\n" +
@@ -184,7 +187,7 @@ namespace RATools.Parser.Tests
             dict[7] = "Two";
             Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
                 new StringConstantExpression("")), Is.Null);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
                 "2,4,6-8=Two\n" +
@@ -201,7 +204,7 @@ namespace RATools.Parser.Tests
             dict[11] = "Eleven";
             Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
                 new StringConstantExpression("")), Is.Null);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
                 "2,4,6,8,10=Two\n" +
@@ -233,8 +236,8 @@ namespace RATools.Parser.Tests
                 new StringConstantExpression("")), Is.Null);
             builder.DisplayString = "@OddOrEven(0xH1234)";
 
-            Assert.That(builder.DisableLookupCollapsing, Is.False);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:OddOrEven\n" +
                 "1,3,5=Odd\n" +
                 "2,4,6=Even\n" +
@@ -243,9 +246,8 @@ namespace RATools.Parser.Tests
                 "@OddOrEven(0xH1234)\n"
             ));
 
-            builder.DisableLookupCollapsing = true;
-            Assert.That(builder.DisableLookupCollapsing, Is.True);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:OddOrEven\n" +
                 "1=Odd\n" +
                 "2=Even\n" +
@@ -277,7 +279,8 @@ namespace RATools.Parser.Tests
             builder.DisplayString = "@T(0xH1234)";
 
             // 4 of 5 items are unique - don't collapse
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:T\n" +
                 "1-5=Test\n" +
                 "\n" +
@@ -304,8 +307,8 @@ namespace RATools.Parser.Tests
                 new StringConstantExpression("Even")), Is.Null);
             builder.DisplayString = "@OddOrEven(0xH1234)";
 
-            Assert.That(builder.DisableLookupCollapsing, Is.False);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:OddOrEven\n" +
                 "1,3,5=Odd\n" +
                 "*=Even\n" +
@@ -314,9 +317,8 @@ namespace RATools.Parser.Tests
                 "@OddOrEven(0xH1234)\n"
             ));
 
-            builder.DisableLookupCollapsing = true;
-            Assert.That(builder.DisableLookupCollapsing, Is.True);
-            Assert.That(builder.ToString().Replace("\r\n", "\n"), Is.EqualTo(
+            serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:OddOrEven\n" +
                 "1=Odd\n" +
                 "3=Odd\n" +

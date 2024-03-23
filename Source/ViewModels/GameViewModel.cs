@@ -34,7 +34,7 @@ namespace RATools.ViewModels
             /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
             GameId = gameId;
             Title = title;
-            Notes = new Dictionary<int, string>();
+            Notes = new Dictionary<uint, string>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _publishedAchievements = new List<Achievement>();
@@ -76,7 +76,8 @@ namespace RATools.ViewModels
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
-        internal Dictionary<int, string> Notes { get; private set; }
+        internal Dictionary<uint, string> Notes { get; private set; }
+        internal SerializationContext SerializationContext { get; set; }
 
         public string LocalFilePath { get { return _localAssets.Filename; } }
 
@@ -220,6 +221,8 @@ namespace RATools.ViewModels
 
             if (interpreter != null)
             {
+                SerializationContext = interpreter.SerializationContext;
+
                 GeneratedAchievementCount = interpreter.Achievements.Count();
                 editors.Capacity += GeneratedAchievementCount;
 
@@ -382,7 +385,8 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { achievement });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning,
+                    SerializationContext, validateAll ? null : new List<AssetBase>() { achievement });
                 LocalAchievementCount = _localAssets.Achievements.Count();
                 LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
             }
@@ -418,7 +422,7 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { leaderboard });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
         }
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
@@ -451,7 +455,7 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence });
         }
 
         private int _localAchievementCommitSuspendCount = 0;
@@ -467,7 +471,7 @@ namespace RATools.ViewModels
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, assetsToValidate);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, assetsToValidate);
 
                 LocalAchievementCount = _localAssets.Achievements.Count();
                 LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
@@ -610,7 +614,7 @@ namespace RATools.ViewModels
                     {
                         foreach (var note in notes.ObjectArrayValue)
                         {
-                            var address = Int32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
+                            var address = UInt32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
                             var text = note.GetField("Note").StringValue;
                             if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
                                 Notes[address] = text;

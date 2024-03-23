@@ -140,7 +140,7 @@ namespace RATools.Data.Tests
         {
             var field = new Field { Size = fieldSize, Type = fieldType, Value = (uint)value };
             var builder = new StringBuilder();
-            field.Serialize(builder);
+            field.Serialize(builder, new SerializationContext());
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 

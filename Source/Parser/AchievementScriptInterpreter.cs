@@ -91,6 +91,11 @@ namespace RATools.Parser
             _leaderboards[leaderboard] = 0;
         }
 
+        /// <summary>
+        /// Gets the serialization context of the interpreted script.
+        /// </summary>
+        public SerializationContext SerializationContext { get; private set; }
+
         public static ExpressionGroupCollection CreateExpressionGroupCollection()
         {
             return new AssetExpressionGroupCollection() { Scope = CreateScope() };
@@ -343,27 +348,26 @@ namespace RATools.Parser
                 }
             }
 
-            double minimumVersion = 0.30;
+            SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion;
             foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
-                if (achievementMinimumVersion > minimumVersion)
-                    minimumVersion = achievementMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(achievementMinimumVersion);
             }
 
             foreach (var leaderboard in _leaderboards.Keys)
             {
                 var leaderboardMinimumVersion = LeaderboardBuilder.GetMinimumVersion(leaderboard);
-                if (leaderboardMinimumVersion > minimumVersion)
-                    minimumVersion = leaderboardMinimumVersion;
+                minimumVersion = minimumVersion.OrNewer(leaderboardMinimumVersion);
             }
 
-            _richPresence.DisableLookupCollapsing = (minimumVersion < 0.79);
-            _richPresence.DisableBuiltInMacros = (minimumVersion < 1.0);
+            minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
+
+            SerializationContext = scriptContext.SerializationContext.WithVersion(minimumVersion);
 
             if (!String.IsNullOrEmpty(_richPresence.DisplayString))
             {
-                RichPresence = _richPresence.ToString();
+                RichPresence = _richPresence.Serialize(SerializationContext);
                 RichPresenceLine = _richPresence.Line;
             }
 

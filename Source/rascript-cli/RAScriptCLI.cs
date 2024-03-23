@@ -176,17 +176,20 @@ namespace RATools
                 stream.WriteLine(error.Message);
 
                 stream.WriteLine(_currentLineText);
-                stream.Write(new String(' ', error.Location.Front.Column - 1));
-                Console.ForegroundColor = ConsoleColor.DarkGreen;
-                stream.Write('^');
-                if (error.Location.Front.Line == error.Location.Back.Line)
+                if (error.Location.Front.Column > 0)
                 {
-                    var distance = error.Location.Back.Column - error.Location.Front.Column;
-                    if (distance > 0)
-                        stream.Write(new String('~', distance));
+                    stream.Write(new String(' ', error.Location.Front.Column - 1));
+                    Console.ForegroundColor = ConsoleColor.DarkGreen;
+                    stream.Write('^');
+                    if (error.Location.Front.Line == error.Location.Back.Line)
+                    {
+                        var distance = error.Location.Back.Column - error.Location.Front.Column;
+                        if (distance > 0)
+                            stream.Write(new String('~', distance));
+                    }
+                    Console.ResetColor();
+                    stream.WriteLine();
                 }
-                Console.ResetColor();
-                stream.WriteLine();
             }
         }
 
@@ -266,7 +269,7 @@ namespace RATools
                 }
                 localAchievements.Replace(existingLeaderboard, leaderboard);
             }
-            localAchievements.Commit(Author, null, null);
+            localAchievements.Commit(Author, null, interpreter.SerializationContext, null);
 
             if (!_quiet)
             {
@@ -276,33 +279,17 @@ namespace RATools
 
             if (!String.IsNullOrEmpty(interpreter.RichPresence))
             {
-                string richPresence;
-                var minimumVersion = Double.Parse(localAchievements.Version, System.Globalization.NumberFormatInfo.InvariantInfo);
-                if (minimumVersion < 1.0)
-                {
-                    interpreter.RichPresenceBuilder.DisableBuiltInMacros = true;
-
-                    if (minimumVersion < 0.79)
-                        interpreter.RichPresenceBuilder.DisableLookupCollapsing = true;
-
-                    richPresence = interpreter.RichPresenceBuilder.ToString();
-                }
-                else
-                {
-                    richPresence = interpreter.RichPresence;
-                }
-
                 outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-Rich.txt", interpreter.GameId));
                 using (var stream = _fileSystemService.CreateFile(outputFileName))
                 {
                     using (var writer = new StreamWriter(stream))
                     {
-                        writer.Write(richPresence);
+                        writer.Write(interpreter.RichPresence);
                     }
                 }
 
                 if (!_quiet)
-                    OutputStream.WriteLine("Wrote {0} bytes to {1}-Rich.txt", richPresence.Length, interpreter.GameId);
+                    OutputStream.WriteLine("Wrote {0} bytes to {1}-Rich.txt", interpreter.RichPresence.Length, interpreter.GameId);
             }
 
             return ReturnCode.Success;

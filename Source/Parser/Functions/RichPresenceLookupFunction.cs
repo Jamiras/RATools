@@ -1,6 +1,7 @@
 ﻿using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System;
+using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -50,7 +51,10 @@ namespace RATools.Parser.Functions
                 }
             }
 
-            var value = ValueBuilderContext.GetValueString(expression, scope, out result);
+            var scriptContext = scope.GetContext<AchievementScriptContext>();
+            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new Data.SerializationContext();
+
+            var value = ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
             if (value == null)
                 return false;
 
