@@ -651,35 +651,35 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceValue()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValuePlusOne()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) + 1))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234_v1) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueMinusOne()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) - 1))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234_v-1) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v-1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueMultiply()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 10 + 1))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234*10_v1) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*10_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueDivide()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) / 4))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(M:0xH001234/4) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234/4) here\r\n"));
         }
 
         [Test]
@@ -687,7 +687,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("function test() => byte(0x1234)\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", test()))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -695,7 +695,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345)))\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -711,7 +711,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -729,7 +729,7 @@ namespace RATools.Parser.Tests
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict))\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -761,7 +761,7 @@ namespace RATools.Parser.Tests
                                "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test(0xH002345) there\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -772,7 +772,7 @@ namespace RATools.Parser.Tests
                                "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test1\", byte(0x2345), dict1))\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test2\", byte(0x1234), dict2))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test1\r\n1=Yes\r\n2=No\r\n\r\nLookup:Test2\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH000000=0?value @Test1(0xH002345) there\r\nvalue @Test2(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test1\r\n1=Yes\r\n2=No\r\n\r\nLookup:Test2\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test1(0xH2345) there\r\nvalue @Test2(0xH1234) here\r\n"));
         }
 
         [Test]
@@ -780,7 +780,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234) + 1, dict))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH001234_v1) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v1) here\r\n"));
         }
 
         [Test]
@@ -795,7 +795,7 @@ namespace RATools.Parser.Tests
         {
             var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, \"Maybe\"))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n*=Maybe\r\n\r\nDisplay:\r\nvalue @Test(0xH001234) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n*=Maybe\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]

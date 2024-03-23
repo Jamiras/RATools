@@ -4,7 +4,6 @@ using RATools.Parser.Functions;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace RATools.Parser.Internal
 {

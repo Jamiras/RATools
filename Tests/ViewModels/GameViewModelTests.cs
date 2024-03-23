@@ -209,10 +209,10 @@ namespace RATools.Tests.ViewModels
             {
                 //Id = id,
                 Title = name,
-                Start = "1=1",
-                Submit = "1=1",
-                Cancel = "1=1",
-                Value = "1"
+                Start = Trigger.Deserialize("1=1"),
+                Submit = Trigger.Deserialize("1=1"),
+                Cancel = Trigger.Deserialize("1=1"),
+                Value = Value.Deserialize("1")
             };
 
             interpreter.AddLeaderboard(leaderboard);

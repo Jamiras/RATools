@@ -112,7 +112,7 @@ namespace RATools.Parser.Expressions.Trigger
                             return new Field();
                     }
 
-                    return new Field { Type = FieldType.Float, Size = FieldSize.DWord, Float = floatResult };
+                    return new Field { Type = FieldType.Float, Size = FieldSize.Float, Float = floatResult };
 
                 default:
                     return new Field();

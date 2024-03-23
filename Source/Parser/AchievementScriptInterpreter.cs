@@ -347,23 +347,40 @@ namespace RATools.Parser
             }
 
             SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion;
+            uint maxAddress = 0;
+
             foreach (var achievement in _achievements.Keys)
             {
                 var achievementMinimumVersion = AchievementBuilder.GetMinimumVersion(achievement);
                 minimumVersion = minimumVersion.OrNewer(achievementMinimumVersion);
+
+                var achievementMaxAddress = AchievementBuilder.GetMaximumAddress(achievement);
+                maxAddress = Math.Max(maxAddress, achievementMaxAddress);
             }
 
             foreach (var leaderboard in _leaderboards.Keys)
             {
                 var leaderboardMinimumVersion = LeaderboardBuilder.GetMinimumVersion(leaderboard);
                 minimumVersion = minimumVersion.OrNewer(leaderboardMinimumVersion);
+
+                var leaderboardMaxAddress = LeaderboardBuilder.GetMaximumAddress(leaderboard);
+                maxAddress = Math.Max(maxAddress, leaderboardMaxAddress);
             }
+
+            minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
+            maxAddress = Math.Max(maxAddress, RichPresenceBuilder.MaximumAddress());
 
             minimumVersion = minimumVersion.OrNewer(RichPresenceBuilder.MinimumVersion());
 
             SerializationContext = scriptContext.SerializationContext.WithVersion(minimumVersion);
+            if (maxAddress >= 0x10000)
+                SerializationContext.AddressWidth = 6;
+            else if (maxAddress >= 0x100)
+                SerializationContext.AddressWidth = 4;
+            else
+                SerializationContext.AddressWidth = 2;
 
-            if (!String.IsNullOrEmpty(_richPresence.DisplayString))
+            if (_richPresence.IsValid)
             {
                 RichPresence = _richPresence.Serialize(SerializationContext);
                 RichPresenceLine = _richPresence.Line;

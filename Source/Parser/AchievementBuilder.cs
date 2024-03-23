@@ -93,6 +93,11 @@ namespace RATools.Parser
             return minimumVersion;
         }
 
+        public static uint GetMaximumAddress(Achievement achievement)
+        {
+            return achievement.Trigger.MaximumAddress();
+        }
+
         /// <summary>
         /// Creates a serialized requirements string from the core and alt groups of a provided <see cref="Achievement"/>.
         /// </summary>

@@ -1,8 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
-using System;
-using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -72,7 +69,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
+        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
@@ -82,22 +79,23 @@ namespace RATools.Parser.Functions
             if (format == null)
                 return false;
 
-            var expression = GetParameter(scope, "expression", out result);
-            if (expression == null)
+            var valueFormat = ParseFormat(format.Value);
+            if (valueFormat == ValueFormat.None)
+            {
+                result = new ErrorExpression("Unknown format", format);
                 return false;
+            }
 
-            var scriptContext = scope.GetContext<AchievementScriptContext>();
-            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new SerializationContext();
-
-            var value = ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
+            var value = GetExpressionValue(scope, out result);
             if (value == null)
                 return false;
 
             var functionCall = scope.GetContext<FunctionCallExpression>();
-            var valueFormat = ParseFormat(format.Value);
-            context.RichPresence.AddValueField(functionCall, name.Value, valueFormat);
+            result = context.RichPresence.AddValueField(functionCall, name, valueFormat);
+            if (result != null)
+                return false;
 
-            result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));
+            context.DisplayString.AddParameter(name.Value, value);
             return true;
         }
     }

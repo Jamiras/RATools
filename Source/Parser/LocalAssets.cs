@@ -239,16 +239,16 @@ namespace RATools.Parser
                 leaderboard.Id = num;
             tokenizer.Advance();
 
-            leaderboard.Start = tokenizer.ReadQuotedString().ToString();
+            leaderboard.Start = Trigger.Deserialize(tokenizer.ReadQuotedString().ToString());
             tokenizer.Advance();
 
-            leaderboard.Cancel = tokenizer.ReadQuotedString().ToString();
+            leaderboard.Cancel = Trigger.Deserialize(tokenizer.ReadQuotedString().ToString());
             tokenizer.Advance();
 
-            leaderboard.Submit = tokenizer.ReadQuotedString().ToString();
+            leaderboard.Submit = Trigger.Deserialize(tokenizer.ReadQuotedString().ToString());
             tokenizer.Advance();
 
-            leaderboard.Value = tokenizer.ReadQuotedString().ToString();
+            leaderboard.Value = Value.Deserialize(tokenizer.ReadQuotedString().ToString());
             tokenizer.Advance();
 
             leaderboard.Format = Leaderboard.ParseFormat(tokenizer.ReadIdentifier().ToString());
@@ -508,7 +508,7 @@ namespace RATools.Parser
         /// </summary>
         public void Commit(string author, StringBuilder warning, SerializationContext serializationContext, List<AssetBase> assetsToValidate)
         {
-            SoftwareVersion minimumVersion = Version;
+            SoftwareVersion minimumVersion = serializationContext.MinimumVersion.OrNewer(Version);
 
             foreach (var achievement in _achievements)
             {
@@ -627,9 +627,14 @@ namespace RATools.Parser
             writer.Write(leaderboard.Id);
             writer.Write(":\"");
 
+            var start = leaderboard.Start.Serialize(serializationContext);
+            var cancel = leaderboard.Cancel.Serialize(serializationContext);
+            var submit = leaderboard.Submit.Serialize(serializationContext);
+            var value = leaderboard.Value.Serialize(serializationContext);
+
             if (warning != null)
             {
-                var totalLength = leaderboard.Start.Length + leaderboard.Cancel.Length + leaderboard.Submit.Length + leaderboard.Value.Length + 4 * 4 + 2 * 3;
+                var totalLength = start.Length + cancel.Length + submit.Length + value.Length + 4 * 4 + 2 * 3;
                 if (totalLength > LeaderboardMaxLength)
                 {
                     warning.AppendFormat("Leaderboard \"{0}\" exceeds serialized limit ({1}/{2})", leaderboard.Title, totalLength, LeaderboardMaxLength);
@@ -637,16 +642,16 @@ namespace RATools.Parser
                 }
             }
 
-            writer.Write(leaderboard.Start);
+            writer.Write(start);
             writer.Write("\":\"");
 
-            writer.Write(leaderboard.Cancel);
+            writer.Write(cancel);
             writer.Write("\":\"");
 
-            writer.Write(leaderboard.Submit);
+            writer.Write(submit);
             writer.Write("\":\"");
 
-            writer.Write(leaderboard.Value);
+            writer.Write(value);
             writer.Write("\":");
 
             writer.Write(Leaderboard.GetFormatString(leaderboard.Format));

@@ -20,7 +20,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("expression"));
         }
 
-        private RichPresenceBuilder Evaluate(string input, string expectedError = null)
+        private static RichPresenceBuilder Evaluate(string input, string expectedError = null)
         {
             var funcDef = new RichPresenceMacroFunction();
 
@@ -31,10 +31,11 @@ namespace RATools.Parser.Tests.Functions
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
             var context = new RichPresenceDisplayFunction.RichPresenceDisplayContext { RichPresence = new RichPresenceBuilder() };
+            context.DisplayString = context.RichPresence.AddDisplayString(null, new StringConstantExpression("{0}"));
             scope.Context = context;
 
             ExpressionBase evaluated;
-            if (expectedError != null)
+            if (expectedError != null && expectedError.StartsWith("Unknown rich presence macro"))
             {
                 Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
                 var parseError = evaluated as ErrorExpression;
@@ -44,9 +45,12 @@ namespace RATools.Parser.Tests.Functions
             }
 
             ExpressionBase result;
-            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
-            Assert.That(funcDef.BuildMacro(context, scope, out result), Is.True);
-            context.RichPresence.DisplayString = ((StringConstantExpression)result).Value;
+            Assert.That(funcDef.Evaluate(scope, out result), Is.True);
+            if (expectedError != null)
+            {
+                Assert.That(result, Is.InstanceOf<ErrorExpression>());
+                Assert.That(((ErrorExpression)result).Message, Is.EqualTo(expectedError));
+            }
 
             return context.RichPresence;
         }

@@ -1,6 +1,4 @@
 ﻿using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
-using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -14,20 +12,49 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("..."));
         }
 
-        protected override bool SetDisplayString(RichPresenceBuilder richPresence, string displayString, InterpreterScope scope, out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var expression = GetRequirementParameter(scope, "condition", out result);
-            if (expression == null)
+            var context = scope.GetContext<AchievementScriptContext>();
+            if (context == null)
+            {
+                result = new ErrorExpression(Name.Name + " has no meaning outside of an achievement script");
                 return false;
+            }
 
-            var scriptContext = scope.GetContext<AchievementScriptContext>();
-            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new Data.SerializationContext();
-
-            var condition = TriggerBuilderContext.GetConditionString(expression, scope, serializationContext, out result);
+            var condition = GetRequirementParameter(scope, "condition", out result);
             if (condition == null)
                 return false;
 
-            richPresence.AddConditionalDisplayString(condition, displayString);
+            ErrorExpression error;
+            var trigger = TriggerBuilder.BuildTrigger(condition, out error);
+            if (trigger == null)
+            {
+                result = error;
+                return false;
+            }
+
+            var formatString = GetStringParameter(scope, "format_string", out result);
+            if (formatString == null)
+                return false;
+
+            var richPresenceContext = new RichPresenceDisplayContext
+            {
+                RichPresence = context.RichPresence,
+                DisplayString = context.RichPresence.AddDisplayString(trigger, formatString)
+            };
+            var richPresenceScope = new InterpreterScope(scope)
+            {
+                Context = richPresenceContext
+            };
+
+            var parameters = EvaluateVarArgs(richPresenceScope, out result, formatString);
+            if (parameters == null)
+                return false;
+
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
+                context.RichPresence.Line = functionCall.Location.Start.Line;
+
             return true;
         }
     }

@@ -68,5 +68,19 @@ namespace RATools.Data
 
             return minimumVersion;
         }
+
+        public uint MaximumAddress()
+        {
+            uint maximumAddress = 0;
+            foreach (var requirement in Requirements)
+            {
+                if (requirement.Left.IsMemoryReference)
+                    maximumAddress = Math.Max(maximumAddress, requirement.Left.Value);
+                if (requirement.Right.IsMemoryReference)
+                    maximumAddress = Math.Max(maximumAddress, requirement.Right.Value);
+            }
+
+            return maximumAddress;
+        }
     }
 }

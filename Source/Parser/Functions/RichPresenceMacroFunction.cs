@@ -1,7 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
-using System;
 using System.Diagnostics;
 
 namespace RATools.Parser.Functions
@@ -96,28 +94,25 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
+        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
             var macro = GetStringParameter(scope, "macro", out result);
             if (macro == null)
                 return false;
 
-            var expression = GetParameter(scope, "expression", out result);
-            if (expression == null)
-                return false;
+            var valueFormat = GetValueFormat(macro.Value);
+            Debug.Assert(valueFormat != ValueFormat.None); // validated in ReplaceVariables
 
-            var scriptContext = scope.GetContext<AchievementScriptContext>();
-            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new SerializationContext();
-
-            var value = ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
+            var value = GetExpressionValue(scope, out result);
             if (value == null)
                 return false;
 
             var functionCall = scope.GetContext<FunctionCallExpression>();
-            var valueFormat = GetValueFormat(macro.Value);
-            context.RichPresence.AddValueField(functionCall, macro.Value, valueFormat);
+            result = context.RichPresence.AddValueField(functionCall, macro, valueFormat);
+            if (result != null)
+                return false;
 
-            result = new StringConstantExpression(String.Format("@{0}({1})", macro.Value, value));
+            context.DisplayString.AddParameter(macro.Value, value);
             return true;
         }
     }

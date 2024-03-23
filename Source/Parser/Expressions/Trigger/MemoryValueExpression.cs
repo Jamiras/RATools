@@ -1411,53 +1411,47 @@ namespace RATools.Parser.Expressions.Trigger
             if (appendConstantAccessor)
                 memoryAccessors.Add(constantAccessor);
 
-            if (context is not ValueBuilderContext)
+            // last item has to be an unmodified AddSource so we can compare it.
+            // if a comparison is provided then the AddAddress chain must also match.
+            var comparisonAccessor = (comparison != null) ? ReduceToSimpleExpression(comparison) as MemoryAccessorExpression : null;
+
+            var lastIndex = memoryAccessors.Count - 1;
+            for (; lastIndex >= 0; --lastIndex)
             {
-                // last item has to be an unmodified AddSource so we can compare it.
-                // if a comparison is provided then the AddAddress chain must also match.
-                var comparisonAccessor = (comparison != null) ? ReduceToSimpleExpression(comparison) as MemoryAccessorExpression : null;
+                var last = memoryAccessors[lastIndex];
+                if (last.CombiningOperator == RequirementType.SubSource)
+                    continue;
 
-                var lastIndex = memoryAccessors.Count - 1;
-                for (; lastIndex >= 0; --lastIndex)
-                {
-                    var last = memoryAccessors[lastIndex];
-                    if (last.CombiningOperator == RequirementType.SubSource)
-                        continue;
+                if (last.ModifyingOperator != RequirementOperator.None)
+                    continue;
 
-                    if (last.ModifyingOperator != RequirementOperator.None)
-                        continue;
+                if (comparisonAccessor != null && !comparisonAccessor.PointerChainMatches(last))
+                    continue;
 
-                    if (comparisonAccessor != null && !comparisonAccessor.PointerChainMatches(last))
-                        continue;
+                break;
+            }
 
-                    break;
-                }
-
-                if (lastIndex == -1)
-                {
-                    // no unmodified AddSource items, append a item with value 0
-                    if (context is not ValueBuilderContext)
-                        memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
-                }
-                else if (lastIndex != memoryAccessors.Count - 1)
-                {
-                    // move the last unmodified AddSource item to the end of the list so we can
-                    var last = memoryAccessors[lastIndex];
-                    memoryAccessors.RemoveAt(lastIndex);
-                    memoryAccessors.Add(last);
-                }
+            if (lastIndex == -1)
+            {
+                // no unmodified AddSource items, append a item with value 0
+                if (context is not ValueBuilderContext)
+                    memoryAccessors.Add(new ModifiedMemoryAccessorExpression(new MemoryAccessorExpression(FieldType.Value, FieldSize.DWord, 0)));
+            }
+            else if (lastIndex != memoryAccessors.Count - 1)
+            {
+                // move the last unmodified AddSource item to the end of the list so we can
+                var last = memoryAccessors[lastIndex];
+                memoryAccessors.RemoveAt(lastIndex);
+                memoryAccessors.Add(last);
             }
 
             // output the accessor chain
             foreach (var accessor in memoryAccessors)
                 accessor.BuildTrigger(context);
 
-            if (context is not ValueBuilderContext)
-            {
-                // the last item will be flagged as an AddSource (or None if 0 was appended)
-                // make sure it's None before leaving
-                context.LastRequirement.Type = RequirementType.None;
-            }
+            // the last item will be flagged as an AddSource (or None if 0 was appended)
+            // make sure it's None before leaving.
+            context.LastRequirement.Type = RequirementType.None;
 
             return null;
         }

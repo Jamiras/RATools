@@ -146,5 +146,14 @@ namespace RATools.Data
 
             return minimumVersion;
         }
+
+        public uint MaximumAddress()
+        {
+            var maximumAddress = Core.MaximumAddress();
+            foreach (var alt in Alts)
+                maximumAddress = Math.Max(maximumAddress, alt.MaximumAddress());
+
+            return maximumAddress;
+        }
     }
 }
