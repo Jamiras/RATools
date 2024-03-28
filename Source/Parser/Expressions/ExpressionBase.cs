@@ -98,6 +98,7 @@ namespace RATools.Parser.Expressions
         internal static void SkipWhitespace(PositionalTokenizer tokenizer)
         {
             tokenizer.SkipWhitespace();
+
             while (tokenizer.Match("//"))
             {
                 var expressionTokenizer = tokenizer as ExpressionTokenizer;
@@ -118,6 +119,35 @@ namespace RATools.Parser.Expressions
                 else
                 {
                     tokenizer.ReadTo('\n');
+                }
+
+                tokenizer.SkipWhitespace();
+            }
+
+            while (tokenizer.Match("/*"))
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+
+                if (expressionTokenizer != null)
+                {
+                    int startLine = tokenizer.Line;
+                    int startColumn = tokenizer.Column - 2;
+                    
+                    var comment = tokenizer.ReadTo("*/");
+                    tokenizer.Advance(2);
+
+                    int endLine = tokenizer.Line;
+                    int endColumn = tokenizer.Column;
+
+                    expressionTokenizer.AddComment(new CommentExpression("/*" + comment.ToString() + "*/")
+                    {
+                        Location = new TextRange(startLine, startColumn, endLine, endColumn)
+                    });
+                }
+                else
+                {
+                    tokenizer.ReadTo("*/");
+                    tokenizer.Advance(2);
                 }
 
                 tokenizer.SkipWhitespace();
