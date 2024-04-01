@@ -12,22 +12,22 @@ namespace RATools.Data
         /// <summary>
         /// Gets or sets the serialized start condition for the leaderboard.
         /// </summary>
-        public string Start { get; set; }
+        public Trigger Start { get; set; }
 
         /// <summary>
         /// Gets or sets the serialized cancel condition for the leaderboard.
         /// </summary>
-        public string Cancel { get; set; }
+        public Trigger Cancel { get; set; }
 
         /// <summary>
         /// Gets or sets the serialized submit condition for the leaderboard.
         /// </summary>
-        public string Submit { get; set; }
+        public Trigger Submit { get; set; }
 
         /// <summary>
         /// Gets or sets the serialized value formula for the leaderboard.
         /// </summary>
-        public string Value { get; set; }
+        public Value Value { get; set; }
 
         /// <summary>
         /// Gets or sets the format to use when displaying the value.

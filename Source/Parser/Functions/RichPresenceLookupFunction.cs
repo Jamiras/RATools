@@ -1,7 +1,4 @@
 ﻿using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
-using System;
-using System.Diagnostics;
 
 namespace RATools.Parser.Functions
 {
@@ -18,14 +15,10 @@ namespace RATools.Parser.Functions
             DefaultParameters["fallback"] = new StringConstantExpression("");
         }
 
-        public override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
+        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
         {
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
-                return false;
-
-            var expression = GetParameter(scope, "expression", out result);
-            if (expression == null)
                 return false;
 
             var dictionary = GetDictionaryParameter(scope, "dictionary", out result);
@@ -36,38 +29,31 @@ namespace RATools.Parser.Functions
             if (fallback == null)
                 return false;
 
+            var expression = GetParameter(scope, "expression", out result);
+
             var integer = expression as IntegerConstantExpression;
             if (integer != null)
             {
-                var entry = dictionary.GetEntry(integer);
-                if (entry == null)
-                    entry = fallback;
+                var entry = dictionary.GetEntry(integer) ?? fallback;
 
                 var stringValue = entry as StringConstantExpression;
                 if (stringValue != null)
                 {
-                    result = stringValue;
+                    context.DisplayString.AddParameter(stringValue);
                     return true;
                 }
             }
 
-            var scriptContext = scope.GetContext<AchievementScriptContext>();
-            var serializationContext = (scriptContext != null) ? scriptContext.SerializationContext : new Data.SerializationContext();
-
-            var value = ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
+            var value = GetExpressionValue(scope, out result);
             if (value == null)
                 return false;
 
             var functionCall = scope.GetContext<FunctionCallExpression>();
-
-            var error = context.RichPresence.AddLookupField(functionCall, name.Value, dictionary, fallback);
-            if (error != null)
-            {
-                result = error;
+            result = context.RichPresence.AddLookupField(functionCall, name, dictionary, fallback);
+            if (result != null)
                 return false;
-            }
 
-            result = new StringConstantExpression(String.Format("@{0}({1})", name.Value, value));
+            context.DisplayString.AddParameter(name.Value, value);
             return true;
         }
     }

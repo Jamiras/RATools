@@ -13,6 +13,7 @@ namespace RATools.Parser
             NumberFormat = NumberFormat.Decimal;
             WrapWidth = Int32.MaxValue;
             Indent = 0;
+            _aliases = new Dictionary<string, string>();
         }
 
         public NumberFormat NumberFormat { get; set; }
@@ -23,6 +24,18 @@ namespace RATools.Parser
 
         public bool IsValue { get; set; }
 
+        public ScriptBuilderContext Clone()
+        {
+            return new ScriptBuilderContext()
+            {
+                NumberFormat = NumberFormat,
+                Indent = Indent,
+                WrapWidth = WrapWidth,
+                IsValue = IsValue,
+                _aliases = _aliases,
+            };
+        }
+
         private StringBuilder _addSources;
         private StringBuilder _subSources;
         private StringBuilder _addHits;
@@ -32,6 +45,13 @@ namespace RATools.Parser
         private StringBuilder _measuredIf;
         private Requirement _lastAndNext;
         private int _remainingWidth;
+
+        private Dictionary<string, string> _aliases;
+
+        public void AddAlias(string memoryReference, string alias)
+        {
+            _aliases[memoryReference] = alias;
+        }
 
         public override string ToString()
         {
@@ -232,6 +252,9 @@ namespace RATools.Parser
 
         private void Append(StringBuilder builder, StringBuilder source)
         {
+            foreach (var alias in _aliases)
+                source.Replace(alias.Key, alias.Value);
+
             if (source.Length <= _remainingWidth)
             {
                 // full string fits on current line
@@ -256,6 +279,14 @@ namespace RATools.Parser
                 _remainingWidth -= source.Length;
                 return;
             }
+            if (source.Length < WrapWidth)
+            {
+                // full string barely doesn't fit on separate line
+                AppendLine(builder);
+                builder.Append(source);
+                _remainingWidth = 0;
+                return;
+            }
 
             // full string does not fit on separate line, try to split it up.
             if (_remainingWidth < availableWidth)
@@ -278,10 +309,33 @@ namespace RATools.Parser
                 }
                 Indent -= 4;
 
-                builder.AppendLine();
-                builder.Append(' ', Indent);
-                builder.Append(')');
-                _remainingWidth = WrapWidth - Indent - 1;
+                // if the last parenthesis matches something on this line, keep with with this line
+                var count = 0;
+                var index = builder.Length;
+                while (index > 0 && builder[index - 1] != '\n')
+                {
+                    --index;
+                    if (builder[index] == ')')
+                        count++;
+                    else if (builder[index] == '(')
+                        count--;
+                }
+
+                if (count >= 0)
+                {
+                    // all parens on this line are matched, put the extra paren on a separate line.
+                    builder.AppendLine();
+                    builder.Append(' ', Indent);
+                    builder.Append(')');
+                    _remainingWidth = WrapWidth - Indent - 1;
+                }
+                else
+                {
+                    // extra paren closes something on this line, keep it on this line.
+                    builder.Append(')');
+                    _remainingWidth = WrapWidth - (builder.Length - index);
+                }
+
                 return;
             }
 

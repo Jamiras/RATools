@@ -79,8 +79,6 @@ namespace RATools.ViewModels
         internal Dictionary<uint, string> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
 
-        public string LocalFilePath { get { return _localAssets.Filename; } }
-
         public ScriptViewModel Script { get; protected set; }
 
         public CommandBase<int> GoToSourceCommand { get; private set; }
@@ -700,25 +698,25 @@ namespace RATools.ViewModels
                         {
                             var part = tokenizer.ReadTo("::");
                             if (part.StartsWith("STA:"))
-                                leaderboard.Start = part.Substring(4);
+                                leaderboard.Start = Trigger.Deserialize(part.Substring(4));
                             else if (part.StartsWith("CAN:"))
-                                leaderboard.Cancel = part.Substring(4);
+                                leaderboard.Cancel = Trigger.Deserialize(part.Substring(4));
                             else if (part.StartsWith("SUB:"))
-                                leaderboard.Submit = part.Substring(4);
+                                leaderboard.Submit = Trigger.Deserialize(part.Substring(4));
                             else if (part.StartsWith("VAL:"))
-                                leaderboard.Value = part.Substring(4);
+                                leaderboard.Value = Value.Deserialize(part.Substring(4));
 
                             tokenizer.Advance(2);
                         }
 
-                        if (String.IsNullOrEmpty(leaderboard.Start))
-                            leaderboard.Start = "1=1";
-                        if (String.IsNullOrEmpty(leaderboard.Cancel))
-                            leaderboard.Cancel = "1=1";
-                        if (String.IsNullOrEmpty(leaderboard.Submit))
-                            leaderboard.Submit = "1=1";
-                        if (String.IsNullOrEmpty(leaderboard.Value))
-                            leaderboard.Value = "0";
+                        if (leaderboard.Start == null)
+                            leaderboard.Start = new Trigger();
+                        if (leaderboard.Cancel == null)
+                            leaderboard.Cancel = new Trigger();
+                        if (leaderboard.Submit == null)
+                            leaderboard.Submit = new Trigger();
+                        if (leaderboard.Value == null)
+                            leaderboard.Value = new Value();
 
                         _publishedLeaderboards.Add(leaderboard);
                     }

@@ -138,11 +138,28 @@ namespace RATools.Data
             requirement.Left = Field.Deserialize(tokenizer);
 
             requirement.Operator = Requirement.ReadOperator(tokenizer);
-            if (requirement.Operator != RequirementOperator.None &&
-                !requirement.IsComparison)
+            if (requirement.Operator == RequirementOperator.None)
+            {
+                if (requirement.Left.Type == FieldType.Value &&
+                    (requirement.Left.Value & 0x80000000) != 0)
+                {
+                    requirement.Type = RequirementType.SubSource;
+                    requirement.Left = new Field
+                    {
+                        Type = FieldType.Value,
+                        Value = (uint)(-((int)requirement.Left.Value))
+                    };
+                }
+            }
+            else
             {
                 requirement.Right = Field.Deserialize(tokenizer);
-                if (requirement.Right.Type == FieldType.Value &&
+
+                if (requirement.IsComparison)
+                {
+                    requirement.Operator = RequirementOperator.None;
+                }
+                else if (requirement.Right.Type == FieldType.Value &&
                     (requirement.Right.Value & 0x80000000) != 0)
                 {
                     requirement.Type = RequirementType.SubSource;
@@ -185,6 +202,8 @@ namespace RATools.Data
                 {
                     if (serializationContext.MinimumVersion < Version._0_77) // Measured leaderboard format
                         SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
+                    else if (enumerator.Current.Requirements.Any(r => r.Type == RequirementType.None)) // raw value
+                        SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
                     else
                         enumerator.Current.Serialize(builder, serializationContext);
 
@@ -203,10 +222,17 @@ namespace RATools.Data
             var enumerator = requirements.GetEnumerator();
             if (enumerator.MoveNext())
             {
+                bool first = true;
+                int constant = 0;
                 do
                 {
                     if (enumerator.Current.Left.IsMemoryReference)
                     {
+                        if (first)
+                            first = false;
+                        else
+                            builder.Append('_');
+
                         enumerator.Current.Left.Serialize(builder, serializationContext);
 
                         double multiplier = 1.0;
@@ -230,29 +256,55 @@ namespace RATools.Data
 
                         if (multiplier != 1.0)
                         {
-                            if (enumerator.Current.Operator == RequirementOperator.Divide)
+                            if (multiplier == Math.Floor(multiplier) && multiplier <= 0xFFFFFFFF && multiplier >= -0x80000000)
                             {
-                                builder.Append('/');
-                                builder.Append(1.0 / multiplier);
+                                int scalar = (multiplier > 0x7FFFFFFF) ?
+                                    (int)(uint)multiplier : (int)multiplier;
+
+                                builder.Append('*');
+                                builder.Append(scalar);
                             }
                             else
                             {
-                                builder.Append('*');
-                                builder.Append(multiplier);
+                                if (enumerator.Current.Operator == RequirementOperator.Divide && multiplier < 1.0f)
+                                {
+                                    builder.Append('/');
+                                    multiplier = 1.0 / multiplier;
+                                }
+                                else
+                                {
+                                    builder.Append('*');
+                                }
+                                builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", multiplier);
+
+                                while (builder[builder.Length - 1] == '0')
+                                    builder.Length--;
+                                if (builder[builder.Length - 1] == '.')
+                                    builder.Length--;
                             }
                         }
                     }
                     else
                     {
-                        builder.Append('v');
-                        builder.Append(enumerator.Current.Left.Value);
+                        if (enumerator.Current.Type == RequirementType.SubSource)
+                            constant -= (int)enumerator.Current.Left.Value;
+                        else
+                            constant += (int)enumerator.Current.Left.Value;
                     }
+                } while (enumerator.MoveNext());
 
-                    if (!enumerator.MoveNext())
-                        break;
-
-                    builder.Append('_');
-                } while (true);
+                if (constant != 0 || first)
+                {
+                    if (!first)
+                        builder.Append('_');
+                    builder.Append('v');
+                    if (constant < 0)
+                    {
+                        constant = -constant;
+                        builder.Append('-');
+                    }
+                    builder.Append(constant);
+                }
             }
         }
 
@@ -264,22 +316,61 @@ namespace RATools.Data
             {
                 foreach (var requirement in value.Requirements)
                 {
+                    Requirement clone = null;
+
                     if (requirement.Operator == RequirementOperator.Multiply ||
                         requirement.Operator == RequirementOperator.Divide)
                     {
-                        // Multiply/Divide in trigger logic requires 0.78, but can be used in leaderboard values long before that.
-                        var clone = requirement.Clone();
-                        clone.Operator = RequirementOperator.None;
-                        minimumVersion = minimumVersion.OrNewer(clone.MinimumVersion());
+                        // Multiply/Divide in trigger logic requires 0.78, but can be used with constants
+                        // in legacy value expressions long before that.
+                        if (!requirement.Right.IsMemoryReference)
+                        {
+                            clone = requirement.Clone();
+                            clone.Operator = RequirementOperator.None;
+
+                            // float support in trigger logic requires 1.0
+                            if (clone.Right.Type == FieldType.Float)
+                                clone.Right = new Field { Type = FieldType.Value, Value = 1 };
+                        }
                     }
-                    else
+
+                    switch (requirement.Type)
                     {
-                        minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
+                        case RequirementType.Measured:
+                            // non-comparison Measured can be converted to legacy syntax
+                            if (!requirement.IsComparison)
+                            {
+                                if (clone == null)
+                                    clone = requirement.Clone();
+                                clone.Type = RequirementType.None;
+                            }
+                            break;
+
+                        case RequirementType.AddHits:
+                        case RequirementType.ResetIf:
+                        case RequirementType.PauseIf:
+                            // these are supported pre-0.77, but cannot be used in value logic without a Measured flag.
+                            minimumVersion = minimumVersion.OrNewer(Version._0_77);
+                            break;
                     }
+
+                    if (clone != null)
+                        minimumVersion = minimumVersion.OrNewer(clone.MinimumVersion());
+                    else
+                        minimumVersion = minimumVersion.OrNewer(requirement.MinimumVersion());
                 }
             }
 
             return minimumVersion;
+        }
+
+        public uint MaximumAddress()
+        {
+            uint maximumAddress = 0;
+            foreach (var value in Values)
+                maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
+
+            return maximumAddress;
         }
     }
 }

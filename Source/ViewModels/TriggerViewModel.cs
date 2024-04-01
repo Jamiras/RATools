@@ -1,5 +1,4 @@
 ﻿using Jamiras.Commands;
-using Jamiras.Components;
 using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser;
@@ -12,15 +11,15 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Label}")]
     public class TriggerViewModel : ViewModelBase
     {
-        public TriggerViewModel(string label, Achievement achievement, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public TriggerViewModel(string label, Trigger trigger, NumberFormat numberFormat, IDictionary<uint, string> notes)
         {
             Label = label;
 
             var groups = new List<RequirementGroupViewModel>();
-            if (achievement != null)
+            if (trigger != null)
             {
                 var groupLabel = (this is ValueViewModel) ? "Value" : "Core";
-                groups.Add(new RequirementGroupViewModel(groupLabel, achievement.CoreRequirements, numberFormat, notes));
+                groups.Add(new RequirementGroupViewModel(groupLabel, trigger.Core.Requirements, numberFormat, notes));
 
                 int i = 0;
                 groupLabel = "Alt ";
@@ -30,10 +29,10 @@ namespace RATools.ViewModels
                     groupLabel = "Value ";
                 }
 
-                foreach (var alt in achievement.AlternateRequirements)
+                foreach (var alt in trigger.Alts)
                 {
                     i++;
-                    groups.Add(new RequirementGroupViewModel(groupLabel + i, alt, numberFormat, notes));
+                    groups.Add(new RequirementGroupViewModel(groupLabel + i, alt.Requirements, numberFormat, notes));
                 }
             }
 
@@ -49,22 +48,10 @@ namespace RATools.ViewModels
             Groups = groups.ToArray();
         }
 
-        public TriggerViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<uint, string> notes)
-            : this(label, CreateAchievement(definition), numberFormat, notes)
-        {
-        }
-
         public TriggerViewModel(string label, IEnumerable<RequirementGroupViewModel> groups)
         {
             Label = label;
             Groups = groups;
-        }
-
-        private static Achievement CreateAchievement(string definition)
-        {
-            var achievementBuilder = new AchievementBuilder();
-            achievementBuilder.ParseRequirements(Tokenizer.CreateTokenizer(definition));
-            return achievementBuilder.ToAchievement();
         }
 
         public string Label { get; private set; }
@@ -75,23 +62,20 @@ namespace RATools.ViewModels
 
     public class ValueViewModel : TriggerViewModel
     {
-        public ValueViewModel(string label, string definition, NumberFormat numberFormat, IDictionary<uint, string> notes)
-            : base(label, CreateValue(definition), numberFormat, notes)
+        public ValueViewModel(string label, Value value, NumberFormat numberFormat, IDictionary<uint, string> notes)
+            : base(label, WrapValue(value), numberFormat, notes)
         {
         }
 
-        private static Achievement CreateValue(string definition)
+        private static Trigger WrapValue(Value value)
         {
-            var valueBuilder = new ValueBuilder();
-            valueBuilder.ParseValue(Tokenizer.CreateTokenizer(definition));
+            var triggerBuilder = new TriggerBuilder();
+            foreach (var requirement in value.Values.First().Requirements)
+                triggerBuilder.CoreRequirements.Add(requirement);
+            foreach (var alternateValue in value.Values.Skip(1))
+                triggerBuilder.AlternateRequirements.Add(alternateValue.Requirements.ToArray());
 
-            var achievementBuilder = new AchievementBuilder();
-            foreach (var requirement in valueBuilder.Values.First())
-                achievementBuilder.CoreRequirements.Add(requirement);
-            foreach (var alternateValue in valueBuilder.Values.Skip(1))
-                achievementBuilder.AlternateRequirements.Add(alternateValue);
-
-            return achievementBuilder.ToAchievement();
+            return triggerBuilder.ToTrigger();
         }
     }
 }

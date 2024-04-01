@@ -30,13 +30,49 @@ namespace RATools.Parser.Functions
             if (stringExpression == null)
                 return false;
 
-            var varargs = GetVarArgsParameter(scope, out result, stringExpression);
+            var varargs = EvaluateVarArgs(scope, out result, stringExpression);
             if (varargs == null)
                 return false;
 
+            result = Evaluate(stringExpression, varargs, false);
+            return (result is StringConstantExpression);
+        }
+
+        private ArrayExpression EvaluateVarArgs(InterpreterScope scope, out ExpressionBase result, ExpressionBase lastExpression)
+        {
+            var varargs = GetVarArgsParameter(scope, out result, lastExpression);
+            if (varargs == null)
+                return null;
+
+            for (int parameterIndex = 0; parameterIndex < varargs.Entries.Count; parameterIndex++)
+            {
+                result = varargs.Entries[parameterIndex];
+                var functionCall = result as FunctionCallExpression;
+                if (functionCall != null)
+                {
+                    if (!functionCall.Evaluate(scope, out result))
+                        return null;
+
+                    varargs.Entries[parameterIndex] = result;
+                }
+            }
+
+            var stringExpression = lastExpression as StringConstantExpression;
+            if (stringExpression != null)
+            {
+                result = Evaluate(stringExpression, varargs, false);
+                if (result is ErrorExpression)
+                    return null;
+            }
+
+            return varargs;
+        }
+
+        internal static ExpressionBase Evaluate(StringConstantExpression formatString, ArrayExpression parameters, bool ignoreMissing)
+        {
             var builder = new StringBuilder();
 
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(stringExpression.Value));
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(formatString.Value));
             while (tokenizer.NextChar != '\0')
             {
                 var token = tokenizer.ReadTo('{');
@@ -49,52 +85,50 @@ namespace RATools.Parser.Functions
                 tokenizer.Advance();
                 if (tokenizer.NextChar == '}')
                 {
-                    result = new ErrorExpression("Empty parameter index",
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
-                    return false;
+                    return new ErrorExpression("Empty parameter index",
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + positionalTokenColumn,
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + tokenizer.Column - 1);
                 }
                 var index = tokenizer.ReadNumber();
                 if (tokenizer.NextChar != '}')
                 {
-                    result = new ErrorExpression("Invalid positional token",
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
-                    return false;
+                    return new ErrorExpression("Invalid positional token",
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + positionalTokenColumn,
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + tokenizer.Column - 1);
                 }
                 tokenizer.Advance();
 
                 Int32 parameterIndex;
                 if (!Int32.TryParse(index.ToString(), out parameterIndex)
-                    || parameterIndex < 0 || parameterIndex >= varargs.Entries.Count)
+                    || parameterIndex < 0 || parameterIndex >= parameters.Entries.Count)
                 {
-                    result = new ErrorExpression("Invalid parameter index: " + index.ToString(),
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + positionalTokenColumn,
-                                                      stringExpression.Location.Start.Line, stringExpression.Location.Start.Column + tokenizer.Column - 1);
-                    return false;
+                    if (ignoreMissing)
+                    {
+                        builder.Append('{');
+                        builder.Append(parameterIndex);
+                        builder.Append('}');
+                        continue;
+                    }
+
+                    return new ErrorExpression("Invalid parameter index: " + index.ToString(),
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + positionalTokenColumn,
+                                               formatString.Location.Start.Line, formatString.Location.Start.Column + tokenizer.Column - 1);
                 }
 
-                result = varargs.Entries[parameterIndex];
-                var functionCall = result as FunctionCallExpression;
-                if (functionCall != null)
+                var parameter = parameters.Entries[parameterIndex];
+                if (parameter != null)
                 {
-                    if (!functionCall.Evaluate(scope, out result))
-                        return false;
-                }
+                    if (!parameter.IsLiteralConstant)
+                        return new ConversionErrorExpression(parameter, ExpressionType.StringConstant);
 
-                if (result.IsLiteralConstant)
-                {
-                    result.AppendStringLiteral(builder);
-                }
-                else
-                {
-                    result = new ConversionErrorExpression(result, ExpressionType.StringConstant);
-                    return false;
+                    parameter.AppendStringLiteral(builder);
                 }
             }
 
-            result = new StringConstantExpression(builder.ToString());
-            return true;
+            return new StringConstantExpression(builder.ToString())
+            {
+                Location = formatString.Location
+            };
         }
     }
 }
