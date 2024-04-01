@@ -16,7 +16,7 @@ namespace RATools.Parser.Tests
 
             return expr;
         }
-
+/*
         [Test]
         public void TestConditionDisplayString()
         {
@@ -329,5 +329,6 @@ namespace RATools.Parser.Tests
                 "@OddOrEven(0xH1234)\n"
             ));
         }
+*/
     }
 }

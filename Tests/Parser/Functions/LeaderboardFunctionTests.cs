@@ -64,10 +64,10 @@ namespace RATools.Parser.Tests.Functions
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567))");
             Assert.That(leaderboard.Title, Is.EqualTo("T"));
             Assert.That(leaderboard.Description, Is.EqualTo("D"));
-            Assert.That(leaderboard.Start, Is.EqualTo("0xH001234=1"));
-            Assert.That(leaderboard.Cancel, Is.EqualTo("0xH001234=2"));
-            Assert.That(leaderboard.Submit, Is.EqualTo("0xH001234=3"));
-            Assert.That(leaderboard.Value, Is.EqualTo("0xH004567"));
+            Assert.That(leaderboard.Start.ToString(), Is.EqualTo("0xH1234=1"));
+            Assert.That(leaderboard.Cancel.ToString(), Is.EqualTo("0xH1234=2"));
+            Assert.That(leaderboard.Submit.ToString(), Is.EqualTo("0xH1234=3"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH4567"));
             Assert.That(leaderboard.Format, Is.EqualTo(ValueFormat.Value));
         }
 
@@ -132,7 +132,7 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "byte(0x1234) * 3)");
-            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH1234*3"));
         }
 
         [Test]
@@ -141,7 +141,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "byte(0x1234) == 3)");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234=3"));
+            // comparison is discarded, there's no "reaching" the target for leaderboard values
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH1234"));
         }
 
         [Test]
@@ -150,7 +151,7 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "max_of(byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8))");
-            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3$0xH001235*5$0xH001236*8"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH1234*3$0xH1235*5$0xH1236*8"));
         }
 
         [Test]
@@ -159,7 +160,7 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "max_of([byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8]))");
-            Assert.That(leaderboard.Value, Is.EqualTo("0xH001234*3$0xH001235*5$0xH001236*8"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH1234*3$0xH1235*5$0xH1236*8"));
         }
 
         [Test]
@@ -168,7 +169,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234) * 10 + byte(0x2345)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("A:0xH001234*10_M:0xH002345"));
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("A:0xH001234*10_M:0xH002345"));
         }
 
         [Test]
@@ -177,7 +179,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234) * 10 + byte(0x2345), when=byte(0x3456) > 4))");
-            Assert.That(leaderboard.Value, Is.EqualTo("A:0xH001234*10_M:0xH002345_Q:0xH003456>4"));
+            var context = new SerializationContext { MinimumVersion = Version._0_78 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("A:0xH001234*10_M:0xH002345_Q:0xH003456>4"));
         }
 
         [Test]
@@ -188,7 +191,8 @@ namespace RATools.Parser.Tests.Functions
                 "max_of(measured(byte(0x1234), when=byte(0x3456) > 4), " +
                        "measured(byte(0x1235), when=byte(0x3456) < 4), " +
                        "measured(byte(0x1236), when=byte(0x3456) == 4)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Q:0xH003456>4$M:0xH001235_Q:0xH003456<4$M:0xH001236_Q:0xH003456=4"));
+            var context = new SerializationContext { MinimumVersion = Version._0_78 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("M:0xH001234_Q:0xH003456>4$M:0xH001235_Q:0xH003456<4$M:0xH001236_Q:0xH003456=4"));
         }
 
         [Test]
@@ -197,12 +201,13 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(always_true()))");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:1=1"));
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("M:1=1"));
 
             leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(tally(0, always_true())))");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:1=1"));
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("M:1=1"));
         }
 
         [Test]
@@ -211,7 +216,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(repeated(10, byte(0x1234) == 6 && word(0x2345) == 1)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("N:0xH001234=6_M:0x 002345=1.10."));
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("N:0xH001234=6_M:0x 002345=1.10."));
         }
 
         [Test]
@@ -231,13 +237,14 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(byte(0x1234), when=repeated(10, byte(0x2345) == 10) && never(byte(0x2345) == 20)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("M:0xH001234_Z:0xH002345=20_Q:0xH002345=10.10."));
+            var context = new SerializationContext { MinimumVersion = Version._1_0 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("M:0xH001234_Z:0xH002345=20_Q:0xH002345=10.10."));
 
             // never outside measured
             leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "never(byte(0x2345) == 20) && measured(byte(0x1234), when=repeated(10, byte(0x2345) == 10)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("R:0xH002345=20_M:0xH001234_Q:0xH002345=10.10."));
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("R:0xH002345=20_M:0xH001234_Q:0xH002345=10.10."));
         }
 
         [Test]
@@ -246,7 +253,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(repeated(10, word(0x1234) / 4 + byte(0x2345) == 6)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("A:0x 001234/4_M:0xH002345=6.10."));
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("A:0x 001234/4_M:0xH002345=6.10."));
         }
 
         [Test]
@@ -255,7 +263,8 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "measured(repeated(10, byte(0x2345 + word(0x1234) * 4) == 6)))");
-            Assert.That(leaderboard.Value, Is.EqualTo("I:0x 001234*4_M:0xH002345=6.10."));
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("I:0x 001234*4_M:0xH002345=6.10."));
         }
     }
 }

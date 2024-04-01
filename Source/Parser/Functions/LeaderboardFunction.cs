@@ -3,7 +3,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
@@ -93,16 +93,19 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        private string ProcessTrigger(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
+        private Trigger ProcessTrigger(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
         {
             var expression = GetRequirementParameter(scope, parameter, out result);
             if (expression == null)
                 return null;
 
-            return TriggerBuilderContext.GetConditionString(expression, scope, serializationContext, out result);
+            ErrorExpression error;
+            var trigger = TriggerBuilder.BuildTrigger(expression, out error);
+            result = error;
+            return trigger;
         }
 
-        private static string ProcessValue(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
+        private static Value ProcessValue(InterpreterScope scope, string parameter, SerializationContext serializationContext, out ExpressionBase result)
         {
             var expression = GetParameter(scope, parameter, out result);
             if (expression == null)
@@ -113,20 +116,34 @@ namespace RATools.Parser.Functions
             {
                 var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
                 if (functionDefinition is MaxOfFunction)
-                {
-                    var builder = new StringBuilder();
-                    foreach (var value in functionCallExpression.Parameters)
-                    {
-                        if (builder.Length > 0)
-                            builder.Append('$');
-
-                        builder.Append(ValueBuilderContext.GetValueString(value, scope, serializationContext, out result));
-                    }
-                    return builder.ToString();
-                }
+                    return ValueFromMaxOf(functionCallExpression.Parameters, out result);
             }
 
-            return ValueBuilderContext.GetValueString(expression, scope, serializationContext, out result);
+            ErrorExpression error;
+            var value = ValueBuilder.BuildValue(expression, out error);
+            result = error;
+            return value;
+        }
+
+        private static Value ValueFromMaxOf(IEnumerable<ExpressionBase> expressions, out ExpressionBase result)
+        {
+            var values = new List<IEnumerable<Requirement>>();
+            ErrorExpression error;
+
+            foreach (var expression in expressions)
+            {
+                var value = ValueBuilder.BuildValue(expression, out error);
+                if (value == null)
+                {
+                    result = error;
+                    return null;
+                }
+
+                values.Add(value.Values.First().Requirements);
+            }
+
+            result = null;
+            return new Value(values);
         }
     }
 

@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -33,6 +34,7 @@ namespace RATools.Parser.Tests.Functions
             ExpressionBase error;
             var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
             var context = new RichPresenceDisplayFunction.RichPresenceDisplayContext { RichPresence = new RichPresenceBuilder() };
+            context.DisplayString = context.RichPresence.AddDisplayString(null, new StringConstantExpression("{0}"));
             scope.Context = context;
 
             ExpressionBase evaluated;
@@ -46,15 +48,9 @@ namespace RATools.Parser.Tests.Functions
             }
 
             ExpressionBase result;
-            Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.True);
-            if (expectedError == null)
+            Assert.That(funcDef.Evaluate(scope, out result), Is.True);
+            if (expectedError != null)
             {
-                Assert.That(funcDef.BuildMacro(context, scope, out result), Is.True);
-                context.RichPresence.DisplayString = ((StringConstantExpression)result).Value;
-            }
-            else
-            {
-                Assert.That(funcDef.BuildMacro(context, scope, out result), Is.False);
                 Assert.That(result, Is.InstanceOf<ErrorExpression>());
                 Assert.That(((ErrorExpression)result).Message, Is.EqualTo(expectedError));
             }

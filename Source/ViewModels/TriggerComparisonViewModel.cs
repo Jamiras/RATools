@@ -7,7 +7,7 @@ namespace RATools.ViewModels
     public class TriggerComparisonViewModel : TriggerViewModel
     {
         public TriggerComparisonViewModel(TriggerViewModel trigger, TriggerViewModel compareTrigger, NumberFormat numberFormat, IDictionary<uint, string> notes)
-            : base(trigger.Label, (Achievement)null, numberFormat, notes)
+            : base(trigger.Label, null, numberFormat, notes)
         {
             var compareTriggerGroups = new List<RequirementGroupViewModel>(compareTrigger.Groups);
             var groups = new List<RequirementGroupViewModel>();
