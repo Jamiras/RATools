@@ -77,5 +77,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("tally_of({1:\"One\",2:\"Two\",3:\"Three\"}, 11, a => byte(a) == 9)"),
                 Is.EqualTo("tally(11, byte(0x000001) == 9, byte(0x000002) == 9, byte(0x000003) == 9)"));
         }
+
+        [Test]
+        public void TestMissingReturn()
+        {
+            Assert.That(Evaluate("tally_of([1, 2, 3], 4, (a) { if (a == 2) return a })"),
+                Is.EqualTo("predicate did not return a value"));
+        }
+
+        [Test]
+        public void TestErrorInPredicate()
+        {
+            Assert.That(Evaluate("tally_of([1, 2, 3], 4, (a) { return b })"),
+                Is.EqualTo("Unknown variable: b"));
+        }
     }
 }

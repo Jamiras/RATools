@@ -61,6 +61,12 @@ namespace RATools.Parser.Functions
                 if (!predicate.Evaluate(iteratorScope, out result))
                     return false;
 
+                if (result == null)
+                {
+                    result = new ErrorExpression("predicate did not return a value", predicate);
+                    return false;
+                }
+
                 expression = Combine(expression, result);
                 if (expression.Type == ExpressionType.Error)
                 {

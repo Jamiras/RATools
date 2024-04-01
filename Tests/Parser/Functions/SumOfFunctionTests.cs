@@ -76,5 +76,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("sum_of({1:\"One\",2:\"Two\",3:\"Three\"}, a => byte(a)) == 9"),
                 Is.EqualTo("(byte(0x000001) + byte(0x000002) + byte(0x000003)) == 9"));
         }
+
+        [Test]
+        public void TestMissingReturn()
+        {
+            Assert.That(Evaluate("sum_of([1, 2, 3], (a) { if (a == 2) return a })"),
+                Is.EqualTo("predicate did not return a value"));
+        }
+
+        [Test]
+        public void TestErrorInPredicate()
+        {
+            Assert.That(Evaluate("sum_of([1, 2, 3], (a) { return b })"),
+                Is.EqualTo("Unknown variable: b"));
+        }
     }
 }
