@@ -1,5 +1,4 @@
-﻿using Jamiras.Components;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
@@ -21,37 +20,14 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("value"));
         }
 
-        private void Evaluate(string input, InterpreterScope scope, string expectedError = null)
+        private static void Evaluate(string input, InterpreterScope scope)
         {
-            var funcDef = new ArrayPushFunction();
+            FunctionTests.Execute<ArrayPushFunction>(input, scope);
+        }
 
-            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
-            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
-            var funcCall = (FunctionCallExpression)expression;
-
-            ExpressionBase error;
-            var parameterScope = funcCall.GetParameters(funcDef, scope, out error);
-
-            if (expectedError == null)
-            {
-                Assert.That(error, Is.Null);
-
-                ExpressionBase result;
-                Assert.That(funcDef.Evaluate(parameterScope, out result), Is.True);
-                Assert.That(result, Is.Null);
-            }
-            else
-            {
-                if (error == null)
-                    Assert.That(funcDef.Evaluate(parameterScope, out error), Is.False);
-
-                Assert.That(error, Is.InstanceOf<ErrorExpression>());
-
-                var parseError = (ErrorExpression)error;
-                while (parseError.InnerError != null)
-                    parseError = parseError.InnerError;
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
-            }
+        private static void AssertEvaluateError(string input, InterpreterScope scope, string expectedError)
+        {
+            FunctionTests.AssertEvaluateError<ArrayPushFunction>(input, scope, expectedError);
         }
 
         [Test]
@@ -75,11 +51,34 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestNested()
+        {
+            var scope = new InterpreterScope();
+            var array = new ArrayExpression();
+            var dict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(0);
+            dict.Add(key, array);
+            scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
+
+            Evaluate("array_push(dict[0], 1)", scope);
+            Assert.That(array.Entries.Count, Is.EqualTo(1));
+            Assert.That(array.Entries[0], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)array.Entries[0]).Value, Is.EqualTo(1));
+
+            Evaluate("array_push(dict[0], \"2\")", scope);
+            Assert.That(array.Entries.Count, Is.EqualTo(2));
+            Assert.That(array.Entries[0], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)array.Entries[0]).Value, Is.EqualTo(1));
+            Assert.That(array.Entries[1], Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)array.Entries[1]).Value, Is.EqualTo("2"));
+        }
+
+        [Test]
         public void TestUndefined()
         {
             var scope = new InterpreterScope();
 
-            Evaluate("array_push(arr, 1)", scope, "Unknown variable: arr");
+            AssertEvaluateError("array_push(arr, 1)", scope, "Unknown variable: arr");
         }
 
         [Test]
@@ -89,10 +88,10 @@ namespace RATools.Parser.Tests.Functions
             var dict = new DictionaryExpression();
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
-            Evaluate("array_push(dict, 1)", scope, "array: Cannot convert dictionary to array");
+            AssertEvaluateError("array_push(dict, 1)", scope, "array: Cannot convert dictionary to array");
         }
 
-        private void AddHappyFunction(InterpreterScope scope)
+        private static void AddHappyFunction(InterpreterScope scope)
         {
             scope.AddFunction(UserFunctionDefinitionExpression.ParseForTest(
                 "function happy(num1) => num1"

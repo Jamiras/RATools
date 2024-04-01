@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -89,7 +90,7 @@ namespace RATools.Parser.Expressions
                 // when a parameter is assigned to a variable that is an array or dictionary,
                 // assume it has already been evaluated and pass it by reference. this is magnitudes
                 // more performant, and allows the function to modify the data in the container.
-                if (value.Type == ExpressionType.Dictionary || value.Type == ExpressionType.Array)
+                if (VariableReferenceExpression.CanReference(value.Type))
                 {
                     var reference = scope.GetVariableReference(Name);
                     CopyLocation(reference);
@@ -222,6 +223,19 @@ namespace RATools.Parser.Expressions
         internal override void AppendString(StringBuilder builder)
         {
             builder.Append(Variable.Name);
+        }
+
+        internal static bool CanReference(ExpressionType type)
+        {
+            switch (type)
+            {
+                case ExpressionType.Dictionary:
+                case ExpressionType.Array:
+                    return true;
+
+                default:
+                    return false;
+            }
         }
     }
 }
