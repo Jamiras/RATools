@@ -115,7 +115,10 @@ namespace RATools.Parser.Expressions.Trigger
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as ModifiedMemoryAccessorExpression;
-            return (that != null && MemoryAccessor == that.MemoryAccessor);
+            return (that != null &&
+                    ModifyingOperator == that.ModifyingOperator &&
+                    MemoryAccessor == that.MemoryAccessor &&
+                    (ModifyingOperator == RequirementOperator.None || Modifier == that.Modifier));
         }
 
         internal override void AppendString(StringBuilder builder)
