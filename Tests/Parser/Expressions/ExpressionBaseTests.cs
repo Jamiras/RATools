@@ -33,6 +33,38 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(tokenizer.NextChar, Is.EqualTo('h'));
         }
 
+        [Test]
+        public void TestSkipWhitespaceMultilineComment()
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("  /* multi-line\r\n     comment\r\n    */\r\nhi"));
+            ExpressionBase.SkipWhitespace(tokenizer);
+            Assert.That(tokenizer.NextChar, Is.EqualTo('h'));
+        }
+
+        [Test]
+        public void TestSkipWhitespaceMultipleMultilineComment()
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("  /* multi-line\r\n     comment\r\n    */\r\n/* second */\r\nhi"));
+            ExpressionBase.SkipWhitespace(tokenizer);
+            Assert.That(tokenizer.NextChar, Is.EqualTo('h'));
+        }
+
+        [Test]
+        public void TestSkipWhitespaceMultilineCommentUnclosed()
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("  /* multi-line\r\n     comment\r\nhi"));
+            ExpressionBase.SkipWhitespace(tokenizer);
+            Assert.That(tokenizer.NextChar, Is.EqualTo('\0'));
+        }
+
+        [Test]
+        public void TestSkipWhitespaceMultilineMixedComment()
+        {
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("  // single-line\r\n/* multi-line\r\n     comment\r\n    */\r\n// second single line\r\n/* second multiline */\r\nhi"));
+            ExpressionBase.SkipWhitespace(tokenizer);
+            Assert.That(tokenizer.NextChar, Is.EqualTo('h'));
+        }
+
         private static PositionalTokenizer CreateTokenizer(string input)
         {
             return new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
