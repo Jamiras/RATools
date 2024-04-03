@@ -1,9 +1,10 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceValueFunction : RichPresenceDisplayFunction.FunctionDefinition
+    internal class RichPresenceValueFunction : FunctionDefinitionExpression
     {
         public RichPresenceValueFunction()
             : base("rich_presence_value")
@@ -13,34 +14,6 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("format"));
 
             DefaultParameters["format"] = new StringConstantExpression("value");
-        }
-
-        public static ValueFormat ParseFormat(string format)
-        {
-            var valueFormat = Leaderboard.ParseFormat(format);
-            if (valueFormat == ValueFormat.None)
-            {
-                if (format == "ASCIICHAR")
-                    valueFormat = ValueFormat.ASCIIChar;
-                else if (format == "UNICODECHAR")
-                    valueFormat = ValueFormat.UnicodeChar;
-            }
-            return valueFormat;
-        }
-
-        public static string GetFormatString(ValueFormat format)
-        {
-            switch (format)
-            {
-                case ValueFormat.ASCIIChar:
-                    return "ASCIICHAR";
-
-                case ValueFormat.UnicodeChar:
-                    return "UNICODECHAR";
-
-                default:
-                    return Leaderboard.GetFormatString(format);
-            }
         }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
@@ -53,7 +26,7 @@ namespace RATools.Parser.Functions
             if (format == null)
                 return false;
 
-            var valueFormat = ParseFormat(format.Value);
+            var valueFormat = RichPresenceValueExpression.ParseFormat(format.Value);
             if (valueFormat == ValueFormat.None)
             {
                 result = new ErrorExpression(format.Value + " is not a supported rich_presence_value format", format);
@@ -64,39 +37,23 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { name, expression, format });
-            CopyLocation(result);
-            return true;
-        }
-
-        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
-        {
-            var name = GetStringParameter(scope, "name", out result);
-            if (name == null)
-                return false;
-
-            var format = GetStringParameter(scope, "format", out result);
-            if (format == null)
-                return false;
-
-            var valueFormat = ParseFormat(format.Value);
-            if (valueFormat == ValueFormat.None)
+            if (!ValueBuilder.IsConvertible(expression))
             {
-                result = new ErrorExpression("Unknown format", format);
+                result = ValueBuilder.InconvertibleError(expression);
                 return false;
             }
 
-            var value = GetExpressionValue(scope, out result);
-            if (value == null)
-                return false;
-
-            var functionCall = scope.GetContext<FunctionCallExpression>();
-            result = context.RichPresence.AddValueField(functionCall, name, valueFormat);
-            if (result != null)
-                return false;
-
-            context.DisplayString.AddParameter(name.Value, value);
+            result = new RichPresenceValueExpression(name, expression) { Format = valueFormat };
+            CopyLocation(result);
+            result.MakeReadOnly();
             return true;
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call", functionCall.FunctionName);
+            return false;
         }
     }
 }

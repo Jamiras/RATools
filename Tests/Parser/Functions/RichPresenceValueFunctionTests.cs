@@ -23,37 +23,17 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.DefaultParameters["format"], Is.EqualTo(new StringConstantExpression("value")));
         }
 
-        private static RichPresenceBuilder Evaluate(string input, string expectedError = null)
+        private static RichPresenceBuilder Evaluate(string input)
         {
-            var funcDef = new RichPresenceValueFunction();
-
+            input = "rich_presence_display(\"{0}\", " + input + ")";
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var funcCall = (FunctionCallExpression)expression;
 
-            ExpressionBase error;
-            var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
-            var context = new RichPresenceDisplayFunction.RichPresenceDisplayContext { RichPresence = new RichPresenceBuilder() };
-            context.DisplayString = context.RichPresence.AddDisplayString(null, new StringConstantExpression("{0}"));
+            var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.Context = context;
-
-            ExpressionBase evaluated;
-            if (expectedError != null && expectedError.EndsWith(" format"))
-            {
-                Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
-                var parseError = evaluated as ErrorExpression;
-                Assert.That(parseError, Is.Not.Null);
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
-                return context.RichPresence;
-            }
-
-            ExpressionBase result;
-            Assert.That(funcDef.Evaluate(scope, out result), Is.True);
-            if (expectedError != null)
-            {
-                Assert.That(result, Is.InstanceOf<ErrorExpression>());
-                Assert.That(((ErrorExpression)result).Message, Is.EqualTo(expectedError));
-            }
+            funcCall.Execute(scope);
 
             return context.RichPresence;
         }
@@ -69,18 +49,17 @@ namespace RATools.Parser.Tests.Functions
         public void TestExplicitCall()
         {
             // not providing a RichPresenceDisplayContext simulates calling the function at a global scope
-            var funcDef = new RichPresenceValueFunction();
-
             var input = "rich_presence_value(\"Name\", byte(0x1234))";
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var funcCall = (FunctionCallExpression)expression;
 
-            ExpressionBase error;
-            var scope = funcCall.GetParameters(funcDef, AchievementScriptInterpreter.GetGlobalScope(), out error);
-            Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-            Assert.That(error, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)error).Message, Is.EqualTo("rich_presence_value has no meaning outside of a rich_presence_display call"));
+            var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = context;
+            var error = funcCall.Execute(scope);
+
+            ExpressionTests.AssertError(error, "rich_presence_value has no meaning outside of a rich_presence_display call");
         }
 
         [Test]
@@ -137,8 +116,17 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestFormatInvalid()
         {
-            Evaluate("rich_presence_value(\"Name\", byte(0x1234), format=\"INVALID\")", 
-                "INVALID is not a supported rich_presence_value format");
+            var input = "rich_presence_display(\"{0}\", rich_presence_value(\"Name\", byte(0x1234), format=\"INVALID\"))";
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = context;
+            var error = funcCall.Execute(scope);
+
+            ExpressionTests.AssertError(error, "INVALID is not a supported rich_presence_value format");
         }
     }
 }

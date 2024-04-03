@@ -34,7 +34,7 @@ namespace RATools.Parser.Functions
             if (varargs == null)
                 return false;
 
-            result = Evaluate(stringExpression, varargs, false);
+            result = Evaluate(stringExpression, varargs, false, ProcessParameter);
             return (result is StringConstantExpression);
         }
 
@@ -60,7 +60,7 @@ namespace RATools.Parser.Functions
             var stringExpression = lastExpression as StringConstantExpression;
             if (stringExpression != null)
             {
-                result = Evaluate(stringExpression, varargs, false);
+                result = Evaluate(stringExpression, varargs, false, ProcessParameter);
                 if (result is ErrorExpression)
                     return null;
             }
@@ -68,7 +68,17 @@ namespace RATools.Parser.Functions
             return varargs;
         }
 
-        internal static ExpressionBase Evaluate(StringConstantExpression formatString, ArrayExpression parameters, bool ignoreMissing)
+        private static ErrorExpression ProcessParameter(StringBuilder builder, int index, ExpressionBase parameter)
+        {
+            if (!parameter.IsLiteralConstant)
+                return new ConversionErrorExpression(parameter, ExpressionType.StringConstant);
+
+            parameter.AppendStringLiteral(builder);
+            return null;
+        }
+
+        internal static ExpressionBase Evaluate(StringConstantExpression formatString, ArrayExpression parameters, bool ignoreMissing,
+            Func<StringBuilder, int, ExpressionBase, ErrorExpression> processParameter)
         {
             var builder = new StringBuilder();
 
@@ -118,10 +128,9 @@ namespace RATools.Parser.Functions
                 var parameter = parameters.Entries[parameterIndex];
                 if (parameter != null)
                 {
-                    if (!parameter.IsLiteralConstant)
-                        return new ConversionErrorExpression(parameter, ExpressionType.StringConstant);
-
-                    parameter.AppendStringLiteral(builder);
+                    var error = processParameter(builder, parameterIndex, parameter);
+                    if (error != null)
+                        return error;
                 }
             }
 
