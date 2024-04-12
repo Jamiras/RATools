@@ -106,5 +106,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("array_map([1], (a, b) => byte(a))"),
                 Is.EqualTo("predicate function must accept a single parameter"));
         }
+
+        [Test]
+        public void TestMissingReturn()
+        {
+            Assert.That(Evaluate("array_map([1, 2, 3], (a) { if (a == 2) return a })"),
+                Is.EqualTo("predicate did not return a value"));
+        }
+
+        [Test]
+        public void TestErrorInPredicate()
+        {
+            Assert.That(Evaluate("array_map([1, 2, 3], (a) { return b })"),
+                Is.EqualTo("Unknown variable: b"));
+        }
     }
 }

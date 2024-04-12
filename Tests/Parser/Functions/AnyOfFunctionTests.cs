@@ -145,5 +145,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("any_of([1], (a, b) => byte(0x1234) == a)"),
                 Is.EqualTo("predicate function must accept a single parameter"));
         }
+
+        [Test]
+        public void TestMissingReturn()
+        {
+            Assert.That(Evaluate("any_of([1, 2, 3], (a) { if (a == 2) return a })"),
+                Is.EqualTo("predicate did not return a value"));
+        }
+
+        [Test]
+        public void TestErrorInPredicate()
+        {
+            Assert.That(Evaluate("any_of([1, 2, 3], (a) { return b })"),
+                Is.EqualTo("Unknown variable: b"));
+        }
     }
 }

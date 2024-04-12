@@ -91,5 +91,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("all_of({1:\"One\",2:\"Two\",3:\"Three\"}, a => byte(0x1234) != a)"),
                 Is.EqualTo("byte(0x001234) != 1 && byte(0x001234) != 2 && byte(0x001234) != 3"));
         }
+
+        [Test]
+        public void TestMissingReturn()
+        {
+            Assert.That(Evaluate("all_of([1, 2, 3], (a) { if (a == 2) return a })"),
+                Is.EqualTo("predicate did not return a value"));
+        }
+
+        [Test]
+        public void TestErrorInPredicate()
+        {
+            Assert.That(Evaluate("all_of([1, 2, 3], (a) { return b })"),
+                Is.EqualTo("Unknown variable: b"));
+        }
     }
 }
