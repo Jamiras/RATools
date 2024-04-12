@@ -261,6 +261,40 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets the number of bytes needed to hold the specified size
+        /// </summary>
+        public static uint GetByteSize(FieldSize size)
+        {
+            switch (size)
+            {
+                case FieldSize.Bit0:
+                case FieldSize.Bit1:
+                case FieldSize.Bit2:
+                case FieldSize.Bit3:
+                case FieldSize.Bit4:
+                case FieldSize.Bit5:
+                case FieldSize.Bit6:
+                case FieldSize.Bit7:
+                case FieldSize.BitCount:
+                case FieldSize.LowNibble:
+                case FieldSize.HighNibble:
+                case FieldSize.Byte:
+                    return 1;
+
+                case FieldSize.Word:
+                case FieldSize.BigEndianWord:
+                    return 2;
+
+                case FieldSize.TByte:
+                case FieldSize.BigEndianTByte:
+                    return 3;
+
+                default:
+                    return 4;
+            }
+        }
+
+        /// <summary>
         /// Gets whether or not the field references memory.
         /// </summary>
         public bool IsMemoryReference
@@ -295,6 +329,28 @@ namespace RATools.Data
                     case FieldSize.BigEndianFloat:
                     case FieldSize.MBF32:
                     case FieldSize.LittleEndianMBF32:
+                        return true;
+
+                    default:
+                        return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets whether or not the value of this field is a big endian number.
+        /// </summary>
+        public bool IsBigEndian
+        {
+            get
+            {
+                switch (Size)
+                {
+                    case FieldSize.BigEndianDWord:
+                    case FieldSize.BigEndianWord:
+                    case FieldSize.BigEndianTByte:
+                    case FieldSize.BigEndianFloat:
+                    case FieldSize.MBF32:
                         return true;
 
                     default:

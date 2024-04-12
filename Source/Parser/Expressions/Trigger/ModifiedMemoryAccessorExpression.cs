@@ -305,7 +305,31 @@ namespace RATools.Parser.Expressions.Trigger
 
             // shrink to size
             if (MemoryAccessor.Field.Size != size)
-                MemoryAccessor = MemoryAccessor.ChangeFieldSize(size);
+            {
+                var newField = MemoryAccessor.Field.Clone();
+                newField.Size = size;
+
+                if (MemoryAccessor.Field.IsBigEndian)
+                {
+                    switch (size)
+                    {
+                        case FieldSize.TByte:
+                            newField.Size = FieldSize.BigEndianTByte;
+                            break;
+
+                        case FieldSize.Word:
+                            newField.Size = FieldSize.BigEndianWord;
+                            break;
+                    }
+
+                    var bytesBefore = Field.GetByteSize(MemoryAccessor.Field.Size);
+                    var bytesAfter = Field.GetByteSize(newField.Size);
+                    if (bytesAfter < bytesBefore)
+                        newField.Value += (bytesBefore - bytesAfter);
+                }
+
+                MemoryAccessor = new MemoryAccessorExpression(MemoryAccessor) { Field = newField };
+            }
 
             if (mask < sizeMask)
             {

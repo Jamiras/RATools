@@ -1,6 +1,8 @@
 ﻿using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
+using System;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -201,6 +203,61 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var converted = MemoryAccessorExpressionBase.WrapInMemoryValue(accessor);
             Assert.That(converted, Is.InstanceOf<MemoryValueExpression>());
             ExpressionTests.AssertAppendString(converted, input);
+        }
+
+        [Test]
+        [TestCase("dword(0x1234) & 0xFFFFFFFF", "dword(0x001234)")]
+        [TestCase("dword(0x1234) & 0x0FFFFFFF", "dword(0x001234) & 0x0FFFFFFF")]
+        [TestCase("dword(0x1234) & 0x00FFFFFF", "tbyte(0x001234)")]
+        [TestCase("dword(0x1234) & 0x000FFFFF", "tbyte(0x001234) & 0x000FFFFF")]
+        [TestCase("dword(0x1234) & 0x0000FFFF", "word(0x001234)")]
+        [TestCase("dword(0x1234) & 0x00000FFF", "word(0x001234) & 0x00000FFF")]
+        [TestCase("dword(0x1234) & 0x000000FF", "byte(0x001234)")]
+        [TestCase("dword(0x1234) & 0x0000000F", "low4(0x001234)")]
+        [TestCase("dword(0x1234) & 0x00000001", "bit0(0x001234)")]
+        [TestCase("dword(0x1234) & 0x00000000", "0")]
+        [TestCase("dword_be(0x1234) & 0xFFFFFFFF", "dword_be(0x001234)")]
+        [TestCase("dword_be(0x1234) & 0x0FFFFFFF", "dword_be(0x001234) & 0x0FFFFFFF")]
+        [TestCase("dword_be(0x1234) & 0x00FFFFFF", "tbyte_be(0x001235)")]
+        [TestCase("dword_be(0x1234) & 0x000FFFFF", "tbyte_be(0x001235) & 0x000FFFFF")]
+        [TestCase("dword_be(0x1234) & 0x0000FFFF", "word_be(0x001236)")]
+        [TestCase("dword_be(0x1234) & 0x00000FFF", "word_be(0x001236) & 0x00000FFF")]
+        [TestCase("dword_be(0x1234) & 0x000000FF", "byte(0x001237)")]
+        [TestCase("dword_be(0x1234) & 0x0000000F", "low4(0x001237)")]
+        [TestCase("dword_be(0x1234) & 0x00000001", "bit0(0x001237)")]
+        [TestCase("dword_be(0x1234) & 0x00000000", "0")]
+        [TestCase("word(0x1234) & 0xFFFFFFFF", "word(0x001234)")]
+        [TestCase("word(0x1234) & 0x0FFFFFFF", "word(0x001234)")]
+        [TestCase("word(0x1234) & 0x00FFFFFF", "word(0x001234)")]
+        [TestCase("word(0x1234) & 0x000FFFFF", "word(0x001234)")]
+        [TestCase("word(0x1234) & 0x0000FFFF", "word(0x001234)")]
+        [TestCase("word(0x1234) & 0x00000FFF", "word(0x001234) & 0x00000FFF")]
+        [TestCase("word(0x1234) & 0x000000FF", "byte(0x001234)")]
+        [TestCase("word(0x1234) & 0x0000000F", "low4(0x001234)")]
+        [TestCase("word(0x1234) & 0x00000001", "bit0(0x001234)")]
+        [TestCase("word(0x1234) & 0x00000000", "0")]
+        [TestCase("word_be(0x1234) & 0xFFFFFFFF", "word_be(0x001234)")]
+        [TestCase("word_be(0x1234) & 0x0FFFFFFF", "word_be(0x001234)")]
+        [TestCase("word_be(0x1234) & 0x00FFFFFF", "word_be(0x001234)")]
+        [TestCase("word_be(0x1234) & 0x000FFFFF", "word_be(0x001234)")]
+        [TestCase("word_be(0x1234) & 0x0000FFFF", "word_be(0x001234)")]
+        [TestCase("word_be(0x1234) & 0x00000FFF", "word_be(0x001234) & 0x00000FFF")]
+        [TestCase("word_be(0x1234) & 0x000000FF", "byte(0x001235)")]
+        [TestCase("word_be(0x1234) & 0x0000000F", "low4(0x001235)")]
+        [TestCase("word_be(0x1234) & 0x00000001", "bit0(0x001235)")]
+        [TestCase("word_be(0x1234) & 0x00000000", "0")]
+        [TestCase("byte(0x1234) & 0x0000FFFF", "byte(0x001234)")]
+        [TestCase("byte(0x1234) & 0x00000FFF", "byte(0x001234)")]
+        [TestCase("byte(0x1234) & 0x000000FF", "byte(0x001234)")]
+        [TestCase("byte(0x1234) & 0x0000000F", "low4(0x001234)")]
+        [TestCase("byte(0x1234) & 0x00000001", "bit0(0x001234)")]
+        [TestCase("byte(0x1234) & 0x00000000", "0")]
+        [TestCase("dword(0x1234) & 0xFFF0FFFF", "dword(0x001234) & 0xFFF0FFFF")]
+        [TestCase("dword(0x1234) & 0x10000000", "dword(0x001234) & 0x10000000")]
+        public void TestApplyMask(string input, string expected)
+        {
+            var accessor = TriggerExpressionTests.Parse(input);
+            ExpressionTests.AssertAppendString(accessor, expected);
         }
     }
 }
