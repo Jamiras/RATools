@@ -1,10 +1,10 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
-using System.Diagnostics;
+using RATools.Parser.Expressions.Trigger;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceMacroFunction : RichPresenceDisplayFunction.FunctionDefinition
+    internal class RichPresenceMacroFunction : FunctionDefinitionExpression
     {
         public RichPresenceMacroFunction()
             : base("rich_presence_macro")
@@ -79,7 +79,8 @@ namespace RATools.Parser.Functions
             if (macro == null)
                 return false;
 
-            if (GetValueFormat(macro.Value) == ValueFormat.None)
+            var valueFormat = GetValueFormat(macro.Value);
+            if (valueFormat == ValueFormat.None)
             {
                 result = new ErrorExpression("Unknown rich presence macro: " + macro.Value);
                 return false;
@@ -89,31 +90,23 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return false;
 
-            result = new FunctionCallExpression(Name.Name, new ExpressionBase[] { macro, expression });
+            if (!ValueBuilder.IsConvertible(expression))
+            {
+                result = ValueBuilder.InconvertibleError(expression);
+                return false;
+            }
+
+            result = new RichPresenceMacroExpression(macro, expression) { Format = valueFormat };
             CopyLocation(result);
+            result.MakeReadOnly();
             return true;
         }
 
-        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            var macro = GetStringParameter(scope, "macro", out result);
-            if (macro == null)
-                return false;
-
-            var valueFormat = GetValueFormat(macro.Value);
-            Debug.Assert(valueFormat != ValueFormat.None); // validated in ReplaceVariables
-
-            var value = GetExpressionValue(scope, out result);
-            if (value == null)
-                return false;
-
             var functionCall = scope.GetContext<FunctionCallExpression>();
-            result = context.RichPresence.AddValueField(functionCall, macro, valueFormat);
-            if (result != null)
-                return false;
-
-            context.DisplayString.AddParameter(macro.Value, value);
-            return true;
+            result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call", functionCall.FunctionName);
+            return false;
         }
     }
 }

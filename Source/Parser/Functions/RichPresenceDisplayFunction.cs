@@ -1,7 +1,7 @@
-﻿using RATools.Data;
-using RATools.Parser.Expressions;
+﻿using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System.Collections.Generic;
+using System.Text;
 
 namespace RATools.Parser.Functions
 {
@@ -69,44 +69,22 @@ namespace RATools.Parser.Functions
             if (varargs == null)
                 return null;
 
-            for (int parameterIndex = 0; parameterIndex < varargs.Entries.Count; parameterIndex++)
-            {
-                result = varargs.Entries[parameterIndex];
-                var functionCall = result as FunctionCallExpression;
-                if (functionCall != null)
-                {
-                    if (!functionCall.Evaluate(scope, out result))
-                        return null;
-
-                    varargs.Entries[parameterIndex] = result;
-                }
-                else
-                {
-                    var stringValue = result as StringConstantExpression;
-                    if (stringValue == null)
-                    {
-                        var combine = result as IMathematicCombineExpression;
-                        if (combine != null)
-                        {
-                            result = combine.Combine(new StringConstantExpression(""), MathematicOperation.Add);
-                            varargs.Entries[parameterIndex] = result;
-
-                            stringValue = result as StringConstantExpression;
-                        }
-
-                        if (stringValue == null)
-                            stringValue = new StringConstantExpression("{" + parameterIndex + "}");
-                    }
-
-                    var richPresenceContext = scope.GetContext<RichPresenceDisplayContext>();
-                    richPresenceContext.DisplayString.AddParameter(stringValue);
-                }
-            }
-
             var stringExpression = lastExpression as StringConstantExpression;
             if (stringExpression != null)
             {
-                result = FormatFunction.Evaluate(stringExpression, varargs, false);
+                var richPresenceContext = scope.GetContext<RichPresenceDisplayContext>();
+
+                result = FormatFunction.Evaluate(stringExpression, varargs, false,
+                    (StringBuilder builder, int index, ExpressionBase parameter) =>
+                    {
+                        // keep the placeholder - we'll need it when we serialize
+                        builder.Append('{');
+                        builder.Append(index);
+                        builder.Append('}');
+
+                        return ProcessParameter(parameter, index, richPresenceContext);
+                    });
+
                 if (result is ErrorExpression)
                     return null;
             }
@@ -114,58 +92,45 @@ namespace RATools.Parser.Functions
             return varargs;
         }
 
+        static ErrorExpression ProcessParameter(ExpressionBase parameter, int index, RichPresenceDisplayContext richPresenceContext)
+        {
+            var richPresenceMacro = parameter as RichPresenceMacroExpressionBase;
+            if (richPresenceMacro != null)
+            {
+                var error = richPresenceMacro.Attach(richPresenceContext.RichPresence);
+                if (error != null)
+                    return error;
+
+                var value = ValueBuilder.BuildValue(richPresenceMacro.Parameter, out error);
+                if (error != null)
+                    return new ErrorExpression(richPresenceMacro.FunctionName + " call failed", richPresenceMacro) { InnerError = error };
+
+                richPresenceContext.DisplayString.AddParameter(index, richPresenceMacro, value);
+                return null;
+            }
+
+            var stringValue = parameter as StringConstantExpression;
+            if (stringValue == null)
+            {
+                var combine = parameter as IMathematicCombineExpression;
+                if (combine != null)
+                {
+                    var result = combine.Combine(new StringConstantExpression(""), MathematicOperation.Add);
+                    stringValue = result as StringConstantExpression;
+                }
+
+                if (stringValue == null)
+                    stringValue = new StringConstantExpression("{" + index + "}");
+            }
+
+            richPresenceContext.DisplayString.AddParameter(index, stringValue);
+            return null;
+        }
+
         internal class RichPresenceDisplayContext
         {
             public RichPresenceBuilder RichPresence { get; set; }
             public RichPresenceBuilder.ConditionalDisplayString DisplayString { get; set; }
-        }
-
-        internal abstract class FunctionDefinition : FunctionDefinitionExpression
-        {
-            public FunctionDefinition(string name)
-                : base(name)
-            {
-            }
-
-            public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
-            {
-                var richPresenceContext = scope.GetContext<RichPresenceDisplayContext>();
-                if (richPresenceContext == null)
-                {
-                    result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call");
-                    return false;
-                }
-
-                return BuildMacro(richPresenceContext, scope, out result);
-            }
-
-            protected abstract bool BuildMacro(RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result);
-
-            protected static Value GetExpressionValue(InterpreterScope scope, out ExpressionBase result)
-            {
-                var expression = GetParameter(scope, "expression", out result);
-                if (expression == null)
-                    return null;
-
-                var requirements = new List<Requirement>();
-                var context = new ValueBuilderContext { Trigger = requirements };
-                var triggerBuilderScope = new InterpreterScope(scope) { Context = context };
-                if (!expression.ReplaceVariables(triggerBuilderScope, out expression))
-                {
-                    result = expression;
-                    return null;
-                }
-
-                ErrorExpression error;
-                var value = ValueBuilder.BuildValue(expression, out error);
-                if (value == null)
-                {
-                    result = error;
-                    return null;
-                }
-
-                return value;
-            }
         }
     }
 }

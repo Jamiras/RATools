@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using System;
 using System.Collections.Generic;
@@ -20,9 +21,9 @@ namespace RATools.Parser
             _displayStrings = new List<ConditionalDisplayString>();
         }
 
-        private List<ConditionalDisplayString> _displayStrings;
-        private SortedDictionary<string, ValueField> _valueFields;
-        private SortedDictionary<string, Lookup> _lookupFields;
+        private readonly List<ConditionalDisplayString> _displayStrings;
+        private readonly SortedDictionary<string, ValueField> _valueFields;
+        private readonly SortedDictionary<string, Lookup> _lookupFields;
 
         /// <summary>
         /// The line associated to the `rich_presence_display` call.
@@ -67,23 +68,9 @@ namespace RATools.Parser
             public ValueFormat Format { get; set; }
         }
 
-        [DebuggerDisplay("@{Name}({Value})")]
-        private class DisplayStringParameter
+        internal class ConditionalDisplayString
         {
-            /// <summary>
-            /// The name of the macro to use for this parameter.
-            /// </summary>
-            public string Name { get; set; }
-
-            /// <summary>
-            /// The parameter to pass to the macro.
-            /// </summary>
-            public Value Value { get; set; }
-        }
-
-        public class ConditionalDisplayString
-        {
-            private ICollection<DisplayStringParameter> _parameters;
+            private Dictionary<int, Parameter> _parameters;
 
             /// <summary>
             /// The raw string with placeholders.
@@ -96,20 +83,27 @@ namespace RATools.Parser
             /// <remarks>If null, this is the default case.</remarks>
             public Trigger Condition { get; set; }
 
-            public void AddParameter(string macro, Value parameter)
+            private class Parameter
             {
-                if (_parameters == null)
-                    _parameters = new List<DisplayStringParameter>();
-
-                _parameters.Add(new DisplayStringParameter { Name = macro, Value = parameter });
+                public RichPresenceMacroExpressionBase Macro { get; set; }
+                public StringConstantExpression Constant { get; set; }
+                public Value Value { get; set; }
             }
 
-            public void AddParameter(StringConstantExpression parameter)
+            public void AddParameter(int index, RichPresenceMacroExpressionBase macro, Value value)
             {
                 if (_parameters == null)
-                    _parameters = new List<DisplayStringParameter>();
+                    _parameters = new Dictionary<int, Parameter>();
 
-                _parameters.Add(new DisplayStringParameter { Name = parameter.Value, Value = null });
+                _parameters[index] = new Parameter { Macro = macro, Value = value };
+            }
+
+            public void AddParameter(int index, StringConstantExpression value)
+            {
+                if (_parameters == null)
+                    _parameters = new Dictionary<int, Parameter>();
+
+                _parameters[index] = new Parameter { Constant = value };
             }
 
             /// <summary>
@@ -130,62 +124,81 @@ namespace RATools.Parser
                 var parameters = new ArrayExpression();
                 if (_parameters != null)
                 {
-                    foreach (var parameter in _parameters)
+                    var maxIndex = 0;
+                    foreach (var index in _parameters.Keys)
+                        maxIndex = Math.Max(index, maxIndex);
+
+                    for (int i = 0; i <= maxIndex; i++)
+                        parameters.Entries.Add(null);
+
+                    foreach (var kvp in _parameters)
                     {
-                        string formatted;
-                        if (parameter.Value == null)
-                        {
-                            // raw string, not a macro
-                            formatted = parameter.Name;
-                        }
+                        if (kvp.Value.Macro != null)
+                            parameters.Entries[kvp.Key] = kvp.Value.Macro;
                         else
-                        {
-                            SerializationContext useSerializationContext = serializationContext;
-                            if (serializationContext.MinimumVersion >= Data.Version._0_77)
-                            {
-                                if (parameter.Value.Values.Count() == 1 &&
-                                    parameter.Value.Values.First().Requirements.Count() == 1 &&
-                                    !parameter.Value.Values.First().Requirements.First().IsComparison)
-                                {
-                                    // single field lookup - force legacy format, even if using sizes only available in 0.77+
-                                    useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
-                                }
-                                else if (parameter.Value.MinimumVersion() < Data.Version._0_77)
-                                {
-                                    // simple AddSource chain, just use legacy format
-                                    useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
-                                }
-                            }
-
-                            formatted = String.Format("@{0}({1})",
-                                parameter.Name, parameter.Value.Serialize(useSerializationContext));
-                        }
-
-                        parameters.Entries.Add(new StringConstantExpression(formatted));
+                            parameters.Entries[kvp.Key] = kvp.Value.Constant;
                     }
                 }
 
-                ExpressionBase result = FormatFunction.Evaluate(Format, parameters, ignoreMissing);
+                var result = FormatFunction.Evaluate(Format, parameters, ignoreMissing,
+                    (StringBuilder builder, int index, ExpressionBase parameter) => ProcessParameter(builder, index, parameter, serializationContext));
+
                 var stringResult = result as StringConstantExpression;
                 return (stringResult != null) ? stringResult.Value : "";
+            }
+
+            private ErrorExpression ProcessParameter(StringBuilder builder, int index, ExpressionBase parameter, SerializationContext serializationContext)
+            {
+                var str = parameter as StringConstantExpression;
+                if (str != null)
+                {
+                    str.AppendStringLiteral(builder);
+                    return null;
+                }
+
+                var param = _parameters[index];
+                if (param.Macro != null)
+                {
+                    SerializationContext useSerializationContext = serializationContext;
+
+                    if (serializationContext.MinimumVersion >= Data.Version._0_77)
+                    {
+                        if (param.Value.Values.Count() == 1 &&
+                            param.Value.Values.First().Requirements.Count() == 1 &&
+                            !param.Value.Values.First().Requirements.First().IsComparison)
+                        {
+                            // single field lookup - force legacy format, even if using sizes only available in 0.77+
+                            useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                        }
+                        else if (param.Value.MinimumVersion() < Data.Version._0_77)
+                        {
+                            // simple AddSource chain, just use legacy format
+                            useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                        }
+                    }
+
+                    builder.Append('@');
+                    builder.Append(param.Macro.Name.Value);
+                    builder.Append('(');
+                    builder.Append(param.Value.Serialize(useSerializationContext));
+                    builder.Append(')');
+                    return null;
+                }
+
+                builder.Append('{');
+                builder.Append(index);
+                builder.Append('}');
+                return null;
             }
 
             public bool UsesMacro(string macroName)
             {
                 if (_parameters != null)
                 {
-                    int i = 0;
-                    foreach (var parameter in _parameters)
+                    foreach (var kvp in _parameters)
                     {
-                        if (parameter.Name == macroName)
-                        {
-                            var placeholder = "{" + i + "}";
-
-                            if (Format.Value.Contains(placeholder))
-                                return true;
-                        }
-
-                        ++i;
+                        if (kvp.Value.Macro != null && kvp.Value.Macro.Name.Value == macroName)
+                            return true;
                     }
                 }
 
@@ -197,7 +210,7 @@ namespace RATools.Parser
                 var minimumVersion = (Condition != null) ? Condition.MinimumVersion() : Data.Version.MinimumVersion;
                 if (_parameters != null)
                 {
-                    foreach (var parameter in _parameters)
+                    foreach (var parameter in _parameters.Values)
                     {
                         if (parameter.Value != null)
                             minimumVersion = minimumVersion.OrNewer(parameter.Value.MinimumVersion());
@@ -212,7 +225,7 @@ namespace RATools.Parser
                 uint maximumAddress = (Condition != null) ? Condition.MaximumAddress() : 0;
                 if (_parameters != null)
                 {
-                    foreach (var parameter in _parameters)
+                    foreach (var parameter in _parameters.Values)
                     {
                         if (parameter.Value != null)
                             maximumAddress = Math.Max(maximumAddress, parameter.Value.MaximumAddress());
@@ -247,7 +260,7 @@ namespace RATools.Parser
 
         public static string GetFormatString(ValueFormat format)
         {
-            return RichPresenceValueFunction.GetFormatString(format);
+            return RichPresenceValueExpression.GetFormatString(format);
         }
 
         public ErrorExpression AddValueField(ExpressionBase func, StringConstantExpression name, ValueFormat format)
@@ -299,7 +312,7 @@ namespace RATools.Parser
             return null;
         }
 
-        public ConditionalDisplayString AddDisplayString(Trigger condition, StringConstantExpression formatString)
+        internal ConditionalDisplayString AddDisplayString(Trigger condition, StringConstantExpression formatString)
         {
             var displayString = new ConditionalDisplayString
             {

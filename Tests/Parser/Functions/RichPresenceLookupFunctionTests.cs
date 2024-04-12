@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -18,37 +19,16 @@ namespace RATools.Parser.Tests.Functions
 
             public InterpreterScope Scope { get; private set; }
 
-            public RichPresenceBuilder Evaluate(string input, string expectedError = null)
+            public RichPresenceBuilder Evaluate(string input)
             {
-                var funcDef = new RichPresenceLookupFunction();
-
+                input = "rich_presence_display(\"{0}\", " + input + ")";
                 var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
                 Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
                 var funcCall = (FunctionCallExpression)expression;
 
-                ExpressionBase error;
-                var scope = funcCall.GetParameters(funcDef, Scope, out error);
-                var context = new RichPresenceDisplayFunction.RichPresenceDisplayContext { RichPresence = new RichPresenceBuilder() };
-                context.DisplayString = context.RichPresence.AddDisplayString(null, new StringConstantExpression("{0}"));
-                scope.Context = context;
-
-                ExpressionBase evaluated;
-                if (expectedError != null && expectedError.EndsWith(" format"))
-                {
-                    Assert.That(funcDef.ReplaceVariables(scope, out evaluated), Is.False);
-                    var parseError = evaluated as ErrorExpression;
-                    Assert.That(parseError, Is.Not.Null);
-                    Assert.That(parseError.Message, Is.EqualTo(expectedError));
-                    return context.RichPresence;
-                }
-
-                ExpressionBase result;
-                Assert.That(funcDef.Evaluate(scope, out result), Is.True);
-                if (expectedError != null)
-                {
-                    Assert.That(result, Is.InstanceOf<ErrorExpression>());
-                    Assert.That(((ErrorExpression)result).Message, Is.EqualTo(expectedError));
-                }
+                var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+                Scope.Context = context;
+                funcCall.Execute(Scope);
 
                 return context.RichPresence;
             }
@@ -90,23 +70,18 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestExplicitCall()
         {
-            // not providing a RichPresenceDisplayContext simulates calling the function at a global scope
-            var funcDef = new RichPresenceLookupFunction();
-
             var input = "rich_presence_lookup(\"Name\", byte(0x1234), lookup)";
             var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
             Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
             var funcCall = (FunctionCallExpression)expression;
 
-            var parentScope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            var dict = new DictionaryExpression();
-            parentScope.DefineVariable(new VariableDefinitionExpression("lookup"), dict);
+            var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.DefineVariable(new VariableDefinitionExpression("lookup"), new DictionaryExpression());
+            scope.Context = context;
+            var error = funcCall.Execute(scope);
 
-            ExpressionBase error;
-            var scope = funcCall.GetParameters(funcDef, parentScope, out error);
-            Assert.That(funcDef.Evaluate(scope, out error), Is.False);
-            Assert.That(error, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)error).Message, Is.EqualTo("rich_presence_lookup has no meaning outside of a rich_presence_display call"));
+            ExpressionTests.AssertError(error, "rich_presence_lookup has no meaning outside of a rich_presence_display call");
         }
 
         [Test]

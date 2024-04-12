@@ -1,8 +1,9 @@
 ﻿using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 
 namespace RATools.Parser.Functions
 {
-    internal class RichPresenceLookupFunction : RichPresenceDisplayFunction.FunctionDefinition
+    internal class RichPresenceLookupFunction : FunctionDefinitionExpression
     {
         public RichPresenceLookupFunction()
             : base("rich_presence_lookup")
@@ -15,7 +16,7 @@ namespace RATools.Parser.Functions
             DefaultParameters["fallback"] = new StringConstantExpression("");
         }
 
-        protected override bool BuildMacro(RichPresenceDisplayFunction.RichPresenceDisplayContext context, InterpreterScope scope, out ExpressionBase result)
+        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             var name = GetStringParameter(scope, "name", out result);
             if (name == null)
@@ -30,6 +31,8 @@ namespace RATools.Parser.Functions
                 return false;
 
             var expression = GetParameter(scope, "expression", out result);
+            if (expression == null)
+                return false;
 
             var integer = expression as IntegerConstantExpression;
             if (integer != null)
@@ -39,22 +42,27 @@ namespace RATools.Parser.Functions
                 var stringValue = entry as StringConstantExpression;
                 if (stringValue != null)
                 {
-                    context.DisplayString.AddParameter(stringValue);
+                    result = stringValue;
                     return true;
                 }
             }
-
-            var value = GetExpressionValue(scope, out result);
-            if (value == null)
+            else if (!ValueBuilder.IsConvertible(expression))
+            {
+                result = ValueBuilder.InconvertibleError(expression);
                 return false;
+            }
 
-            var functionCall = scope.GetContext<FunctionCallExpression>();
-            result = context.RichPresence.AddLookupField(functionCall, name, dictionary, fallback);
-            if (result != null)
-                return false;
-
-            context.DisplayString.AddParameter(name.Value, value);
+            result = new RichPresenceLookupExpression(name, expression) { Items = dictionary, Fallback = fallback };
+            CopyLocation(result);
+            result.MakeReadOnly();
             return true;
+        }
+
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call", functionCall.FunctionName);
+            return false;
         }
     }
 }

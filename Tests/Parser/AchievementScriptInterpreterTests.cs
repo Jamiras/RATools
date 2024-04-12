@@ -754,6 +754,19 @@ namespace RATools.Parser.Tests
         }
 
         [Test]
+        public void TestRichPresenceSkippedParameter()
+        {
+            // {1} does not appear in the format string, so Unused should not be defined as a Format
+            var parser = Parse("rich_presence_display(\"value {0} here, {2} there\",\n" +
+                                 "rich_presence_value(\"Test\", byte(0x1234))," +
+                                 "rich_presence_value(\"Unused\", byte(0x2345))," +
+                                 "rich_presence_value(\"Third\", byte(0x3456))" +
+                               ")");
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nFormat:Third\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here, @Third(0xH3456) there\r\n"));
+        }
+
+
+        [Test]
         public void TestRichPresenceLookupReusedEquivalentDictionary()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback

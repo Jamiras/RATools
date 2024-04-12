@@ -28,6 +28,16 @@ namespace RATools.Parser
             _values = values;
         }
 
+        internal static bool IsConvertible(ExpressionBase expression)
+        {
+            return (expression is ITriggerExpression || expression is IntegerConstantExpression);
+        }
+
+        internal static ErrorExpression InconvertibleError(ExpressionBase expression)
+        {
+            return new ErrorExpression("Cannot create value from " + expression.Type.ToLowerString(), expression);
+        }
+
         public static Value BuildValue(ExpressionBase expression, out ErrorExpression error)
         {
             var integerConstant = expression as IntegerConstantExpression;
@@ -45,7 +55,7 @@ namespace RATools.Parser
             var trigger = expression as ITriggerExpression;
             if (trigger == null)
             {
-                error = new ErrorExpression("Cannot create value from " + expression.Type.ToLowerString(), expression);
+                error = InconvertibleError(expression);
                 return null;
             }
 

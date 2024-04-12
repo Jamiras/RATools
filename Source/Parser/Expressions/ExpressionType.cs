@@ -119,6 +119,11 @@
         /// A comparison of MemoryValues with a possible hit target.
         /// </summary>
         Requirement,
+
+        /// <summary>
+        /// A rich presence macro parameter.
+        /// </summary>
+        RichPresenceMacro,
     }
 
     internal static class ExpressionTypeExtension
