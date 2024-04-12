@@ -113,6 +113,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("A == 1 && B == 1 && A == 1", "A == 1 && B == 1")]
         [TestCase("A == 1 && B == 1 && A == 3", "always_false()")]
         [TestCase("A > 1 && B == 1 && A == 3", "B == 1 && A == 3")]
+        [TestCase("A & 7 == 4 && A < 24", "A & 0x00000007 == 4 && A < 24")] // "& 7" should prevent collapse to "A == 4"
         [TestCase("(A == 1 && B == 1) || (A == 1 && B == 2) || (A == 1 && B == 3)", "A == 1 && (B == 1 || B == 2 || B == 3)")]
         [TestCase("(A == 1 || B != 1) && (A == 1 || B != 2) && (A == 1 || B != 3)", "A == 1 || (B != 1 && B != 2 && B != 3)")]
         [TestCase("A == 1 && ((once(B == 1 && C == 1) && D == 1) || (once(B == 2 && C == 1) && D == 1))",
