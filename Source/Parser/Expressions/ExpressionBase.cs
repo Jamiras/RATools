@@ -95,32 +95,66 @@ namespace RATools.Parser.Expressions
             AppendString(builder);
         }
 
+
         internal static void SkipWhitespace(PositionalTokenizer tokenizer)
         {
             tokenizer.SkipWhitespace();
-            while (tokenizer.Match("//"))
+
+            bool matchedSingle = tokenizer.MatchSubstring("//") == 2;
+            bool matchedMulti = tokenizer.MatchSubstring("/*") == 2;
+
+            while (matchedSingle || matchedMulti)
             {
                 var expressionTokenizer = tokenizer as ExpressionTokenizer;
-                if (expressionTokenizer != null)
+                
+                if (matchedSingle)
                 {
-                    int line = tokenizer.Line;
-                    int column = tokenizer.Column - 2;
-
-                    var comment = tokenizer.ReadTo('\n');
-                    if (comment.Length > 0 && comment[comment.Length - 1] == '\r')
-                        comment = comment.SubToken(0, comment.Length - 1);
-
-                    expressionTokenizer.AddComment(new CommentExpression("//" + comment.ToString()) 
+                    if (expressionTokenizer != null)
                     {
-                        Location = new TextRange(line, column, line, column + comment.Length + 1)
-                    });
+                        int line = tokenizer.Line;
+                        int column = tokenizer.Column;
+
+                        var comment = tokenizer.ReadTo('\n');
+
+                        expressionTokenizer.AddComment(new CommentExpression(comment.ToString())
+                        {
+                            Location = new TextRange(line, column, line, column + comment.Length + 1)
+                        });
+                    }
+                    else
+                    {
+                        tokenizer.ReadTo('\n');
+                    }
                 }
-                else
+                else // matchedMulti
                 {
-                    tokenizer.ReadTo('\n');
-                }
+                    if (expressionTokenizer != null)
+                    {
+                        int startLine = tokenizer.Line;
+                        int startColumn = tokenizer.Column;
+
+                        var comment = tokenizer.ReadTo("*/");
+                        tokenizer.Advance(2);
+
+                        int endLine = tokenizer.Line;
+                        int endColumn = tokenizer.Column;
+
+                        expressionTokenizer.AddComment(new CommentExpression(comment.ToString() + "*/")
+                        {
+                            Location = new TextRange(startLine, startColumn, endLine, endColumn)
+                        });
+                    }
+                    else
+                    {
+                        tokenizer.ReadTo("*/");
+                        tokenizer.Advance(2);
+                    }
+                }            
 
                 tokenizer.SkipWhitespace();
+
+                matchedSingle = tokenizer.MatchSubstring("//") == 2;
+                matchedMulti = tokenizer.MatchSubstring("/*") == 2;
             }
         }
 
