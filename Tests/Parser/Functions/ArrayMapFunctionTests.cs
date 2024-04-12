@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Parser.Tests.Functions
 {
@@ -30,7 +31,7 @@ namespace RATools.Parser.Tests.Functions
                 scope.Context = new AssignmentExpression(new VariableExpression("t"), expr);
                 if (funcCall.Evaluate(scope, out expr))
                 {
-                    var builder = new System.Text.StringBuilder();
+                    var builder = new StringBuilder();
                     expr.AppendString(builder);
                     return builder.ToString();
                 }
@@ -48,6 +49,27 @@ namespace RATools.Parser.Tests.Functions
         {
             Assert.That(Evaluate("array_map([1, 2, 3], a => byte(a))"),
                 Is.EqualTo("[byte(0x000001), byte(0x000002), byte(0x000003)]"));
+        }
+
+        [Test]
+        public void TestNested()
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            var array = new ArrayExpression();
+            array.Entries.Add(new IntegerConstantExpression(1));
+            array.Entries.Add(new IntegerConstantExpression(2));
+            array.Entries.Add(new IntegerConstantExpression(3));
+            var dict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(0);
+            dict.Add(key, array);
+            scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
+
+            var result = FunctionTests.Evaluate<ArrayMapFunction>("array_map(dict[0], a => byte(a))", scope);
+            Assert.That(result, Is.Not.Null);
+
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("[byte(0x000001), byte(0x000002), byte(0x000003)]"));
         }
 
         [Test]

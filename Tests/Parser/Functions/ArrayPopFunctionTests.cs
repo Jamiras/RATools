@@ -18,39 +18,14 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("array"));
         }
 
-        private ExpressionBase Evaluate(string input, InterpreterScope scope, string expectedError = null)
+        private static ExpressionBase Evaluate(string input, InterpreterScope scope)
         {
-            var funcDef = new ArrayPopFunction();
+            return FunctionTests.Evaluate<ArrayPopFunction>(input, scope);
+        }
 
-            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
-            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
-            var funcCall = (FunctionCallExpression)expression;
-
-            ExpressionBase error;
-            var parameterScope = funcCall.GetParameters(funcDef, scope, out error);
-
-            if (expectedError == null)
-            {
-                Assert.That(error, Is.Null);
-
-                ExpressionBase result;
-                Assert.That(funcDef.Evaluate(parameterScope, out result), Is.True);
-                return result;
-            }
-            else
-            {
-                if (error == null)
-                    Assert.That(funcDef.Evaluate(parameterScope, out error), Is.False);
-
-                Assert.That(error, Is.InstanceOf<ErrorExpression>());
-
-                var parseError = (ErrorExpression)error;
-                while (parseError.InnerError != null)
-                    parseError = parseError.InnerError;
-                Assert.That(parseError.Message, Is.EqualTo(expectedError));
-
-                return null;
-            }
+        private static void AssertEvaluateError(string input, InterpreterScope scope, string expectedError)
+        {
+            FunctionTests.AssertEvaluateError<ArrayPopFunction>(input, scope, expectedError);
         }
 
         [Test]
@@ -82,11 +57,42 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestNested()
+        {
+            var scope = new InterpreterScope();
+            var array = new ArrayExpression();
+            array.Entries.Add(new IntegerConstantExpression(1));
+            array.Entries.Add(new IntegerConstantExpression(2));
+            var dict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(0);
+            dict.Add(key, array);
+            scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
+
+            var entry = Evaluate("array_pop(dict[0])", scope);
+            Assert.That(entry, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)entry).Value, Is.EqualTo(2));
+            Assert.That(array.Entries.Count, Is.EqualTo(1));
+            Assert.That(array.Entries[0], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)array.Entries[0]).Value, Is.EqualTo(1));
+
+            entry = Evaluate("array_pop(dict[0])", scope);
+            Assert.That(entry, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)entry).Value, Is.EqualTo(1));
+            Assert.That(array.Entries.Count, Is.EqualTo(0));
+
+            // empty array always returns 0
+            entry = Evaluate("array_pop(dict[0])", scope);
+            Assert.That(entry, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)entry).Value, Is.EqualTo(0));
+            Assert.That(array.Entries.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void TestUndefined()
         {
             var scope = new InterpreterScope();
 
-            Evaluate("array_pop(arr)", scope, "Unknown variable: arr");
+            AssertEvaluateError("array_pop(arr)", scope, "Unknown variable: arr");
         }
 
         [Test]
@@ -97,7 +103,7 @@ namespace RATools.Parser.Tests.Functions
             dict.Add(new IntegerConstantExpression(1), new StringConstantExpression("One"));
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
-            Evaluate("array_push(dict)", scope, "array: Cannot convert dictionary to array");
+            AssertEvaluateError("array_pop(dict)", scope, "array: Cannot convert dictionary to array");
         }
 
         [Test]

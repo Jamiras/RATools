@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Data;
+using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -43,15 +44,16 @@ namespace RATools.Parser.Expressions
         {
             StringBuilder builder;
             ExpressionBase container, index, result;
+            bool isReference;
 
-            GetContainerIndex(scope, out container, out index);
+            GetContainerIndex(scope, out container, out index, out isReference);
 
             switch (container.Type)
             {
                 case ExpressionType.Dictionary:
                     result = ((DictionaryExpression)container).GetEntry(index);
                     if (result != null)
-                        return result;
+                        break;
 
                     builder = new StringBuilder();
                     builder.Append("No entry in dictionary for key: ");
@@ -60,7 +62,8 @@ namespace RATools.Parser.Expressions
 
                 case ExpressionType.Array:
                     // ASSERT: index was validated in GetContainerIndex
-                    return ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
+                    result = ((ArrayExpression)container).Entries[((IntegerConstantExpression)index).Value];
+                    break;
 
                 case ExpressionType.Error:
                     return container;
@@ -74,12 +77,22 @@ namespace RATools.Parser.Expressions
                     builder.Append(')');
                     return new ErrorExpression(builder.ToString(), Variable);
             }
+
+            if (isReference && VariableReferenceExpression.CanReference(result.Type))
+            {
+                builder = new StringBuilder();
+                AppendString(builder);
+                result = new VariableReferenceExpression(new VariableDefinitionExpression(builder.ToString()), result);
+            }
+
+            return result;
         }
 
         public ErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
         {
             ExpressionBase container, index;
-            GetContainerIndex(scope, out container, out index);
+            bool isReference;
+            GetContainerIndex(scope, out container, out index, out isReference);
 
             switch (container.Type)
             {
@@ -108,8 +121,11 @@ namespace RATools.Parser.Expressions
             return null;
         }
 
-        private void GetContainerIndex(InterpreterScope scope, out ExpressionBase container, out ExpressionBase index)
+        private void GetContainerIndex(InterpreterScope scope, 
+            out ExpressionBase container, out ExpressionBase index, out bool isReference)
         {
+            isReference = false;
+
             if (Index.Type == ExpressionType.FunctionCall)
             {
                 var expression = (FunctionCallExpression)Index;
@@ -131,7 +147,10 @@ namespace RATools.Parser.Expressions
 
             var variableReference = container as VariableReferenceExpression;
             if (variableReference != null)
+            {
                 container = variableReference.Expression;
+                isReference = true;
+            }
 
             var array = container as ArrayExpression;
             if (array != null)
