@@ -7,7 +7,6 @@ using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Mime;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -140,27 +139,27 @@ namespace RATools.ViewModels
             {
                 var builder2 = new StringBuilder();
                 context.AppendRequirement(builder2, requirement);
-                //requirement.AppendString(builder2, numberFormat, "~", "~");
-                //var i = 0;
-                //while (i < builder2.Length - 1)
-                //{
-                //    if (builder2[i+1] == '~' && builder2[i] == '(')
-                //    {
-                //        builder2.Remove(i, 2); // remove "(~"
-                //        break;
-                //    }
-                //    i++;
-                //}
-                //while (i < builder2.Length)
-                //{
-                //    if (builder2[i] == '~' && builder2[i + 1] == ')')
-                //    {
-                //        builder2.Remove(i, 2); // remove "~)"
-                //        break;
-                //    }
-                //    i++;
-                //}
-                builder.Append(builder2);
+                var clause = builder2.ToString();
+
+                if (clause == "always_false()" || clause == "always_true()")
+                {
+                    // always_true/always_false indicates the requirement is a comparison
+                    // of constants. if we're dependent on a previous requirement, assume
+                    // the previous requirement is an AddSource and the constant is a
+                    // modifier that shouldn't be collapsed to always_true/always_false.
+                    // use a dummy AddSource requirement to generate a complex expression,
+                    // then extract the parts assoacited to the dummy requirement.
+                    var requirements = new List<Requirement>();
+                    requirements.Add(new Requirement { Type = RequirementType.AddSource });
+                    requirements.Add(requirement);
+                    builder2.Clear();
+                    context.AppendRequirements(builder2, requirements);
+                    builder2.Remove(0, 8); // remove "(none + "
+                    builder2.Replace(")", ""); // remove closing parenthesis
+                    clause = builder2.ToString();
+                }
+
+                builder.Append(clause);
             }
             else
             {
