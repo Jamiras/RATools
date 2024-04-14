@@ -63,9 +63,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) * 10", "/", "2",
             ExpressionType.MemoryAccessor, "byte(0x001234) * 5")]
         [TestCase("byte(0x001234) * 10", "&", "2",
-            ExpressionType.Mathematic, "byte(0x001234) * 10 & 2")]
+            ExpressionType.Error, "Cannot combine bitwise and arithmetic operations")]
         [TestCase("byte(0x001234) * 10", "^", "2",
-            ExpressionType.Mathematic, "byte(0x001234) * 10 ^ 2")]
+            ExpressionType.Error, "Cannot combine bitwise and arithmetic operations")]
         [TestCase("byte(0x001234) * 10", "%", "2",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("byte(0x001234) * 10", "+", "byte(0x002345)",
@@ -77,9 +77,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) * 10", "/", "byte(0x002345)",
             ExpressionType.Mathematic, "byte(0x001234) * 10 / byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "&", "byte(0x002345)",
-            ExpressionType.Mathematic, "byte(0x001234) * 10 & byte(0x002345)")]
+            ExpressionType.Error, "Cannot combine bitwise and arithmetic operations")]
         [TestCase("byte(0x001234) * 10", "^", "byte(0x002345)",
-            ExpressionType.Mathematic, "byte(0x001234) * 10 ^ byte(0x002345)")]
+            ExpressionType.Error, "Cannot combine bitwise and arithmetic operations")]
         [TestCase("byte(0x001234) * 10", "%", "byte(0x002345)",
             ExpressionType.Error, "Cannot modulus using a runtime value")]
         [TestCase("byte(0x001234) * 10", "/", "3",
@@ -124,6 +124,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
         [TestCase("byte(0x001234) ^ 10", "*", "2.5",
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
+        [TestCase("(byte(0x001234) & 0x3F)", "*", "100",
+            ExpressionType.Error, "Cannot combine bitwise and arithmetic operations")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertCombine(left, operation, right, expectedType, expected);

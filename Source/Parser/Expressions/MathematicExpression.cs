@@ -217,6 +217,7 @@ namespace RATools.Parser.Expressions
             if (result.Location.IsEmpty)
                 CopyLocation(result);
 
+            result.IsLogicalUnit = IsLogicalUnit;
             return (result is not ErrorExpression);
         }
 
