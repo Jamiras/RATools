@@ -2,7 +2,7 @@
 using RATools.Data;
 using System.Text;
 
-namespace RATools.Parser.Internal.Tests
+namespace RATools.Parser.Tests.Internal
 {
     [TestFixture]
     class ScriptBuilderContextTests

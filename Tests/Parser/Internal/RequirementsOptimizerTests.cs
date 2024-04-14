@@ -3,7 +3,7 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 
-namespace RATools.Parser.Internal.Tests
+namespace RATools.Parser.Tests.Internal
 {
     [TestFixture]
     class RequirementsOptimizerTests
@@ -125,6 +125,8 @@ namespace RATools.Parser.Internal.Tests
         [TestCase("float(0x001234) < 0", "float(0x001234) < 0")]
         [TestCase("(byte(0x001234) == 1 && byte(0x002345) != 1) || (byte(0x001234) != 1 && byte(0x002345) == 1)",
                   "(byte(0x001234) == 1 && byte(0x002345) != 1) || (byte(0x001234) != 1 && byte(0x002345) == 1)")]
+        [TestCase("once(byte(0x001234) == 1) && never((byte(0x002345) & 0x0000001F) == 0 && byte(0x003456) == 6)", // masking creates an AddSource followed by a constant/constant comparison that should not be eliminated
+                  "once(byte(0x001234) == 1) && never(((byte(0x002345) & 0x0000001F) == 0) && byte(0x003456) == 6)")]
         public void TestOptimizeNormalizeComparisons(string input, string expected)
         {
             var achievement = CreateAchievement(input);

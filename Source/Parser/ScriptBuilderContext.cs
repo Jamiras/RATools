@@ -664,6 +664,18 @@ namespace RATools.Parser
             }
             else if (!NullOrEmpty(_addSources))
             {
+                // remove trailing " + 0"
+                if (builder.Length > 4 &&
+                    builder[builder.Length - 1] == '0' &&
+                    builder[builder.Length - 2] == ' ' &&
+                    builder[builder.Length - 3] == '+' &&
+                    builder[builder.Length - 4] == ' ')
+                {
+                    // special case - ignore awkward construction used for building chained RequirementViewModel
+                    if (_addSources.Length != 7 || _addSources.ToString() != "none + ")
+                        builder.Length -= 4;
+                }
+
                 builder.Append(')');
                 _addSources.Clear();
             }
