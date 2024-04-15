@@ -65,15 +65,28 @@ namespace RATools.Parser
             if (error != null)
                 return null;
 
+            RemoveTrailingPlusZero(requirements);
+
             // ensure there's a Measured condition
-            if (!requirements.Any(r => r.Type == RequirementType.Measured))
-            {
-                var measured = requirements.LastOrDefault(r => r.Type == RequirementType.None);
-                if (measured != null)
-                    measured.Type = RequirementType.Measured;
-            }
+            MeasuredRequirementExpression.EnsureHasMeasuredRequirement(requirements);
 
             return new Value(new[] { requirements });
+        }
+
+        internal static void RemoveTrailingPlusZero(List<Requirement> requirements)
+        {
+            if (requirements.Count > 1)
+            {
+                // if a value expression ends with a "+0" for combining, remove it.
+                var lastRequirement = requirements.Last();
+                if (lastRequirement.Operator == RequirementOperator.None &&
+                    lastRequirement.Left.Type == FieldType.Value &&
+                    lastRequirement.Left.Value == 0 &&
+                    lastRequirement.HitCount == 0)
+                {
+                    requirements.RemoveAt(requirements.Count - 1);
+                }
+            }
         }
 
         /// <summary>

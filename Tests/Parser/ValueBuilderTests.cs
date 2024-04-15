@@ -86,6 +86,8 @@ namespace RATools.Parser.Tests
         [TestCase("prev(byte(0x1234))", "d0xH001234")]
         [TestCase("bcd(byte(0x1234))", "b0xH001234")]
         [TestCase("measured(dword(0x1234) - dword(0x2345))", "0xX002345*-1_0xX001234")]
+        [TestCase("measured(tally(0, byte(0x10) & 0x02 == 0x02))", "A:0xH000010&2_M:0=2")]
+        [TestCase("byte(0x1234) * 10 + byte(0x1235) * 100", "0xH001234*10_0xH001235*100")]
         public void TestGetValueString(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse(input);
