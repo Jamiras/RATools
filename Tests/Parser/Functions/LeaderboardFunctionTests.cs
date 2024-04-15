@@ -141,8 +141,7 @@ namespace RATools.Parser.Tests.Functions
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "byte(0x1234) == 3)");
-            // comparison is discarded, there's no "reaching" the target for leaderboard values
-            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH1234"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("M:0xH1234=3"));
         }
 
         [Test]

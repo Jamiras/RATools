@@ -3,7 +3,6 @@ using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
 using RATools.Parser.Tests.Expressions.Trigger;
 
 namespace RATools.Parser.Tests

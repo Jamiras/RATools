@@ -82,7 +82,7 @@ namespace RATools.ViewModels
             if (leaderboard != null)
             {
                 var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
-                clipboard.SetData(leaderboard.Start.Serialize(new SerializationContext()));
+                clipboard.SetData(leaderboard.Start.Serialize(_owner.SerializationContext));
             }
         }
 
@@ -92,7 +92,7 @@ namespace RATools.ViewModels
             if (leaderboard != null)
             {
                 var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
-                clipboard.SetData(leaderboard.Cancel.Serialize(new SerializationContext()));
+                clipboard.SetData(leaderboard.Cancel.Serialize(_owner.SerializationContext));
             }
         }
 
@@ -102,7 +102,7 @@ namespace RATools.ViewModels
             if (leaderboard != null)
             {
                 var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
-                clipboard.SetData(leaderboard.Submit.Serialize(new SerializationContext()));
+                clipboard.SetData(leaderboard.Submit.Serialize(_owner.SerializationContext));
             }
         }
 
@@ -112,7 +112,7 @@ namespace RATools.ViewModels
             if (leaderboard != null)
             {
                 var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
-                clipboard.SetData(leaderboard.Value.Serialize(new SerializationContext()));
+                clipboard.SetData(leaderboard.Value.Serialize(_owner.SerializationContext));
             }
         }
     }
