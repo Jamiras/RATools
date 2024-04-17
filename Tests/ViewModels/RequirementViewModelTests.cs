@@ -1,7 +1,10 @@
 ﻿using Jamiras.Components;
+using Moq;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Parser.Expressions.Trigger;
+using RATools.Services;
 using RATools.ViewModels;
 using System.Collections.Generic;
 using System.Linq;
@@ -80,6 +83,32 @@ namespace RATools.Tests.ViewModels
                 Assert.IsFalse(vmRequirement.IsNoteShortened);
             else
                 Assert.IsTrue(vmRequirement.IsNoteShortened);
+        }
+
+        [Test]
+        public void TestAddSourceTrailingConstantComparison()
+        {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
+            var requirement = new Requirement
+            {
+                Left = FieldFactory.CreateField(0),
+                Operator = RequirementOperator.GreaterThan,
+                Right = FieldFactory.CreateField(3)
+            };
+
+            var notes = new Dictionary<uint, string>();
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+
+            Assert.That(vmRequirement.Definition, Is.EqualTo("always_false()"));
+
+            vmRequirement.IsValueDependentOnPreviousRequirement = true;
+            Assert.That(vmRequirement.Definition, Is.EqualTo("0 > 3"));
+
+            ServiceRepository.Reset();
         }
     }
 }

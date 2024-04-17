@@ -26,7 +26,7 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
-        public void TestSkipWhitespaceMultiComment()
+        public void TestSkipWhitespaceMultipleComment()
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("  // comment\r\n// comment2\r\nhi"));
             ExpressionBase.SkipWhitespace(tokenizer);
