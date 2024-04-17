@@ -464,7 +464,8 @@ namespace RATools.Parser
                     builder.Append("measured(");
 
                     // if there's no HitTarget and we're in a Value clause, wrap it in a "tally(0, ...)"
-                    if (requirement.HitCount == 0 && IsValue &&
+                    // note: if we're already in an AddHits chain, there will be an implicity tally
+                    if (requirement.HitCount == 0 && IsValue && NullOrEmpty(_addHits) &&
                         requirement.Operator != RequirementOperator.None)
                     {
                         var measuredClause = new StringBuilder();
@@ -582,6 +583,12 @@ namespace RATools.Parser
 
         internal void AppendCondition(StringBuilder builder, Requirement requirement)
         {
+            if (!NullOrEmpty(_addHits))
+            {
+                builder.Append(_addHits);
+                _addHits.Clear();
+            }
+
             if (!NullOrEmpty(_andNext))
             {
                 builder.Append(_andNext);
@@ -597,11 +604,6 @@ namespace RATools.Parser
             else if (!NullOrEmpty(_subSources))
             {
                 builder.Append('(');
-            }
-            else if (!NullOrEmpty(_addHits))
-            {
-                builder.Append(_addHits);
-                _addHits.Clear();
             }
 
             string suffix = null;
@@ -814,7 +816,10 @@ namespace RATools.Parser
             nestedContext._measuredIf = null;
             nestedContext._resetNextIf = null;
 
-            nestedContext.AppendRequirement(builder, requirement);
+            var nestedBuilder = new StringBuilder();
+            nestedContext.AppendRequirement(nestedBuilder, requirement);
+            RemoveOuterParentheses(nestedBuilder);
+            builder.Append(nestedBuilder);
 
             _lastAndNext = null;
         }
