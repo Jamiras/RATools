@@ -81,6 +81,7 @@ namespace RATools.Parser.Tests.Functions
             "N:0xH001235=1_C:0xH001235=2.1._0xH001234=1.25.")] // multiple clauses - can rearrange the clauses themselves
         [TestCase("tally(26, byte(0x1234) == 1 && once(byte(0x1234) == 2), byte(0x1235) == 1 && once(byte(0x1235) == 2))",
             "N:0xH001234=1_C:0xH001234=2.1._N:0xH001235=1_C:0xH001235=2.1._0=1.26.")] // multiple clauses - don't rearrage within the clauses; use always_false() for total
+        [TestCase("tally(27, byte(0x10) & 0x02 == 0x02)", "A:0xH000010&2_0=2.27.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);

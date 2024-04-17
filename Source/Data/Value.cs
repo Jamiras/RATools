@@ -184,7 +184,7 @@ namespace RATools.Data
 
         public override string ToString()
         {
-            return Serialize(new SerializationContext { AddressWidth = 4 });
+            return Serialize(new SerializationContext { AddressWidth = 4, MinimumVersion = MinimumVersion() });
         }
 
         /// <summary>

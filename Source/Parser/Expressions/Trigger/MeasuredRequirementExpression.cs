@@ -125,6 +125,9 @@ namespace RATools.Parser.Expressions.Trigger
             if (error != null)
                 return error;
 
+            if (context is ValueBuilderContext)
+                ValueBuilder.RemoveTrailingPlusZero(requirements);
+
             // make sure at least one condition is flagged with Measured
             EnsureHasMeasuredRequirement(requirements);
 
