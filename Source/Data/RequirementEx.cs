@@ -256,7 +256,7 @@ namespace RATools.Data
 
                         case RequirementType.AndNext:
                             // an always_true() condition will not affect the next condition
-                            if (requirement.Evaluate() == true)
+                            if (combiningRequirement == null && requirement.Evaluate() == true)
                                 continue;
                             break;
 
