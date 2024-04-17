@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -347,6 +348,19 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
+        private static bool IsBitwiseOperator(RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.BitwiseAnd:
+                case RequirementOperator.BitwiseXor:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
         public ExpressionBase ApplyMathematic(ExpressionBase right, MathematicOperation operation)
         {
             switch (operation)
@@ -435,7 +449,7 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ErrorExpression("Cannot combine " + Type + " and " + right.Type + " using " + operation);
             }
 
-            if (newModifyingOperator == RequirementOperator.BitwiseAnd || newModifyingOperator == RequirementOperator.BitwiseXor)
+            if (IsBitwiseOperator(newModifyingOperator))
             {
                 if (field.IsFloat || Modifier.IsFloat || MemoryAccessor.Field.IsFloat)
                     return new ErrorExpression("Cannot perform bitwise operations on floating point values");
@@ -447,6 +461,9 @@ namespace RATools.Parser.Expressions.Trigger
                     if ((max & 0x01) != 0)
                         field.Value &= (uint)max;
                 }
+
+                if (ModifyingOperator != RequirementOperator.None && !IsBitwiseOperator(ModifyingOperator))
+                    return new ErrorExpression("Cannot combine bitwise and arithmetic operations");
             }
 
             switch (ModifyingOperator)
@@ -518,6 +535,8 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementOperator.BitwiseXor:
                     if (field.Type == FieldType.Float || Modifier.Type == FieldType.Float)
                         return new ErrorExpression("Cannot perform bitwise operations on floating point values");
+                    if (!IsBitwiseOperator(newModifyingOperator))
+                        return new ErrorExpression("Cannot combine bitwise and arithmetic operations");
 
                     if (MathematicExpression.GetPriority(GetMathematicOperation(newModifyingOperator)) >
                         MathematicExpression.GetPriority(GetMathematicOperation(ModifyingOperator)))
