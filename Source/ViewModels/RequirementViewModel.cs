@@ -132,6 +132,10 @@ namespace RATools.ViewModels
                 case RequirementType.OrNext:
                     builder.Append("OrNext ");
                     break;
+
+                case RequirementType.MeasuredIf:
+                    builder.Append("MeasuredIf ");
+                    break;
             }
 
             var context = new ScriptBuilderContext { NumberFormat = numberFormat };
@@ -147,16 +151,9 @@ namespace RATools.ViewModels
                     // of constants. if we're dependent on a previous requirement, assume
                     // the previous requirement is an AddSource and the constant is a
                     // modifier that shouldn't be collapsed to always_true/always_false.
-                    // use a dummy AddSource requirement to generate a complex expression,
-                    // then extract the parts assoacited to the dummy requirement.
-                    var requirements = new List<Requirement>();
-                    requirements.Add(new Requirement { Type = RequirementType.AddSource });
-                    requirements.Add(requirement);
-                    builder2.Clear();
-                    context.AppendRequirements(builder2, requirements);
-                    builder2.Remove(0, 8); // remove "(none + "
-                    builder2.Replace(")", ""); // remove closing parenthesis
-                    clause = builder2.ToString();
+                    var clone = requirement.Clone();
+                    clone.Type = RequirementType.None;
+                    clause = clone.ToString();
                 }
 
                 builder.Append(clause);
