@@ -297,11 +297,14 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                     else if (newConditions.Count != subclause._conditions.Count)
                     {
-                        newComplexSubclauses.Add(new RequirementClauseExpression
+                        if (newConditions.Count > 0)
                         {
-                            Operation = ConditionalOperation.Or,
-                            _conditions = newConditions
-                        });
+                            newComplexSubclauses.Add(new RequirementClauseExpression
+                            {
+                                Operation = ConditionalOperation.Or,
+                                _conditions = newConditions
+                            });
+                        }
 
                         updated = true;
                     }
