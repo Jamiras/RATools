@@ -51,13 +51,13 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        private DictionaryEntry GetEntry(ExpressionBase key, bool createIfNotFound)
+        internal ExpressionBase GetEntry(ExpressionBase key)
         {
             if (_state == DictionaryState.Unprocessed)
             {
                 var error = UpdateState();
                 if (error != null)
-                    return new DictionaryEntry { Value = error };
+                    return error;
             }
 
             if (_state == DictionaryState.DynamicKeysUnsorted)
@@ -65,55 +65,60 @@ namespace RATools.Parser.Expressions
                 foreach (var entry in _entries)
                 {
                     if (entry.Key == key)
-                        return entry;
-                }
-
-                if (createIfNotFound)
-                {
-                    var entry = new DictionaryEntry { Key = key };
-                    _entries.Add(entry);
-                    return entry;
+                        return entry.Value;
                 }
             }
             else
             {
-                var entry = new DictionaryEntry { Key = key };
-                var comparer = (IComparer<DictionaryEntry>)entry;
-                var index = _entries.BinarySearch(entry, comparer);
+                var entry = new DictionaryEntry { Key = key, Value = null };
+                var index = _entries.BinarySearch(entry, entry);
                 if (index >= 0)
-                    return _entries[index];
-
-                if (createIfNotFound)
-                {
-                    _entries.Insert(~index, entry);
-                    if (!key.IsConstant)
-                        _state = DictionaryState.DynamicKeysUnsorted;
-
-                    return entry;
-                }
+                    return _entries[index].Value;
             }
 
             return null;
         }
 
-        internal ExpressionBase GetEntry(ExpressionBase key)
-        {
-            var entry = GetEntry(key, false);
-            return entry != null ? entry.Value : null;
-        }
-
         internal ErrorExpression Assign(ExpressionBase key, ExpressionBase value)
         {
-            var entry = GetEntry(key, true);
+            if (_state == DictionaryState.Unprocessed)
+            {
+                var error = UpdateState();
+                if (error != null)
+                    return error;
+            }
 
-            var error = entry.Value as ErrorExpression;
-            if (error != null)
-                return error;
+            if (_state == DictionaryState.DynamicKeysUnsorted)
+            {
+                foreach (var entry in _entries)
+                {
+                    if (entry.Key == key)
+                    {
+                        entry.Value = value;
+                        return null;
+                    }
+                }
 
-            entry.Value = value;
+                _entries.Add(new DictionaryEntry { Key = key, Value = value });
+            }
+            else
+            {
+                var entry = new DictionaryEntry { Key = key, Value = value };
+                var index = _entries.BinarySearch(entry, entry);
+                if (index >= 0)
+                {
+                    _entries[index].Value = value;
+                }
+                else
+                {
+                    _entries.Insert(~index, entry);
+                    if (!key.IsConstant)
+                        _state = DictionaryState.DynamicKeysUnsorted;
+                }
 
-            if (_state == DictionaryState.ConstantSorted && !value.IsConstant)
-                _state = DictionaryState.ConstantKeysSorted;
+                if (_state == DictionaryState.ConstantSorted && !value.IsConstant)
+                    _state = DictionaryState.ConstantKeysSorted;
+            }
 
             return null;
         }
@@ -273,15 +278,16 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var newDict = new DictionaryExpression();
-            var entries = newDict._entries;
-
             if (_state == DictionaryState.Unprocessed)
             {
                 result = UpdateState();
                 if (result != null)
                     return false;
             }
+
+            var newDict = new DictionaryExpression();
+            var entries = newDict._entries;
+            entries.Capacity = (_entries.Count + 3) & ~3;
 
             // constant dictionary
             if (_state == DictionaryState.ConstantSorted)
