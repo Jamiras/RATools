@@ -899,25 +899,12 @@ namespace RATools.Parser.Expressions
                 case ExpressionType.Conditional:
                 case ExpressionType.Dictionary:
                 case ExpressionType.FloatConstant:
+                case ExpressionType.FunctionCall:
                 case ExpressionType.FunctionDefinition:
                 case ExpressionType.IntegerConstant:
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
-                    break;
-
-                case ExpressionType.FunctionCall:
                 case ExpressionType.Variable:
-                    if (tokenizer.NextChar == '(')
-                    {
-                        tokenizer.Advance();
-
-                        var parameters = new List<ExpressionBase>();
-                        ParseParameters(tokenizer, parameters);
-
-                        var functionCall = new FunctionCallExpression((IValueExpression)value, parameters);
-                        functionCall.Location = new TextRange(value.Location.Start.Line, value.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1);
-                        value = functionCall;
-                    }
                     break;
 
                 default:
