@@ -1,12 +1,23 @@
 ﻿using RATools.Data;
+using RATools.Parser.Internal;
+using System.Text;
 
 namespace RATools.Parser.Expressions.Trigger
 {
-    internal abstract class MemoryAccessorExpressionBase : ExpressionBase
+    internal abstract class MemoryAccessorExpressionBase : ExpressionBase, IValueExpression
     {
         protected MemoryAccessorExpressionBase()
             : base(ExpressionType.MemoryAccessor)
         {
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            return this;
         }
 
         /// <summary>

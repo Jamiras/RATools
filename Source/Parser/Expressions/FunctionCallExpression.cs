@@ -1,13 +1,12 @@
 ﻿using RATools.Parser.Internal;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class FunctionCallExpression : ExpressionBase, INestedExpressions, IExecutableExpression
+    public class FunctionCallExpression : ExpressionBase, INestedExpressions,
+        IExecutableExpression, IValueExpression
     {
         public FunctionCallExpression(string functionName, ICollection<ExpressionBase> parameters)
             : this(new FunctionNameExpression(functionName), parameters)
@@ -23,10 +22,22 @@ namespace RATools.Parser.Expressions
             Location = new Jamiras.Components.TextRange(functionName.Location.Start.Line, functionName.Location.Start.Column, 0, 0);
         }
 
+        internal FunctionCallExpression(IValueExpression source, ICollection<ExpressionBase> parameters)
+            : base(ExpressionType.FunctionCall)
+        {
+            _source = source;
+            Parameters = parameters;
+
+            var expression = (ExpressionBase)source;
+            Location = new Jamiras.Components.TextRange(expression.Location.Start.Line, expression.Location.Start.Column, 0, 0);
+        }
+
         /// <summary>
         /// Gets the name of the function to call.
         /// </summary>
         public FunctionNameExpression FunctionName { get; private set; }
+
+        private readonly IValueExpression _source;
 
         /// <summary>
         /// Gets the parameters to pass to the function.
@@ -47,7 +58,11 @@ namespace RATools.Parser.Expressions
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            FunctionName.AppendString(builder);
+            if (FunctionName != null)
+                FunctionName.AppendString(builder);
+            else
+                ((ExpressionBase)_source).AppendString(builder);
+
             builder.Append('(');
 
             if (Parameters.Count > 0)
@@ -73,7 +88,7 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            if (!Evaluate(scope, out result))
+            if (!Evaluate(scope, false, out result))
                 return false;
 
             if (result == null)
@@ -87,6 +102,23 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            if (!Evaluate(scope, false, out result))
+                return result;
+
+            if (result == null)
+                return new ErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
+
+            CopyLocation(result);
+            return result;
+        }
+
+        /// <summary>
         /// Gets the return value from calling a function.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
@@ -96,32 +128,48 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
-            bool inAssignment = scope.GetInterpreterContext<AssignmentExpression>() != null;
-            if (inAssignment && _fullyExpanded)
+            return Evaluate(scope, false, out result);
+        }
+
+        private bool Evaluate(InterpreterScope scope, bool isInvoking, out ExpressionBase result)
+        { 
+            FunctionDefinitionExpression functionDefinition;
+            if (FunctionName != null)
             {
-                // this function call is already fully expanded, allow it to be assigned without re-evaluating
-                result = this;
+                functionDefinition = scope.GetFunction(FunctionName.Name);
+
+                if (functionDefinition == null)
+                {
+                    if (scope.GetVariable(FunctionName.Name) != null)
+                        result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
+                    else
+                        result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+
+                    return false;
+                }
             }
             else
             {
-                if (!Evaluate(scope, inAssignment, out result))
+                result = _source.Evaluate(scope);
+                if (result is ErrorExpression)
                     return false;
-            }
 
-            return true;
-        }
-
-        private bool Evaluate(InterpreterScope scope, bool inAssignment, out ExpressionBase result)
-        {
-            var functionDefinition = scope.GetFunction(FunctionName.Name);
-            if (functionDefinition == null)
-            {
-                if (scope.GetVariable(FunctionName.Name) != null)
-                    result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
+                var functionReference = result as FunctionReferenceExpression;
+                if (functionReference != null)
+                    functionDefinition = scope.GetFunction(functionReference.Name);
                 else
-                    result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                    functionDefinition = result as FunctionDefinitionExpression;
 
-                return false;
+                if (functionDefinition == null)
+                {
+                    var sourceExpression = (ExpressionBase)_source;
+                    var funcCall = sourceExpression as FunctionCallExpression;
+                    if (funcCall != null)
+                        result = new ErrorExpression(funcCall.FunctionName.Name + " did not return a function reference", sourceExpression);
+                    else
+                        result = new ErrorExpression(sourceExpression.ToString() + " is not a function reference", sourceExpression);
+                    return false;
+                }
             }
 
             var functionParametersScope = GetParameters(functionDefinition, scope, out result);
@@ -135,16 +183,10 @@ namespace RATools.Parser.Expressions
             }
 
             functionParametersScope.Context = this;
-            if (inAssignment)
-            {
-                // in assignment, just replace variables
-                functionDefinition.ReplaceVariables(functionParametersScope, out result);
-            }
+            if (isInvoking)
+                functionDefinition.Invoke(functionParametersScope, out result);
             else
-            {
-                // not in assignment, evaluate the function
                 functionDefinition.Evaluate(functionParametersScope, out result);
-            }
 
             var error = result as ErrorExpression;
             if (error != null)
@@ -198,14 +240,17 @@ namespace RATools.Parser.Expressions
         /// Gets the return value from calling a function.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
-        /// <param name="result">[out] The new expression containing the function result.</param>
+        /// <param name="result">[out] <c>null</c> if successful, or an <see cref="ErrorExpression"/>.</param>
         /// <returns>
-        ///   <c>true</c> if invocation was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
         /// </returns>
         public bool Invoke(InterpreterScope scope, out ExpressionBase result)
         {
-            if (Evaluate(scope, out result))
+            if (Evaluate(scope, true, out result))
+            {
+                result = null;
                 return true;
+            }
 
             if (result.Location.Start.Line == 0)
                 result = new ErrorExpression(result, FunctionName);
@@ -217,56 +262,52 @@ namespace RATools.Parser.Expressions
         {
             ExpressionBase value = assignment.Value;
 
-            var variable = value as VariableExpression;
-            if (variable != null)
+            if (value.IsConstant)
             {
-                value = variable.GetValue(scope);
+                // already a basic type, do nothing
+            }
+            else
+            {
+                var valueExpression = value as IValueExpression;
+                if (valueExpression == null)
+                    return new ErrorExpression("Cannot assign " + value.Type.ToLowerString() + " to parameter", value);
+
+                bool isLogicalUnit = value.IsLogicalUnit;
+                value = valueExpression.Evaluate(scope);
 
                 var error = value as ErrorExpression;
                 if (error != null)
                     return new ErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
 
-                if (value is VariableReferenceExpression)
-                    return value;
-
-                Debug.Assert(value != null);
-            }
-
-            if (value.IsConstant)
-            {
-                // already a basic type, do nothing
-            }
-            else if (value.Type == ExpressionType.FunctionDefinition)
-            {
-                var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
-                if (anonymousFunction != null)
-                    anonymousFunction.CaptureVariables(parameterScope);
-            }
-            else
-            {
-                bool isLogicalUnit = value.IsLogicalUnit;
-
-                // not a basic type, evaluate it
-                var assignmentScope = new InterpreterScope(scope) { Context = assignment };
-                if (!value.ReplaceVariables(assignmentScope, out value))
+                if (!value.IsReadOnly && !VariableReferenceExpression.CanReference(value.Type))
                 {
-                    var error = (ErrorExpression)value;
-                    return new ErrorExpression("Invalid value for parameter: " + assignment.Variable.Name, assignment.Value) { InnerError = error };
+                    value.IsLogicalUnit = isLogicalUnit;
+                    assignment.Value.CopyLocation(value);
+                    value.MakeReadOnly();
                 }
+            }
 
-                value.IsLogicalUnit = isLogicalUnit;
-                assignment.Value.CopyLocation(value);
+            var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
+            if (anonymousFunction != null)
+            {
+                // a function normally can only see its variables and global variables. an
+                // anonymous function may also see variables in the current function scope.
+                // identify any local variables the anonymous function needs so we can copy
+                // them to the function call scope when the function is invoked.
+                anonymousFunction.IdentifyCaptureVariables(parameterScope);
+                parameterScope.AddFunction(anonymousFunction);
             }
 
             return value;
         }
 
-        private bool GetSingleParameter(FunctionDefinitionExpression function, InterpreterScope parameterScope, out ExpressionBase error)
+        private bool GetSingleParameter(FunctionDefinitionExpression function, 
+            InterpreterScope parameterScope, InterpreterScope initializationScope, out ExpressionBase error)
         {
             var funcParameter = function.Parameters.First();
 
             ExpressionBase value = Parameters.First();
-            if (value.IsConstant)
+            if (value.IsConstant && value is not AnonymousUserFunctionDefinitionExpression)
             {
                 // already a basic type, just proceed to storing it
                 error = null;
@@ -284,7 +325,7 @@ namespace RATools.Parser.Expressions
                     return true;
                 }
 
-                value = GetParameter(parameterScope, parameterScope, assignedParameter);
+                value = GetParameter(parameterScope, initializationScope, assignedParameter);
                 error = value as ErrorExpression;
                 if (error != null)
                     return true;
@@ -316,7 +357,7 @@ namespace RATools.Parser.Expressions
             // optimization for single parameter function
             if (function.Parameters.Count == 1 && Parameters.Count == 1)
             {
-                if (GetSingleParameter(function, parameterScope, out error))
+                if (GetSingleParameter(function, parameterScope, initializationScope, out error))
                 {
                     if (function.Parameters.First().Name == "...")
                     {
@@ -477,7 +518,7 @@ namespace RATools.Parser.Expressions
         public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
             ExpressionBase result;
-            if (!Evaluate(scope, true, out result))
+            if (!Evaluate(scope, false, out result))
             {
                 error = result as ErrorExpression;
                 return null;

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace RATools.Parser.Expressions.Trigger
 {
     internal abstract class RequirementExpressionBase : ExpressionBase,
-        ITriggerExpression, IComparisonNormalizeExpression, 
+        ITriggerExpression, IComparisonNormalizeExpression, IValueExpression,
         ILogicalCombineExpression, IExecutableExpression
     {
         protected RequirementExpressionBase()
@@ -48,6 +48,15 @@ namespace RATools.Parser.Expressions.Trigger
         public virtual ErrorExpression BuildSubclauseTrigger(TriggerBuilderContext context, ConditionalOperation splitCondition, RequirementType splitBehavior)
         {
             return BuildTrigger(context);
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            return this;
         }
 
         /// <summary>
@@ -157,6 +166,21 @@ namespace RATools.Parser.Expressions.Trigger
             var index = asString.IndexOf('(');
             var functionName = (index == -1) ? "expression" : asString.Substring(0, index);
             return new ErrorExpression(functionName + " has no meaning outside of a trigger");
+        }
+
+        internal static RequirementExpressionBase ConvertToRequirementExpression(ExpressionBase expression)
+        {
+            var requirement = expression as RequirementExpressionBase;
+            if (requirement != null)
+                return requirement;
+
+            var memoryValue = expression as MemoryValueExpression;
+            if (memoryValue == null)
+                memoryValue = MemoryValueExpression.WrapInMemoryValue(expression);
+            if (memoryValue != null)
+                return new MemoryValueExpression.MemoryValueRequirementExpression(memoryValue) { Location = expression.Location };
+
+            return null;
         }
     }
 }

@@ -1,10 +1,10 @@
-﻿using RATools.Data;
+﻿using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class IndexedVariableExpression : VariableExpression, INestedExpressions
+    public class IndexedVariableExpression : VariableExpression, INestedExpressions, IValueExpression
     {
         public IndexedVariableExpression(VariableExpression variable, ExpressionBase index)
             : base(string.Empty)
@@ -83,6 +83,13 @@ namespace RATools.Parser.Expressions
                 builder = new StringBuilder();
                 AppendString(builder);
                 result = new VariableReferenceExpression(new VariableDefinitionExpression(builder.ToString()), result);
+            }
+            else
+            {
+                // if the result is an anonymous function, load it into the current scope
+                var functionDefinition = result as FunctionDefinitionExpression;
+                if (functionDefinition != null)
+                    scope.AddFunction(functionDefinition);
             }
 
             return result;

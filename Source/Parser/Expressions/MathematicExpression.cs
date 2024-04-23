@@ -6,7 +6,7 @@ using System.Text;
 namespace RATools.Parser.Expressions
 {
     public class MathematicExpression : LeftRightExpressionBase, 
-        IMathematicCombineExpression, IComparisonNormalizeExpression
+        IMathematicCombineExpression, IComparisonNormalizeExpression, IValueExpression
     {
         public MathematicExpression(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
             : base(left, right, ExpressionType.Mathematic)
@@ -146,6 +146,17 @@ namespace RATools.Parser.Expressions
                 case MathematicOperation.Divide: return MathematicOperation.Multiply;
                 default: return MathematicOperation.None;
             }
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
         }
 
         /// <summary>
@@ -589,7 +600,7 @@ namespace RATools.Parser.Expressions
                 if (newRight != null)
                 {
                     // don't allow normalization to convert a constant on the right to a non-constant
-                    if (newRight.IsLiteralConstant || !right.IsLiteralConstant)
+                    if (newRight is LiteralConstantExpressionBase || right is not LiteralConstantExpressionBase)
                         return new ComparisonExpression(Left, operation, newRight);
                 }
             }

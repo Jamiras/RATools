@@ -13,13 +13,13 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("predicate"));
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var count = GetIntegerParameter(scope, "count", out result);
             if (count == null)
                 return false;
 
-            if (!base.ReplaceVariables(scope, out result))
+            if (!base.Evaluate(scope, out result))
                 return false;
 
             var array = result as ArrayExpression;

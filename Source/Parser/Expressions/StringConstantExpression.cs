@@ -3,7 +3,8 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class StringConstantExpression : ExpressionBase, IMathematicCombineExpression, IComparisonNormalizeExpression
+    public class StringConstantExpression : LiteralConstantExpressionBase,
+        IMathematicCombineExpression, IComparisonNormalizeExpression
     {
         public StringConstantExpression(string value)
             : base(ExpressionType.StringConstant)
@@ -15,22 +16,6 @@ namespace RATools.Parser.Expressions
         /// Gets the value.
         /// </summary>
         public string Value { get; private set; }
-
-        /// <summary>
-        /// Gets whether this is non-changing.
-        /// </summary>
-        public override bool IsConstant
-        {
-            get { return true; }
-        }
-
-        /// <summary>
-        /// Gets whether this is a compile-time constant.
-        /// </summary>
-        public override bool IsLiteralConstant
-        {
-            get { return true; }
-        }
 
         /// <summary>
         /// Appends the textual representation of this expression to <paramref name="builder"/>.
@@ -49,13 +34,6 @@ namespace RATools.Parser.Expressions
             builder.Append('"');
             builder.Append(Value);
             builder.Append('"');
-        }
-
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            result = new StringConstantExpression(Value);
-            CopyLocation(result);
-            return true;
         }
 
         /// <summary>
@@ -134,7 +112,7 @@ namespace RATools.Parser.Expressions
             }
 
             // prefer constants on right side of comparison
-            if (!right.IsLiteralConstant)
+            if (right is not LiteralConstantExpressionBase)
                 return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;

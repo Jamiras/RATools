@@ -15,6 +15,15 @@
 
         public ExpressionBase Parameter { get; private set; }
 
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            return this;
+        }
+
         public abstract ErrorExpression Attach(RichPresenceBuilder builder);
     }
 }

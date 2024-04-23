@@ -378,5 +378,44 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(entry.Key, Is.EqualTo(new IntegerConstantExpression(2)));
             Assert.That(entry.Value, Is.EqualTo(new IntegerConstantExpression(4)));
         }
+
+        [Test]
+        public void TestFunctionValue()
+        {
+            string input =
+                "{" +
+                    "\"a\": inc," +          // direct function reference
+                    "\"b\": (n) => n + 1," + // anonymous function
+                "}";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var dictionary = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(dictionary, Is.InstanceOf<DictionaryExpression>());
+
+            tokenizer = Tokenizer.CreateTokenizer("function inc(d) => d + 1");
+            var function = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(function, Is.InstanceOf<FunctionDefinitionExpression>());
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AddFunction((FunctionDefinitionExpression)function);
+            scope.DefineVariable(new VariableDefinitionExpression("dict"), dictionary);
+
+            tokenizer = Tokenizer.CreateTokenizer("v = dict[\"a\"](5)");
+            var assignment = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(assignment, Is.InstanceOf<AssignmentExpression>());
+            Assert.That(((AssignmentExpression)assignment).Execute(scope), Is.Null);
+
+            var value = scope.GetVariable("v");
+            Assert.That(value, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(6));
+
+            tokenizer = Tokenizer.CreateTokenizer("v = dict[\"b\"](2)");
+            assignment = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(assignment, Is.InstanceOf<AssignmentExpression>());
+            Assert.That(((AssignmentExpression)assignment).Execute(scope), Is.Null);
+
+            value = scope.GetVariable("v");
+            Assert.That(value, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(3));
+        }
     }
 }

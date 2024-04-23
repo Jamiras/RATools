@@ -1,11 +1,13 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class DictionaryExpression : ExpressionBase, INestedExpressions, IIterableExpression
+    public class DictionaryExpression : ExpressionBase, INestedExpressions,
+        IIterableExpression, IValueExpression
     {
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)
@@ -24,11 +26,6 @@ namespace RATools.Parser.Expressions
             DynamicKeysUnsorted,
         }
         private DictionaryState _state;
-
-        internal void MarkUnprocessed()
-        {
-            _state = DictionaryState.Unprocessed;
-        }
 
         /// <summary>
         /// Gets the keys for the items in the dictionary.
@@ -256,6 +253,17 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
+        }
+
+        /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
@@ -285,47 +293,41 @@ namespace RATools.Parser.Expressions
             }
 
             // non-constant dictionary - have to evaluate
-            var dictScope = new InterpreterScope(scope);
-
             foreach (var entry in _entries)
             {
-                ExpressionBase key, value;
-                key = entry.Key;
+                ExpressionBase key = entry.Key, value = entry.Value;
 
                 if (!key.IsConstant)
                 {
-                    dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
-                    if (!key.ReplaceVariables(dictScope, out value))
+                    var valueExpression = key as IValueExpression;
+                    if (valueExpression != null)
                     {
-                        result = value;
-                        return false;
+                        key = valueExpression.Evaluate(scope);
+                        if (key is ErrorExpression)
+                        {
+                            result = key;
+                            return false;
+                        }
                     }
 
-                    if (!value.IsConstant)
+                    if (key is not LiteralConstantExpressionBase)
                     {
                         result = new ErrorExpression("Dictionary key must evaluate to a string or numeric constant", key);
                         return false;
                     }
-
-                    key = value;
                 }
 
-                if (entry.Value.IsConstant)
+                if (!value.IsConstant)
                 {
-                    value = entry.Value;
-                }
-                else
-                {
-                    var builder = new StringBuilder();
-                    builder.Append('[');
-                    key.AppendString(builder);
-                    builder.Append(']');
-                    dictScope.Context = new AssignmentExpression(new VariableExpression(builder.ToString()), entry.Value);
-
-                    if (!entry.Value.ReplaceVariables(dictScope, out value))
+                    var valueExpression = entry.Value as IValueExpression;
+                    if (valueExpression != null)
                     {
-                        result = value;
-                        return false;
+                        value = valueExpression.Evaluate(scope);
+                        if (value is ErrorExpression)
+                        {
+                            result = value;
+                            return false;
+                        }
                     }
                 }
 

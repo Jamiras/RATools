@@ -101,6 +101,7 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestScopedVariable()
         {
+            // any_of predicate needs to capture id from parent scope
             var script = "function ItemInInventory(id) => any_of(range(0x1200, 0x1208, step=2), addr => word(addr) == id)\n" +
                 "achievement(\"title\", \"desc\", 5, ItemInInventory(17))";
             var tokenizer = Tokenizer.CreateTokenizer(script);

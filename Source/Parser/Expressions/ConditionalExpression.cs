@@ -9,7 +9,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ConditionalExpression : ExpressionBase, INestedExpressions
+    public class ConditionalExpression : ExpressionBase, INestedExpressions, IValueExpression
     {
         public ConditionalExpression(ExpressionBase left, ConditionalOperation operation, ExpressionBase right)
             : base(ExpressionType.Conditional)
@@ -148,6 +148,17 @@ namespace RATools.Parser.Expressions
                 case ConditionalOperation.Or: return "||";
                 default: return null;
             }
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
         }
 
         /// <summary>

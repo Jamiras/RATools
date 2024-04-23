@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 using System.Text;
 
@@ -46,15 +47,9 @@ namespace RATools.Parser.Functions
 
             for (int parameterIndex = 0; parameterIndex < varargs.Entries.Count; parameterIndex++)
             {
-                result = varargs.Entries[parameterIndex];
-                var functionCall = result as FunctionCallExpression;
-                if (functionCall != null)
-                {
-                    if (!functionCall.Evaluate(scope, out result))
-                        return null;
-
-                    varargs.Entries[parameterIndex] = result;
-                }
+                var value = varargs.Entries[parameterIndex] as IValueExpression;
+                if (value != null)
+                    varargs.Entries[parameterIndex] = value.Evaluate(scope);
             }
 
             var stringExpression = lastExpression as StringConstantExpression;
@@ -70,7 +65,7 @@ namespace RATools.Parser.Functions
 
         private static ErrorExpression ProcessParameter(StringBuilder builder, int index, ExpressionBase parameter)
         {
-            if (!parameter.IsLiteralConstant)
+            if (parameter is not LiteralConstantExpressionBase)
                 return new ConversionErrorExpression(parameter, ExpressionType.StringConstant);
 
             parameter.AppendStringLiteral(builder);

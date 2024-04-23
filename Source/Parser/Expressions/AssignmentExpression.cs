@@ -1,4 +1,5 @@
 ﻿using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -73,31 +74,15 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public ErrorExpression Execute(InterpreterScope scope)
         {
-            var assignmentScope = new InterpreterScope(scope) { Context = this };
-            ExpressionBase result;
+            var value = Value as IValueExpression;
+            if (value == null)
+                return new ErrorExpression("Cannot assign " + Value.Type.ToLowerString() + " to variable", this);
 
-            var functionDefinition = Value as FunctionDefinitionExpression;
-            if (functionDefinition != null)
-            {
-                scope.AddFunction(functionDefinition);
-                result = new FunctionReferenceExpression(functionDefinition.Name.Name);
-            }
-            else
-            {
-                var variable = Value as VariableExpression;
-                if (variable != null)
-                {
-                    result = variable.GetValue(assignmentScope);
-                    var error = result as ErrorExpression;
-                    if (error != null)
-                        return error;
-                }
-                else
-                {
-                    if (!Value.ReplaceVariables(assignmentScope, out result))
-                        return (ErrorExpression)result;
-                }
-            }
+            var result = value.Evaluate(scope);
+
+            var error = result as ErrorExpression;
+            if (error != null)
+                return error;
 
             return scope.AssignVariable(Variable, result);
         }

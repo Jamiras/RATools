@@ -28,22 +28,11 @@ namespace RATools.Parser.Functions
             if (comparison == null)
                 return false;
 
-            var expression = comparison as RequirementExpressionBase;
+            var expression = RequirementExpressionBase.ConvertToRequirementExpression(comparison);
             if (expression == null)
             {
-                var memoryValue = comparison as MemoryValueExpression;
-                if (memoryValue == null)
-                {
-                    memoryValue = MemoryAccessorExpressionBase.WrapInMemoryValue(comparison);
-                    if (memoryValue == null)
-                    {
-                        result = InvalidParameter(comparison, scope, "comparison", ExpressionType.Comparison);
-                        return false;
-                    }
-                }
-
-                expression = new MeasuredRequirementExpression.MemoryValueWrapper(memoryValue);
-                memoryValue.CopyLocation(expression);
+                result = InvalidParameter(comparison, scope, "comparison", ExpressionType.Comparison);
+                return false;
             }
 
             var when = GetRequirementParameter(scope, "when", out result);

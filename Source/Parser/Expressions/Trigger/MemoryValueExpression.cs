@@ -419,7 +419,7 @@ namespace RATools.Parser.Expressions.Trigger
                 // constants canceled out
             }
             else if (newLeft is MemoryAccessorExpression ||
-                    newLeft.IsLiteralConstant)
+                    newLeft is LiteralConstantExpressionBase)
             {
                 // new left is non-complex, reverse the equation to eliminate the subtraction
 
@@ -1487,5 +1487,31 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         #endregion
+
+        internal class MemoryValueRequirementExpression : RequirementExpressionBase
+        {
+            public MemoryValueRequirementExpression(MemoryValueExpression expression)
+            {
+                MemoryValue = expression;
+            }
+
+            public MemoryValueExpression MemoryValue { get; set; }
+
+            internal override void AppendString(StringBuilder builder)
+            {
+                MemoryValue.AppendString(builder);
+            }
+
+            protected override bool Equals(ExpressionBase obj)
+            {
+                var that = obj as MemoryValueRequirementExpression;
+                return (that != null && MemoryValue == that.MemoryValue);
+            }
+
+            public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
+            {
+                return MemoryValue.BuildTrigger(context);
+            }
+        }
     }
 }

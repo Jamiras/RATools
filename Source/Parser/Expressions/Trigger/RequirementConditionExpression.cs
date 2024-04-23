@@ -536,7 +536,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ExpressionBase Normalize()
         {
-            if (Left.IsLiteralConstant && !Right.IsLiteralConstant)
+            if (Left is LiteralConstantExpressionBase && Right is not LiteralConstantExpressionBase)
             {
                 var reversed = new RequirementConditionExpression
                 {

@@ -6,7 +6,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ComparisonExpression : LeftRightExpressionBase
+    public class ComparisonExpression : LeftRightExpressionBase, IValueExpression
     {
         public ComparisonExpression(ExpressionBase left, ComparisonOperation operation, ExpressionBase right)
             : base(left, right, ExpressionType.Comparison)
@@ -76,6 +76,17 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
+        }
+
+        /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
@@ -106,13 +117,25 @@ namespace RATools.Parser.Expressions
                 return false;
             }
 
+            // if either side is a function reference, it can only equal another reference to the same function
             var funcRefLeft = left as FunctionReferenceExpression;
             var funcRefRight = right as FunctionReferenceExpression;
             if (funcRefLeft != null || funcRefRight != null)
             {
                 if (funcRefLeft != null && funcRefRight != null)
                 {
-                    result = new BooleanConstantExpression(funcRefLeft.Name == funcRefRight.Name);
+                    switch (Operation)
+                    {
+                        case ComparisonOperation.Equal:
+                            result = new BooleanConstantExpression(funcRefLeft.Name == funcRefRight.Name);
+                            break;
+                        case ComparisonOperation.NotEqual:
+                            result = new BooleanConstantExpression(funcRefLeft.Name != funcRefRight.Name);
+                            break;
+                        default:
+                            result = new ErrorExpression("Cannot apply " + GetOperatorString(Operation) + " to function reference", this.Location);
+                            return false;
+                    }
                     CopyLocation(result);
                     return true;
                 }
@@ -308,20 +331,27 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)
         {
-            ExpressionBase left, right;
-            if (!Left.ReplaceVariables(scope, out left))
+            var valueExpression = Left as IValueExpression;
+            if (valueExpression == null)
             {
-                error = left as ErrorExpression;
+                error = new ErrorExpression(String.Format("Cannot compare {0} and {1}", Left.Type.ToLowerString(), Right.Type.ToLowerString()), this);
                 return null;
             }
+            var left = valueExpression.Evaluate(scope);
+            error = left as ErrorExpression;
+            if (error != null)
+                return null;
 
-            if (!Right.ReplaceVariables(scope, out right))
+            valueExpression = Right as IValueExpression;
+            if (valueExpression == null)
             {
-                error = right as ErrorExpression;
+                error = new ErrorExpression(String.Format("Cannot compare {0} and {1}", Left.Type.ToLowerString(), Right.Type.ToLowerString()), this);
                 return null;
             }
-
-            error = null;
+            var right = valueExpression.Evaluate(scope);
+            error = right as ErrorExpression;
+            if (error != null)
+                return null;
 
             var normalizeComparison = left as IComparisonNormalizeExpression;
             if (normalizeComparison != null)
@@ -332,7 +362,7 @@ namespace RATools.Parser.Expressions
                     return boolResult.Value;
 
                 // memory reference (or something similar) that can't be determined at processing time
-                if (!left.IsLiteralConstant)
+                if (left is not LiteralConstantExpressionBase)
                     return null;
             }
 

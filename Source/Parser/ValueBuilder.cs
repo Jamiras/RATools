@@ -52,6 +52,10 @@ namespace RATools.Parser
                 return new Value(new[] { new[] { requirement } });
             }
 
+            var maxOf = expression as MaxOfRequirementExpression;
+            if (maxOf != null)
+                return maxOf.ToValue(out error);
+
             var trigger = expression as ITriggerExpression;
             if (trigger == null)
             {
