@@ -136,6 +136,10 @@ namespace RATools.ViewModels
                 case RequirementType.MeasuredIf:
                     builder.Append("MeasuredIf ");
                     break;
+
+                case RequirementType.ResetNextIf:
+                    builder.Append("ResetNextIf ");
+                    break;
             }
 
             var context = new ScriptBuilderContext { NumberFormat = numberFormat };
