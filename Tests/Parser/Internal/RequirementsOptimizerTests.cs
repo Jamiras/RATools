@@ -384,6 +384,8 @@ namespace RATools.Parser.Tests.Internal
                   "A && ((B && D) || (B && E) || (C && D) || (C && E))")]
         [TestCase("A && (B || (C && D)) && (E || F)",
                   "A && ((B && E) || (B && F) || (C && D && E) || (C && D && F))")]
+        [TestCase("(always_false() || always_false()) && (A || D)",
+                  "A || D")] // always_false() cross multiples can be eliminated
         public void TestOrExpansion(string input, string expected)
         {
             input = input.Replace("A", "byte(0x00000A) == 1");
