@@ -1,5 +1,5 @@
 ﻿using RATools.Data;
-using System;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -47,7 +47,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    public class VariableExpression : VariableExpressionBase, INestedExpressions
+    public class VariableExpression : VariableExpressionBase, INestedExpressions, IValueExpression
     {
         public VariableExpression(string name)
             : base(name)
@@ -57,6 +57,38 @@ namespace RATools.Parser.Expressions
         internal VariableExpression(string name, int line, int column)
             : base(name, line, column)
         {
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase value = GetValue(scope);
+            if (value == null) // not found
+                return value;
+
+            switch (value.Type)
+            {
+                case ExpressionType.Error:
+                    return value;
+
+                case ExpressionType.FunctionDefinition:
+                    // a variable storing a function definition should just return the
+                    // definition and let the caller decide whether or not to call the function.
+                    return value;
+
+                default:
+                    break;
+            }
+
+            var valueExpression = value as IValueExpression;
+            if (valueExpression != null)
+                return valueExpression.Evaluate(scope);
+
+            value.ReplaceVariables(scope, out value);
+            return value;
         }
 
         /// <summary>
@@ -184,18 +216,36 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    public class VariableReferenceExpression : ExpressionBase
+    public class VariableReferenceExpression : ExpressionBase, IValueExpression
     {
         public VariableReferenceExpression(VariableDefinitionExpression variable, ExpressionBase expression)
             : base(ExpressionType.VariableReference)
         {
             Variable = variable;
             Expression = expression;
+
+            MakeReadOnly();
         }
 
         public VariableDefinitionExpression Variable { get; private set; }
 
         public ExpressionBase Expression { get; private set; }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            // don't evaluate variable references when building parameter list.
+            // arrays and dictionaries are passed to functions by reference.
+            if (scope.Context is ParameterInitializationContext)
+                return this;
+
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
+        }
 
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {

@@ -1,11 +1,13 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class DictionaryExpression : ExpressionBase, INestedExpressions, IIterableExpression
+    public class DictionaryExpression : ExpressionBase, INestedExpressions,
+        IIterableExpression, IValueExpression
     {
         public DictionaryExpression()
             : base(ExpressionType.Dictionary)
@@ -24,11 +26,6 @@ namespace RATools.Parser.Expressions
             DynamicKeysUnsorted,
         }
         private DictionaryState _state;
-
-        internal void MarkUnprocessed()
-        {
-            _state = DictionaryState.Unprocessed;
-        }
 
         /// <summary>
         /// Gets the keys for the items in the dictionary.
@@ -54,13 +51,13 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        private DictionaryEntry GetEntry(ExpressionBase key, bool createIfNotFound)
+        internal ExpressionBase GetEntry(ExpressionBase key)
         {
             if (_state == DictionaryState.Unprocessed)
             {
                 var error = UpdateState();
                 if (error != null)
-                    return new DictionaryEntry { Value = error };
+                    return error;
             }
 
             if (_state == DictionaryState.DynamicKeysUnsorted)
@@ -68,55 +65,60 @@ namespace RATools.Parser.Expressions
                 foreach (var entry in _entries)
                 {
                     if (entry.Key == key)
-                        return entry;
-                }
-
-                if (createIfNotFound)
-                {
-                    var entry = new DictionaryEntry { Key = key };
-                    _entries.Add(entry);
-                    return entry;
+                        return entry.Value;
                 }
             }
             else
             {
-                var entry = new DictionaryEntry { Key = key };
-                var comparer = (IComparer<DictionaryEntry>)entry;
-                var index = _entries.BinarySearch(entry, comparer);
+                var entry = new DictionaryEntry { Key = key, Value = null };
+                var index = _entries.BinarySearch(entry, entry);
                 if (index >= 0)
-                    return _entries[index];
-
-                if (createIfNotFound)
-                {
-                    _entries.Insert(~index, entry);
-                    if (!key.IsConstant)
-                        _state = DictionaryState.DynamicKeysUnsorted;
-
-                    return entry;
-                }
+                    return _entries[index].Value;
             }
 
             return null;
         }
 
-        internal ExpressionBase GetEntry(ExpressionBase key)
-        {
-            var entry = GetEntry(key, false);
-            return entry != null ? entry.Value : null;
-        }
-
         internal ErrorExpression Assign(ExpressionBase key, ExpressionBase value)
         {
-            var entry = GetEntry(key, true);
+            if (_state == DictionaryState.Unprocessed)
+            {
+                var error = UpdateState();
+                if (error != null)
+                    return error;
+            }
 
-            var error = entry.Value as ErrorExpression;
-            if (error != null)
-                return error;
+            if (_state == DictionaryState.DynamicKeysUnsorted)
+            {
+                foreach (var entry in _entries)
+                {
+                    if (entry.Key == key)
+                    {
+                        entry.Value = value;
+                        return null;
+                    }
+                }
 
-            entry.Value = value;
+                _entries.Add(new DictionaryEntry { Key = key, Value = value });
+            }
+            else
+            {
+                var entry = new DictionaryEntry { Key = key, Value = value };
+                var index = _entries.BinarySearch(entry, entry);
+                if (index >= 0)
+                {
+                    _entries[index].Value = value;
+                }
+                else
+                {
+                    _entries.Insert(~index, entry);
+                    if (!key.IsConstant)
+                        _state = DictionaryState.DynamicKeysUnsorted;
+                }
 
-            if (_state == DictionaryState.ConstantSorted && !value.IsConstant)
-                _state = DictionaryState.ConstantKeysSorted;
+                if (_state == DictionaryState.ConstantSorted && !value.IsConstant)
+                    _state = DictionaryState.ConstantKeysSorted;
+            }
 
             return null;
         }
@@ -256,6 +258,17 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
+        }
+
+        /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
@@ -265,15 +278,16 @@ namespace RATools.Parser.Expressions
         /// </returns>
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
-            var newDict = new DictionaryExpression();
-            var entries = newDict._entries;
-
             if (_state == DictionaryState.Unprocessed)
             {
                 result = UpdateState();
                 if (result != null)
                     return false;
             }
+
+            var newDict = new DictionaryExpression();
+            var entries = newDict._entries;
+            entries.Capacity = (_entries.Count + 3) & ~3;
 
             // constant dictionary
             if (_state == DictionaryState.ConstantSorted)
@@ -285,47 +299,41 @@ namespace RATools.Parser.Expressions
             }
 
             // non-constant dictionary - have to evaluate
-            var dictScope = new InterpreterScope(scope);
-
             foreach (var entry in _entries)
             {
-                ExpressionBase key, value;
-                key = entry.Key;
+                ExpressionBase key = entry.Key, value = entry.Value;
 
                 if (!key.IsConstant)
                 {
-                    dictScope.Context = new AssignmentExpression(new VariableExpression("@key"), key);
-                    if (!key.ReplaceVariables(dictScope, out value))
+                    var valueExpression = key as IValueExpression;
+                    if (valueExpression != null)
                     {
-                        result = value;
-                        return false;
+                        key = valueExpression.Evaluate(scope);
+                        if (key is ErrorExpression)
+                        {
+                            result = key;
+                            return false;
+                        }
                     }
 
-                    if (!value.IsConstant)
+                    if (key is not LiteralConstantExpressionBase)
                     {
                         result = new ErrorExpression("Dictionary key must evaluate to a string or numeric constant", key);
                         return false;
                     }
-
-                    key = value;
                 }
 
-                if (entry.Value.IsConstant)
+                if (!value.IsConstant)
                 {
-                    value = entry.Value;
-                }
-                else
-                {
-                    var builder = new StringBuilder();
-                    builder.Append('[');
-                    key.AppendString(builder);
-                    builder.Append(']');
-                    dictScope.Context = new AssignmentExpression(new VariableExpression(builder.ToString()), entry.Value);
-
-                    if (!entry.Value.ReplaceVariables(dictScope, out value))
+                    var valueExpression = entry.Value as IValueExpression;
+                    if (valueExpression != null)
                     {
-                        result = value;
-                        return false;
+                        value = valueExpression.Evaluate(scope);
+                        if (value is ErrorExpression)
+                        {
+                            result = value;
+                            return false;
+                        }
                     }
                 }
 

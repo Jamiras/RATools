@@ -1,6 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
+using RATools.Parser.Expressions.Trigger;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -111,39 +111,10 @@ namespace RATools.Parser.Functions
             if (expression == null)
                 return null;
 
-            var functionCallExpression = expression as FunctionCallExpression;
-            if (functionCallExpression != null)
-            {
-                var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
-                if (functionDefinition is MaxOfFunction)
-                    return ValueFromMaxOf(functionCallExpression.Parameters, out result);
-            }
-
             ErrorExpression error;
             var value = ValueBuilder.BuildValue(expression, out error);
             result = error;
             return value;
-        }
-
-        private static Value ValueFromMaxOf(IEnumerable<ExpressionBase> expressions, out ExpressionBase result)
-        {
-            var values = new List<IEnumerable<Requirement>>();
-            ErrorExpression error;
-
-            foreach (var expression in expressions)
-            {
-                var value = ValueBuilder.BuildValue(expression, out error);
-                if (value == null)
-                {
-                    result = error;
-                    return null;
-                }
-
-                values.Add(value.Values.First().Requirements);
-            }
-
-            result = null;
-            return new Value(values);
         }
     }
 
@@ -155,23 +126,36 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("..."));
         }
 
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        {
+            return ReplaceVariables(scope, out result);
+        }
+
         public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
         {
             var varargs = GetVarArgsParameter(scope, out result, null, true);
             if (varargs == null)
                 return false;
 
-            var parameters = new List<ExpressionBase>();
+            var maxOf = new MaxOfRequirementExpression();
+            CopyLocation(maxOf);
+
             foreach (var entry in varargs.Entries)
             {
                 if (!entry.ReplaceVariables(scope, out result))
                     return false;
 
-                parameters.Add(result);
+                var requirement = RequirementExpressionBase.ConvertToRequirementExpression(result);
+                if (requirement == null)
+                {
+                    result = new ErrorExpression("Cannot convert " + result.Type.ToLowerString() + " to value", entry);
+                    return false;
+                }
+
+                maxOf.AddValue(requirement);
             }
 
-            result = new FunctionCallExpression(Name.Name, parameters.ToArray());
-            CopyLocation(result);
+            result = maxOf;
             return true;
         }
     }

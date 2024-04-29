@@ -175,7 +175,7 @@ namespace RATools
                 Console.ResetColor();
                 stream.WriteLine(error.Message);
 
-                stream.WriteLine(_currentLineText);
+                stream.WriteLine(_currentLineText.Replace('\t', ' '));
                 if (error.Location.Front.Column > 0)
                 {
                     stream.Write(new String(' ', error.Location.Front.Column - 1));

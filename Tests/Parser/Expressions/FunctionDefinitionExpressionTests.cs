@@ -177,7 +177,7 @@ namespace RATools.Parser.Tests.Expressions
 
             ExpressionBase result;
             var funcCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(6) });
-            Assert.That(funcCall.Evaluate(scope, out result), Is.True);
+            Assert.That(funcCall.Invoke(scope, out result), Is.True);
 
             result = scope.GetVariable("k");
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
@@ -214,7 +214,7 @@ namespace RATools.Parser.Tests.Expressions
 
             ExpressionBase result;
             var funcCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(6) });
-            Assert.That(funcCall.Evaluate(scope, out result), Is.True);
+            Assert.That(funcCall.Invoke(scope, out result), Is.True);
 
             result = scope.GetVariable("k");
             Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());

@@ -3,8 +3,9 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class IntegerConstantExpression : ExpressionBase,
-        IMathematicCombineExpression, IComparisonNormalizeExpression, INumericConstantExpression
+    public class IntegerConstantExpression : LiteralConstantExpressionBase,
+        IMathematicCombineExpression, IComparisonNormalizeExpression,
+        INumericConstantExpression
     {
         public IntegerConstantExpression(int value)
             : base(ExpressionType.IntegerConstant)
@@ -16,22 +17,6 @@ namespace RATools.Parser.Expressions
         /// Gets the value.
         /// </summary>
         public int Value { get; private set; }
-
-        /// <summary>
-        /// Gets whether this is non-changing.
-        /// </summary>
-        public override bool IsConstant
-        {
-            get { return true; }
-        }
-
-        /// <summary>
-        /// Gets whether this is a compile-time constant.
-        /// </summary>
-        public override bool IsLiteralConstant
-        {
-            get { return true; }
-        }
 
         /// <summary>
         /// Returns <c>true</c> if the constant is numerically zero
@@ -192,7 +177,7 @@ namespace RATools.Parser.Expressions
                 return new FloatConstantExpression((float)Value).NormalizeComparison(right, operation, canModifyRight);
 
             // prefer constants on right side of comparison
-            if (!right.IsLiteralConstant)
+            if (right is not LiteralConstantExpressionBase)
                 return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;

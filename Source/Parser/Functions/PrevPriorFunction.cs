@@ -69,7 +69,7 @@ namespace RATools.Parser.Functions
         {
             // assert: left/right already expanded by calling function
             var left = mathematic.Left;
-            if (!left.IsLiteralConstant)
+            if (left is not LiteralConstantExpressionBase)
             {
                 if (!ReplaceVariables(left, scope, out result))
                     return false;
@@ -77,7 +77,7 @@ namespace RATools.Parser.Functions
             }
 
             var right = mathematic.Right;
-            if (!right.IsLiteralConstant)
+            if (right is not LiteralConstantExpressionBase)
             {
                 if (!ReplaceVariables(right, scope, out result))
                     return false;

@@ -4,8 +4,9 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class FloatConstantExpression : ExpressionBase,
-        IMathematicCombineExpression, IComparisonNormalizeExpression, INumericConstantExpression
+    public class FloatConstantExpression : LiteralConstantExpressionBase,
+        IMathematicCombineExpression, IComparisonNormalizeExpression,
+        INumericConstantExpression
     {
         public FloatConstantExpression(float value)
             : base(ExpressionType.FloatConstant)
@@ -17,22 +18,6 @@ namespace RATools.Parser.Expressions
         /// Gets the value.
         /// </summary>
         public float Value { get; private set; }
-
-        /// <summary>
-        /// Gets whether this is non-changing.
-        /// </summary>
-        public override bool IsConstant
-        {
-            get { return true; }
-        }
-
-        /// <summary>
-        /// Gets whether this is a compile-time constant.
-        /// </summary>
-        public override bool IsLiteralConstant
-        {
-            get { return true; }
-        }
 
         /// <summary>
         /// Returns <c>true</c> if the constant is numerically zero
@@ -201,7 +186,7 @@ namespace RATools.Parser.Expressions
             }
 
             // prefer constants on right side of comparison
-            if (!right.IsLiteralConstant)
+            if (right is not LiteralConstantExpressionBase)
                 return new ComparisonExpression(right, ComparisonExpression.ReverseComparisonOperation(operation), this);
 
             return null;

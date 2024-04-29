@@ -205,31 +205,5 @@ namespace RATools.Parser.Expressions.Trigger
 
             last.Type = RequirementType.Measured;
         }
-
-        internal class MemoryValueWrapper : RequirementExpressionBase
-        {
-            public MemoryValueWrapper(MemoryValueExpression expression)
-            {
-                MemoryValue = expression;
-            }
-
-            public MemoryValueExpression MemoryValue { get; set; }
-
-            internal override void AppendString(StringBuilder builder)
-            {
-                MemoryValue.AppendString(builder);
-            }
-
-            protected override bool Equals(ExpressionBase obj)
-            {
-                var that = obj as MemoryValueWrapper;
-                return (that != null && MemoryValue == that.MemoryValue);
-            }
-
-            public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
-            {
-                return MemoryValue.BuildTrigger(context);
-            }
-        }
     }
 }

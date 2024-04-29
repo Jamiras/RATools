@@ -5,7 +5,6 @@ using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -24,6 +23,8 @@ namespace RATools.Parser.Expressions
             Parameters = new List<VariableDefinitionExpression>();
             Expressions = new List<ExpressionBase>();
             DefaultParameters = new TinyDictionary<string, ExpressionBase>();
+
+            MakeReadOnly();
         }
 
         /// <summary>
@@ -45,6 +46,8 @@ namespace RATools.Parser.Expressions
         /// Gets the expressions for the contents of the function.
         /// </summary>
         public ICollection<ExpressionBase> Expressions { get; private set; }
+
+        public override bool IsConstant { get { return true; } }
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
@@ -133,6 +136,23 @@ namespace RATools.Parser.Expressions
                 return false;
 
             result = interpreterScope.ReturnValue;
+            return true;
+        }
+
+        /// <summary>
+        /// Invokes the function.
+        /// </summary>
+        /// <param name="scope">The scope object containing variable values and function parameters.</param>
+        /// <param name="result">[out] <c>null</c> if successful, or an <see cref="ErrorExpression"/>.</param>
+        /// <returns>
+        ///   <c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result" /> will likely be a <see cref="ErrorExpression" />.
+        /// </returns>
+        public virtual bool Invoke(InterpreterScope scope, out ExpressionBase result)
+        {
+            if (!Evaluate(scope, out result))
+                return false;
+
+            result = null;
             return true;
         }
 
@@ -605,7 +625,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class UserFunctionDefinitionExpression : FunctionDefinitionExpression
+    internal class UserFunctionDefinitionExpression : FunctionDefinitionExpression, IValueExpression
     {
         protected UserFunctionDefinitionExpression(VariableDefinitionExpression name)
             : base(name)
@@ -786,6 +806,14 @@ namespace RATools.Parser.Expressions
             return MakeReadOnly();
         }
 
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            return this;
+        }
 
         /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope"/>.
@@ -793,14 +821,19 @@ namespace RATools.Parser.Expressions
         /// <param name="scope">The scope object containing variable values.</param>
         /// <param name="result">[out] The new expression containing the replaced variables.</param>
         /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             // user-defined functions should be evaluated (expanded) immediately.
-            if (!Evaluate(scope, out result))
+            if (!base.Evaluate(scope, out result))
                 return false;
 
             if (result == null)
             {
+                // don't return "Anonymous@5,12 did not return a value", just return null
+                // and let the caller handle it.
+                if (this is AnonymousUserFunctionDefinitionExpression)
+                    return true;
+
                 var functionCall = scope.GetContext<FunctionCallExpression>();
                 if (functionCall != null)
                     result = new ErrorExpression(Name.Name + " did not return a value", functionCall.FunctionName);
@@ -810,6 +843,15 @@ namespace RATools.Parser.Expressions
                 return false;
             }
 
+            return true;
+        }
+
+        public override bool Invoke(InterpreterScope scope, out ExpressionBase result)
+        {
+            if (!base.Evaluate(scope, out result))
+                return false;
+
+            result = null;
             return true;
         }
     }
@@ -899,7 +941,7 @@ namespace RATools.Parser.Expressions
 
         public IEnumerable<VariableReferenceExpression> CapturedVariables { get; private set; }
 
-        public void CaptureVariables(InterpreterScope scope)
+        public void IdentifyCaptureVariables(InterpreterScope scope)
         {
             // Initialize a new scope object with a FunctionCall context so we can determine which
             // variables have to be captured. The FunctionCall context will only see the globals.
@@ -927,7 +969,7 @@ namespace RATools.Parser.Expressions
         }
     }
 
-    internal class FunctionReferenceExpression : VariableExpressionBase
+    internal class FunctionReferenceExpression : VariableExpressionBase, IValueExpression
     {
         public FunctionReferenceExpression(string name)
             : base(name)
@@ -937,6 +979,15 @@ namespace RATools.Parser.Expressions
         public override string ToString()
         {
             return "FunctionReference: " + Name;
+        }
+
+        /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            return this;
         }
     }
 }

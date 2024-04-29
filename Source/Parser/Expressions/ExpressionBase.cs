@@ -2,6 +2,7 @@
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
 
@@ -74,14 +75,6 @@ namespace RATools.Parser.Expressions
         /// Gets whether this is non-changing.
         /// </summary>
         public virtual bool IsConstant
-        {
-            get { return false; }
-        }
-
-        /// <summary>
-        /// Gets whether this is a compile-time constant.
-        /// </summary>
-        public virtual bool IsLiteralConstant
         {
             get { return false; }
         }

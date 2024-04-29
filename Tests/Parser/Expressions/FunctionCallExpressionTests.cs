@@ -531,7 +531,7 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
-        public void TestEvaluateNoReturnValue()
+        public void TestInvokeNoReturnValue()
         {
             var functionDefinition = Parse("function func(i) { j = i }");
             var scope = new InterpreterScope();
@@ -540,7 +540,7 @@ namespace RATools.Parser.Tests.Expressions
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { value });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Invoke(scope, out result), Is.True);
             Assert.That(result, Is.Null);
         }
 
@@ -574,7 +574,7 @@ namespace RATools.Parser.Tests.Expressions
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new VariableExpression("dict") });
 
             ExpressionBase result;
-            Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+            Assert.That(functionCall.Invoke(scope, out result), Is.True);
             Assert.That(result, Is.Null);
 
             Assert.That(dict.Count, Is.EqualTo(1));

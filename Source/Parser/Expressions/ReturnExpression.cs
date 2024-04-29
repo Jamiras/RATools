@@ -104,24 +104,16 @@ namespace RATools.Parser.Expressions
                 Context = new AssignmentExpression(new VariableExpression("@return"), Value) 
             };
 
-            ExpressionBase result;
-            if (!Value.ReplaceVariables(returnScope, out result))
-                return result as ErrorExpression;
+            var value = Value as IValueExpression;
+            if (value == null)
+                return new ErrorExpression("Cannot evaluate " + Value.Type.ToLowerString());
 
-            var functionCall = result as FunctionCallExpression;
-            if (functionCall != null)
-            {
-                var error = functionCall.Execute(returnScope);
-                if (error != null)
-                    return error;
+            ExpressionBase result = value.Evaluate(returnScope);
+            var error = result as ErrorExpression;
+            if (error != null)
+                return error;
 
-                scope.ReturnValue = returnScope.ReturnValue;
-            }
-            else
-            {
-                scope.ReturnValue = result;
-            }
-
+            scope.ReturnValue = result;
             scope.IsComplete = true;
             return null;
         }

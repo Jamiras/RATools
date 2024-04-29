@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using RATools.Parser.Internal;
+using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ArrayExpression : ExpressionBase, INestedExpressions, IIterableExpression
+    public class ArrayExpression : ExpressionBase, INestedExpressions,
+        IIterableExpression, IValueExpression
     {
         public ArrayExpression()
             : base(ExpressionType.Array)
@@ -37,6 +39,17 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Evaluates an expression
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
+        public ExpressionBase Evaluate(InterpreterScope scope)
+        {
+            ExpressionBase result;
+            ReplaceVariables(scope, out result);
+            return result;
+        }
+
+        /// <summary>
         /// Replaces the variables in the expression with values from <paramref name="scope" />.
         /// </summary>
         /// <param name="scope">The scope object containing variable values.</param>
@@ -53,15 +66,22 @@ namespace RATools.Parser.Expressions
                 return true;
             }
 
-            var arrayScope = new InterpreterScope(scope);
-
-            int index = 0;
             var entries = new List<ExpressionBase>();
             foreach (var entry in Entries)
             {
                 ExpressionBase value;
-                arrayScope.Context = new AssignmentExpression(new VariableExpression("[" + index++ + "]"), entry);
-                if (!entry.ReplaceVariables(arrayScope, out value))
+
+                var valueExpression = entry as IValueExpression;
+                if (valueExpression != null)
+                {
+                    value = valueExpression.Evaluate(scope);
+                    if (value is ErrorExpression)
+                    {
+                        result = value;
+                        return false;
+                    }
+                }
+                else if (!entry.ReplaceVariables(scope, out value))
                 {
                     result = value;
                     return false;

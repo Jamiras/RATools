@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
 
 namespace RATools.Parser.Functions
 {
@@ -73,7 +74,7 @@ namespace RATools.Parser.Functions
             }
         }
 
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
+        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var macro = GetStringParameter(scope, "macro", out result);
             if (macro == null)
@@ -102,7 +103,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+        public override bool Invoke(InterpreterScope scope, out ExpressionBase result)
         {
             var functionCall = scope.GetContext<FunctionCallExpression>();
             result = new ErrorExpression(Name.Name + " has no meaning outside of a rich_presence_display call", functionCall.FunctionName);
