@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
@@ -701,6 +702,23 @@ namespace RATools.Parser.Tests.Expressions
             ErrorExpression error;
             Assert.That(expr.IsTrue(scope, out error), Is.True);
             Assert.That(error, Is.Null);
+        }
+
+        [Test]
+        public void TestDeferenceReturnedDictionary()
+        {
+            var userFunc = Parse("function f() => {0:\"no\",1:\"yes\"}");
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AddFunction(userFunc);
+
+            var tokenizer = Tokenizer.CreateTokenizer("v = f()[1]");
+            var assignment = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(assignment, Is.InstanceOf<AssignmentExpression>());
+            Assert.That(((AssignmentExpression)assignment).Execute(scope), Is.Null);
+
+            var value = scope.GetVariable("v");
+            Assert.That(value, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)value).Value, Is.EqualTo("yes"));
         }
     }
 }

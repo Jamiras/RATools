@@ -167,6 +167,9 @@ namespace RATools.Parser.Expressions
 
         internal static new ExpressionBase Parse(PositionalTokenizer tokenizer)
         {
+            if (tokenizer.NextChar != '{')
+                return null;
+            tokenizer.Advance();
             SkipWhitespace(tokenizer);
 
             var dict = new DictionaryExpression();

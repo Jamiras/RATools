@@ -123,7 +123,7 @@ namespace RATools.Parser.Tests.Expressions
             ExpressionBase result;
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot index: variable (IntegerConstant)"));
+            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot index integer: variable"));
         }
 
         [Test]

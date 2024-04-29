@@ -45,7 +45,6 @@ namespace RATools.Parser.Tests.Expressions
         public void TestParse()
         {
             var tokenizer = CreateTokenizer("{1: \"a\", 2: \"b\"}");
-            tokenizer.Match("{");
             var expression = DictionaryExpression.Parse(tokenizer);
             Assert.That(expression, Is.InstanceOf<DictionaryExpression>());
             var dict = (DictionaryExpression)expression;
@@ -57,7 +56,6 @@ namespace RATools.Parser.Tests.Expressions
         {
             var group = new ExpressionGroup();
             var tokenizer = CreateTokenizer("{1 = \"a\", 2 = \"b\"}", group);
-            tokenizer.Match("{");
             var expression = DictionaryExpression.Parse(tokenizer);
             ExpressionTests.AssertError(expression, "Expecting colon following key expression");
             Assert.That(expression.Location.Start.Line, Is.EqualTo(1));
@@ -69,7 +67,6 @@ namespace RATools.Parser.Tests.Expressions
         {
             var group = new ExpressionGroup();
             var tokenizer = CreateTokenizer("{1: \"a\"\n 2: \"b\"}", group);
-            tokenizer.Match("{");
             var expression = DictionaryExpression.Parse(tokenizer);
             ExpressionTests.AssertError(expression, "Expecting comma between entries");
             Assert.That(expression.Location.Start.Line, Is.EqualTo(2));

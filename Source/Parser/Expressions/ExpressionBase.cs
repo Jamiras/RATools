@@ -410,28 +410,7 @@ namespace RATools.Parser.Expressions
                         break;
 
                     case '[':
-                        var variable = clause as VariableExpression;
-                        if (variable == null)
-                            return clause;
-
-                        tokenizer.Advance();
-
-                        var index = ExpressionBase.Parse(tokenizer);
-                        if (index.Type == ExpressionType.Error)
-                            return index;
-
-                        SkipWhitespace(tokenizer);
-                        clauseEndLine = tokenizer.Line;
-                        clauseEndColumn = tokenizer.Column;
-                        if (tokenizer.NextChar != ']')
-                            return ParseError(tokenizer, "Expecting closing bracket after index");
-                        tokenizer.Advance();
-                        SkipWhitespace(tokenizer);
-
-                        clause = new IndexedVariableExpression(variable, index)
-                        {
-                            Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, clauseEndLine, clauseEndColumn)
-                        };
+                        clause = IndexedVariableExpression.Parse(clause, tokenizer);
                         break;
 
                     default:
@@ -666,11 +645,9 @@ namespace RATools.Parser.Expressions
                     return ParseError(tokenizer, "Minus without value", tokenStart.Line, tokenStart.Column);
 
                 case '{':
-                    tokenizer.Advance();
                     return DictionaryExpression.Parse(tokenizer);
 
                 case '[':
-                    tokenizer.Advance();
                     return ArrayExpression.Parse(tokenizer);
 
                 default:
