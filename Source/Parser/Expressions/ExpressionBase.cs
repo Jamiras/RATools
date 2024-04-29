@@ -2,7 +2,6 @@
 using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
-using System.Data.Common;
 using System.Diagnostics;
 using System.Text;
 
@@ -394,6 +393,47 @@ namespace RATools.Parser.Expressions
                         clause = ParseMathematic(tokenizer, clause, MathematicOperation.BitwiseXor, joinerLine, joinerColumn);
                         break;
 
+                    case '(':
+                        var value = clause as IValueExpression;
+                        if (value == null || clause.IsConstant)
+                            return clause;
+
+                        tokenizer.Advance();
+
+                        var parameters = new List<ExpressionBase>();
+                        ParseParameters(tokenizer, parameters);
+
+                        clause = new FunctionCallExpression(value, parameters)
+                        {
+                            Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1)
+                        };
+                        break;
+
+                    case '[':
+                        var variable = clause as VariableExpression;
+                        if (variable == null)
+                            return clause;
+
+                        tokenizer.Advance();
+
+                        var index = ExpressionBase.Parse(tokenizer);
+                        if (index.Type == ExpressionType.Error)
+                            return index;
+
+                        SkipWhitespace(tokenizer);
+                        clauseEndLine = tokenizer.Line;
+                        clauseEndColumn = tokenizer.Column;
+                        if (tokenizer.NextChar != ']')
+                            return ParseError(tokenizer, "Expecting closing bracket after index");
+                        tokenizer.Advance();
+                        SkipWhitespace(tokenizer);
+
+                        clause = new IndexedVariableExpression(variable, index)
+                        {
+                            Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, clauseEndLine, clauseEndColumn)
+                        };
+                        break;
+
                     default:
                         if (clause.Location.End.Column == 0)
                             clause.Location = new TextRange(clause.Location.Start, new TextLocation(clauseEndLine, clauseEndColumn));
@@ -412,7 +452,7 @@ namespace RATools.Parser.Expressions
             Location = new TextRange(Location.Start.Line + amount, Location.Start.Column, Location.End.Line + amount, Location.End.Column);
         }
 
-        protected static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
+        private static ExpressionBase ParseClause(PositionalTokenizer tokenizer)
         {
             var start = tokenizer.Location;
 
@@ -428,6 +468,29 @@ namespace RATools.Parser.Expressions
                     end = new TextLocation(tokenizer.Line, (tokenizer.Column > 1) ? tokenizer.Column - 1 : 1);
 
                 clause.Location = new TextRange(start, end);
+            }
+
+            return clause;
+        }
+
+        protected static ExpressionBase ParseValueClause(PositionalTokenizer tokenizer)
+        {
+            return ParseValueClause(tokenizer, OperationPriority.Assign);
+        }
+
+        private static ExpressionBase ParseValueClause(PositionalTokenizer tokenizer, OperationPriority priority)
+        {
+            var clause = ParseClause(tokenizer);
+
+            var value = clause as IValueExpression;
+            while (value != null)
+            {
+                var existingClause = clause;
+                clause = ParseClauseExtension(clause, tokenizer, priority + 1);
+                if (ReferenceEquals(clause, existingClause))
+                    break;
+
+                value = clause as IValueExpression;
             }
 
             return clause;
@@ -517,7 +580,7 @@ namespace RATools.Parser.Expressions
             {
                 case '!':
                     tokenizer.Advance();
-                    clause = ParseClause(tokenizer);
+                    clause = ParseValueClause(tokenizer, OperationPriority.Not);
                     if (clause.Type == ExpressionType.Error)
                         return clause;
 
@@ -608,7 +671,7 @@ namespace RATools.Parser.Expressions
 
                 case '[':
                     tokenizer.Advance();
-                    return ParseArray(tokenizer);
+                    return ArrayExpression.Parse(tokenizer);
 
                 default:
                     var line = tokenizer.Line;
@@ -654,34 +717,6 @@ namespace RATools.Parser.Expressions
                         var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
                         functionCall.Location = new TextRange(line, column, tokenizer.Line, tokenizer.Column - 1);
                         return functionCall;
-                    }
-
-                    if (tokenizer.NextChar == '[')
-                    {
-                        IndexedVariableExpression parent = null;
-
-                        do
-                        {
-                            tokenizer.Advance();
-
-                            var index = ExpressionBase.Parse(tokenizer);
-                            if (index.Type == ExpressionType.Error)
-                                return index;
-
-                            SkipWhitespace(tokenizer);
-                            if (tokenizer.NextChar != ']')
-                                return ParseError(tokenizer, "Expecting closing bracket after index");
-                            tokenizer.Advance();
-                            SkipWhitespace(tokenizer);
-
-                            if (parent != null)
-                                parent = new IndexedVariableExpression(parent, index);
-                            else
-                                parent = new IndexedVariableExpression(new VariableExpression(identifier.ToString(), line, column), index);
-
-                        } while (tokenizer.NextChar == '[');
-
-                        return parent;
                     }
 
                     return new VariableExpression(identifier.ToString(), line, column);
@@ -917,33 +952,6 @@ namespace RATools.Parser.Expressions
             }
 
             return new AssignmentExpression((VariableExpression)variable, value);
-        }
-
-        private static ExpressionBase ParseArray(PositionalTokenizer tokenizer)
-        {
-            SkipWhitespace(tokenizer);
-
-            var array = new ArrayExpression();
-            while (tokenizer.NextChar != ']')
-            {
-                var value = Parse(tokenizer);
-                if (value.Type == ExpressionType.Error)
-                    return value;
-
-                array.Entries.Add(value);
-
-                SkipWhitespace(tokenizer);
-                if (tokenizer.NextChar == ']')
-                    break;
-
-                if (tokenizer.NextChar != ',')
-                    return ParseError(tokenizer, "Expecting comma between entries");
-                tokenizer.Advance();
-                SkipWhitespace(tokenizer);
-            }
-
-            tokenizer.Advance();
-            return array;
         }
 
         internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)

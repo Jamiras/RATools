@@ -22,6 +22,18 @@ namespace RATools.Parser.Expressions
             Location = new Jamiras.Components.TextRange(functionName.Location.Start.Line, functionName.Location.Start.Column, 0, 0);
         }
 
+        internal FunctionCallExpression(IValueExpression source, ICollection<ExpressionBase> parameters)
+            : base(ExpressionType.FunctionCall)
+        {
+            _source = source;
+            Parameters = parameters;
+
+            var expression = (ExpressionBase)source;
+            Location = new Jamiras.Components.TextRange(expression.Location.Start.Line, expression.Location.Start.Column, 0, 0);
+        }
+
+        private readonly IValueExpression _source;
+
         /// <summary>
         /// Gets the name of the function to call.
         /// </summary>
@@ -46,7 +58,11 @@ namespace RATools.Parser.Expressions
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            FunctionName.AppendString(builder);
+            if (FunctionName != null)
+                FunctionName.AppendString(builder);
+            else
+                ((ExpressionBase)_source).AppendString(builder);
+
             builder.Append('(');
 
             if (Parameters.Count > 0)
@@ -116,16 +132,44 @@ namespace RATools.Parser.Expressions
         }
 
         private bool Evaluate(InterpreterScope scope, bool isInvoking, out ExpressionBase result)
-        { 
-            var functionDefinition = scope.GetFunction(FunctionName.Name);
-            if (functionDefinition == null)
+        {
+            FunctionDefinitionExpression functionDefinition;
+            if (FunctionName != null)
             {
-                if (scope.GetVariable(FunctionName.Name) != null)
-                    result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
-                else
-                    result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+                functionDefinition = scope.GetFunction(FunctionName.Name);
 
-                return false;
+                if (functionDefinition == null)
+                {
+                    if (scope.GetVariable(FunctionName.Name) != null)
+                        result = new UnknownVariableParseErrorExpression(FunctionName.Name + " is not a function", FunctionName);
+                    else
+                        result = new UnknownVariableParseErrorExpression("Unknown function: " + FunctionName.Name, FunctionName);
+
+                    return false;
+                }
+            }
+            else
+            {
+                result = _source.Evaluate(scope);
+                if (result is ErrorExpression)
+                    return false;
+
+                var functionReference = result as FunctionReferenceExpression;
+                if (functionReference != null)
+                    functionDefinition = scope.GetFunction(functionReference.Name);
+                else
+                    functionDefinition = result as FunctionDefinitionExpression;
+
+                if (functionDefinition == null)
+                {
+                    var sourceExpression = (ExpressionBase)_source;
+                    var funcCall = sourceExpression as FunctionCallExpression;
+                    if (funcCall != null)
+                        result = new ErrorExpression(funcCall.FunctionName.Name + " did not return a function reference", sourceExpression);
+                    else
+                        result = new ErrorExpression(sourceExpression.ToString() + " is not a function reference", sourceExpression);
+                    return false;
+                }
             }
 
             var functionParametersScope = GetParameters(functionDefinition, scope, out result);
