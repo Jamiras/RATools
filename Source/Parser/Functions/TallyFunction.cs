@@ -68,6 +68,13 @@ namespace RATools.Parser.Functions
                 if (!entry.ReplaceVariables(scope, out result))
                     return false;
 
+                var clause = result as RequirementClauseExpression;
+                if (clause != null && clause.Conditions.OfType<TalliedRequirementExpression>().Count() > 1)
+                {
+                    result = new ErrorExpression("Cannot tally subclause with multiple hit targets");
+                    return false;
+                }
+
                 var functionCall = result as FunctionCallExpression;
                 if (functionCall != null && functionCall.FunctionName.Name == "deduct")
                 {

@@ -41,8 +41,8 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("tally(03, byte(0x1234) == 56 && byte(0x2345) == 67)", "N:0xH001234=56_0xH002345=67.3.")] // tally of one item is just repeated
         [TestCase("tally(04, byte(0x1234) == 56 || byte(0x2345) == 67)", "O:0xH001234=56_0xH002345=67.4.")] // tally of one item is just repeated
         [TestCase("tally(05, byte(0x1234) == 56, byte(0x1234) == 67)", "C:0xH001234=56_0xH001234=67.5.")]
-        [TestCase("tally(07, once(byte(0x1234) == 56) || once(byte(0x1234) == 67))",
-            "O:0xH001234=56.1._C:0xH001234=67.1._0=1.7.")] // OrNext should be preserved within a tallied item
+        [TestCase("tally(07, once(byte(0x1234) == 56 || once(byte(0x1234) == 67)), once(byte(0x1234) == 78))",
+            "O:0xH001234=67.1._C:0xH001234=56.1._C:0xH001234=78.1._0=1.7.")] // OrNext should be preserved within a tallied item
         [TestCase("tally(08, byte(0x1234) == 56, byte(0x1234) == 67, byte(0x1234) == 78, byte(0x1234) == 89)",
             "C:0xH001234=56_C:0xH001234=67_C:0xH001234=78_0xH001234=89.8.")]
         [TestCase("tally(09, [byte(0x1234) == 56, byte(0x1234) == 67])",
@@ -164,6 +164,32 @@ namespace RATools.Parser.Tests.Functions
         public void TestUnsupportedFlags(string input, string unsupported)
         {
             TriggerExpressionTests.AssertParseError(input, unsupported + " not allowed in subclause");
+        }
+
+        [Test]
+        public void TestAndChain()
+        {
+            TriggerExpressionTests.AssertParseError(
+                "tally(4, once(byte(0x2345) == 99) && once(byte(0x2345) == 99))",
+                "Cannot tally subclause with multiple hit targets");
+
+            // nested once() is okay. outer once will be combined with outer repeated
+            var input = "tally(4, once(byte(0x1234) == 99 && once(byte(0x2345) == 99)))";
+            var clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);
+            TriggerExpressionTests.AssertSerialize(clause, "N:0xH002345=99.1._0xH001234=99.4.");
+
+            // nested once() is okay. inner repeated will be combined with outer repeated
+            input = "tally(4, repeated(2, byte(0x1234) == 99 && once(byte(0x2345) == 99)))";
+            clause = TriggerExpressionTests.Parse<TalliedRequirementExpression>(input);
+            TriggerExpressionTests.AssertSerialize(clause, "N:0xH002345=99.1._0xH001234=99.8.");
+        }
+
+        [Test]
+        public void TestOrChain()
+        {
+            TriggerExpressionTests.AssertParseError(
+                "tally(4, once(byte(0x2345) == 99) || once(byte(0x2345) == 99))",
+                "Cannot tally subclause with multiple hit targets");
         }
     }
 }

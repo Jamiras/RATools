@@ -356,8 +356,6 @@ namespace RATools.Parser.Tests.Internal
                   "once(word(0x001234) >= 284 && word(0x001234) <= 301)")] // OrNext will move always_false to end, which will have the HitCount, HitCount should be kept when always_false is eliminated
         [TestCase("tally(2, always_false() || word(0x1234) >= 284 && word(0x1234) <= 301)",
                   "repeated(2, word(0x001234) >= 284 && word(0x001234) <= 301)")] // always_false() inside once() is optimized out
-        [TestCase("tally(2, once(byte(0x1234) == 1) || once(byte(0x1234) == 2) || once(byte(0x1234) == 3))", // malformed: tally(3, repeated(2, A) || repeated(2, B))
-                  "tally(2, (once(once(once(byte(0x001234) == 1) || byte(0x001234) == 2) || byte(0x001234) == 3)))")]
         [TestCase("measured(byte(0x1234) == 120, when = (byte(0x2345) == 6 || byte(0x2346) == 7))", // OrNext in MeasuredIf should not be split into alts
                   "measured(byte(0x001234) == 120, when=(byte(0x002345) == 6 || byte(0x002346) == 7))")]
         public void TestOptimizeComplex(string input, string expected)
