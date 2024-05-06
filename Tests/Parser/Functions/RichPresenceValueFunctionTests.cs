@@ -89,6 +89,14 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueMaxOf()
+        {
+            var rp = Evaluate("rich_presence_value(\"Name\", " +
+                "max_of(byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8))");
+            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(0xH001234*3$0xH001235*5$0xH001236*8)\r\n"));
+        }
+
+        [Test]
         [TestCase("VALUE", "VALUE")]
         [TestCase("SECS", "SECS")]
         [TestCase("TIMESECS", "SECS")]
