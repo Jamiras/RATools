@@ -70,17 +70,12 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("prev(byte(0x1234) * 10 + 20) == 80", "d0xH001234=6")] // modifier is extracted and comparison is normalized
         [TestCase("prev(byte(0x1234) + byte(0x2345)) == 7", "A:d0xH001234=0_d0xH002345=7")] // prev is distributed
         [TestCase("prev(byte(0x1234) - byte(0x2345)) == 7", "B:d0xH002345=0_d0xH001234=7")] // prev is distributed
+        [TestCase("prev(byte(0x1234) == 56)", "d0xH001234=56")] // prev is distributed
+        [TestCase("prev(byte(0x1234) == byte(0x2345))", "d0xH001234=d0xH002345")] // prev is distributed
         public void TestPrev(string input, string expected)
         {
             var definition = Process(input);
             Assert.That(definition, Is.EqualTo(expected));
-        }
-
-        [Test]
-        public void TestPrevMalformed()
-        {
-            var parser = Parse("achievement(\"T\", \"D\", 5, prev(byte(0x1234) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 accessor: Cannot convert requirement to memory accessor"));
         }
 
         [Test]
