@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Text;
 
@@ -14,6 +15,14 @@ namespace RATools.Parser.Expressions
 
             // assert: Name is not used for IndexedVariableExpression
         }
+        private IndexedVariableExpression(IValueExpression source, ExpressionBase index)
+            : base(string.Empty)
+        {
+            _source = source;
+            Index = index;
+        }
+
+        private readonly IValueExpression _source;
 
         /// <summary>
         /// Gets the variable expression.
@@ -30,11 +39,52 @@ namespace RATools.Parser.Expressions
         /// </summary>
         internal override void AppendString(StringBuilder builder)
         {
-            Variable.AppendString(builder);
+            if (Variable != null)
+                Variable.AppendString(builder);
+            else
+                ((ExpressionBase)_source).AppendString(builder);
 
             builder.Append('[');
             Index.AppendString(builder);
             builder.Append(']');
+        }
+
+        internal static ExpressionBase Parse(ExpressionBase clause, PositionalTokenizer tokenizer)
+        {
+            if (tokenizer.NextChar != '[')
+                return clause;
+            tokenizer.Advance();
+
+            var index = ExpressionBase.Parse(tokenizer);
+            if (index.Type == ExpressionType.Error)
+                return index;
+
+            SkipWhitespace(tokenizer);
+            if (tokenizer.NextChar != ']')
+                return ParseError(tokenizer, "Expecting closing bracket after index");
+            tokenizer.Advance();
+
+            IndexedVariableExpression indexed;
+            var variable = clause as VariableExpression;
+            if (variable != null)
+            {
+                indexed = new IndexedVariableExpression(variable, index);
+            }
+            else
+            {
+                var functionCall = clause as FunctionCallExpression;
+                if (functionCall != null)
+                {
+                    indexed = new IndexedVariableExpression(functionCall, index);
+                }
+                else
+                {
+                    return new ErrorExpression("Cannot index " + clause.Type.ToLowerString(), clause);
+                }
+            }
+
+            indexed.Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1);
+            return indexed;
         }
 
         /// <summary>
@@ -70,11 +120,10 @@ namespace RATools.Parser.Expressions
 
                 default:
                     builder = new StringBuilder();
-                    builder.Append("Cannot index: ");
+                    builder.Append("Cannot index ");
+                    builder.Append(container.Type.ToLowerString());
+                    builder.Append(": ");
                     Variable.AppendString(builder);
-                    builder.Append(" (");
-                    builder.Append(container.Type);
-                    builder.Append(')');
                     return new ErrorExpression(builder.ToString(), Variable);
             }
 
@@ -148,7 +197,11 @@ namespace RATools.Parser.Expressions
                 return;
             }
 
-            container = Variable.GetValue(scope);
+            if (Variable != null)
+                container = Variable.GetValue(scope);
+            else
+                container = _source.Evaluate(scope);
+
             if (container is ErrorExpression)
                 return;
 
@@ -162,6 +215,7 @@ namespace RATools.Parser.Expressions
             var array = container as ArrayExpression;
             if (array != null)
             {
+                // array index must be an integer in the range 0..count-1
                 var intIndex = index as IntegerConstantExpression;
                 if (intIndex == null)
                     container = new ErrorExpression("Index does not evaluate to an integer constant", index);

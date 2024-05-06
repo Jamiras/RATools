@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Text;
 
@@ -36,6 +37,41 @@ namespace RATools.Parser.Expressions
             }
 
             builder.Append(']');
+        }
+
+        internal static new ExpressionBase Parse(PositionalTokenizer tokenizer)
+        {
+            if (tokenizer.NextChar != '[')
+                return null;
+            tokenizer.Advance();
+
+            SkipWhitespace(tokenizer);
+
+            var array = new ArrayExpression();
+            while (tokenizer.NextChar != ']')
+            {
+                var value = ParseValueClause(tokenizer);
+                if (value is not IValueExpression)
+                {
+                    if (value.Type == ExpressionType.Error)
+                        return value;
+                    return new ErrorExpression("Invalid array entry", value);
+                }
+
+                array.Entries.Add(value);
+
+                SkipWhitespace(tokenizer);
+                if (tokenizer.NextChar == ']')
+                    break;
+
+                if (tokenizer.NextChar != ',')
+                    return ParseError(tokenizer, "Expecting comma between entries");
+                tokenizer.Advance();
+                SkipWhitespace(tokenizer);
+            }
+
+            tokenizer.Advance();
+            return array;
         }
 
         /// <summary>

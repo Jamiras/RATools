@@ -1,5 +1,4 @@
-﻿using RATools.Data;
-using RATools.Parser.Internal;
+﻿using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
