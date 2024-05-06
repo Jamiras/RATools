@@ -266,6 +266,11 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("byte(0x1234) == 6 && repeated(5, byte(0x1234) == 6)", "byte(0x001234) == 6 && repeated(5, byte(0x001234) == 6)")] // without hitcount, cannot be merged
         [TestCase("once(byte(0x1234) == byte(0x1234)) && repeated(5, byte(0x2345) == byte(0x2345))", "repeated(5, always_true())")] // different conditions evaluate to always true, only capture higher hitcount
         [TestCase("once(byte(0x1234) == 1) && never(byte(0x2345) != 12) && never(byte(0x2345) == 0)", "once(byte(0x001234) == 1) && never(byte(0x002345) != 12)")] // never should keep the less restrictive condition
+        [TestCase("measured(byte(0x1234) == 50, when=byte(0x2345) == 1) && byte(0x2345) == 1", "measured(byte(0x001234) == 50, when=byte(0x002345) == 1)")] // non-when condition redundant with when condition
+        [TestCase("measured(byte(0x1234) == 50, when=byte(0x2345) == 1) && byte(0x2345) == 1 && byte(0x2345) == 1", "measured(byte(0x001234) == 50, when=byte(0x002345) == 1)")] // non-when condition redundant with when condition
+        [TestCase("measured(byte(0x1234) == 50, when=byte(0x2345) == 1) && byte(0x2345) == 1 && byte(0x2345) == 1", "measured(byte(0x001234) == 50, when=byte(0x002345) == 1)")] // non-when condition redundant with when condition
+        [TestCase("measured(byte(0x1234) == 50, when=byte(0x2345) < 5) && byte(0x2345) == 2", "measured(byte(0x001234) == 50, when=byte(0x002345) < 5) && byte(0x002345) == 2")] // non-when condition not redundant and must be kept
+        [TestCase("measured(byte(0x1234) == 50, when=byte(0x2345) == 2) && byte(0x2345) < 5", "measured(byte(0x001234) == 50, when=byte(0x002345) == 2)")] // non-when condition redundant with when condition
         public void TestOptimizeRemoveRedundancies(string input, string expected)
         {
             var achievement = CreateAchievement(input);

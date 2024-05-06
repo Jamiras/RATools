@@ -864,6 +864,40 @@ namespace RATools.Parser.Internal
                     }
                 }
             }
+
+            // if one requirement is "X == N" and another is "MeasuredIf X == N", they can be merged.
+            for (int i = group.Count - 1; i >= 0; i--)
+            {
+                var groupI = group[i];
+                if (groupI.Type != RequirementType.MeasuredIf)
+                    continue;
+
+                var typelessGroupI = new RequirementEx();
+                if (groupI.Requirements.Count > 1)
+                {
+                    typelessGroupI.Requirements.AddRange(groupI.Requirements);
+                    typelessGroupI.Requirements.RemoveAt(groupI.Requirements.Count - 1);
+                }
+
+                var typelessCondition = groupI.Requirements.Last().Clone();
+                typelessCondition.Type = RequirementType.None;
+                typelessGroupI.Requirements.Add(typelessCondition);
+
+                for (int j = group.Count - 1; j >= 0; j--)
+                {
+                    var groupJ = group[j];
+                    if (groupJ.Type != RequirementType.None)
+                        continue;
+
+                    RequirementEx merged = RequirementMerger.MergeRequirements(typelessGroupI, groupJ, ConditionalOperation.And);
+                    if (merged != null && merged.Requirements.Last() == typelessGroupI.Requirements.Last())
+                    {
+                        group.RemoveAt(j);
+                        if (j < i)
+                            i--;
+                    }
+                }
+            }
         }
 
         private class BitReferences
