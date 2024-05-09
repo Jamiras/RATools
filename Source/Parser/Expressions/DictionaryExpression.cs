@@ -455,8 +455,9 @@ namespace RATools.Parser.Expressions
                 switch (x.Key.Type)
                 {
                     case ExpressionType.IntegerConstant:
-                        return ((IntegerConstantExpression)x.Key).Value -
-                            ((IntegerConstantExpression)y.Key).Value;
+                        var xIntValue = ((IntegerConstantExpression)x.Key).Value;
+                        var yIntValue = ((IntegerConstantExpression)y.Key).Value;
+                        return xIntValue.CompareTo(yIntValue);
 
                     case ExpressionType.StringConstant:
                         return string.Compare(((StringConstantExpression)x.Key).Value,
