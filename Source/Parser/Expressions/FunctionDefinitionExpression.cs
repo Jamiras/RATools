@@ -473,7 +473,15 @@ namespace RATools.Parser.Expressions
                 {
                     var conditional = parameter as ConditionalExpression;
                     if (conditional != null)
+                    {
                         invalidClause = conditional.Conditions.FirstOrDefault(c => c is not RequirementExpressionBase) ?? parameter;
+                    }
+                    else
+                    {
+                        var mathematic = parameter as MathematicExpression;
+                        if (mathematic != null)
+                            invalidClause = mathematic.FindFirstSubclause<MathematicExpression>();
+                    }
 
                     // FunctionCallExpression.ReplaceVariables will call Evaluate and then
                     // replace the location of the result to the function call's location.
@@ -491,14 +499,18 @@ namespace RATools.Parser.Expressions
                     }
                 }
 
-                parseError = InvalidParameter(parameter, scope, name, ExpressionType.Requirement);
+                var error = InvalidParameter(parameter, scope, name, ExpressionType.Requirement);
 
-                if (invalidClause != parameter)
+                // FunctionCall evaluation may return the same expression as parameter, but not the same instance.
+                // Look for a location match instead of calling the more expensive equality check.
+                if (invalidClause.Type != parameter.Type ||
+                    invalidClause.Location.Start != parameter.Location.Start ||
+                    invalidClause.Location.End != parameter.Location.End)
                 {
-                    ((ErrorExpression)parseError).InnerError = new ErrorExpression(
-                        String.Format("{0} is not a {1}", invalidClause.Type.ToLowerString(), ExpressionType.Requirement.ToLowerString()),
-                        invalidClause);
+                    error.InnerError = new ConversionErrorExpression(invalidClause, ExpressionType.Requirement);
                 }
+
+                parseError = error;
                 return null;
             }
 

@@ -312,6 +312,10 @@ namespace RATools.Parser.Expressions
                     return Combine(Left, Operation, newRight);
                 }
             }
+            else if (right is MathematicExpression)
+            {
+                return new MathematicExpression(this, operation, right);
+            }
 
             return null;
         }

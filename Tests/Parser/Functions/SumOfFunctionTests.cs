@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Functions;
+using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -30,6 +31,9 @@ namespace RATools.Parser.Tests.Functions
                 var builder = new AchievementBuilder(achievement);
                 return builder.RequirementsDebugString;
             }
+
+            if (parser.Error.InnerError == null)
+                return parser.Error.Message;
 
             return parser.Error.InnermostError.Message;
         }
@@ -89,6 +93,13 @@ namespace RATools.Parser.Tests.Functions
         {
             Assert.That(Evaluate("sum_of([1, 2, 3], (a) { return b })"),
                 Is.EqualTo("Unknown variable: b"));
+        }
+
+        [Test]
+        public void TestSumOfUnrepresentableLogic()
+        {
+            Assert.That(Evaluate("sum_of([1, 2, 3], (a) => bit1(0x1234+a) * word(0x2345+a*2) / 5)"),
+                Is.EqualTo("Cannot convert mathematic expression to requirement"));
         }
     }
 }

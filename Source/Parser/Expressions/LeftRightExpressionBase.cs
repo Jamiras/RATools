@@ -73,5 +73,38 @@ namespace RATools.Parser.Expressions
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
         }
+
+        /// <summary>
+        /// Identifies the first clause (in left-to-right order) of the specified type.
+        /// </summary>
+        internal T FindFirstSubclause<T>()
+            where T : class
+        {
+            var leftRight = Left as LeftRightExpressionBase;
+            if (leftRight != null)
+            {
+                var found = leftRight.FindFirstSubclause<T>();
+                if (found != null)
+                    return found;
+            }
+
+            var left = Left as T;
+            if (left != null)
+                return left;
+
+            leftRight = Right as LeftRightExpressionBase;
+            if (leftRight != null)
+            {
+                var found = leftRight.FindFirstSubclause<T>();
+                if (found != null)
+                    return found;
+            }
+
+            var right = Right as T;
+            if (right != null)
+                return right;
+
+            return null;
+        }
     }
 }
