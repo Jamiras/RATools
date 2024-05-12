@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -420,6 +421,47 @@ namespace RATools.Parser.Tests.Expressions
             value = scope.GetVariable("v");
             Assert.That(value, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void TestSignedUnsignedKeys()
+        {
+            // Values in this dictionary are both near int.MinValue and near int.MaxValue. Values more
+            // than int.MaxValue distance from each other will overflow into the sign bit and get sorted
+            // incorrectly (see issue #487).
+            var dictionary = new DictionaryExpression();
+            dictionary.Add(new IntegerConstantExpression(0x6b450446), new StringConstantExpression("0x6b450446"));
+            dictionary.Add(new IntegerConstantExpression(0x49e39403), new StringConstantExpression("0x49e39403"));
+            dictionary.Add(new IntegerConstantExpression(0x57c4ea83), new StringConstantExpression("0x57c4ea83"));
+            dictionary.Add(new IntegerConstantExpression(0x69e63d11), new StringConstantExpression("0x69e63d11"));
+            dictionary.Add(new IntegerConstantExpression(0x75a03c4c), new StringConstantExpression("0x75a03c4c"));
+            dictionary.Add(new IntegerConstantExpression(0x1ac0a35e), new StringConstantExpression("0x1ac0a35e"));
+            dictionary.Add(new IntegerConstantExpression(0x131e5f8b), new StringConstantExpression("0x131e5f8b"));
+            dictionary.Add(new UnsignedIntegerConstantExpression(0xcaac63ee), new StringConstantExpression("0xcaac63ee"));
+            dictionary.Add(new UnsignedIntegerConstantExpression(0xf991002d), new StringConstantExpression("0xf991002d"));
+            dictionary.Add(new IntegerConstantExpression(0x417b1aa8), new StringConstantExpression("0x417b1aa8"));
+            dictionary.Add(new IntegerConstantExpression(0x2d1f51f8), new StringConstantExpression("0x2d1f51f8"));
+            dictionary.Add(new IntegerConstantExpression(-10), new StringConstantExpression("-10"));
+
+            Action<ExpressionBase, string> assertValue = (key, expected) =>
+            {
+                var value = dictionary.GetEntry(key);
+                Assert.That(value, Is.InstanceOf<StringConstantExpression>());
+                Assert.That(((StringConstantExpression)value).Value, Is.EqualTo(expected));
+            };
+
+            assertValue(new IntegerConstantExpression(0x6b450446), "0x6b450446");
+            assertValue(new IntegerConstantExpression(0x49e39403), "0x49e39403");
+            assertValue(new IntegerConstantExpression(0x57c4ea83), "0x57c4ea83");
+            assertValue(new IntegerConstantExpression(0x69e63d11), "0x69e63d11");
+            assertValue(new IntegerConstantExpression(0x75a03c4c), "0x75a03c4c");
+            assertValue(new IntegerConstantExpression(0x1ac0a35e), "0x1ac0a35e");
+            assertValue(new IntegerConstantExpression(0x131e5f8b), "0x131e5f8b");
+            assertValue(new UnsignedIntegerConstantExpression(0xcaac63ee), "0xcaac63ee");
+            assertValue(new UnsignedIntegerConstantExpression(0xf991002d), "0xf991002d");
+            assertValue(new IntegerConstantExpression(0x417b1aa8), "0x417b1aa8");
+            assertValue(new IntegerConstantExpression(0x2d1f51f8), "0x2d1f51f8");
+            assertValue(new IntegerConstantExpression(-10), "-10");
         }
     }
 }

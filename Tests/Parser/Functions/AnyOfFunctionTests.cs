@@ -101,7 +101,6 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestScopedVariable()
         {
-            // any_of predicate needs to capture id from parent scope
             var script = "function ItemInInventory(id) => any_of(range(0x1200, 0x1208, step=2), addr => word(addr) == id)\n" +
                 "achievement(\"title\", \"desc\", 5, ItemInInventory(17))";
             var tokenizer = Tokenizer.CreateTokenizer(script);
@@ -131,6 +130,23 @@ namespace RATools.Parser.Tests.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.RequirementsDebugString, Is.EqualTo(
                 "byte(0x000001) == 17 || byte(0x000002) == 17 || byte(0x000003) == 17"));
+        }
+
+        [Test]
+        public void TestPredicateWithModifier()
+        {
+            var script = "function p(n) => byte(0x1234) == prev(byte(0x1234)) * n\n" +
+                "achievement(\"title\", \"desc\", 5, any_of([1, 2, 3], p))";
+            var tokenizer = Tokenizer.CreateTokenizer(script);
+            var parser = new AchievementScriptInterpreter();
+
+            if (!parser.Run(tokenizer))
+                Assert.Fail(parser.ErrorMessage);
+
+            var achievement = parser.Achievements.First();
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.RequirementsDebugString, Is.EqualTo(
+                "byte(0x001234) == prev(byte(0x001234)) || ((prev(byte(0x001234)) * 2) == byte(0x001234)) || ((prev(byte(0x001234)) * 3) == byte(0x001234))"));
         }
 
         [Test]
