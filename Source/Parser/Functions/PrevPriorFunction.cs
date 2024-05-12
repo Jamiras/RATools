@@ -45,18 +45,25 @@ namespace RATools.Parser.Functions
                     // convert "prev(a + b)" => "prev(a) + prev(b)"
                     return ReplaceVariablesMathematic((MathematicExpression)parameter, scope, out result);
 
+                case ExpressionType.Requirement:
+                    // convert "prev(a == b)" => "prev(a) == prev(b)"
+                    var condition = parameter as RequirementConditionExpression;
+                    if (condition != null)
+                        return DistributeFlag(condition, scope, out result);
+                    break;
+
                 case ExpressionType.MemoryAccessor:
                     var memoryAccessor = parameter as MemoryAccessorExpression;
                     if (memoryAccessor != null)
-                        return WrapMemoryAccessor(memoryAccessor, scope, out result);
+                        return WrapMemoryAccessor(memoryAccessor, out result);
 
                     var modifiedMemoryAccessor = parameter as ModifiedMemoryAccessorExpression;
                     if (modifiedMemoryAccessor != null)
-                        return WrapModifiedMemoryAccessor(modifiedMemoryAccessor, scope, out result);
+                        return WrapModifiedMemoryAccessor(modifiedMemoryAccessor, out result);
 
                     var memoryValue = parameter as MemoryValueExpression;
                     if (memoryValue != null)
-                        return WrapMemoryValue(memoryValue, scope, out result);
+                        return WrapMemoryValue(memoryValue, out result);
 
                     break;
             }
@@ -68,6 +75,7 @@ namespace RATools.Parser.Functions
         private bool ReplaceVariablesMathematic(MathematicExpression mathematic, InterpreterScope scope, out ExpressionBase result)
         {
             // assert: left/right already expanded by calling function
+            // recursive ReplaceVariables calls will apply flag to memoryaccessors
             var left = mathematic.Left;
             if (left is not LiteralConstantExpressionBase)
             {
@@ -85,10 +93,36 @@ namespace RATools.Parser.Functions
             }
 
             result = new MathematicExpression(left, mathematic.Operation, right);
+            mathematic.CopyLocation(result);
             return true;
         }
 
-        private bool WrapMemoryAccessor(MemoryAccessorExpression memoryAccessor, InterpreterScope scope, out ExpressionBase result)
+        private bool DistributeFlag(RequirementConditionExpression condition, InterpreterScope scope, out ExpressionBase result)
+        {
+            // assert: left/right already expanded by calling function
+            // recursive ReplaceVariables calls will apply flag to memoryaccessors
+            var left = condition.Left;
+            if (left is not LiteralConstantExpressionBase)
+            {
+                if (!ReplaceVariables(left, scope, out result))
+                    return false;
+                left = result;
+            }
+
+            var right = condition.Right;
+            if (right is not LiteralConstantExpressionBase)
+            {
+                if (!ReplaceVariables(right, scope, out result))
+                    return false;
+                right = result;
+            }
+
+            result = new RequirementConditionExpression { Left = left, Comparison = condition.Comparison, Right = right };
+            condition.CopyLocation(result);
+            return true;
+        }
+
+        private bool WrapMemoryAccessor(MemoryAccessorExpression memoryAccessor, out ExpressionBase result)
         {
             if (_fieldType == FieldType.BinaryCodedDecimal)
             {
@@ -126,9 +160,9 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        private bool WrapModifiedMemoryAccessor(ModifiedMemoryAccessorExpression memoryAccessor, InterpreterScope scope, out ExpressionBase result)
+        private bool WrapModifiedMemoryAccessor(ModifiedMemoryAccessorExpression memoryAccessor, out ExpressionBase result)
         {
-            if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, scope, out result))
+            if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, out result))
                 return false;
 
             var clone = memoryAccessor.Clone();
@@ -140,12 +174,12 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        private bool WrapMemoryValue(MemoryValueExpression memoryValue, InterpreterScope scope, out ExpressionBase result)
+        private bool WrapMemoryValue(MemoryValueExpression memoryValue, out ExpressionBase result)
         {
             var clone = memoryValue.Clone();
             foreach (var memoryAccessor in clone.MemoryAccessors)
             {
-                if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, scope, out result))
+                if (!WrapMemoryAccessor(memoryAccessor.MemoryAccessor, out result))
                     return false;
 
                 memoryAccessor.MemoryAccessor = (MemoryAccessorExpression)result;

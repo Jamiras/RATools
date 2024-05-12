@@ -856,9 +856,8 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestErrorInFunctionParameterLocation()
         {
-            var parser = Parse("tens = word(0x1234) == 3\n" +
-                               "achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:45 accessor: Cannot convert requirement to memory accessor"));
+            var parser = Parse("achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:45 Unknown variable: tens"));
         }
 
         [TestCase("word(0x1234) * 10 == 10000", true, "word(0x001234) == 1000")]
