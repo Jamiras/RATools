@@ -79,7 +79,7 @@ namespace RATools.Data
         public static readonly SoftwareVersion _1_2 = new SoftwareVersion(1, 2);
 
         /// <summary>
-        /// 1.3 - TBD
+        /// 1.3 - 17 Apr 2024
         ///  Sizes: FloatBE
         ///  ValueFormats: Tens, Hundreds, Thousands, Fixed1-3
         ///  Other: AchievementTypes

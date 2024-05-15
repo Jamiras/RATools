@@ -72,6 +72,11 @@ namespace RATools.Parser
         {
             private Dictionary<int, Parameter> _parameters;
 
+            internal int ParameterCount
+            {
+                get { return _parameters != null ? _parameters.Count : 0; }
+            }
+
             /// <summary>
             /// The raw string with placeholders.
             /// </summary>

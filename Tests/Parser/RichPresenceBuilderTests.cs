@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using System.Collections.Generic;
 
 namespace RATools.Parser.Tests
@@ -16,20 +17,43 @@ namespace RATools.Parser.Tests
 
             return expr;
         }
-/*
+
+        private static void AddMacroReference(RichPresenceBuilder builder,
+            RichPresenceBuilder.ConditionalDisplayString displayString, string macroName, ValueFormat format)
+        {
+            var macroExpression = new RichPresenceValueExpression(new StringConstantExpression(macroName), null) { Format = format };
+            macroExpression.Attach(builder);
+
+            displayString.AddParameter(displayString.ParameterCount, macroExpression, null);
+        }
+
+        private static void AddLookupReference(RichPresenceBuilder builder,
+            RichPresenceBuilder.ConditionalDisplayString displayString, string macroName,
+            DictionaryExpression values, string fallbackValue = "")
+        {
+            var macroExpression = new RichPresenceLookupExpression(new StringConstantExpression(macroName), null)
+            {
+                Items = values,
+                Fallback = new StringConstantExpression(fallbackValue),
+            };
+            macroExpression.Attach(builder);
+
+            displayString.AddParameter(displayString.ParameterCount, macroExpression, null);
+        }
+
         [Test]
         public void TestConditionDisplayString()
         {
             var builder = new RichPresenceBuilder();
-            builder.AddConditionalDisplayString("0xH1234=1", "One");
-            builder.AddConditionalDisplayString("0xH1234=2", "Two");
-            builder.DisplayString = "Something Else";
+            builder.AddDisplayString(Trigger.Deserialize("0xH1234=1"), new StringConstantExpression("One"));
+            builder.AddDisplayString(Trigger.Deserialize("0xH1234=2"), new StringConstantExpression("Two"));
+            builder.AddDisplayString(null, new StringConstantExpression("Something Else"));
 
             var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Display:\n" +
-                "?0xH1234=1?One\n" +
-                "?0xH1234=2?Two\n" +
+                "?0xH001234=1?One\n" +
+                "?0xH001234=2?Two\n" +
                 "Something Else\n"
             ));
         }
@@ -39,16 +63,16 @@ namespace RATools.Parser.Tests
         {
             // explicitly initialize out of order
             var builder = new RichPresenceBuilder();
-            builder.AddValueField(null, "Val", ValueFormat.Value);
-            builder.AddValueField(null, "Score", ValueFormat.Score);
-            builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@Val(0xH1234) @Score(0xH2345)"));
+            AddMacroReference(builder, displayString, "Val", ValueFormat.Value);
+            AddMacroReference(builder, displayString, "Score", ValueFormat.Score);
 
             Assert.That(builder.Serialize(new SerializationContext()).Replace("\r\n", "\n"), Is.EqualTo(
-                "Format:Val\n" +
-                "FormatType=VALUE\n" +
-                "\n" +
                 "Format:Score\n" +
                 "FormatType=SCORE\n" +
+                "\n" +
+                "Format:Val\n" +
+                "FormatType=VALUE\n" +
                 "\n" +
                 "Display:\n" +
                 "@Val(0xH1234) @Score(0xH2345)\n"
@@ -59,11 +83,11 @@ namespace RATools.Parser.Tests
         public void TestValueFieldsBuiltIn()
         {
             var builder = new RichPresenceBuilder();
-            builder.AddValueField(null, "Val", ValueFormat.Value);
-            builder.AddValueField(null, "Score", ValueFormat.Score);
-            builder.DisplayString = "@Val(0xH1234) @Score(0xH2345)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@Val(0xH1234) @Score(0xH2345)"));
+            AddMacroReference(builder, displayString, "Val", ValueFormat.Value);
+            AddMacroReference(builder, displayString, "Score", ValueFormat.Score);
 
-            var serializationContext = new SerializationContext { MinimumVersion = Data.Version._1_0 };
+            var serializationContext = new SerializationContext { MinimumVersion = Version._1_0 };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Format:Val\n" +
                 "FormatType=VALUE\n" +
@@ -85,8 +109,8 @@ namespace RATools.Parser.Tests
             dict.Add(new IntegerConstantExpression(2), new StringConstantExpression("Two"));
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "L", dict, new StringConstantExpression("")), Is.Null);
-            builder.DisplayString = "@L(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@L(0xH1234)"));
+            AddLookupReference(builder, displayString, "L", dict);
 
             var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
@@ -102,7 +126,6 @@ namespace RATools.Parser.Tests
             ));
         }
 
-
         [Test]
         public void TestLookupFieldWithFallbackValue()
         {
@@ -113,9 +136,8 @@ namespace RATools.Parser.Tests
             };
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "YesNo", 
-                CreateDictionaryExpression(dict), new StringConstantExpression("?")), Is.Null);
-            builder.DisplayString = "@YesNo(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@YesNo(0xH1234)"));
+            AddLookupReference(builder, displayString, "YesNo", CreateDictionaryExpression(dict), "?");
 
             var serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
@@ -142,9 +164,8 @@ namespace RATools.Parser.Tests
             };
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict), 
-                new StringConstantExpression("")), Is.Null);
-            builder.DisplayString = "@LCF(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@LCF(0xH1234)"));
+            AddLookupReference(builder, displayString, "LCF", CreateDictionaryExpression(dict));
 
             // 4 of 5 items are unique - don't collapse
             var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
@@ -165,8 +186,11 @@ namespace RATools.Parser.Tests
             dict[7] = "Seven";
             dict[8] = "Two";
             dict[9] = "Three";
-            Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
-                new StringConstantExpression("")), Is.Null);
+
+            builder = new RichPresenceBuilder();
+            displayString = builder.AddDisplayString(null, new StringConstantExpression("@LCF(0xH1234)"));
+            AddLookupReference(builder, displayString, "LCF", CreateDictionaryExpression(dict));
+
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
@@ -185,8 +209,11 @@ namespace RATools.Parser.Tests
 
             // 4 of 9 items are unique - collapse
             dict[7] = "Two";
-            Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
-                new StringConstantExpression("")), Is.Null);
+
+            builder = new RichPresenceBuilder();
+            displayString = builder.AddDisplayString(null, new StringConstantExpression("@LCF(0xH1234)"));
+            AddLookupReference(builder, displayString, "LCF", CreateDictionaryExpression(dict));
+
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
@@ -202,8 +229,11 @@ namespace RATools.Parser.Tests
             dict[7] = "Seven";
             dict[10] = "Two";
             dict[11] = "Eleven";
-            Assert.That(builder.AddLookupField(null, "LCF", CreateDictionaryExpression(dict),
-                new StringConstantExpression("")), Is.Null);
+
+            builder = new RichPresenceBuilder();
+            displayString = builder.AddDisplayString(null, new StringConstantExpression("@LCF(0xH1234)"));
+            AddLookupReference(builder, displayString, "LCF", CreateDictionaryExpression(dict));
+
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:LCF\n" +
                 "1=One\n" +
@@ -232,9 +262,8 @@ namespace RATools.Parser.Tests
             };
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "OddOrEven", CreateDictionaryExpression(dict),
-                new StringConstantExpression("")), Is.Null);
-            builder.DisplayString = "@OddOrEven(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@OddOrEven(0xH1234)"));
+            AddLookupReference(builder, displayString, "OddOrEven", CreateDictionaryExpression(dict));
 
             var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
@@ -274,15 +303,26 @@ namespace RATools.Parser.Tests
             };
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "T", CreateDictionaryExpression(dict),
-                new StringConstantExpression("")), Is.Null);
-            builder.DisplayString = "@T(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@T(0xH1234)"));
+            AddLookupReference(builder, displayString, "T", CreateDictionaryExpression(dict));
 
-            // 4 of 5 items are unique - don't collapse
             var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
                 "Lookup:T\n" +
                 "1-5=Test\n" +
+                "\n" +
+                "Display:\n" +
+                "@T(0xH1234)\n"
+            ));
+
+            serializationContext = new SerializationContext { MinimumVersion = Version.MinimumVersion };
+            Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
+                "Lookup:T\n" +
+                "1=Test\n" +
+                "2=Test\n" +
+                "3=Test\n" +
+                "4=Test\n" +
+                "5=Test\n" +
                 "\n" +
                 "Display:\n" +
                 "@T(0xH1234)\n"
@@ -303,9 +343,8 @@ namespace RATools.Parser.Tests
             };
 
             var builder = new RichPresenceBuilder();
-            Assert.That(builder.AddLookupField(null, "OddOrEven", CreateDictionaryExpression(dict),
-                new StringConstantExpression("Even")), Is.Null);
-            builder.DisplayString = "@OddOrEven(0xH1234)";
+            var displayString = builder.AddDisplayString(null, new StringConstantExpression("@OddOrEven(0xH1234)"));
+            AddLookupReference(builder, displayString, "OddOrEven", CreateDictionaryExpression(dict), "Even");
 
             var serializationContext = new SerializationContext { MinimumVersion = Version._0_79 };
             Assert.That(builder.Serialize(serializationContext).Replace("\r\n", "\n"), Is.EqualTo(
@@ -329,6 +368,5 @@ namespace RATools.Parser.Tests
                 "@OddOrEven(0xH1234)\n"
             ));
         }
-*/
     }
 }

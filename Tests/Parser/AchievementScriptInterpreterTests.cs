@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
@@ -704,6 +705,40 @@ namespace RATools.Parser.Tests
             var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345), format=\"VALUE\"))\n" +
                                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234), format=\"FRAMES\"))", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("1:68 Multiple rich_presence_value calls with the same name must have the same format"));
+        }
+
+        [Test]
+        public void TestRichPresenceValueFloatModifier()
+        {
+            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*1.5) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceValueFloatModifierLocale()
+        {
+            using (var cultureOverride = new CultureOverride("fr-FR"))
+            {
+                var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
+                Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*1.5) here\r\n"));
+            }
+        }
+
+        [Test]
+        public void TestRichPresenceValueFloatModifierWithPointer()
+        {
+            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_M:0xH0002*f1.5) here\r\n"));
+        }
+
+        [Test]
+        public void TestRichPresenceValueFloatModifierLocaleWithPointer()
+        {
+            using (var cultureOverride = new CultureOverride("fr-FR"))
+            {
+                var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
+                Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_M:0xH0002*f1.5) here\r\n"));
+            }
         }
 
         [Test]
