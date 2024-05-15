@@ -82,43 +82,6 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Replaces the variables in the expression with values from <paramref name="scope"/>.
-        /// </summary>
-        /// <param name="scope">The scope object containing variable values.</param>
-        /// <param name="result">[out] The new expression containing the replaced variables.</param>
-        /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
-        public override bool ReplaceVariables(InterpreterScope scope, out ExpressionBase result)
-        {
-            // FunctionDefinition.ReplaceVariables is called when evaluating a function for an assignment.
-            // For user functions (see UserFunctionDefinition.ReplaceVariables) - it will just evaluate the
-            // function call and return the result. Several internal functions have very special Evaluate
-            // handling that should not be executed when defining variables. Those functions rely on this
-            // behavior to just evaluate the parameters without calling Evaluate. There are some built-in
-            // functions that should call Evaluate when ReplaceVariables is called. They will override
-            // ReplaceVariables to do that.
-            var parameters = new ExpressionBase[Parameters.Count];
-            int i = 0;
-
-            foreach (var parameterName in Parameters)
-            {
-                // do a direct lookup here. calling GetParameter will discard the VariableReference
-                // and we want to preserve those for now.
-                var parameter = scope.GetVariable(parameterName.Name);
-                if (parameter == null)
-                {
-                    result = new ErrorExpression("No value provided for " + parameterName.Name + " parameter", parameterName);
-                    return false;
-                }
-
-                parameters[i++] = parameter;
-            }
-
-            result = new FunctionCallExpression(Name.Name, parameters);
-            CopyLocation(result);
-            return true;
-        }
-
-        /// <summary>
         /// Gets the return value from calling a function.
         /// </summary>
         /// <param name="scope">The scope object containing variable values and function parameters.</param>

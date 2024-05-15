@@ -222,6 +222,37 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        [TestCase("function func(i, j = a => a * 2) { k = j(i) }")]
+        [TestCase("function func(i, j = (a) => a * 2) { k = j(i) }")]
+        [TestCase("function func(i, j = (a) { return a * 2 } ) { k = j(i) }")]
+        public void TestParseDefaultParameterAnonymousFunction(string input)
+        {
+            var expr = Parse(input);
+            Assert.That(expr.Name.Name, Is.EqualTo("func"));
+            Assert.That(expr.Parameters.Count, Is.EqualTo(2));
+            Assert.That(expr.Parameters.ElementAt(0).Name, Is.EqualTo("i"));
+            Assert.That(expr.Parameters.ElementAt(1).Name, Is.EqualTo("j"));
+            Assert.That(expr.DefaultParameters.ContainsKey("j"));
+            Assert.That(expr.DefaultParameters["j"], Is.InstanceOf<FunctionDefinitionExpression>());
+            Assert.That(expr.Expressions.Count, Is.EqualTo(1));
+
+            var scope = new InterpreterScope();
+            scope.DefineVariable(new VariableDefinitionExpression("k"), new IntegerConstantExpression(0));
+            scope.AddFunction(expr);
+
+            ExpressionBase result;
+            var funcCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(6) });
+            var parameterScope = funcCall.GetParameters(expr, scope, out result);
+            Assert.That(result, Is.Null);
+
+            Assert.That(funcCall.Invoke(parameterScope, out result), Is.True);
+
+            result = scope.GetVariable("k");
+            Assert.That(result, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)result).Value, Is.EqualTo(12));
+        }
+
+        [Test]
         public void TestParseDefaultParameterNonConstant()
         {
             Parse("function func(i, j = z + 2) { k = i + j }",
