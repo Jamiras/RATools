@@ -173,7 +173,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // single explicit OrNext should be joined to any other conditions via AndNext
                     joinBehavior = RequirementType.AndNext;
                 }
-                else
+                else if (context.MinimumVersion < RATools.Data.Version._0_78)
                 {
                     // no explicit OrNexts. if building an achievement, put the ORs into alts
                     var achievementContext = context as AchievementBuilderContext;
@@ -696,7 +696,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null)
                 return null;
 
-            var achievementContext = new AchievementBuilderContext();
+            var achievementContext = new AchievementBuilderContext() { MinimumVersion = subclauseContext.MinimumVersion };
             ErrorExpression error;
 
             if (Operation == ConditionalOperation.Or && NeedAltsForOr(_conditions))
