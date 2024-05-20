@@ -246,6 +246,7 @@ namespace RATools
                     localAchievements.Achievements.Count(), localAchievements.Leaderboards.Count(), interpreter.GameId);
             }
 
+            var nextLocalId = AssetBase.FirstLocalId;
             var existingAchievements = new List<Achievement>(localAchievements.Achievements);
             foreach (var achievement in interpreter.Achievements)
             {
@@ -255,6 +256,10 @@ namespace RATools
                     existingAchievements.Remove(existingAchievement);
                     achievement.Id = existingAchievement.Id;
                 }
+
+                if (achievement.Id == 0)
+                    achievement.Id = nextLocalId++;
+
                 localAchievements.Replace(existingAchievement, achievement);
             }
 
