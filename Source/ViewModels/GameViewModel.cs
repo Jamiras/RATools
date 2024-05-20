@@ -581,8 +581,6 @@ namespace RATools.ViewModels
             private set { SetValue(LocalAchievementPointsProperty, value); }
         }
 
-        private static DateTime UnixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
         public void AssociateRACacheDirectory(string raCacheDirectory)
         {
             RACacheDirectory = raCacheDirectory;
@@ -631,109 +629,38 @@ namespace RATools.ViewModels
             _publishedRichPresence = null;
 
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
-            using (var stream = _fileSystemService.OpenFile(fileName, OpenFileMode.Read))
+            var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
+
+            var coreCount = 0;
+            var corePoints = 0;
+            var unofficialCount = 0;
+            var unofficialPoints = 0;
+            foreach (var achievement in publishedAssets.Achievements)
             {
-                if (stream == null)
-                    return;
-
-                var publishedData = new JsonObject(stream);
-                Title = publishedData.GetField("Title").StringValue;
-
-                var publishedAchievements = publishedData.GetField("Achievements");
-                var coreCount = 0;
-                var corePoints = 0;
-                var unofficialCount = 0;
-                var unofficialPoints = 0;
-                if (publishedAchievements.Type == JsonFieldType.ObjectArray)
+                if (achievement.Category == 3)
                 {
-                    foreach (var publishedAchievement in publishedAchievements.ObjectArrayValue)
-                    {
-                        var builder = new AchievementBuilder();
-                        builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
-                        builder.Title = publishedAchievement.GetField("Title").StringValue;
-                        builder.Description = publishedAchievement.GetField("Description").StringValue;
-                        builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
-                        builder.BadgeName = publishedAchievement.GetField("BadgeName").StringValue;
-                        builder.ParseRequirements(Tokenizer.CreateTokenizer(publishedAchievement.GetField("MemAddr").StringValue));
-                        builder.Category = publishedAchievement.GetField("Flags").IntegerValue.GetValueOrDefault();
-
-                        var typeField = publishedAchievement.GetField("Type");
-                        if (!String.IsNullOrEmpty(typeField.StringValue))
-                            builder.Type = Achievement.ParseType(typeField.StringValue);
-
-                        var builtAchievement = builder.ToAchievement();
-                        builtAchievement.Published = UnixEpoch.AddSeconds(publishedAchievement.GetField("Created").IntegerValue.GetValueOrDefault());
-                        builtAchievement.LastModified = UnixEpoch.AddSeconds(publishedAchievement.GetField("Modified").IntegerValue.GetValueOrDefault());
-
-                        if (builtAchievement.Category == 5)
-                        {
-                            _publishedAchievements.Add(builtAchievement);
-                            unofficialCount++;
-                            unofficialPoints += builtAchievement.Points;
-                        }
-                        else if (builtAchievement.Category == 3)
-                        {
-                            _publishedAchievements.Add(builtAchievement);
-                            coreCount++;
-                            corePoints += builtAchievement.Points;
-                        }
-                    }
+                    coreCount++;
+                    corePoints += achievement.Points;
                 }
-
-                var publishedLeaderboards = publishedData.GetField("Leaderboards");
-                if (publishedLeaderboards.Type == JsonFieldType.ObjectArray)
+                else
                 {
-                    foreach (var publishedLeaderboard in publishedLeaderboards.ObjectArrayValue)
-                    {
-                        var leaderboard = new Leaderboard();
-                        leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
-                        leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
-                        leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
-                        leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
-                        leaderboard.LowerIsBetter = publishedLeaderboard.GetField("LowerIsBetter").BooleanValue;
-
-                        var mem = publishedLeaderboard.GetField("Mem").StringValue;
-                        var tokenizer = Tokenizer.CreateTokenizer(mem);
-                        while (tokenizer.NextChar != '\0')
-                        {
-                            var part = tokenizer.ReadTo("::");
-                            if (part.StartsWith("STA:"))
-                                leaderboard.Start = Trigger.Deserialize(part.Substring(4));
-                            else if (part.StartsWith("CAN:"))
-                                leaderboard.Cancel = Trigger.Deserialize(part.Substring(4));
-                            else if (part.StartsWith("SUB:"))
-                                leaderboard.Submit = Trigger.Deserialize(part.Substring(4));
-                            else if (part.StartsWith("VAL:"))
-                                leaderboard.Value = Value.Deserialize(part.Substring(4));
-
-                            tokenizer.Advance(2);
-                        }
-
-                        if (leaderboard.Start == null)
-                            leaderboard.Start = new Trigger();
-                        if (leaderboard.Cancel == null)
-                            leaderboard.Cancel = new Trigger();
-                        if (leaderboard.Submit == null)
-                            leaderboard.Submit = new Trigger();
-                        if (leaderboard.Value == null)
-                            leaderboard.Value = new Value();
-
-                        _publishedLeaderboards.Add(leaderboard);
-                    }
-
-                    var publishedRichPresence = publishedData.GetField("RichPresencePatch");
-                    if (publishedRichPresence.Type == JsonFieldType.String)
-                        _publishedRichPresence = new RichPresence { Script = publishedRichPresence.StringValue };
+                    unofficialCount++;
+                    unofficialPoints += achievement.Points;
                 }
-
-                CoreAchievementCount = coreCount;
-                CoreAchievementPoints = corePoints;
-                UnofficialAchievementCount = unofficialCount;
-                UnofficialAchievementPoints = unofficialPoints;
-
-                _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
-                _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
             }
+
+            CoreAchievementCount = coreCount;
+            CoreAchievementPoints = corePoints;
+            UnofficialAchievementCount = unofficialCount;
+            UnofficialAchievementPoints = unofficialPoints;
+
+            _publishedAchievements.AddRange(publishedAssets.Achievements);
+            _publishedLeaderboards.AddRange(publishedAssets.Leaderboards);
+            _publishedRichPresence = publishedAssets.RichPresence;
+            Title = publishedAssets.Title;
+
+            _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
+            _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
         }
 
         private void MergeAchievements(List<ViewerViewModelBase> editors, IEnumerable<AssetBase> assets,

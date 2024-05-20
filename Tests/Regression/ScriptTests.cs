@@ -263,7 +263,7 @@ namespace RATools.Tests.Regression
 
             Stream IFileSystemService.OpenFile(string path, OpenFileMode mode)
             {
-                throw new NotImplementedException();
+                return null;
             }
 
             bool IFileSystemService.FileExists(string path)

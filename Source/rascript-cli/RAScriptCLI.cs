@@ -236,9 +236,18 @@ namespace RATools
                 return ReturnCode.EvaluationError;
             }
 
+            var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
+            var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
+
+            if (_verbose && File.Exists(publishedAssetsFilename))
+            {
+                OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}.json",
+                    publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
+            }
+
             var outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-User.txt", interpreter.GameId));
             var localAchievements = new LocalAssets(outputFileName, _fileSystemService);
-            localAchievements.Title = interpreter.GameTitle ?? Path.GetFileNameWithoutExtension(_inputFileName);
+            localAchievements.Title = interpreter.GameTitle ?? publishedAssets.Title ?? Path.GetFileNameWithoutExtension(_inputFileName);
 
             if (_verbose)
             {
@@ -255,6 +264,12 @@ namespace RATools
                 {
                     existingAchievements.Remove(existingAchievement);
                     achievement.Id = existingAchievement.Id;
+                }
+                else if (achievement.Id == 0)
+                {
+                    existingAchievement = Achievement.FindMergeAchievement(publishedAssets.Achievements, achievement);
+                    if (existingAchievement != null)
+                        achievement.Id = existingAchievement.Id;
                 }
 
                 if (achievement.Id == 0)
