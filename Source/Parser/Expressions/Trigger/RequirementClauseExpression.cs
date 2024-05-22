@@ -960,6 +960,9 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null || _conditions.Count == 0)
                 return this;
 
+            if (_conditions.Count == 1)
+                return _conditions[0].Optimize(context);
+
             var achievementContext = context as AchievementBuilderContext;
             if (achievementContext != null && achievementContext.HasPauseIf == null)
             {
@@ -1114,6 +1117,17 @@ namespace RATools.Parser.Expressions.Trigger
                     if (!ReferenceEquals(newRequirements[i], alwaysFalseCondition))
                         newRequirements.RemoveAt(i);
                 }
+            }
+            else if (newRequirements.Count == 0)
+            {
+                // the only way for there to be 0 conditions left at this point is if all the
+                // conditions evaluated to true when Operation was And, or all the conditions
+                // evaluated to false when Operation was Or. return a singular expression
+                // reflecting that result.
+                RequirementExpressionBase result = (Operation == ConditionalOperation.And) ?
+                    new AlwaysTrueExpression() : new AlwaysFalseExpression();
+                CopyLocation(result);
+                return result;
             }
             else
             {
@@ -1638,7 +1652,7 @@ namespace RATools.Parser.Expressions.Trigger
         /// </returns>
         public RequirementClauseExpression EnsureLastConditionHasNoHitTarget()
         {
-            if (_conditions != null)
+            if (_conditions != null && _conditions.Count > 0)
             {
                 var lastCondition = _conditions.Last();
 
