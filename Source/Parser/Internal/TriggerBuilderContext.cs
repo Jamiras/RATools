@@ -1,4 +1,5 @@
-﻿using RATools.Data;
+﻿using Jamiras.Components;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
@@ -22,6 +23,8 @@ namespace RATools.Parser.Internal
         {
             get { return Trigger.LastOrDefault(); }
         }
+
+        public SoftwareVersion MinimumVersion { get; set; }
 
         [DebuggerDisplay("{field} * {Multiplier}")]
         private class Term
@@ -482,6 +485,10 @@ namespace RATools.Parser.Internal
             RequirementExpressionBase expression, InterpreterScope scope, out ExpressionBase result)
         {
             var context = new AchievementBuilderContext(achievement);
+
+            var scriptContext = scope.GetContext<AchievementScriptContext>();
+            if (scriptContext != null)
+                context.MinimumVersion = scriptContext.SerializationContext.MinimumVersion;
 
             var error = ((ITriggerExpression)expression).BuildTrigger(context);
             if (error != null)

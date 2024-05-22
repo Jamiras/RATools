@@ -24,6 +24,8 @@ namespace RATools.Parser
             _achievements = new Dictionary<Achievement, int>();
             _leaderboards = new Dictionary<Leaderboard, int>();
             _richPresence = new RichPresenceBuilder();
+
+            _minimumVersion = RATools.Data.Version.MinimumVersion;
         }
 
         public RichPresenceBuilder RichPresenceBuilder
@@ -57,6 +59,8 @@ namespace RATools.Parser
         /// Gets the game identifier from the script.
         /// </summary>
         public int GameId { get; private set; }
+
+        private SoftwareVersion _minimumVersion;
 
         /// <summary>
         /// Gets the game title from the script.
@@ -223,18 +227,9 @@ namespace RATools.Parser
             expressionGroups.Parse(input);
 
             GameTitle = null;
-            foreach (var comment in expressionGroups.Groups.First().Expressions.OfType<CommentExpression>())
-            {
-                if (comment.Value.Contains("#ID"))
-                {
-                    ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
-                    break;
-                }
-                else if (GameTitle == null)
-                {
-                    GameTitle = comment.Value.Substring(2).Trim();
-                }
-            }
+            var firstGroup = expressionGroups.Groups.FirstOrDefault();
+            if (firstGroup != null)
+                ProcessHeaderComment(firstGroup);
 
             return expressionGroups;
         }
@@ -278,6 +273,13 @@ namespace RATools.Parser
             }
 
             expressionGroups.ResetErrors();
+
+            var firstGroup = expressionGroups.Groups.FirstOrDefault();
+            if (firstGroup != null)
+            {
+                ProcessHeaderComment(firstGroup);
+                scriptContext.SerializationContext.MinimumVersion = _minimumVersion;
+            }
 
             bool result = true;
             foreach (var expressionGroup in expressionGroups.Groups)
@@ -346,7 +348,7 @@ namespace RATools.Parser
                 }
             }
 
-            SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion;
+            SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion.OrNewer(_minimumVersion);
             uint maxAddress = 0;
 
             foreach (var achievement in _achievements.Keys)
@@ -392,6 +394,26 @@ namespace RATools.Parser
             return result;
         }
 
+        private void ProcessHeaderComment(ExpressionGroup expressionGroup)
+        {
+            foreach (var comment in expressionGroup.Expressions.OfType<CommentExpression>())
+            {
+                if (comment.Value.Contains("#ID"))
+                {
+                    if (GameId == 0)
+                        ExtractGameId(new Token(comment.Value, 0, comment.Value.Length));
+                }
+                else if (comment.Value.Contains("#MinimumVersion"))
+                {
+                    ExtractMinimumVersion(new Token(comment.Value, 0, comment.Value.Length));
+                }
+                else if (GameTitle == null)
+                {
+                    GameTitle = comment.Value.Substring(2).Trim();
+                }
+            }
+        }
+
         private void ExtractGameId(Token line)
         {
             var tokens = line.Split('=');
@@ -400,6 +422,17 @@ namespace RATools.Parser
                 int gameId;
                 if (Int32.TryParse(tokens[1].ToString(), out gameId))
                     GameId = gameId;
+            }
+        }
+
+        private void ExtractMinimumVersion(Token line)
+        {
+            var tokens = line.Split('=');
+            if (tokens.Length > 1)
+            {
+                SoftwareVersion version;
+                if (SoftwareVersion.TryParse(tokens[1].ToString(), out version))
+                    _minimumVersion = version.OrNewer(RATools.Data.Version.MinimumVersion);
             }
         }
 

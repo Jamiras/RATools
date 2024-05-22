@@ -1298,5 +1298,37 @@ namespace RATools.Parser.Tests
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("tally(8, byte(0x001234) == 1 && never(byte(0x002345) == 2 && byte(0x003456) == 3), byte(0x001234) == 2 && never(byte(0x002345) == 3 && byte(0x003456) == 4))"));
         }
+
+        [Test]
+        public void TestMinimumVersionMetaComment()
+        {
+            // Without meta comment, minimum version will be 0.30, which doesn't support OrNext, so 
+            // (A || B) && (C || D) will have to be cross-multiplied into four alts.
+            var parser = Parse(
+                "// GameName\n" +
+                "achievement(\"T\", \"D\", 5,\n" +
+                "  byte(0x1234) == 1 && (byte(0x2345) == 5 || byte(0x2345) == 6) && (byte(0x3456) == 6 || byte(0x3456) == 7)\n" +
+                ")");
+
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            Assert.That(achievement.Trigger.Serialize(parser.SerializationContext),
+                Is.EqualTo("0xH1234=1S0xH2345=5_0xH3456=6S0xH2345=5_0xH3456=7S0xH2345=6_0xH3456=6S0xH2345=6_0xH3456=7"));
+
+            // With meta comment, OrNext is supported, so alts aren't needed.
+            parser = Parse(
+                "// GameName\n" +
+                "// #MinimumVersion=1.0\n" +
+                "achievement(\"T\", \"D\", 5,\n" +
+                "  byte(0x1234) == 1 && (byte(0x2345) == 5 || byte(0x2345) == 6) && (byte(0x3456) == 6 || byte(0x3456) == 7)\n" +
+                ")");
+
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            achievement = parser.Achievements.First();
+            Assert.That(achievement.Trigger.Serialize(parser.SerializationContext),
+                Is.EqualTo("0xH1234=1_O:0xH2345=5_0xH2345=6_O:0xH3456=6_0xH3456=7"));
+        }
     }
 }
