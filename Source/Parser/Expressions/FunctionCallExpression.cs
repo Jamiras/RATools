@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using RATools.Data;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -461,13 +462,14 @@ namespace RATools.Parser.Expressions
                     return null;
                 }
 
-                var assignmentScope = new InterpreterScope(initializationScope) { Context = new AssignmentExpression(new VariableExpression(parameter), value) };
-                if (!value.ReplaceVariables(assignmentScope, out value))
+                var valueExpression = value as IValueExpression;
+                if (valueExpression == null)
                 {
-                    error = new ErrorExpression(value, this);
+                    error = new ErrorExpression("Cannot assign " + value.Type.ToLowerString() + " to parameter", this);
                     return null;
                 }
 
+                value = valueExpression.Evaluate(initializationScope);
                 parameterScope.DefineVariable(new VariableDefinitionExpression(parameter), value);
             }
 
