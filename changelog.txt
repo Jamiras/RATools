@@ -1,3 +1,28 @@
+v1.14.0 - 29 May 2024
+* support for multiline comments via `/* */`
+* add `#MinimumVersion` header meta-comment to specify some minimum target version for optional features
+* serialize addresses as 16-bit if script does not reference any addresses over 0xFFFF
+* support to translate `prev(A == B)` into `prev(A) == prev(B)`
+* support invoking functions stored in dictionaries and indexing function returns without intermediate variables
+* show output path as tooltip on local achievement count
+* allow character chords containing Ctrl (i.e. Ctrl+Alt+4 for left curly brace on French keyboards)
+* report error ORing hitcounts inside tally (instead of commas)
+* better error when summing expressions that cannot be converted to requirements
+* fix modification of nested dictionaries
+* fix arithmetic and bitwise modifications being combined incorrectly
+* fix constant modifier at end of AddSource chain becoming `always_true()`/`always_false()` when viewing logic
+* fix `always_true()` clause being removed from end of AddSource chain
+* fix IDs not being generated when using the CLI tool
+* fix modified comparisons being considered equal if they're equivalent without the modification
+* fix modified comparison losing modification when used inside `tally()`
+* fix error specifying anonymous function as default parameter
+* fix extra tally when dumping script containing AddHits chain inside Measured
+* fix address not updating when shrinking big endian sizes
+* fix exception processing `repeated(N, always_true() && never(X))`
+* fix exception doing a search and replace of some string to empty string
+* fix exception when cross-multipling conditions results in an `always_true()`
+* fix exception when predicate doesn't return a value
+
 v1.13.0 - 4 Mar 2024
 * add `float_be` function
 * add `type` parameter to `achievement` function
