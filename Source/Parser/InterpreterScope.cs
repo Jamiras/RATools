@@ -1,4 +1,5 @@
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -296,7 +297,9 @@ namespace RATools.Parser
                 var assignment = expression as AssignmentExpression;
                 if (assignment != null && assignment.Variable.Name == name)
                 {
-                    DefineVariable(new VariableDefinitionExpression(assignment.Variable), assignment.Value);
+                    var valueExpression = assignment.Value as IValueExpression;
+                    var value = (valueExpression != null) ? valueExpression.Evaluate(this) : assignment.Value;
+                    DefineVariable(new VariableDefinitionExpression(assignment.Variable), value);
                     return true;
                 }
 
