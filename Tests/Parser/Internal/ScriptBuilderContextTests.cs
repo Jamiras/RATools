@@ -83,6 +83,20 @@ namespace RATools.Parser.Tests.Internal
             Assert.That(trigger.Serialize(new SerializationContext()), Is.EqualTo(input));
         }
 
+        [Test]
+        public void TestAppendRequirementsAddSourceSubSourceChained()
+        {
+            string input = "B:0xM001234_A:0xK001234_3=9_B:d0xM001234_A:d0xK001234_3=8";
+            var context = new ScriptBuilderContext();
+            var builder = new StringBuilder();
+
+            var trigger = Trigger.Deserialize(input);
+            context.AppendRequirements(builder, trigger.Core.Requirements);
+
+            var expected = "(bitcount(0x001234) + 3 - bit0(0x001234)) == 9 && (prev(bitcount(0x001234)) + 3 - prev(bit0(0x001234))) == 8";
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
         [TestCase("N:0xH001234=1_M:0xH002345=2",
           "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
         [TestCase("O:0xH001234=1_M:0xH002345=2",
