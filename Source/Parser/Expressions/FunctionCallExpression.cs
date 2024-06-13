@@ -94,7 +94,10 @@ namespace RATools.Parser.Expressions
 
             if (result == null)
             {
-                result = new ErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
+                if (_source != null)
+                    result = new ErrorExpression("Function did not return a value", (ExpressionBase)_source);
+                else
+                    result = new ErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
                 return false;
             }
 
@@ -113,7 +116,12 @@ namespace RATools.Parser.Expressions
                 return result;
 
             if (result == null)
+            {
+                if (_source != null)
+                    return new ErrorExpression("Function did not return a value", (ExpressionBase)_source);
+
                 return new ErrorExpression(FunctionName.Name + " did not return a value", FunctionName);
+            }
 
             CopyLocation(result);
             return result;
@@ -195,7 +203,10 @@ namespace RATools.Parser.Expressions
                 if (error.Location.End.Line == 0)
                     CopyLocation(error);
 
-                result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
+                if (_source != null)
+                    result = ErrorExpression.WrapError(error, "Function call failed", (ExpressionBase)_source);
+                else
+                    result = ErrorExpression.WrapError(error, FunctionName.Name + " call failed", FunctionName);
                 return false;
             }
 
@@ -230,8 +241,11 @@ namespace RATools.Parser.Expressions
 
                 // when expanding the parameters, a new functionCall object will be created without a name
                 // location. if that has happened, replace the temporary name object with the real one.
-                if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
-                    functionCall.FunctionName = FunctionName;
+                if (FunctionName != null && functionCall.FunctionName != null)
+                {
+                    if (functionCall.FunctionName.Location.Start.Line == 0 && functionCall.FunctionName.Name == FunctionName.Name)
+                        functionCall.FunctionName = FunctionName;
+                }
             }
 
             return true;
@@ -254,7 +268,7 @@ namespace RATools.Parser.Expressions
             }
 
             if (result.Location.Start.Line == 0)
-                result = new ErrorExpression(result, FunctionName);
+                result = new ErrorExpression(result, FunctionName ?? (ExpressionBase)_source);
 
             return false;
         }
@@ -458,7 +472,7 @@ namespace RATools.Parser.Expressions
                 ExpressionBase value;
                 if (!function.DefaultParameters.TryGetValue(parameter, out value))
                 {
-                    error = new ErrorExpression(string.Format("Required parameter '{0}' not provided", parameter), FunctionName);
+                    error = new ErrorExpression(string.Format("Required parameter '{0}' not provided", parameter), FunctionName ?? (ExpressionBase)_source);
                     return null;
                 }
 
@@ -487,14 +501,18 @@ namespace RATools.Parser.Expressions
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as FunctionCallExpression;
-            return that != null && FunctionName == that.FunctionName && ExpressionsEqual(Parameters, that.Parameters);
+            return that != null && FunctionName == that.FunctionName && _source == that._source &&
+                ExpressionsEqual(Parameters, that.Parameters);
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
             {
-                yield return FunctionName;
+                if (_source != null)
+                    yield return (ExpressionBase)_source;
+                else
+                    yield return FunctionName;
 
                 foreach (var parameter in Parameters)
                     yield return parameter;
@@ -503,7 +521,16 @@ namespace RATools.Parser.Expressions
 
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
-            dependencies.Add(FunctionName.Name);
+            if (_source != null)
+            {
+                var nested = _source as INestedExpressions;
+                if (nested != null)
+                    nested.GetDependencies(dependencies);
+            }
+            else
+            {
+                dependencies.Add(FunctionName.Name);
+            }
 
             foreach (var parameter in Parameters)
             {
@@ -531,6 +558,9 @@ namespace RATools.Parser.Expressions
             {
                 error = null;
 
+                if (functionCall._source != null)
+                    return null;
+
                 var funcDef = scope.GetFunction(functionCall.FunctionName.Name);
                 if (funcDef is Functions.AlwaysTrueFunction)
                     return true;
@@ -553,8 +583,12 @@ namespace RATools.Parser.Expressions
                 if (scope.GetInterpreterContext<FunctionCallExpression>() != null)
                 {
                     var error = result as ErrorExpression;
-                    result = new ErrorExpression(FunctionName.Name + " call failed: " + error.Message, FunctionName) { InnerError = error };
+                    if (_source != null)
+                        result = new ErrorExpression("Function call failed: " + error.Message, (ExpressionBase)_source) { InnerError = error };
+                    else
+                        result = new ErrorExpression(FunctionName.Name + " call failed: " + error.Message, FunctionName) { InnerError = error };
                 }
+
                 return (ErrorExpression)result;
             }
 
