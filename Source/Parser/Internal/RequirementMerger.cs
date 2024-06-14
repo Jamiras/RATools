@@ -42,8 +42,8 @@ namespace RATools.Parser.Internal
             {
                 if (mergeCondition == ConditionalOperation.Or)
                 {
-                    comparison1 = Requirement.GetOpposingOperator(comparison1);
-                    comparison2 = Requirement.GetOpposingOperator(comparison2);
+                    comparison1 = comparison1.OppositeOperator();
+                    comparison2 = comparison2.OppositeOperator();
                 }
 
                 switch (GetMoreRestrictiveRequirement(comparison1, value1, comparison2, value2))
@@ -94,7 +94,7 @@ namespace RATools.Parser.Internal
                             break;
 
                         default:
-                            mergedOperator = Requirement.GetOpposingOperator(mergedOperator);
+                            mergedOperator = mergedOperator.OppositeOperator();
                             break;
                     }
                 }
@@ -568,7 +568,7 @@ namespace RATools.Parser.Internal
                     {
                         Type = left.Type,
                         Left = left.Left,
-                        Operator = Requirement.GetOpposingOperator(left.Operator),
+                        Operator = left.Operator.OppositeOperator(),
                         Right = left.Right,
                         HitCount = left.HitCount
                     };
@@ -577,7 +577,7 @@ namespace RATools.Parser.Internal
                     {
                         Type = right.Type,
                         Left = right.Left,
-                        Operator = Requirement.GetOpposingOperator(right.Operator),
+                        Operator = right.Operator.OppositeOperator(),
                         Right = right.Right,
                         HitCount = right.HitCount
                     };
@@ -602,7 +602,7 @@ namespace RATools.Parser.Internal
                         }
                         else
                         {
-                            merged.Operator = Requirement.GetOpposingOperator(merged.Operator);
+                            merged.Operator = merged.Operator.OppositeOperator();
                         }
                     }
                 }
