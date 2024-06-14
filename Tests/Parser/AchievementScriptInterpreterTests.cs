@@ -728,7 +728,7 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceValueFloatModifierWithPointer()
         {
             var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
-            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_M:0xH0002*f1.5) here\r\n"));
+            Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_A:0xH0002*f1.5_M:0) here\r\n"));
         }
 
         [Test]
@@ -737,7 +737,7 @@ namespace RATools.Parser.Tests
             using (var cultureOverride = new CultureOverride("fr-FR"))
             {
                 var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
-                Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_M:0xH0002*f1.5) here\r\n"));
+                Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_A:0xH0002*f1.5_M:0) here\r\n"));
             }
         }
 
