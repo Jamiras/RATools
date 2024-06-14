@@ -56,8 +56,10 @@ namespace RATools.Parser.Tests.Functions
             "N:0xH001234=5_M:0xH002345=6.10.")]
         [TestCase("measured(6 - byte(0x1234) == 6)", "B:0xH001234_M:6=6")]
         [TestCase("measured(300 - byte(0x1234) >= 100)", "B:0xH001234_M:300>=100")]
-        [TestCase("measured(byte(0x1234) + 22 >= 100)", "A:22_M:0xH001234>=100")] // raw measurements include adjustment as a starting value (target in unchanged)
-        [TestCase("measured(byte(0x1234) + 22 >= 100, format=\"percent\")", "G:0xH001234>=78")] // percent measurements factor out the adjustment
+        [TestCase("measured(byte(0x1234) + 22 >= 100)", "A:22_M:0xH001234>=100")] // measurements include adjustment so target is unchanged
+        [TestCase("measured(byte(0x1234) + 22 >= 100, format=\"percent\")", "A:22_G:0xH001234>=100")] // measurements include adjustment so target is unchanged
+        [TestCase("measured(byte(0x1234) - 6 >= 100)", "B:6_M:0xH001234>=100")] // measurements include adjustment so target is unchanged
+        [TestCase("measured(byte(0x1234) - 6 >= 100, format=\"percent\")", "B:6_G:0xH001234>=100")] // measurements include adjustment so target is unchanged
         [TestCase("measured(tally(2, byte(0x1234) == 120, byte(0x1234) == 126))", "C:0xH001234=120_M:0xH001234=126.2.")]
         [TestCase("measured(bitcount(0x1234) == 8)", "M:0xK001234=8")] // should not be optimized to byte=255
         public void TestBuildTrigger(string input, string expected)
