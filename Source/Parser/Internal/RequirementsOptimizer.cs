@@ -65,7 +65,7 @@ namespace RATools.Parser.Internal
                 var value = requirement.Left;
                 requirement.Left = requirement.Right;
                 requirement.Right = value;
-                requirement.Operator = Requirement.GetReversedRequirementOperator(requirement.Operator);
+                requirement.Operator = requirement.Operator.ReverseOperator();
             }
 
             // comparing float to integer - integer will be cast to float, so don't enforce integer limits
@@ -401,7 +401,7 @@ namespace RATools.Parser.Internal
                     if (r.Type == RequirementType.AndNext)
                     {
                         r.Type = RequirementType.OrNext;
-                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                        r.Operator = r.Operator.OppositeOperator();
                     }
                 }
             }
@@ -413,13 +413,13 @@ namespace RATools.Parser.Internal
                     if (r.Type == RequirementType.OrNext)
                     {
                         r.Type = RequirementType.AndNext;
-                        r.Operator = Requirement.GetOpposingOperator(r.Operator);
+                        r.Operator = r.Operator.OppositeOperator();
                     }
                 }
             }
 
             var lastRequirement = requirementEx.Requirements.Last();
-            lastRequirement.Operator = Requirement.GetOpposingOperator(lastRequirement.Operator);
+            lastRequirement.Operator = lastRequirement.Operator.OppositeOperator();
             return true;
         }
 
@@ -824,7 +824,7 @@ namespace RATools.Parser.Internal
                         if (requirement.Left != compareRequirement.Left || requirement.Right != compareRequirement.Right)
                             continue;
 
-                        var opposingOperator = Requirement.GetOpposingOperator(requirement.Operator);
+                        var opposingOperator = requirement.Operator.OppositeOperator();
                         if (compareRequirement.Operator == opposingOperator)
                         {
                             // if a HitCount exists, keep the ResetIf, otherwise keep the non-ResetIf

@@ -31,41 +31,7 @@ namespace RATools.Data
         {
             get
             {
-                switch (Type)
-                {
-                    case RequirementType.AddHits:
-                    case RequirementType.SubHits:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                    case RequirementType.AndNext:
-                    case RequirementType.OrNext:
-                    case RequirementType.AddAddress:
-                    case RequirementType.ResetNextIf:
-                        return true;
-
-                    default:
-                        return false;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Gets whether or not the requirement can be scaled.
-        /// </summary>
-        public bool IsScalable
-        {
-            get
-            {
-                switch (Type)
-                {
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                    case RequirementType.AddAddress:
-                        return true;
-
-                    default:
-                        return false;
-                }
+                return Type.IsCombining();
             }
         }
 
@@ -76,19 +42,7 @@ namespace RATools.Data
         {
             get
             {
-                switch (Operator)
-                {
-                    case RequirementOperator.Equal:
-                    case RequirementOperator.NotEqual:
-                    case RequirementOperator.LessThan:
-                    case RequirementOperator.LessThanOrEqual:
-                    case RequirementOperator.GreaterThan:
-                    case RequirementOperator.GreaterThanOrEqual:
-                        return true;
-
-                    default:
-                        return false;
-                }
+                return Operator.IsComparison();
             }
         }
 
@@ -153,19 +107,9 @@ namespace RATools.Data
 
             if (Operator != RequirementOperator.None)
             {
-                switch (Operator)
-                {
-                    case RequirementOperator.Equal: builder.Append(" == "); break;
-                    case RequirementOperator.NotEqual: builder.Append(" != "); break;
-                    case RequirementOperator.LessThan: builder.Append(" < "); break;
-                    case RequirementOperator.LessThanOrEqual: builder.Append(" <= "); break;
-                    case RequirementOperator.GreaterThan: builder.Append(" > "); break;
-                    case RequirementOperator.GreaterThanOrEqual: builder.Append(" >= "); break;
-                    case RequirementOperator.Multiply: builder.Append(" * "); break;
-                    case RequirementOperator.Divide: builder.Append(" / "); break;
-                    case RequirementOperator.BitwiseAnd: builder.Append(" & "); break;
-                    case RequirementOperator.BitwiseXor: builder.Append(" ^ "); break;
-                }
+                builder.Append(' ');
+                builder.Append(Operator.ToOperatorString());
+                builder.Append(' ');
 
                 Right.AppendString(builder, NumberFormat.Decimal);
             }
@@ -198,7 +142,7 @@ namespace RATools.Data
 
             Left.Serialize(builder, serializationContext);
 
-            if (IsScalable)
+            if (Type.IsScalable())
             {
                 switch (Operator)
                 {
@@ -550,7 +494,7 @@ namespace RATools.Data
             if (requirement.Operator != RequirementOperator.None)
                 requirement.Right = Field.Deserialize(tokenizer);
 
-            if (requirement.IsScalable && requirement.IsComparison)
+            if (requirement.Type.IsScalable() && requirement.IsComparison)
             {
                 requirement.Operator = RequirementOperator.None;
                 requirement.Right = new Field();
@@ -636,41 +580,6 @@ namespace RATools.Data
             return RequirementOperator.None;
         }
 
-
-        /// <summary>
-        /// Gets the logically opposing operator.
-        /// </summary>
-        public static RequirementOperator GetOpposingOperator(RequirementOperator op)
-        {
-            switch (op)
-            {
-                case RequirementOperator.Equal: return RequirementOperator.NotEqual;
-                case RequirementOperator.NotEqual: return RequirementOperator.Equal;
-                case RequirementOperator.LessThan: return RequirementOperator.GreaterThanOrEqual;
-                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThan;
-                case RequirementOperator.GreaterThan: return RequirementOperator.LessThanOrEqual;
-                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThan;
-                default: return RequirementOperator.None;
-            }
-        }
-
-        /// <summary>
-        /// Gets the equivalent operator if the operands are switched.
-        /// </summary>
-        public static RequirementOperator GetReversedRequirementOperator(RequirementOperator op)
-        {
-            switch (op)
-            {
-                case RequirementOperator.Equal: return RequirementOperator.Equal;
-                case RequirementOperator.NotEqual: return RequirementOperator.NotEqual;
-                case RequirementOperator.LessThan: return RequirementOperator.GreaterThan;
-                case RequirementOperator.LessThanOrEqual: return RequirementOperator.GreaterThanOrEqual;
-                case RequirementOperator.GreaterThan: return RequirementOperator.LessThan;
-                case RequirementOperator.GreaterThanOrEqual: return RequirementOperator.LessThanOrEqual;
-                default: return RequirementOperator.None;
-            }
-        }
-
         /// <summary>
         /// Creates a requirement that will always evaluate true.
         /// </summary>
@@ -694,147 +603,5 @@ namespace RATools.Data
             requirement.Right = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 1 };
             return requirement;
         }
-    }
-
-    /// <summary>
-    /// Specifies how the <see cref="Requirement.Left"/> and <see cref="Requirement.Right"/> values should be compared.
-    /// </summary>
-    public enum RequirementOperator
-    {
-        /// <summary>
-        /// Unspecified.
-        /// </summary>
-        None = 0,
-
-        /// <summary>
-        /// The left and right values are equivalent.
-        /// </summary>
-        Equal,
-
-        /// <summary>
-        /// The left and right values are not equivalent.
-        /// </summary>
-        NotEqual,
-
-        /// <summary>
-        /// The left value is less than the right value.
-        /// </summary>
-        LessThan,
-
-        /// <summary>
-        /// The left value is less than or equal to the right value.
-        /// </summary>
-        LessThanOrEqual,
-
-        /// <summary>
-        /// The left value is greater than the right value.
-        /// </summary>
-        GreaterThan,
-
-        /// <summary>
-        /// The left value is greater than or equal to the right value.
-        /// </summary>
-        GreaterThanOrEqual,
-
-        /// <summary>
-        /// The left value is multiplied by the right value. (combining conditions only)
-        /// </summary>
-        Multiply,
-
-        /// <summary>
-        /// The left value is divided by the right value. (combining conditions only)
-        /// </summary>
-        Divide,
-
-        /// <summary>
-        /// The left value is masked by the right value. (combining conditions only)
-        /// </summary>
-        BitwiseAnd,
-
-        /// <summary>
-        /// The bits in the left value are toggled by the bits in the right value. (combining conditions only)
-        /// </summary>
-        BitwiseXor,
-    }
-
-    /// <summary>
-    /// Special requirement behaviors
-    /// </summary>
-    public enum RequirementType
-    {
-        /// <summary>
-        /// No special behavior.
-        /// </summary>
-        None = 0,
-
-        /// <summary>
-        /// Resets any HitCounts in the current requirement group if true.
-        /// </summary>
-        ResetIf,
-
-        /// <summary>
-        /// Pauses processing of the achievement if true.
-        /// </summary>
-        PauseIf,
-
-        /// <summary>
-        /// Adds the Left part of the requirement to the Left part of the next requirement.
-        /// </summary>
-        AddSource,
-
-        /// <summary>
-        /// Subtracts the Left part of the next requirement from the Left part of the requirement.
-        /// </summary>
-        SubSource,
-
-        /// <summary>
-        /// Adds the HitsCounts from this requirement to the next requirement.
-        /// </summary>
-        AddHits,
-
-        /// <summary>
-        /// Subtracts the HitsCounts from this requirement from the next requirement.
-        /// </summary>
-        SubHits,
-
-        /// <summary>
-        /// This requirement must also be true for the next requirement to be true.
-        /// </summary>
-        AndNext,
-
-        /// <summary>
-        /// This requirement or the following requirement must be true for the next requirement to be true.
-        /// </summary>
-        OrNext,
-
-        /// <summary>
-        /// Meta-flag indicating that this condition tracks progress as a raw value.
-        /// </summary>
-        Measured,
-
-        /// <summary>
-        /// Meta-flag indicating that this condition must be true to track progress.
-        /// </summary>
-        MeasuredIf,
-
-        /// <summary>
-        /// Adds the Left part of the requirement to the addresses in the next requirement.
-        /// </summary>
-        AddAddress,
-
-        /// <summary>
-        /// Resets any HitCounts on the next requirement group if true.
-        /// </summary>
-        ResetNextIf,
-
-        /// <summary>
-        /// While all non-Trigger conditions are true, a challenge indicator will be displayed.
-        /// </summary>
-        Trigger,
-
-        /// <summary>
-        /// Meta-flag indicating that this condition tracks progress as a percentage.
-        /// </summary>
-        MeasuredPercent,
     }
 }

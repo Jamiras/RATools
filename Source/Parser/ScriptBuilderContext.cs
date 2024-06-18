@@ -899,8 +899,8 @@ namespace RATools.Parser
                     if (requirement.Type == RequirementType.AddHits)
                     {
                         bool hasAlwaysFalse = false;
-                        if (requirementEx.Requirements.Count(r => !r.IsScalable) > 1 &&
-                            requirementEx.Requirements.All(r => r.HitCount != 0 || r.IsScalable))
+                        if (requirementEx.Requirements.Count(r => !r.Type.IsScalable()) > 1 &&
+                            requirementEx.Requirements.All(r => r.HitCount != 0 || r.Type.IsScalable()))
                         {
                             requirementEx.Requirements.Last().Type = RequirementType.OrNext;
                             requirementEx.Requirements.Add(Requirement.CreateAlwaysFalseRequirement());
