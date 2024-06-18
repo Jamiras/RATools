@@ -200,12 +200,32 @@ namespace RATools.Data
             {
                 do
                 {
-                    if (serializationContext.MinimumVersion < Version._0_77) // Measured leaderboard format
+                    if (serializationContext.MinimumVersion < Version._0_77)
+                    {
+                        // Measured leaderboard format not supported
                         SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
-                    else if (enumerator.Current.Requirements.Any(r => r.Type == RequirementType.None)) // raw value
+                    }
+                    else if (enumerator.Current.Requirements.Any(r => r.Type == RequirementType.None))
+                    {
+                        // raw value - Measured not needed
                         SerializeLegacyRequirements(enumerator.Current.Requirements, builder, serializationContext);
+                    }
                     else
-                        enumerator.Current.Serialize(builder, serializationContext);
+                    {
+                        var group = enumerator.Current;
+
+                        // A non-blank non-comparison operand on the Measured condition will cause runtimes prior
+                        // to rcheevos 10.3 (Version._1_0) to count frames instead of the value. Ensure the
+                        // Measured condition has a blank operator (for all versions for greatest compatibility)
+                        // See https://discord.com/channels/310192285306454017/386068797921951755/1247501391908307027
+                        if (group.Requirements.Last().Operator != RequirementOperator.None &&
+                            !group.Requirements.Last().IsComparison)
+                        {
+                            group = EnsureLastRequirementHasNoOperator(group);
+                        }
+
+                        group.Serialize(builder, serializationContext);
+                    }
 
                     if (!enumerator.MoveNext())
                         break;
@@ -216,6 +236,52 @@ namespace RATools.Data
 
             return builder.ToString();
         }
+
+        private static RequirementGroup EnsureLastRequirementHasNoOperator(RequirementGroup group)
+        {
+            // find a clause without an operator
+            var groupEx = RequirementEx.Combine(group.Requirements);
+            var toMove = groupEx.LastOrDefault(r => r.Type == RequirementType.AddSource && r.Requirements.Last().Operator == RequirementOperator.None);
+
+            // copy all the other clauses
+            var newRequirements = new List<Requirement>();
+            foreach (var requirementEx in groupEx)
+            {
+                if (!ReferenceEquals(requirementEx, toMove))
+                    newRequirements.AddRange(requirementEx.Requirements);
+            }
+
+            // change the last clause from Measured/MeasuredPercent to AddSource
+            var last = newRequirements.Last();
+            var measuredType = last.Type;
+            newRequirements.RemoveAt(newRequirements.Count - 1);
+            last = last.Clone();
+            last.Type = RequirementType.AddSource;
+            newRequirements.Add(last);
+
+            if (toMove == null)
+            {
+                // no available item to move, append a +0 item
+                newRequirements.Add(new Requirement
+                {
+                    Type = measuredType,
+                    Left = new Field { Type = FieldType.Value, Size = FieldSize.DWord, Value = 0 },
+                });
+            }
+            else
+            {
+                // move the found item and change its type to Measured/MeasuredPercent
+                newRequirements.AddRange(toMove.Requirements);
+
+                last = newRequirements.Last().Clone();
+                last.Type = measuredType;
+                newRequirements.RemoveAt(newRequirements.Count - 1);
+                newRequirements.Add(last);
+            }
+
+            return new RequirementGroup(newRequirements);
+        }
+
 
         private static void SerializeLegacyRequirements(IEnumerable<Requirement> requirements, StringBuilder builder, SerializationContext serializationContext)
         {
