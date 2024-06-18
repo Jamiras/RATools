@@ -169,14 +169,12 @@ namespace RATools.Parser.Expressions
             if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
             {
                 var initializationContext = scope.GetContext<ParameterInitializationContext>();
-                if (initializationContext != null)
+                if (initializationContext != null &&
+                    initializationContext.Function.Name.Name == "measured")
                 {
-                    var format = initializationContext.GetParameter<StringConstantExpression>(scope, "format");
-                    if (format != null && format.Value == "raw")
-                    {
-                        // capturing raw measured value. don't modify comparison
-                        canModifyRight = false;
-                    }
+                    // capturing measured value - don't modify comparison. the user has already
+                    // determined the limits they want to use for the progress tracker.
+                    canModifyRight = false;
                 }
             }
 
