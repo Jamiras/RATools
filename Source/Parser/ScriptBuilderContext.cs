@@ -658,13 +658,7 @@ namespace RATools.Parser
             AppendFieldModifier(builder, requirement);
 
             // append chained operations
-            if (!NullOrEmpty(_subSources))
-            {
-                builder.Append(_subSources);
-                builder.Append(')');
-                _subSources.Clear();
-            }
-            else if (!NullOrEmpty(_addSources))
+            if (!NullOrEmpty(_addSources))
             {
                 // remove trailing " + 0"
                 if (builder.Length > 4 &&
@@ -678,8 +672,15 @@ namespace RATools.Parser
                         builder.Length -= 4;
                 }
 
-                builder.Append(')');
+                if (NullOrEmpty(_subSources))
+                    builder.Append(')');
                 _addSources.Clear();
+            }
+            if (!NullOrEmpty(_subSources))
+            {
+                builder.Append(_subSources);
+                builder.Append(')');
+                _subSources.Clear();
             }
 
             // handle comparison operators

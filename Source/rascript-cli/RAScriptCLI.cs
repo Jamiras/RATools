@@ -47,7 +47,7 @@ namespace RATools
             OutputStream.WriteLine("========================");
             OutputStream.WriteLine("Usage: rascript-cli [-v] [-q] [-i script] [-o outdir] [-a author]");
             OutputStream.WriteLine();
-            OutputStream.WriteLine("  -v            (optional) enabled verbose messages");
+            OutputStream.WriteLine("  -v            (optional) enable verbose messages");
             OutputStream.WriteLine("  -q            (optional) disable all messages");
             OutputStream.WriteLine("  -i script     specifies the input file to process");
             OutputStream.WriteLine("  -o outdir     (optional) specifies the output directory to write to [default: current directory]");
