@@ -1,3 +1,9 @@
+v1.14.1 - 19 Jun 2024
+* no longer generate leaderboard values with operator in final measured clause
+* fix exception typing a memory accessor before a clause surrounded in parentheses
+* fix dumping script containing AddSource and SubSource in multiple clauses of same achievement
+* fix migration of constants in measured statement using percent format
+
 v1.14.0 - 29 May 2024
 * support for multiline comments via `/* */`
 * add `#MinimumVersion` header meta-comment to specify some minimum target version for optional features
