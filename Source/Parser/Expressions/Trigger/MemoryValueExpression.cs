@@ -320,7 +320,21 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 var underflowNormalized = CheckForUnderflow(comparison);
                 if (!ReferenceEquals(underflowNormalized, comparison))
+                {
+                    // sanity check to prevent infinite loop of applying/removing underflow adjustment
+                    var normalizedComparison = underflowNormalized as ComparisonExpression;
+                    if (normalizedComparison != null &&
+                        normalizedComparison.Operation == operation &&
+                        normalizedComparison.Right == right &&
+                        normalizedComparison.Left == this)
+                    {
+                        // the constant that got moved to the right hand side was being used for
+                        // underflow protection. no normalization occurred
+                        return null;
+                    }
+
                     normalized = underflowNormalized;
+                }
             }
 
             return CheckForImpossibleValues(normalized);
@@ -340,6 +354,19 @@ namespace RATools.Parser.Expressions.Trigger
 
         private ExpressionBase MoveConstantsToRightHandSide(MemoryValueExpression memoryValue, ComparisonOperation operation)
         {
+            // if there are constants on both sides, they might be underflow protection
+            if (HasConstant && memoryValue.HasConstant)
+            {
+                // direct comparisons aren't affected by underflow.
+                if (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual)
+                    return EnsureSingleExpressionOnRightHandSide(memoryValue, operation);
+
+                // if there are both added and subtracted accessors on the left, then assume the user
+                // is trying to account for the underflow themselves and don't merge the constants.
+                if (HasSubtractedMemoryAccessor && HasAddedMemoryAccessor)
+                    return null;
+            }
+
             // special handling for pointers
             // try to find a single AddAdress that can be applied to both sides of the equation
             if (_memoryAccessors != null && _memoryAccessors.Count >= 2)
@@ -352,22 +379,6 @@ namespace RATools.Parser.Expressions.Trigger
             // if the left side doesn't have a constant to move, just normalize the right side
             if (!HasConstant)
                 return EnsureSingleExpressionOnRightHandSide(memoryValue, operation);
-
-            // constant on left. check for a constant on the right too
-            if (memoryValue.HasConstant)
-            {
-                if (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual)
-                {
-                    // direct comparisons aren't affected by underflow.
-                    return EnsureSingleExpressionOnRightHandSide(memoryValue, operation);
-                }
-
-                // if there are constants on both sides of the comparison and both added and
-                // subtracted accessors on the left, then assume the user is trying to account
-                // for the underflow themselves and don't merge the constants.
-                if (HasSubtractedMemoryAccessor && HasAddedMemoryAccessor)
-                    return null;
-            }
 
             var integerConstant = memoryValue.IntegerConstant - IntegerConstant;
             var floatConstant = memoryValue.FloatConstant - FloatConstant;

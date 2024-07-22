@@ -404,7 +404,9 @@ namespace RATools.ViewModels
                             else
                                 user = userStats[index];
 
-                            user.Achievements[stats.Id] = DateTime.Parse(parts[1]);
+                            DateTime dateTime;
+                            if (parts.Length > 1 && DateTime.TryParse(parts[1], out dateTime))
+                                user.Achievements[stats.Id] = dateTime;
                         }
                     }
                 }
@@ -566,6 +568,9 @@ namespace RATools.ViewModels
                 return false;
 
             var achievements = masteryJson.GetField("achievements").ObjectValue;
+            if (achievements == null)
+                return false;
+
             foreach (var achievement in achievements)
             {
                 var id = Int32.Parse(achievement.FieldName);

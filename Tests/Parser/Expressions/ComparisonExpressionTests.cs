@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Text;
 
@@ -291,6 +292,60 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(expr7.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
             Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Cannot compare integer and function reference"));
+        }
+
+        [Test]
+        public void TestNormalizeComparisonMergeBitUnderflow()
+        {
+            ExpressionBase result;
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            var tokenizer = Tokenizer.CreateTokenizer("bit1(0x0000) + bit2(0x0000) + bit3(0x0000) - bit4(0x0000) - bit5(0x0000) > 0");
+            var expr = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("bit1(0x000000) + bit2(0x000000) + bit3(0x000000) - bit4(0x000000) - bit5(0x000000) + 2 > 2"));
+        }
+
+        [Test]
+        public void TestNormalizeComparisonMergeBitUnderflowWithPointer()
+        {
+            ExpressionBase result;
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            var tokenizer = Tokenizer.CreateTokenizer("dword(0x000000)");
+            scope.DefineVariable(new VariableDefinitionExpression("a"), ExpressionBase.Parse(new PositionalTokenizer(tokenizer)));
+
+            tokenizer = Tokenizer.CreateTokenizer("bit1(a) + bit2(a) + bit3(a) - bit4(a) - bit5(a) > 0");
+            var expr = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("bit1(dword(0x000000)) + bit2(dword(0x000000)) + bit3(dword(0x000000)) - bit4(dword(0x000000)) - bit5(dword(0x000000)) + 2 > 2"));
+        }
+
+        [Test]
+        public void TestNormalizeComparisonSkipUnderflowWhenDoingExactComparisonToZero()
+        {
+            ExpressionBase result;
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+
+            var tokenizer = Tokenizer.CreateTokenizer("bit1(0x0000) + bit2(0x0000) + bit3(0x0000) - bit4(0x0000) - bit5(0x0000) != 0");
+            var expr = (ComparisonExpression)ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+
+            var builder = new StringBuilder();
+            result.AppendString(builder);
+            Assert.That(builder.ToString(), Is.EqualTo("bit1(0x000000) + bit2(0x000000) + bit3(0x000000) - bit4(0x000000) != bit5(0x000000)"));
         }
     }
 }
