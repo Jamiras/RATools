@@ -5,7 +5,7 @@ namespace RATools.Parser.Expressions.Trigger
 {
     internal static class FieldFactory
     {
-        internal static Field CreateField(ExpressionBase expression)
+        internal static Field CreateField(ExpressionBase expression, bool ignorePointerChain = false)
         {
             switch (expression.Type)
             {
@@ -19,7 +19,7 @@ namespace RATools.Parser.Expressions.Trigger
                     var memoryAccessor = expression as MemoryAccessorExpression;
                     if (memoryAccessor != null)
                     {
-                        if (memoryAccessor.PointerChain.Any())
+                        if (memoryAccessor.HasPointerChain && !ignorePointerChain)
                             break;
                         if (expression is BinaryCodedDecimalExpression)
                             return memoryAccessor.Field.ChangeType(FieldType.BinaryCodedDecimal);

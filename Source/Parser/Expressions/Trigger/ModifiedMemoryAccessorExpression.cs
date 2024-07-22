@@ -1,6 +1,5 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
-using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -403,7 +402,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
 
                 // pointer chain matched. extract the field
-                field = rightAccessor.Field;
+                field = FieldFactory.CreateField(right, true);
             }
             else
             {
