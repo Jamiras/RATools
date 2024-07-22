@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Parser.Expressions
 {
@@ -45,6 +46,24 @@ namespace RATools.Parser.Expressions
             return new ExpressionGroup();
         }
 
+        private class PlaceholderExpression : ExpressionBase
+        {
+            public PlaceholderExpression(TextLocation startLocation, TextLocation endLocation)
+                : base(ExpressionType.None)
+            {
+                Location = new TextRange(startLocation, endLocation);
+            }
+
+            protected override bool Equals(ExpressionBase obj)
+            {
+                return obj is PlaceholderExpression && Equals(Location, obj.Location);
+            }
+
+            internal override void AppendString(StringBuilder builder)
+            {
+            }
+        }
+
         private static void ParseGroups(ExpressionTokenizer tokenizer, List<ExpressionGroup> groups, Func<ExpressionGroup> createGroup)
         {
             while (tokenizer.NextChar != '\0')
@@ -66,6 +85,7 @@ namespace RATools.Parser.Expressions
                 if (tokenizer.NextChar == '\0')
                     break;
 
+                var startLocation = tokenizer.Location;
                 var expression = ExpressionBase.Parse(tokenizer);
 
                 // sometimes parsing an expression will process trailing whitespace looking for a continuation character. 
@@ -76,6 +96,8 @@ namespace RATools.Parser.Expressions
 
                 if (expression.Type != ExpressionType.Error)
                     newGroup.AddExpression(expression);
+                else
+                    newGroup.AddExpression(new PlaceholderExpression(startLocation, tokenizer.Location));
             }
 
             var lastGroup = groups.LastOrDefault();

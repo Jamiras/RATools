@@ -715,11 +715,23 @@ namespace RATools.Parser.Expressions
             if (nonConstantDefaultParameterError != null)
                 return nonConstantDefaultParameterError;
 
-            ExpressionBase expression;
+            var bodyError = tokenizer.Match("=>") ? ParseShorthandBody(tokenizer) : ParseBody(tokenizer);
 
-            if (tokenizer.Match("=>"))
-                return ParseShorthandBody(tokenizer);
+            if (bodyError != null)
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer == null)
+                    return bodyError;
 
+                expressionTokenizer.AddError(bodyError);
+            }
+
+            Location = new TextRange(Location.Start, tokenizer.Location);
+            return MakeReadOnly();
+        }
+
+        private ErrorExpression ParseBody(PositionalTokenizer tokenizer)
+        {
             if (tokenizer.NextChar != '{')
                 return ParseError(tokenizer, "Expected '{' after function declaration", Name);
 
@@ -729,16 +741,9 @@ namespace RATools.Parser.Expressions
             bool seenReturn = false;
             while (tokenizer.NextChar != '}')
             {
-                expression = ExpressionBase.Parse(tokenizer);
+                var expression = ExpressionBase.Parse(tokenizer);
                 if (expression.Type == ExpressionType.Error)
-                {
-                    // the ExpressionTokenizer will capture the error, we should still return the incomplete FunctionDefinition
-                    if (tokenizer is ExpressionTokenizer)
-                        break;
-
-                    // not an ExpressionTokenizer, just return the error
-                    return expression;
-                }
+                    return (ErrorExpression)expression;
 
                 if (expression.Type == ExpressionType.Return)
                     seenReturn = true;
@@ -750,18 +755,17 @@ namespace RATools.Parser.Expressions
                 SkipWhitespace(tokenizer);
             }
 
-            Location = new TextRange(Location.Start, tokenizer.Location);
             tokenizer.Advance();
-            return MakeReadOnly();
+            return null;
         }
 
-        protected ExpressionBase ParseShorthandBody(PositionalTokenizer tokenizer)
+        protected ErrorExpression ParseShorthandBody(PositionalTokenizer tokenizer)
         {
             SkipWhitespace(tokenizer);
 
             var expression = ExpressionBase.Parse(tokenizer);
             if (expression.Type == ExpressionType.Error)
-                return expression;
+                return (ErrorExpression)expression;
 
             switch (expression.Type)
             {
@@ -777,8 +781,7 @@ namespace RATools.Parser.Expressions
 
             var returnExpression = new ReturnExpression(expression);
             Expressions.Add(returnExpression);
-            Location = new TextRange(Location.Start, expression.Location.End);
-            return MakeReadOnly();
+            return null;
         }
 
         /// <summary>
@@ -911,7 +914,19 @@ namespace RATools.Parser.Expressions
             var function = new AnonymousUserFunctionDefinitionExpression(name);
             function.Location = parameter.Location;
             function.Parameters.Add(new VariableDefinitionExpression(variable.Name, variable.Location.Start.Line, variable.Location.Start.Column));
-            return function.ParseShorthandBody(tokenizer);
+
+            var bodyError = function.ParseShorthandBody(tokenizer);
+            if (bodyError != null)
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer == null)
+                    return bodyError;
+
+                expressionTokenizer.AddError(bodyError);
+            }
+
+            function.Location = new TextRange(function.Location.Start, tokenizer.Location);
+            return function.MakeReadOnly();
         }
 
         public IEnumerable<VariableReferenceExpression> CapturedVariables { get; private set; }
