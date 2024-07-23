@@ -1,5 +1,8 @@
 ﻿using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
+using System.Collections.Generic;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -228,6 +231,20 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             // user meant "prev(byte(0x1234 + 10)) == 0"
 
             TriggerExpressionTests.Parse<AlwaysFalseExpression>(input);
+        }
+
+        [Test]
+        public void TestSubSourceScaled()
+        {
+            var input = "A * 10 + B * 100 - prev(A * 10 + B * 100) == 200";
+            input = input.Replace("A", "byte(dword(0x1234) + 1)").Replace("B", "byte(dword(0x1234) + 2)");
+
+            var expression = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
+
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            expression.BuildTrigger(context);
+            TriggerExpressionTests.AssertSerialize(expression, "I:0xX001234_A:0xH000001*10_I:0xX001234_A:0xH000002*100_I:0xX001234_B:d0xH000001*10_I:0xX001234_B:d0xH000002*100_0=200");
         }
     }
 }

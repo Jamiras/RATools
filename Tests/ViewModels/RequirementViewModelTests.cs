@@ -20,6 +20,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("R:0xH1234=7", "never(byte(0x001234) == 7)")]
         [TestCase("A:0xH1234=0_0xH2345=7", "byte(0x001234) + ")]
         [TestCase("B:0xH1234=0_0xH2345=7", "-byte(0x001234) + ")]
+        [TestCase("I:0xH1234=7_0xH2345=7", "AddAddress byte(0x001234) == 7")]
         [TestCase("C:0xH1234=7_0xH2345=7", "AddHits byte(0x001234) == 7")]
         [TestCase("D:0xH1234=7_0xH2345=7", "SubHits byte(0x001234) == 7")]
         [TestCase("N:0xH1234=7_0xH2345=7", "AndNext byte(0x001234) == 7")]
@@ -107,6 +108,33 @@ namespace RATools.Tests.ViewModels
 
             vmRequirement.IsValueDependentOnPreviousRequirement = true;
             Assert.That(vmRequirement.Definition, Is.EqualTo("0 > 3"));
+
+            ServiceRepository.Reset();
+        }
+
+        [Test]
+        public void TestAddSourceTrailingConstantComparisonWithHits()
+        {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
+            var requirement = new Requirement
+            {
+                Left = FieldFactory.CreateField(0),
+                Operator = RequirementOperator.GreaterThan,
+                Right = FieldFactory.CreateField(3),
+                HitCount = 10,
+            };
+
+            var notes = new Dictionary<uint, string>();
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+
+            Assert.That(vmRequirement.Definition, Is.EqualTo("repeated(10, always_false())"));
+
+            vmRequirement.IsValueDependentOnPreviousRequirement = true;
+            Assert.That(vmRequirement.Definition, Is.EqualTo("repeated(10, 0 > 3)"));
 
             ServiceRepository.Reset();
         }

@@ -576,6 +576,9 @@ namespace RATools.Parser.Expressions.Trigger
                 if (!_memoryAccessors[i].MemoryAccessor.HasPointerChain)
                     continue;
 
+                if (_memoryAccessors[i].ModifyingOperator != RequirementOperator.None)
+                    continue;
+
                 // found a SubSource with a pointer. see if there's an AddSource with the same pointer
                 // try to match a prev with it's non-prev first
                 var searchMemoryAccessor = _memoryAccessors[i].MemoryAccessor;
