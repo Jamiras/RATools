@@ -20,7 +20,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("R:0xH1234=7", "never(byte(0x001234) == 7)")]
         [TestCase("A:0xH1234=0_0xH2345=7", "byte(0x001234) + ")]
         [TestCase("B:0xH1234=0_0xH2345=7", "-byte(0x001234) + ")]
-        [TestCase("I:0xH1234=7_0xH2345=7", "AddAddress byte(0x001234) == 7")]
+        [TestCase("I:0xH1234_0xH2345=7", "AddAddress byte(0x001234)")]
         [TestCase("C:0xH1234=7_0xH2345=7", "AddHits byte(0x001234) == 7")]
         [TestCase("D:0xH1234=7_0xH2345=7", "SubHits byte(0x001234) == 7")]
         [TestCase("N:0xH1234=7_0xH2345=7", "AndNext byte(0x001234) == 7")]
