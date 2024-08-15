@@ -125,6 +125,10 @@ namespace RATools.ViewModels
                     builder.Append("SubHits ");
                     break;
 
+                case RequirementType.AddAddress:
+                    builder.Append("AddAddress ");
+                    break;
+
                 case RequirementType.AndNext:
                     builder.Append("AndNext ");
                     break;
@@ -158,6 +162,28 @@ namespace RATools.ViewModels
                     var clone = requirement.Clone();
                     clone.Type = RequirementType.None;
                     clause = clone.ToString();
+                }
+                else if (clause.Contains("always_false()"))
+                {
+                    var clone = new Requirement
+                    {
+                        Left = requirement.Left,
+                        Operator = requirement.Operator,
+                        Right = requirement.Right
+                    };
+                    clone.Type = RequirementType.None;
+                    clause = clause.Replace("always_false()", clone.ToString());
+                }
+                else if (clause.Contains("always_true()"))
+                {
+                    var clone = new Requirement
+                    {
+                        Left = requirement.Left,
+                        Operator = requirement.Operator,
+                        Right = requirement.Right
+                    };
+                    clone.Type = RequirementType.None;
+                    clause = clause.Replace("always_true()", clone.ToString());
                 }
 
                 builder.Append(clause);
