@@ -39,6 +39,8 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("disable_when(byte(0x1234) == 56 || byte(0x1235) == 55, until=byte(0x2345) == 67 || byte(0x2346) == 66)", "O:0xH002345=67_Z:0xH002346=66_O:0xH001234=56_P:0xH001235=55.1.")]
         [TestCase("disable_when(tally(3, once(byte(0x1234) == 56), byte(0x1235) == 55, repeated(2, byte(0x1236) == 54)), until=byte(0x1234) == 1)",
             "Z:0xH001234=1_C:0xH001234=56.1._Z:0xH001234=1_C:0xH001236=54.2._Z:0xH001234=1_P:0xH001235=55.3.")] // ResetNextIf has to proceed each clause of tally
+        [TestCase("disable_when(byte(0x1234) & 0x07 == 3 || byte(0x1234) & 0x30 == 1)",
+            "A:0xH001234&7_O:0=3_A:0xH001234&48_P:0=1.1.")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<DisableWhenRequirementExpression>(input);

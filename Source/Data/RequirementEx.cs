@@ -192,6 +192,9 @@ namespace RATools.Data
             Requirement combiningRequirement = null;
             foreach (var requirement in requirements)
             {
+                if (requirement == null)
+                    continue;
+
                 if (combiningRequirement != null &&
                     (combiningRequirement.Type == RequirementType.AndNext ||
                      combiningRequirement.Type == RequirementType.OrNext))
@@ -243,8 +246,10 @@ namespace RATools.Data
                         }
                     }
                 }
-                else if (requirement != null)
+                else if (combiningRequirement == null || !IsAccumulated(group.Last().Requirements))
                 {
+                    // if this requirement is not part of an accumulator chain (AddSource/SubSource),
+                    // check to see if it can be discarded.
                     switch (requirement.Type)
                     {
                         case RequirementType.AddHits:
@@ -256,7 +261,7 @@ namespace RATools.Data
 
                         case RequirementType.AndNext:
                             // an always_true() condition will not affect the next condition
-                            if (combiningRequirement == null && requirement.Evaluate() == true)
+                            if (requirement.Evaluate() == true)
                                 continue;
                             break;
 
@@ -273,10 +278,34 @@ namespace RATools.Data
 
                 group.Last().Requirements.Add(requirement);
 
-                combiningRequirement = requirement != null && requirement.IsCombining ? requirement : null;
+                combiningRequirement = requirement.IsCombining ? requirement : null;
             }
 
             return group;
+        }
+
+        private static bool IsAccumulated(List<Requirement> requirements)
+        {
+            for (int i = requirements.Count - 1; i >= 0; i--)
+            {
+                switch (requirements[i].Type)
+                {
+                    // AddAddress doesn't affect accumulator, ignore it.
+                    case RequirementType.AddAddress:
+                        continue;
+
+                    // These affect accumulator.
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        return true;
+
+                    // Everything else consumes and resets the accumulator.
+                    default:
+                        return false;
+                }
+            }
+
+            return false;
         }
     }
 }
