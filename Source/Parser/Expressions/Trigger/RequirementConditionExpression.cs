@@ -347,7 +347,7 @@ namespace RATools.Parser.Expressions.Trigger
                 expression = new RequirementConditionExpression()
                 {
                     Left = newLeft,
-                    Comparison = condition.Comparison,
+                    Comparison = ComparisonExpression.ReverseComparisonOperation(condition.Comparison),
                     Right = newRight,
                     Location = condition.Location,
                 };

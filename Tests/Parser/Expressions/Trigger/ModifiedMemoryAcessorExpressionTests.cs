@@ -39,6 +39,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) & byte(0x002345)", "0xH001234&0xH002345")]
         [TestCase("byte(0x001234) ^ byte(0x002345)", "0xH001234^0xH002345")]
         [TestCase("byte(0x001234) * byte(0x001234)", "0xH001234*0xH001234")]
+        [TestCase("byte(0x001234) * ~byte(0x002345)", "0xH001234*~0xH002345")]
+        [TestCase("~byte(0x001234) * ~byte(0x002345)", "~0xH001234*~0xH002345")]
         [TestCase("low4(word(0x001234)) * 20", "I:0x 001234_0xL000000*20")]
         [TestCase("prev(high4(0x001234)) * prior(bit3(0x001235))", "d0xU001234*p0xP001235")]
         [TestCase("low4(word(0x001234)) * high4(word(0x001234) + 10)", "I:0x 001234_0xL000000*0xU00000a")]

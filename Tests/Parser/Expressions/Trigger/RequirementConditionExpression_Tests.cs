@@ -161,9 +161,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("~prev(byte(1)) == 15", "prev(byte(0x000001)) == 240")]
         [TestCase("~byte(1) != prev(~byte(1))", "byte(0x000001) != prev(byte(0x000001))")]
         [TestCase("byte(1) & ~0x3F == 0x80", "byte(0x000001) & 0x000000C0 == 128")]
+        [TestCase("~byte(1) == ~byte(2)", "byte(0x000001) == byte(0x000002)")]
+        [TestCase("~byte(1) > ~byte(2)", "byte(0x000001) < byte(0x000002)")]
         // invert cannot be factored out
         [TestCase("~byte(1) != byte(2)", "~byte(0x000001) != byte(0x000002)")]
         [TestCase("byte(1) != ~byte(2)", "byte(0x000001) != ~byte(0x000002)")]
+        [TestCase("~byte(1) > byte(2)", "~byte(0x000001) > byte(0x000002)")]
         public void TestNormalizeInvert(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);
