@@ -137,11 +137,11 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
                   "never(byte(0x002345) == 2) && repeated(2, byte(0x001234) == 1)")] // ResetNextIf can be turned into a ResetIf
         [TestCase("never(byte(0x2222) == 2) && unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
-                  "never(byte(0x002222) == 2) && unless(repeated(2, byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+                  "never(byte(0x002222) == 2) && disable_when(repeated(2, byte(0x001234) == 1), until=byte(0x002345) == 2)")] // ResetNextIf attached to a PauseIf cannot be converted
         [TestCase("byte(0x2222) == 2 || unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
-                  "byte(0x002222) == 2 || unless(repeated(2, byte(0x001234) == 1)) || (never(byte(0x002345) == 2) && always_false())")] // PauseLock cannot be eliminated, ResetNextIf turned into a ResetIf and moved to a separate alt
+                  "byte(0x002222) == 2 || (disable_when(repeated(2, byte(0x001234) == 1), until=byte(0x002345) == 2))")] // ResetNextIf attached to a PauseIf cannot be converted
         [TestCase("byte(0x2222) == 2 || never(byte(0x3333) == 1) && unless(repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))",
-                  "byte(0x002222) == 2 || (never(byte(0x003333) == 1) && unless(repeated(2, byte(0x001234) == 1))) || (never(byte(0x002345) == 2) && always_false())")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an always false alt group
+                  "byte(0x002222) == 2 || (never(byte(0x003333) == 1) && disable_when(repeated(2, byte(0x001234) == 1), until=byte(0x002345) == 2))")] // ResetNextIf attached to a PauseIf cannot be converted
         [TestCase("once(byte(0x2222) == 2) && repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2))",
                   "once(byte(0x002222) == 2) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))")] // ResetNextIf cannot be turned into a ResetIf
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 2))",
@@ -149,11 +149,9 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)) && repeated(3, byte(0x1234) == 3 && never(byte(0x2345) == 3))",
                   "repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2)) && repeated(3, byte(0x001234) == 3 && never(byte(0x002345) == 3))")] // dissimilar ResetNextIfs cannot be turned into a ResetIf
         [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2)",
-                  "unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 2))")] // Pause lock that's not guarding anything should not be inverted
-        [TestCase("disable_when(byte(0x1234) == 1, until=byte(0x2345) == 2) && never(byte(0x3456) == 3)",
-                  "unless(once(byte(0x001234) == 1)) && never(byte(0x003456) == 3) && (never(byte(0x002345) == 2))")] // ResetNextIf can be turned into a ResetIf, but has to be moved into an alt group
+                  "disable_when(byte(0x001234) == 1, until=byte(0x002345) == 2)")] // ResetNextIf attached to PauseIf should not be converted
         [TestCase("disable_when(tally(2, byte(0x1234) == 1, byte(0x1234) == 2), until=byte(0x2345) == 2)",
-                  "unless(tally(2, byte(0x001234) == 1, byte(0x001234) == 2)) && (never(byte(0x002345) == 2))")] // tally will generate similar ResetNextIfs which can be turned into a ResetIf, but has to be moved into an alt group
+                  "disable_when(tally(2, byte(0x001234) == 1 && never(byte(0x002345) == 2), byte(0x001234) == 2), until=byte(0x002345) == 2)")] // ResetNextIf attached to a tallied PauseIf gets distributed across the tallied items. TODO: collapse them back together when converting back to a string
         [TestCase("never(byte(0x001234) != 5)", "byte(0x001234) == 5")]
         [TestCase("never(byte(0x001234) == 5)", "byte(0x001234) != 5")]
         [TestCase("never(byte(0x001234) >= 5)", "byte(0x001234) < 5")]
