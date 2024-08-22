@@ -99,6 +99,7 @@ namespace RATools.Data.Tests
         [TestCase(TestField.Byte1234, RequirementOperator.Multiply, TestField.Value99, null)]
         [TestCase(TestField.Byte1234, RequirementOperator.Multiply, TestField.Byte1234, null)]
         [TestCase(TestField.Byte1234, RequirementOperator.Divide, TestField.Value99, null)]
+        [TestCase(TestField.Byte1234, RequirementOperator.Modulus, TestField.Value99, null)]
         [TestCase(TestField.Byte1234, RequirementOperator.BitwiseAnd, TestField.Value99, null)]
         [TestCase(TestField.Value99, RequirementOperator.None, TestField.None, null)]
         public void TestEvaluate(TestField left, RequirementOperator requirementOperator, TestField right, bool? expected)

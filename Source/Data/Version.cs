@@ -68,7 +68,7 @@ namespace RATools.Data
         /// 1.1 - 15 Nov 2022
         ///  Operators: BitwiseXor
         ///  Sizes: MBF32LE
-        ///  Otehr: Local code notes
+        ///  Other: Local code notes
         /// </summary>
         public static readonly SoftwareVersion _1_1 = new SoftwareVersion(1, 1);
 
@@ -85,5 +85,12 @@ namespace RATools.Data
         ///  Other: AchievementTypes
         /// </summary>
         public static readonly SoftwareVersion _1_3 = new SoftwareVersion(1, 3);
+
+        /// <summary>
+        /// 1.3.1 - TBD
+        ///  Flags: Remember/Recall
+        ///  Operators: Modulus, Add, Subtract
+        /// </summary>
+        public static readonly SoftwareVersion _1_3_1 = new SoftwareVersion(1, 3, 1);
     }
 }

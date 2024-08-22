@@ -232,6 +232,10 @@ namespace RATools.Parser.Expressions.Trigger
                             builder.Append(" / ");
                             _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
                             break;
+                        case RequirementOperator.Modulus:
+                            builder.Append(" % ");
+                            _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
+                            break;
                         case RequirementOperator.BitwiseAnd:
                             builder.Append(" & ");
                             builder.AppendFormat("0x{0:X6}", _pointerChain[i].Right.Value);

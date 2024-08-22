@@ -77,6 +77,7 @@ namespace RATools.ViewModels
                 new LookupItem((int)RequirementOperator.GreaterThanOrEqual, ">="),
                 new LookupItem((int)RequirementOperator.Multiply, "*"),
                 new LookupItem((int)RequirementOperator.Divide, "/"),
+                new LookupItem((int)RequirementOperator.Modulus, "%"),
                 new LookupItem((int)RequirementOperator.BitwiseAnd, "&"),
             };
 

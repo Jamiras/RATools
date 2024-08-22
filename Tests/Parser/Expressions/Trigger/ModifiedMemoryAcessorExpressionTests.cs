@@ -1,8 +1,6 @@
 ﻿using NUnit.Framework;
-using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using System;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -12,10 +10,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [Test]
         [TestCase("byte(0x001234) * 10")]
         [TestCase("byte(0x001234) / 10")]
+        [TestCase("byte(0x001234) % 10")]
         [TestCase("byte(0x001234) & 0x0000000A")]
         [TestCase("byte(0x001234) ^ 0x0000000A")]
         [TestCase("byte(0x001234) * byte(0x002345)")]
         [TestCase("byte(0x001234) / byte(0x002345)")]
+        [TestCase("byte(0x001234) % byte(0x002345)")]
         [TestCase("byte(0x001234) & byte(0x002345)")]
         [TestCase("byte(0x001234) ^ byte(0x002345)")]
         [TestCase("byte(0x001234) * byte(0x001234)")]
@@ -32,10 +32,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [Test]
         [TestCase("byte(0x001234) * 10", "0xH001234*10")]
         [TestCase("byte(0x001234) / 10", "0xH001234/10")]
+        [TestCase("byte(0x001234) % 10", "0xH001234%10")]
         [TestCase("byte(0x001234) & 10", "0xH001234&10")]
         [TestCase("byte(0x001234) ^ 10", "0xH001234^10")]
         [TestCase("byte(0x001234) * byte(0x002345)", "0xH001234*0xH002345")]
         [TestCase("byte(0x001234) / byte(0x002345)", "0xH001234/0xH002345")]
+        [TestCase("byte(0x001234) % byte(0x002345)", "0xH001234%0xH002345")]
         [TestCase("byte(0x001234) & byte(0x002345)", "0xH001234&0xH002345")]
         [TestCase("byte(0x001234) ^ byte(0x002345)", "0xH001234^0xH002345")]
         [TestCase("byte(0x001234) * byte(0x001234)", "0xH001234*0xH001234")]

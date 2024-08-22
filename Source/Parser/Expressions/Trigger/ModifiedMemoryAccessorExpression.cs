@@ -146,6 +146,10 @@ namespace RATools.Parser.Expressions.Trigger
                     builder.Append(" / ");
                     break;
 
+                case RequirementOperator.Modulus:
+                    builder.Append(" % ");
+                    break;
+
                 case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
                     break;
@@ -175,6 +179,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                     case RequirementOperator.Multiply:
                     case RequirementOperator.Divide:
+                    case RequirementOperator.Modulus:
                         if (Modifier.Type != FieldType.Value)
                             goto default; // default formating for floats
 
@@ -494,6 +499,9 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                     else if (ModifyingOperator != newModifyingOperator)
                     {
+                        if (newModifyingOperator == RequirementOperator.Modulus)
+                            return new ErrorExpression("Cannot modulus using a runtime value");
+
                         if (Modifier.Type == FieldType.Value && field.Type == FieldType.Value)
                         {
                             if (ModifyingOperator == RequirementOperator.Multiply && newModifyingOperator == RequirementOperator.Divide)
@@ -568,6 +576,7 @@ namespace RATools.Parser.Expressions.Trigger
                 switch (ModifyingOperator)
                 {
                     case RequirementOperator.Divide:
+                    case RequirementOperator.Modulus:
                         return new ErrorExpression("Division by zero");
 
                     case RequirementOperator.Multiply:   // a * 0  =>  0
@@ -588,6 +597,9 @@ namespace RATools.Parser.Expressions.Trigger
                     case RequirementOperator.Divide:   // a / 1  =>  a
                         ModifyingOperator = RequirementOperator.None;
                         break;
+
+                    case RequirementOperator.Modulus:  // a % 1 => 0
+                        return new IntegerConstantExpression(0);
                 }
             }
 
@@ -660,6 +672,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 case MathematicOperation.Multiply: return RequirementOperator.Multiply;
                 case MathematicOperation.Divide: return RequirementOperator.Divide;
+                case MathematicOperation.Modulus: return RequirementOperator.Modulus;
                 case MathematicOperation.BitwiseAnd: return RequirementOperator.BitwiseAnd;
                 case MathematicOperation.BitwiseXor: return RequirementOperator.BitwiseXor;
                 default: return RequirementOperator.None;
@@ -672,6 +685,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 case RequirementOperator.Multiply: return MathematicOperation.Multiply;
                 case RequirementOperator.Divide: return MathematicOperation.Divide;
+                case RequirementOperator.Modulus: return MathematicOperation.Modulus;
                 case RequirementOperator.BitwiseAnd: return MathematicOperation.BitwiseAnd;
                 case RequirementOperator.BitwiseXor: return MathematicOperation.BitwiseXor;
                 default: return MathematicOperation.None;

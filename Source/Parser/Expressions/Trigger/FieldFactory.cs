@@ -86,6 +86,9 @@ namespace RATools.Parser.Expressions.Trigger
                         case RequirementOperator.Divide:
                             intResult /= right.Value;
                             break;
+                        case RequirementOperator.Modulus:
+                            intResult %= right.Value;
+                            break;
                         case RequirementOperator.BitwiseAnd:
                             intResult &= right.Value;
                             break;
@@ -107,6 +110,9 @@ namespace RATools.Parser.Expressions.Trigger
                             break;
                         case RequirementOperator.Divide:
                             floatResult /= right.Float;
+                            break;
+                        case RequirementOperator.Modulus:
+                            floatResult %= right.Float;
                             break;
                         default:
                             return new Field();

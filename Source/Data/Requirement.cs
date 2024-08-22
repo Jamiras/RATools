@@ -148,6 +148,7 @@ namespace RATools.Data
                 {
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
+                    case RequirementOperator.Modulus: builder.Append('%'); break;
                     case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
                     case RequirementOperator.BitwiseXor: builder.Append('^'); break;
                     default:
@@ -170,6 +171,7 @@ namespace RATools.Data
                     case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
+                    case RequirementOperator.Modulus: builder.Append('%'); break;
                     case RequirementOperator.BitwiseAnd: builder.Append('&'); break;
                     case RequirementOperator.BitwiseXor: builder.Append('^'); break;
                     case RequirementOperator.None: return;
@@ -236,6 +238,10 @@ namespace RATools.Data
 
                 case RequirementOperator.BitwiseXor:
                     minimumVersion = minimumVersion.OrNewer(Version._1_1);
+                    break;
+
+                case RequirementOperator.Modulus:
+                    minimumVersion = minimumVersion.OrNewer(Version._1_3_1);
                     break;
 
                 default:
