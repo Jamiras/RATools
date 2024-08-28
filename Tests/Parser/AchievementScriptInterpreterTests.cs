@@ -1350,5 +1350,15 @@ namespace RATools.Parser.Tests
                 "4:1 foo call failed\r\n" +
                 "- 3:5 Expression is not executable. Did you mean to return it?");
         }
+
+        [Test]
+        public void TestIfInParameters()
+        {
+            Evaluate("function inc(a) => a + 1\n" +
+                "b = 2\n" +
+                "c = inc(if (b == 1) { return 3 } else { return 5 })",
+
+                "3:9 Cannot assign if statement to parameter");
+        }
     }
 }
