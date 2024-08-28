@@ -59,6 +59,11 @@
         /// The bits in the left value are toggled by the bits in the right value. (combining conditions only)
         /// </summary>
         BitwiseXor,
+
+        /// <summary>
+        /// The left value is divided by the right value and the remainder is returned. (combining conditions only)
+        /// </summary>
+        Modulus,
     }
 
     public static class RequirementOperatorExtension
@@ -78,6 +83,7 @@
                 case RequirementOperator.GreaterThanOrEqual: return ">=";
                 case RequirementOperator.Multiply: return "*";
                 case RequirementOperator.Divide: return "/";
+                case RequirementOperator.Modulus: return "%";
                 case RequirementOperator.BitwiseAnd: return "&";
                 case RequirementOperator.BitwiseXor: return "^";
                 default: return "";
@@ -147,6 +153,7 @@
             {
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
+                case RequirementOperator.Modulus:
                 case RequirementOperator.BitwiseAnd:
                 case RequirementOperator.BitwiseXor:
                     return true;

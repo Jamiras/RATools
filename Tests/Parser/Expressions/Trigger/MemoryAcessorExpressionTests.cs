@@ -56,7 +56,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234)", "&", "2",
             ExpressionType.MemoryAccessor, "byte(0x001234) & 0x00000002")]
         [TestCase("byte(0x001234)", "%", "2",
-            ExpressionType.Error, "Cannot modulus using a runtime value")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) % 2")]
         [TestCase("byte(0x001234)", "+", "byte(0x002345)",
             ExpressionType.MemoryAccessor, "byte(0x001234) + byte(0x002345)")]
         [TestCase("byte(0x001234)", "-", "byte(0x002345)",
@@ -68,7 +68,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234)", "&", "byte(0x002345)",
             ExpressionType.MemoryAccessor, "byte(0x001234) & byte(0x002345)")]
         [TestCase("byte(0x001234)", "%", "byte(0x002345)",
-            ExpressionType.Error, "Cannot modulus using a runtime value")]
+            ExpressionType.MemoryAccessor, "byte(0x001234) % byte(0x002345)")]
         [TestCase("float(0x001234)", "&", "10",
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
         [TestCase("float(0x001234)", "^", "10",

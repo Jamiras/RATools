@@ -707,6 +707,7 @@ namespace RATools.Parser
 
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
+                case RequirementOperator.Modulus:
                 case RequirementOperator.BitwiseAnd:
                 // handled by AppendFieldModifier above, treat like none
 
@@ -758,6 +759,11 @@ namespace RATools.Parser
 
                 case RequirementOperator.Divide:
                     builder.Append(" / ");
+                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    break;
+
+                case RequirementOperator.Modulus:
+                    builder.Append(" % ");
                     requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
                     break;
 
