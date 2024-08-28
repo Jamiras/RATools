@@ -1330,5 +1330,25 @@ namespace RATools.Parser.Tests
             Assert.That(achievement.Trigger.Serialize(parser.SerializationContext),
                 Is.EqualTo("0xH1234=1_O:0xH2345=5_0xH2345=6_O:0xH3456=6_0xH3456=7"));
         }
+
+        [Test]
+        public void TestNonExecutableExpression()
+        {
+            Evaluate("byte(0x1234) == 6", "1:1 Only assignment statements, function calls and function definitions allowed at outer scope");
+        }
+
+        [Test]
+        public void TestNonExecutableExpressionInFunction()
+        {
+            Evaluate(
+                "function foo()\n" +
+                "{\n" +
+                "    byte(0x1234) == 6" +
+                "}\n" +
+                "foo()\n",
+
+                "4:1 foo call failed\r\n" +
+                "- 3:5 Expression is not executable. Did you mean to return it?");
+        }
     }
 }

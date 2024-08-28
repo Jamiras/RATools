@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 
 namespace RATools.Parser
@@ -449,6 +450,9 @@ namespace RATools.Parser
                     // block of code. just ignore them.
                     return null;
             }
+
+            if (scope.GetContext<FunctionCallExpression>() != null)
+                return new ErrorExpression("Expression is not executable. Did you mean to return it?", expression);
 
             return new ErrorExpression("Only assignment statements, function calls and function definitions allowed at outer scope", expression);
         }
