@@ -1275,6 +1275,11 @@ namespace RATools.Parser.Internal
             if (!canExtract || resetNextIf == null)
                 return;
 
+            // a ResetNextIf attached to a Pause must remain attached to the Pause, or it could cause
+            // the logic to fail when it's just supposed to be unpausing the logic.
+            if (resetNextIsForPause)
+                return;
+
             // remove the common clause from each complex clause
             foreach (var requirementEx in resetNextIfClauses)
             {
@@ -1292,46 +1297,15 @@ namespace RATools.Parser.Internal
             // change the ResetNextIf to a ResetIf
             resetNextIf.Requirements.Last().Type = RequirementType.ResetIf;
 
-            // if the reset is for a pause, it has to be moved to a separate group or it can't be evaluated
-            if (resetNextIsForPause)
+            // put the ResetIf where the ResetNextIf was
+            foreach (var group in groups)
             {
-                var newGroup = new List<RequirementEx>();
-                newGroup.Add(resetNextIf);
-                groups.Add(newGroup);
-
-                if (groups.Count > 2)
+                for (int i = 0; i < group.Count; ++i)
                 {
-                    // if alt groups already exist, add the an always false condition to prevent the new alt group
-                    // from ever being true. otherwise, just add it as is and it'll always be true.
-                    var newClause = new RequirementEx();
-                    newClause.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-                    newGroup.Add(newClause);
-                }
-                else
-                {
-                    // if alt groups don't exist, let the new group always be true, but add an always false
-                    // second group to prevent it from being collapsed back into core. the always false group
-                    // will be optimized out later.
-                    var newClause = new RequirementEx();
-                    newClause.Requirements.Add(AlwaysFalseFunction.CreateAlwaysFalseRequirement());
-
-                    newGroup = new List<RequirementEx>();
-                    newGroup.Add(newClause);
-                    groups.Add(newGroup);
-                }
-            }
-            else
-            {
-                // reset is not for a pause, insert it where the ResetNextIf was
-                foreach (var group in groups)
-                {
-                    for (int i = 0; i < group.Count; ++i)
+                    if (resetNextIfClauses.Contains(group[i]))
                     {
-                        if (resetNextIfClauses.Contains(group[i]))
-                        {
-                            group.Insert(i, resetNextIf);
-                            break;
-                        }
+                        group.Insert(i, resetNextIf);
+                        break;
                     }
                 }
             }
