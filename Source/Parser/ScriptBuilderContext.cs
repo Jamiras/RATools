@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Text;
 
 namespace RATools.Parser
@@ -43,6 +44,7 @@ namespace RATools.Parser
         private StringBuilder _addAddress;
         private StringBuilder _resetNextIf;
         private StringBuilder _measuredIf;
+        private StringBuilder _remember;
         private Requirement _lastAndNext;
         private int _remainingWidth;
 
@@ -180,6 +182,7 @@ namespace RATools.Parser
             {
                 // precedence is AddAddress
                 //             > AddSource/SubSource
+                //             > Remember
                 //             > AndNext/OrNext
                 //             > ResetNextIf
                 //             > AddHits/SubHits
@@ -189,14 +192,14 @@ namespace RATools.Parser
                     case RequirementType.AddAddress:
                         if (_addAddress == null)
                             _addAddress = new StringBuilder();
-                        AppendField(_addAddress, requirement);
+                        AppendFields(_addAddress, requirement);
                         _addAddress.Append(" + ");
                         break;
 
                     case RequirementType.AddSource:
                         if (_addSources == null)
                             _addSources = new StringBuilder();
-                        AppendField(_addSources, requirement);
+                        AppendFields(_addSources, requirement);
                         _addSources.Append(" + ");
                         break;
 
@@ -204,7 +207,7 @@ namespace RATools.Parser
                         if (_subSources == null)
                             _subSources = new StringBuilder();
                         _subSources.Append(" - ");
-                        AppendField(_subSources, requirement);
+                        AppendFields(_subSources, requirement);
                         break;
 
                     case RequirementType.AndNext:
@@ -236,6 +239,14 @@ namespace RATools.Parser
                         definition.Append("measured_if(");
                         AppendRepeatedCondition(definition, requirement);
                         definition.Append(')');
+                        break;
+
+                    case RequirementType.Remember:
+                        if (_addSources == null)
+                            _addSources = new StringBuilder();
+                        AppendFields(_addSources, requirement);
+                        _remember = _addSources;
+                        _addSources = null;
                         break;
 
                     default:
@@ -650,7 +661,7 @@ namespace RATools.Parser
                         }
                     }
 
-                    requirement.Left.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Left, _addAddress?.ToString());
                     break;
             }
 
@@ -717,7 +728,7 @@ namespace RATools.Parser
                     return;
             }
 
-            requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+            AppendField(builder, requirement.Right, _addAddress?.ToString());
 
             if (suffix != null)
                 builder.Append(suffix);
@@ -725,7 +736,7 @@ namespace RATools.Parser
             _addAddress?.Clear();
         }
 
-        private void AppendField(StringBuilder builder, Requirement requirement)
+        private void AppendFields(StringBuilder builder, Requirement requirement)
         {
             if (!NullOrEmpty(_addAddress))
             {
@@ -735,7 +746,7 @@ namespace RATools.Parser
                 if (!ReferenceEquals(_addAddress, builder))
                     builder.Append('(');
 
-                requirement.Left.AppendString(builder, NumberFormat, addAddressString);
+                AppendField(builder, requirement.Left, addAddressString);
                 AppendFieldModifier(builder, requirement);
 
                 if (!ReferenceEquals(_addAddress, builder))
@@ -743,33 +754,58 @@ namespace RATools.Parser
             }
             else
             {
-                requirement.Left.AppendString(builder, NumberFormat);
+                AppendField(builder, requirement.Left);
                 AppendFieldModifier(builder, requirement);
             }
+        }
+
+        private void AppendField(StringBuilder builder, Field field, string addAddressString = null)
+        {
+            if (field.Type == FieldType.Recall && _remember.Length > 0)
+            {
+                builder.Append('(');
+                builder.Append(_remember);
+                builder.Append(')');
+            }
+            else
+                field.AppendString(builder, NumberFormat, addAddressString);
         }
 
         private void AppendFieldModifier(StringBuilder builder, Requirement requirement)
         {
             switch (requirement.Operator)
             {
+                case RequirementOperator.Add:
+                    builder.Append(" + ");
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
+                    break;
+
+                case RequirementOperator.Subtract:
+                    builder.Append(" - ");
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
+                    break;
+
                 case RequirementOperator.Multiply:
                     builder.Append(" * ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.Divide:
                     builder.Append(" / ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.Modulus:
                     builder.Append(" % ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
-                    requirement.Right.AppendString(builder, NumberFormat.Hexadecimal, _addAddress?.ToString());
+                    if (requirement.Right.Type == FieldType.Recall && _remember.Length > 0)
+                        builder.Append(_remember);
+                    else
+                        requirement.Right.AppendString(builder, NumberFormat.Hexadecimal, _addAddress?.ToString());
                     break;
             }
         }

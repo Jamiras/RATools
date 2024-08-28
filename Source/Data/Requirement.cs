@@ -138,6 +138,7 @@ namespace RATools.Data
                 case RequirementType.AddAddress: builder.Append("I:"); break;
                 case RequirementType.ResetNextIf: builder.Append("Z:"); break;
                 case RequirementType.Trigger: builder.Append("T:"); break;
+                case RequirementType.Remember: builder.Append("K:"); break;
             }
 
             Left.Serialize(builder, serializationContext);
@@ -146,6 +147,8 @@ namespace RATools.Data
             {
                 switch (Operator)
                 {
+                    case RequirementOperator.Add: builder.Append('+'); break;
+                    case RequirementOperator.Subtract: builder.Append('-'); break;
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
                     case RequirementOperator.Modulus: builder.Append('%'); break;
@@ -224,6 +227,10 @@ namespace RATools.Data
                     minimumVersion = Version._1_0;
                     break;
 
+                case RequirementType.Remember:
+                    minimumVersion = Version._1_3_1;
+                    break;
+
                 default:
                     break;
             }
@@ -240,6 +247,8 @@ namespace RATools.Data
                     minimumVersion = minimumVersion.OrNewer(Version._1_1);
                     break;
 
+                case RequirementOperator.Add:
+                case RequirementOperator.Subtract:
                 case RequirementOperator.Modulus:
                     minimumVersion = minimumVersion.OrNewer(Version._1_3_1);
                     break;
@@ -254,6 +263,10 @@ namespace RATools.Data
                 {
                     case FieldType.PriorValue:
                         minimumVersion = minimumVersion.OrNewer(Version._0_76);
+                        break;
+
+                    case FieldType.Recall:
+                        minimumVersion = minimumVersion.OrNewer(Version._1_3_1);
                         break;
 
                     default:
@@ -462,38 +475,43 @@ namespace RATools.Data
             return !left.Equals(right);
         }
 
+        private static RequirementType ReadRequirementType(Tokenizer tokenizer)
+        {
+            RequirementType type;
+
+            switch (tokenizer.NextChar)
+            {
+                case 'R': type = RequirementType.ResetIf; break;
+                case 'P': type = RequirementType.PauseIf; break;
+                case 'A': type = RequirementType.AddSource; break;
+                case 'B': type = RequirementType.SubSource; break;
+                case 'C': type = RequirementType.AddHits; break;
+                case 'D': type = RequirementType.SubHits; break;
+                case 'N': type = RequirementType.AndNext; break;
+                case 'O': type = RequirementType.OrNext; break;
+                case 'I': type = RequirementType.AddAddress; break;
+                case 'M': type = RequirementType.Measured; break;
+                case 'G': type = RequirementType.MeasuredPercent; break;
+                case 'Q': type = RequirementType.MeasuredIf; break;
+                case 'Z': type = RequirementType.ResetNextIf; break;
+                case 'T': type = RequirementType.Trigger; break;
+                case 'K': type = RequirementType.Remember; break;
+
+                default: 
+                    return RequirementType.None;
+            }
+
+            var prefix = tokenizer.NextChar + ":";
+            if (tokenizer.Match(prefix))
+                return type;
+
+            return RequirementType.None;
+        }
+
         internal static Requirement Deserialize(Tokenizer tokenizer)
         {
             var requirement = new Requirement();
-
-            if (tokenizer.Match("R:"))
-                requirement.Type = RequirementType.ResetIf;
-            else if (tokenizer.Match("P:"))
-                requirement.Type = RequirementType.PauseIf;
-            else if (tokenizer.Match("A:"))
-                requirement.Type = RequirementType.AddSource;
-            else if (tokenizer.Match("B:"))
-                requirement.Type = RequirementType.SubSource;
-            else if (tokenizer.Match("C:"))
-                requirement.Type = RequirementType.AddHits;
-            else if (tokenizer.Match("D:"))
-                requirement.Type = RequirementType.SubHits;
-            else if (tokenizer.Match("N:"))
-                requirement.Type = RequirementType.AndNext;
-            else if (tokenizer.Match("O:"))
-                requirement.Type = RequirementType.OrNext;
-            else if (tokenizer.Match("I:"))
-                requirement.Type = RequirementType.AddAddress;
-            else if (tokenizer.Match("M:"))
-                requirement.Type = RequirementType.Measured;
-            else if (tokenizer.Match("G:"))
-                requirement.Type = RequirementType.MeasuredPercent;
-            else if (tokenizer.Match("Q:"))
-                requirement.Type = RequirementType.MeasuredIf;
-            else if (tokenizer.Match("Z:"))
-                requirement.Type = RequirementType.ResetNextIf;
-            else if (tokenizer.Match("T:"))
-                requirement.Type = RequirementType.Trigger;
+            requirement.Type = ReadRequirementType(tokenizer);
             requirement.Left = Field.Deserialize(tokenizer);
 
             requirement.Operator = ReadOperator(tokenizer);
@@ -569,6 +587,14 @@ namespace RATools.Data
                         return RequirementOperator.GreaterThanOrEqual;
                     }
                     return RequirementOperator.GreaterThan;
+
+                case '+':
+                    tokenizer.Advance();
+                    return RequirementOperator.Add;
+
+                case '-':
+                    tokenizer.Advance();
+                    return RequirementOperator.Subtract;
 
                 case '*':
                     tokenizer.Advance();

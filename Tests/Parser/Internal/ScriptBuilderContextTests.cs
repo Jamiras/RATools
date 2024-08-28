@@ -62,6 +62,8 @@ namespace RATools.Parser.Tests.Internal
                   "measured(repeated(100, byte(0x001234) == 1 && byte(0x002345) == 2))")]
         [TestCase("N:0xH001234=1_C:0xH002345=2_N:0xH001234=2_M:0xH002345=3",
                   "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2, byte(0x001234) == 2 && byte(0x002345) == 3))")]
+        [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000=3", "byte(dword(0x002345) + (byte(0x001234) * 2)) == 3")]
+        [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000={recall}", "byte(dword(0x002345) + (byte(0x001234) * 2)) == (byte(0x001234) * 2)")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
