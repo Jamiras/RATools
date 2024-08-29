@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.NetworkInformation;
 using System.Text;
 
 namespace RATools.Parser
@@ -110,12 +109,47 @@ namespace RATools.Parser
 
             RequirementEx measured = null;
             var measuredIfs = new List<RequirementEx>();
+            var pauseRemembers = new List<RequirementEx>();
             foreach (var group in groups)
             {
                 if (group.IsMeasured)
                     measured = group;
                 else if (group.Type == RequirementType.MeasuredIf)
                     measuredIfs.Add(group);
+                else if (group.Type == RequirementType.PauseIf && group.Requirements.Any(r => r.Type == RequirementType.Remember))
+                    pauseRemembers.Add(group);
+            }
+
+            if (pauseRemembers.Count > 0)
+            {
+                bool hasNonPauseRecallBeforeLastPauseRemember = false;
+                int lastPauseRememberIndex = groups.IndexOf(pauseRemembers.Last());
+                for (int index = 0; index < lastPauseRememberIndex; index++)
+                {
+                    var group = groups[index];
+                    if (group.Type == RequirementType.PauseIf)
+                        continue;
+
+                    // found a non-pause Remember, don't need the pause Remember
+                    if (group.Requirements.Any(r => r.Type == RequirementType.Remember))
+                        break;
+
+                    if (group.Requirements.Any(r => r.Left.Type == FieldType.Recall || r.Right.Type == FieldType.Recall))
+                    {
+                        // found a Recall without a Remember, it will use the last non-pause Remember
+                        hasNonPauseRecallBeforeLastPauseRemember = true;
+                        break;
+                    }
+                }
+
+                if (hasNonPauseRecallBeforeLastPauseRemember)
+                {
+                    // there's at least one Recall dependant on a Remember from the Pause chain.
+                    // move the pause chain to the front of the list.
+                    foreach (var group in pauseRemembers)
+                        groups.Remove(group);
+                    groups.InsertRange(0, pauseRemembers);
+                }
             }
 
             if (measuredIfs.Count > 0 && measured != null)

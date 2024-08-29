@@ -86,6 +86,21 @@ namespace RATools.Parser.Tests.Internal
         }
 
         [Test]
+        public void TestAppendRequirementsPauseRememberUsedByEarlierNonPauseRecall()
+        {
+            string input = "{recall}=5_K:0xH001234*2_I:0xX002345+{recall}_P:0xH000000=3";
+            var context = new ScriptBuilderContext();
+            var builder = new StringBuilder();
+
+            var trigger = Trigger.Deserialize(input);
+            context.AppendRequirements(builder, trigger.Core.Requirements);
+
+            // the PauseIf will be moved forward in the logic chain so it's remember will precede the recall using it
+            var expected = "unless(byte(dword(0x002345) + (byte(0x001234) * 2)) == 3) && (byte(0x001234) * 2) == 5";
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
         public void TestAppendRequirementsAddSourceSubSourceChained()
         {
             string input = "B:0xM001234_A:0xK001234_3=9_B:d0xM001234_A:d0xK001234_3=8";
