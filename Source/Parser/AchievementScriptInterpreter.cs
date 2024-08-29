@@ -138,6 +138,8 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MemoryAccessorFunction("float_be", FieldSize.BigEndianFloat));
                 _globalScope.AddFunction(new MemoryAccessorFunction("mbf32", FieldSize.MBF32));
                 _globalScope.AddFunction(new MemoryAccessorFunction("mbf32_le", FieldSize.LittleEndianMBF32));
+                _globalScope.AddFunction(new MemoryAccessorFunction("double32", FieldSize.Double32));
+                _globalScope.AddFunction(new MemoryAccessorFunction("double32_be", FieldSize.BigEndianDouble32));
                 _globalScope.AddFunction(new BitFunction());
                 _globalScope.AddFunction(new MemoryAccessorFunction("bitcount", FieldSize.BitCount));
 

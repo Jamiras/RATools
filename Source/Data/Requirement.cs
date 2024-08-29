@@ -286,6 +286,8 @@ namespace RATools.Data
                         break;
 
                     case FieldSize.BigEndianFloat:
+                    case FieldSize.Double32:
+                    case FieldSize.BigEndianDouble32:
                         minimumVersion = minimumVersion.OrNewer(Version._1_3);
                         break;
 
