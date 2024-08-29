@@ -40,7 +40,7 @@ namespace RATools.Parser.Tests
         [TestCase("byte(0x1234) * 10", "0xH001234*10")]
         [TestCase("byte(0x1234) * -10", "0xH001234*-10")]
         [TestCase("byte(0x1234) / 10", "0xH001234/10")]
-        [TestCase("byte(0x1234) * 10 / 3", "Cannot create value from mathematic expression")] // integer division with remainder is rejected as invalid
+        [TestCase("byte(0x1234) * 10 / 3", "K:0xH001234*10_A:{recall}/3_M:0")]
         [TestCase("byte(0x1234) * 10.0 / 3", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) * 10 / 3.0", "0xH001234*3.333333")]
         [TestCase("byte(0x1234) + 10", "0xH001234_v10")]

@@ -197,20 +197,5 @@ namespace RATools.Parser.Tests.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.Type, Is.EqualTo(expectedType));
         }
-
-        [Test]
-        public void TestSumOfUnrepresentableLogic()
-        {
-            var input = "function a() => sum_of([1,2,3], (a) => bit1(0x1234+a) * word(0x2345+a*2) / 5)\n" +
-                        "achievement(\"T\", \"D\", 5, a())";
-
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            var parser = new AchievementScriptInterpreter();
-            Assert.That(parser.Run(tokenizer), Is.False);
-            Assert.That(parser.ErrorMessage, Is.EqualTo(
-                "2:1 achievement call failed\r\n" +
-                "- 2:26 trigger: Cannot convert mathematic expression to requirement\r\n" +
-                "- 1:40 Cannot convert mathematic expression to requirement"));
-        }
     }
 }

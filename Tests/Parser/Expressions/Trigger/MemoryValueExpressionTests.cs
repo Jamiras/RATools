@@ -66,9 +66,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) * 50 + 10", "/", "5",
                 ExpressionType.MemoryAccessor, "byte(0x001234) * 10 + 2")]
         [TestCase("byte(0x001234) * 50 + 12", "/", "3",
-                ExpressionType.None, null)] // division with remainder will not be processed
+                ExpressionType.MemoryAccessor, "remembered(byte(0x001234) * 50) / 3 + 4")] // division with remainder will not be processed
         [TestCase("byte(0x001234) * 12 + 5", "/", "3",
-                ExpressionType.Mathematic, "(byte(0x001234) * 12 + 5) / 3")] // division with remainder will return mathematic
+                ExpressionType.MemoryAccessor, "remembered(byte(0x001234) * 12 + 5) / 3")] // division with remainder will not be processed
         [TestCase("byte(0x001234) + 1.5", "*", "3",
                 ExpressionType.MemoryAccessor, "byte(0x001234) * 3 + 4.5")]
         [TestCase("byte(0x001234) + 3.0", "/", "4",

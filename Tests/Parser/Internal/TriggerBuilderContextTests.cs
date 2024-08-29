@@ -20,7 +20,7 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("byte(0x1234) > byte(0x2345)", "0xH001234>0xH002345")]
         [TestCase("byte(0x1234) / byte(0x2345) < 10", "A:0xH001234/0xH002345_0<10")]
         [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/0xH002345_0<f0.8")]
-        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "expression is not a requirement")]
+        [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "K:0xH001234*100_A:{recall}/0xH002345_0<80")]
         public void TestGetConditionString(string input, string expected)
         {
             ExpressionBase error;
