@@ -795,7 +795,7 @@ namespace RATools.Parser
 
         private void AppendField(StringBuilder builder, Field field, string addAddressString = null)
         {
-            if (field.Type == FieldType.Recall && _remember.Length > 0)
+            if (field.Type == FieldType.Recall && _remember != null && _remember.Length > 0)
             {
                 builder.Append('(');
                 builder.Append(_remember);

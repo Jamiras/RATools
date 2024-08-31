@@ -167,8 +167,11 @@ namespace RATools.Data
             {
                 if (address == 0)
                 {
-                    builder.Append(addAddress);
-                    builder.Length -= 3;
+                    if (addAddress[0] == '(' && addAddress.EndsWith(") + "))
+                        builder.Append(addAddress, 1, addAddress.Length - 5);
+                    else
+                        builder.Append(addAddress, 0, addAddress.Length - 3);
+
                     builder.Append(')');
                     return;
                 }

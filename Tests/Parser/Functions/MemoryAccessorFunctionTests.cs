@@ -196,10 +196,23 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        [TestCase("byte(word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
-        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
-        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "Cannot construct single address lookup from multiple memory references")]
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "Cannot construct single address lookup from multiple memory references")]
+        [TestCase("byte(word(0x1234) + word(0x2345))", "byte(word(0x001234) + word(0x002345))")]
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
+        public void TestRememberRecall(string input, string expected)
+        {
+            var requirements = Evaluate(input);
+
+            var builder = new StringBuilder();
+            var context = new ScriptBuilderContext { NumberFormat = NumberFormat.Hexadecimal };
+            context.AppendRequirements(builder, requirements);
+
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+
+        }
+
+        [Test]
         [TestCase("byte(repeated(4, word(0x1234) == 3))", "Cannot convert requirement to memory address")]
         [TestCase("byte(word(0x1234) == 3)", "Cannot convert requirement to memory address")]
         [TestCase("byte(word(0x1234) == 3 && 2 > 1)", "Cannot convert requirement to memory address")] // 2>1 is true and will be removed before reporting the error
