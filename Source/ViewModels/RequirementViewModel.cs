@@ -144,6 +144,10 @@ namespace RATools.ViewModels
                 case RequirementType.ResetNextIf:
                     builder.Append("ResetNextIf ");
                     break;
+
+                case RequirementType.Remember:
+                    builder.Append("Remember ");
+                    break;
             }
 
             var context = new ScriptBuilderContext { NumberFormat = numberFormat };

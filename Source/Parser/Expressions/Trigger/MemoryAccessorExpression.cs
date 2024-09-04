@@ -101,7 +101,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (_pointerChain == null)
                 _pointerChain = new List<Requirement>();
 
-            Debug.Assert(pointer.Type == RequirementType.AddAddress);
+            Debug.Assert(pointer.Type == RequirementType.AddAddress || pointer.Type == RequirementType.Remember);
             _pointerChain.Add(pointer);
         }
 

@@ -139,7 +139,8 @@ namespace RATools.Parser.Functions
             modifiedMemoryAccessor.BuildTrigger(context);
             foreach (var requirement in requirements)
             {
-                requirement.Type = RequirementType.AddAddress;
+                if (requirement.Type != RequirementType.Remember)
+                    requirement.Type = RequirementType.AddAddress;
                 result.AddPointer(requirement);
             }
 
