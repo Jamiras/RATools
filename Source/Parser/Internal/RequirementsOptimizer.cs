@@ -1372,6 +1372,10 @@ namespace RATools.Parser.Internal
                 // if the core contains an OrNext and there are no alts, denormalize it to increase backwards compatibility
                 DenormalizeOrNexts(groups);
 
+                // if multiple conditions use the same remember value, it doesn't have to be built constructed times.
+                foreach (var group in groups)
+                    EliminateRedundantRemembers(group);
+
                 // ensure only one Measured target exists
                 uint measuredTarget = 0;
                 string measuredError = CheckForMultipleMeasuredTargets(groups[0], ref measuredTarget);
@@ -1387,6 +1391,80 @@ namespace RATools.Parser.Internal
             }
 
             return null;
+        }
+
+        private static RequirementEx GetRemembered(List<Requirement> requirements)
+        {
+            for (int i = requirements.Count - 1; i >= 0; i--)
+            {
+                if (requirements[i].Type != RequirementType.Remember)
+                    continue;
+
+                int j = i;
+                bool hasRecall = false;
+                while (j > 0)
+                {
+                    bool isAddSource = false;
+                    switch (requirements[j - 1].Type)
+                    {
+                        case RequirementType.AddSource:
+                        case RequirementType.SubSource:
+                            isAddSource = true;
+                            break;
+
+                        case RequirementType.Remember:
+                            isAddSource = hasRecall;
+                            hasRecall = false;
+                            break;
+                    }
+                    if (!isAddSource)
+                        break;
+
+                    j--;
+                    if (requirements[j].Left.Type == FieldType.Recall || requirements[j].Right.Type == FieldType.Recall)
+                        hasRecall = true;
+                }
+
+                var remember = new RequirementEx();
+                remember.Requirements.AddRange(requirements.Skip(j).Take(i - j + 1));
+                return remember;
+            }
+
+            return null;
+        }
+
+        private static void EliminateRedundantRemembers(List<RequirementEx> group)
+        {
+            RequirementEx remembered = null;
+
+            var groupEnumerator = group.GetEnumerator();
+            while (remembered == null && groupEnumerator.MoveNext())
+                remembered = GetRemembered(groupEnumerator.Current.Requirements);
+
+            while (groupEnumerator.MoveNext()) // won't happen if remembered was not found
+            {
+                var requirements = groupEnumerator.Current.Requirements;
+                for (int i = 0; i < requirements.Count - remembered.Requirements.Count; i++)
+                {
+                    if (requirements[i + remembered.Requirements.Count - 1].Type == RequirementType.Remember)
+                    {
+                        var match = new RequirementEx();
+                        match.Requirements.AddRange(requirements.Take(remembered.Requirements.Count));
+                        if (match == remembered)
+                        {
+                            requirements.RemoveRange(i, remembered.Requirements.Count);
+                            continue;
+                        }
+                    }
+
+                    if (requirements[i].Type == RequirementType.Remember)
+                        break;
+                }
+
+                var newRemembered = GetRemembered(requirements);
+                if (newRemembered != null)
+                    remembered = newRemembered;
+            }
         }
 
         internal static int FindResetNextIfStart(IList<Requirement> requirements, int resetNextIfIndex)

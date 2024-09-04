@@ -37,6 +37,7 @@ namespace RATools.Parser.Expressions.Trigger
             Field = source.Field;
             Location = source.Location;
 
+            _rememberPointer = source._rememberPointer;
             if (source._pointerChain != null)
                 _pointerChain = new List<Requirement>(source._pointerChain);
         }
