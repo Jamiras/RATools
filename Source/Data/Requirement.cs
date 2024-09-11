@@ -431,7 +431,7 @@ namespace RATools.Data
         public override bool Equals(object obj)
         {
             var that = obj as Requirement;
-            if (ReferenceEquals(that, null))
+            if (that is null)
                 return false;
 
             if (that.Type != this.Type || that.Operator != this.Operator || that.HitCount != this.HitCount)
@@ -458,7 +458,7 @@ namespace RATools.Data
         {
             if (ReferenceEquals(left, right))
                 return true;
-            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
+            if (left is null || right is null)
                 return false;
 
             return left.Equals(right);
@@ -471,7 +471,7 @@ namespace RATools.Data
         {
             if (ReferenceEquals(left, right))
                 return false;
-            if (ReferenceEquals(left, null) || ReferenceEquals(right, null))
+            if (left is null || right is null)
                 return true;
 
             return !left.Equals(right);

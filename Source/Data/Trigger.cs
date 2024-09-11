@@ -48,6 +48,63 @@ namespace RATools.Data
         /// </summary>
         public IEnumerable<RequirementGroup> Alts { get; private set; }
 
+        public override bool Equals(object obj)
+        {
+            var that = obj as Trigger;
+            if (that == null)
+                return false;
+
+            if (Core != that.Core)
+                return false;
+
+            var thisEnumerator = Alts.GetEnumerator();
+            var thatEnumerator = that.Alts.GetEnumerator();
+            while (thisEnumerator.MoveNext())
+            {
+                if (!thatEnumerator.MoveNext())
+                    return false;
+
+                if (thisEnumerator.Current != thatEnumerator.Current)
+                    return false;
+            }
+
+            if (thatEnumerator.MoveNext())
+                return false;
+
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="Trigger"/>s are equivalent.
+        /// </summary>
+        public static bool operator ==(Trigger left, Trigger right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left is null || right is null)
+                return false;
+
+            return left.Equals(right);
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="Trigger"/>s are not equivalent.
+        /// </summary>
+        public static bool operator !=(Trigger left, Trigger right)
+        {
+            if (ReferenceEquals(left, right))
+                return false;
+            if (left is null || right is null)
+                return true;
+
+            return !left.Equals(right);
+        }
+
         /// <summary>
         /// Constructs a Trigger from a serialized trigger string.
         /// </summary>
