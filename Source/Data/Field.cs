@@ -216,6 +216,8 @@ namespace RATools.Data
                 case FieldSize.MBF32: return "mbf32";
                 case FieldSize.LittleEndianMBF32: return "mbf32_le";
                 case FieldSize.BigEndianFloat: return "float_be";
+                case FieldSize.Double32: return "double32";
+                case FieldSize.BigEndianDouble32: return "double32_be";
                 default: return size.ToString();
             }
         }
@@ -329,6 +331,8 @@ namespace RATools.Data
                     case FieldSize.BigEndianFloat:
                     case FieldSize.MBF32:
                     case FieldSize.LittleEndianMBF32:
+                    case FieldSize.Double32:
+                    case FieldSize.BigEndianDouble32:
                         return true;
 
                     default:
@@ -350,6 +354,7 @@ namespace RATools.Data
                     case FieldSize.BigEndianWord:
                     case FieldSize.BigEndianTByte:
                     case FieldSize.BigEndianFloat:
+                    case FieldSize.BigEndianDouble32:
                     case FieldSize.MBF32:
                         return true;
 
@@ -421,6 +426,8 @@ namespace RATools.Data
                 case FieldSize.MBF32: builder.Append("fM"); break;
                 case FieldSize.LittleEndianMBF32: builder.Append("fL"); break;
                 case FieldSize.BigEndianFloat: builder.Append("fB"); break;
+                case FieldSize.Double32: builder.Append("fH"); break;
+                case FieldSize.BigEndianDouble32: builder.Append("fI"); break;
             }
 
             builder.Append(serializationContext.FormatAddress(Value));
@@ -487,6 +494,12 @@ namespace RATools.Data
                     case 'L':
                         tokenizer.Advance();
                         return new Field { Size = FieldSize.LittleEndianMBF32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    case 'H':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.Double32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
+                    case 'I':
+                        tokenizer.Advance();
+                        return new Field { Size = FieldSize.BigEndianDouble32, Type = fieldType, Value = ReadHexNumber(tokenizer) };
                     default: 
                         return new Field { Type = FieldType.Float, Float = ReadFloat(tokenizer) };
                 }
@@ -889,5 +902,15 @@ namespace RATools.Data
         /// 32-bit IEE-754 floating point number in big-endian mode
         /// </summary>
         BigEndianFloat,
+
+        /// <summary>
+        /// Most significant 32-bits of an IEE-754 double number (64-bit float).
+        /// </summary>
+        Double32,
+
+        /// <summary>
+        /// Most significant 32-bits of an IEE-754 double number (64-bit float) in big endian mode.
+        /// </summary>
+        BigEndianDouble32,
     }
 }

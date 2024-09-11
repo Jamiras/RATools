@@ -174,6 +174,8 @@ namespace RATools.Data.Tests
         [TestCase("fM123456", FieldSize.MBF32, FieldType.MemoryAddress, 0x123456U)]
         [TestCase("dfM123456", FieldSize.MBF32, FieldType.PreviousValue, 0x123456U)]
         [TestCase("fL123456", FieldSize.LittleEndianMBF32, FieldType.MemoryAddress, 0x123456U)]
+        [TestCase("fH123456", FieldSize.Double32, FieldType.MemoryAddress, 0x123456U)]
+        [TestCase("fI123456", FieldSize.BigEndianDouble32, FieldType.MemoryAddress, 0x123456U)]
         public void TestDeserialize(string serialized, FieldSize fieldSize, FieldType fieldType, uint value)
         {
             var field = Field.Deserialize(Tokenizer.CreateTokenizer(serialized));
