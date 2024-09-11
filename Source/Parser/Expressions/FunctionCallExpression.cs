@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -202,6 +203,13 @@ namespace RATools.Parser.Expressions
             {
                 if (error.Location.End.Line == 0)
                     CopyLocation(error);
+
+                if (functionDefinition is AssertFunction)
+                {
+                    // don't report assert as failing. if it returns an error, it still succeeded.
+                    // still return false so any higher-level function calls report failure.
+                    return false;
+                }
 
                 if (_source != null)
                     result = ErrorExpression.WrapError(error, "Function call failed", (ExpressionBase)_source);
