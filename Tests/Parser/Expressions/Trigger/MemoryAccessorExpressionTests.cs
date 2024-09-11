@@ -38,6 +38,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234 + 0x10 * byte(0x2345))", "I:0xH002345*16_0xH001234")]
         [TestCase("prev(high4(0x001234))", "d0xU001234")]
         [TestCase("prior(bit0(0x001234))", "p0xM001234")]
+        [TestCase("dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4))",
+            "K:0x 002345&1023_A:{recall}*8_A:4_K:0xX001234_I:{recall}_0xX000000")]
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<MemoryAccessorExpression>(input);

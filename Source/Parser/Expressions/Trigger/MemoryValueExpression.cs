@@ -172,8 +172,8 @@ namespace RATools.Parser.Expressions.Trigger
                             if (remainder is IntegerConstantExpression && ((IntegerConstantExpression)remainder).Value != 0)
                             {
                                 // remainder after dividing, don't do it
-                                // return a MathematicExpression for now, it may get reduced in a comparison normalization
-                                return new MathematicExpression(this, operation, right);
+                                var rememberRecallExpression = new RememberRecallExpression(this);
+                                return rememberRecallExpression.Combine(right, operation);
                             }
                         }
 
@@ -1424,6 +1424,18 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (appendConstantAccessor)
                 memoryAccessors.Add(constantAccessor);
+
+            // move all RememberRecall expressions to the front
+            int insertIndex = 0;
+            for (int i = 1; i < memoryAccessors.Count; i++)
+            {
+                var memoryAccessor = memoryAccessors[i];
+                if (memoryAccessor.MemoryAccessor is RememberRecallExpression)
+                {
+                    memoryAccessors.RemoveAt(i);
+                    memoryAccessors.Insert(insertIndex++, memoryAccessor);
+                }
+            }
 
             // last item has to be an unmodified AddSource so we can compare it.
             // if a comparison is provided then the AddAddress chain must also match.

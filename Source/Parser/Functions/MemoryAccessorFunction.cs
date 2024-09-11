@@ -63,7 +63,13 @@ namespace RATools.Parser.Functions
             if (memoryValue != null)
             {
                 if (memoryValue.MemoryAccessors.Count() > 1)
-                    return new ErrorExpression("Cannot construct single address lookup from multiple memory references", address);
+                {
+                    // chain of logic to build address has to be stored in the recall accumulator
+                    accessor = new MemoryAccessorExpression();
+                    accessor.RememberPointer = new RememberRecallExpression(memoryValue);
+                    accessor.Field = new Field { Type = FieldType.MemoryAddress, Size = Size, Value = 0 };
+                    return accessor;
+                }
 
                 var result = CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First());
                 if (result != null)
@@ -133,7 +139,8 @@ namespace RATools.Parser.Functions
             modifiedMemoryAccessor.BuildTrigger(context);
             foreach (var requirement in requirements)
             {
-                requirement.Type = RequirementType.AddAddress;
+                if (requirement.Type != RequirementType.Remember)
+                    requirement.Type = RequirementType.AddAddress;
                 result.AddPointer(requirement);
             }
 

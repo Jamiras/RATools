@@ -297,6 +297,7 @@ namespace RATools.Data
                     // These affect accumulator.
                     case RequirementType.AddSource:
                     case RequirementType.SubSource:
+                    case RequirementType.Remember:
                         return true;
 
                     // Everything else consumes and resets the accumulator.

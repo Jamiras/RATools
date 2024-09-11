@@ -43,6 +43,7 @@ namespace RATools.Parser
         private StringBuilder _addAddress;
         private StringBuilder _resetNextIf;
         private StringBuilder _measuredIf;
+        private StringBuilder _remember;
         private Requirement _lastAndNext;
         private int _remainingWidth;
 
@@ -108,12 +109,47 @@ namespace RATools.Parser
 
             RequirementEx measured = null;
             var measuredIfs = new List<RequirementEx>();
+            var pauseRemembers = new List<RequirementEx>();
             foreach (var group in groups)
             {
                 if (group.IsMeasured)
                     measured = group;
                 else if (group.Type == RequirementType.MeasuredIf)
                     measuredIfs.Add(group);
+                else if (group.Type == RequirementType.PauseIf && group.Requirements.Any(r => r.Type == RequirementType.Remember))
+                    pauseRemembers.Add(group);
+            }
+
+            if (pauseRemembers.Count > 0)
+            {
+                bool hasNonPauseRecallBeforeLastPauseRemember = false;
+                int lastPauseRememberIndex = groups.IndexOf(pauseRemembers.Last());
+                for (int index = 0; index < lastPauseRememberIndex; index++)
+                {
+                    var group = groups[index];
+                    if (group.Type == RequirementType.PauseIf)
+                        continue;
+
+                    // found a non-pause Remember, don't need the pause Remember
+                    if (group.Requirements.Any(r => r.Type == RequirementType.Remember))
+                        break;
+
+                    if (group.Requirements.Any(r => r.Left.Type == FieldType.Recall || r.Right.Type == FieldType.Recall))
+                    {
+                        // found a Recall without a Remember, it will use the last non-pause Remember
+                        hasNonPauseRecallBeforeLastPauseRemember = true;
+                        break;
+                    }
+                }
+
+                if (hasNonPauseRecallBeforeLastPauseRemember)
+                {
+                    // there's at least one Recall dependant on a Remember from the Pause chain.
+                    // move the pause chain to the front of the list.
+                    foreach (var group in pauseRemembers)
+                        groups.Remove(group);
+                    groups.InsertRange(0, pauseRemembers);
+                }
             }
 
             if (measuredIfs.Count > 0 && measured != null)
@@ -180,6 +216,7 @@ namespace RATools.Parser
             {
                 // precedence is AddAddress
                 //             > AddSource/SubSource
+                //             > Remember
                 //             > AndNext/OrNext
                 //             > ResetNextIf
                 //             > AddHits/SubHits
@@ -189,14 +226,14 @@ namespace RATools.Parser
                     case RequirementType.AddAddress:
                         if (_addAddress == null)
                             _addAddress = new StringBuilder();
-                        AppendField(_addAddress, requirement);
+                        AppendFields(_addAddress, requirement);
                         _addAddress.Append(" + ");
                         break;
 
                     case RequirementType.AddSource:
                         if (_addSources == null)
                             _addSources = new StringBuilder();
-                        AppendField(_addSources, requirement);
+                        AppendFields(_addSources, requirement);
                         _addSources.Append(" + ");
                         break;
 
@@ -204,7 +241,7 @@ namespace RATools.Parser
                         if (_subSources == null)
                             _subSources = new StringBuilder();
                         _subSources.Append(" - ");
-                        AppendField(_subSources, requirement);
+                        AppendFields(_subSources, requirement);
                         break;
 
                     case RequirementType.AndNext:
@@ -236,6 +273,14 @@ namespace RATools.Parser
                         definition.Append("measured_if(");
                         AppendRepeatedCondition(definition, requirement);
                         definition.Append(')');
+                        break;
+
+                    case RequirementType.Remember:
+                        if (_addSources == null)
+                            _addSources = new StringBuilder();
+                        AppendFields(_addSources, requirement);
+                        _remember = _addSources;
+                        _addSources = null;
                         break;
 
                     default:
@@ -650,7 +695,7 @@ namespace RATools.Parser
                         }
                     }
 
-                    requirement.Left.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Left, _addAddress?.ToString());
                     break;
             }
 
@@ -717,7 +762,7 @@ namespace RATools.Parser
                     return;
             }
 
-            requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+            AppendField(builder, requirement.Right, _addAddress?.ToString());
 
             if (suffix != null)
                 builder.Append(suffix);
@@ -725,7 +770,7 @@ namespace RATools.Parser
             _addAddress?.Clear();
         }
 
-        private void AppendField(StringBuilder builder, Requirement requirement)
+        private void AppendFields(StringBuilder builder, Requirement requirement)
         {
             if (!NullOrEmpty(_addAddress))
             {
@@ -735,7 +780,7 @@ namespace RATools.Parser
                 if (!ReferenceEquals(_addAddress, builder))
                     builder.Append('(');
 
-                requirement.Left.AppendString(builder, NumberFormat, addAddressString);
+                AppendField(builder, requirement.Left, addAddressString);
                 AppendFieldModifier(builder, requirement);
 
                 if (!ReferenceEquals(_addAddress, builder))
@@ -743,33 +788,58 @@ namespace RATools.Parser
             }
             else
             {
-                requirement.Left.AppendString(builder, NumberFormat);
+                AppendField(builder, requirement.Left);
                 AppendFieldModifier(builder, requirement);
             }
+        }
+
+        private void AppendField(StringBuilder builder, Field field, string addAddressString = null)
+        {
+            if (field.Type == FieldType.Recall && _remember != null && _remember.Length > 0)
+            {
+                builder.Append('(');
+                builder.Append(_remember);
+                builder.Append(')');
+            }
+            else
+                field.AppendString(builder, NumberFormat, addAddressString);
         }
 
         private void AppendFieldModifier(StringBuilder builder, Requirement requirement)
         {
             switch (requirement.Operator)
             {
+                case RequirementOperator.Add:
+                    builder.Append(" + ");
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
+                    break;
+
+                case RequirementOperator.Subtract:
+                    builder.Append(" - ");
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
+                    break;
+
                 case RequirementOperator.Multiply:
                     builder.Append(" * ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.Divide:
                     builder.Append(" / ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.Modulus:
                     builder.Append(" % ");
-                    requirement.Right.AppendString(builder, NumberFormat, _addAddress?.ToString());
+                    AppendField(builder, requirement.Right, _addAddress?.ToString());
                     break;
 
                 case RequirementOperator.BitwiseAnd:
                     builder.Append(" & ");
-                    requirement.Right.AppendString(builder, NumberFormat.Hexadecimal, _addAddress?.ToString());
+                    if (requirement.Right.Type == FieldType.Recall && _remember.Length > 0)
+                        builder.Append(_remember);
+                    else
+                        requirement.Right.AppendString(builder, NumberFormat.Hexadecimal, _addAddress?.ToString());
                     break;
             }
         }

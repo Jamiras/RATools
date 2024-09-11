@@ -37,6 +37,7 @@ namespace RATools.Parser.Expressions.Trigger
             Field = source.Field;
             Location = source.Location;
 
+            _rememberPointer = source._rememberPointer;
             if (source._pointerChain != null)
                 _pointerChain = new List<Requirement>(source._pointerChain);
         }
@@ -67,11 +68,26 @@ namespace RATools.Parser.Expressions.Trigger
         protected List<Requirement> _pointerChain;
 
         /// <summary>
+        /// Gets the remembered value to use as a pointer.
+        /// </summary>
+        public RememberRecallExpression RememberPointer
+        {
+            get { return _rememberPointer; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _rememberPointer = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        protected RememberRecallExpression _rememberPointer;
+
+        /// <summary>
         /// Returns <c>true</c> if <see cref="PointerChain"/> is not empty.
         /// </summary>
         public bool HasPointerChain
         {
-            get { return _pointerChain != null && _pointerChain.Count > 0; }
+            get { return (_pointerChain != null && _pointerChain.Count > 0) || (RememberPointer != null); }
         }
 
         /// <summary>
@@ -80,11 +96,12 @@ namespace RATools.Parser.Expressions.Trigger
         public void AddPointer(Requirement pointer)
         {
             Debug.Assert(!IsReadOnly);
+            Debug.Assert(_rememberPointer == null);
 
             if (_pointerChain == null)
                 _pointerChain = new List<Requirement>();
 
-            Debug.Assert(pointer.Type == RequirementType.AddAddress);
+            Debug.Assert(pointer.Type == RequirementType.AddAddress || pointer.Type == RequirementType.Remember);
             _pointerChain.Add(pointer);
         }
 
@@ -95,6 +112,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             Debug.Assert(!IsReadOnly);
             _pointerChain = null;
+            _rememberPointer = null;
         }
 
         /// <summary>
@@ -102,6 +120,9 @@ namespace RATools.Parser.Expressions.Trigger
         /// </summary>
         public bool PointerChainMatches(MemoryAccessorExpression that)
         {
+            if (_rememberPointer != null || that._rememberPointer != null)
+                return (_rememberPointer == that._rememberPointer);
+
             if (_pointerChain == null || that._pointerChain == null)
                 return (_pointerChain == null && that._pointerChain == null);
 
@@ -201,7 +222,11 @@ namespace RATools.Parser.Expressions.Trigger
 
             builder.Append(Field.GetSizeFunction(Field.Size));
             builder.Append('(');
-            if (_pointerChain != null)
+            if (_rememberPointer != null)
+            {
+                _rememberPointer.AppendString(builder);
+            }
+            else if (_pointerChain != null)
             {
                 for (int i = _pointerChain.Count - 1; i >= 0; i--)
                 {
@@ -269,7 +294,12 @@ namespace RATools.Parser.Expressions.Trigger
 
         public virtual ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
-            if (_pointerChain != null)
+            if (_rememberPointer != null)
+            {
+                _rememberPointer.BuildTrigger(context);
+                context.LastRequirement.Type = RequirementType.AddAddress;
+            }
+            else if (_pointerChain != null)
             {
                 foreach (var pointer in _pointerChain)
                     context.Trigger.Add(pointer);

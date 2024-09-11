@@ -41,6 +41,16 @@
         GreaterThanOrEqual,
 
         /// <summary>
+        /// The right value is added to the left value. (combining conditions only)
+        /// </summary>
+        Add,
+
+        /// <summary>
+        /// The right value is subtracted from the left value. (combining conditions only)
+        /// </summary>
+        Subtract,
+
+        /// <summary>
         /// The left value is multiplied by the right value. (combining conditions only)
         /// </summary>
         Multiply,
@@ -82,6 +92,8 @@
                 case RequirementOperator.GreaterThan: return ">";
                 case RequirementOperator.GreaterThanOrEqual: return ">=";
                 case RequirementOperator.Multiply: return "*";
+                case RequirementOperator.Add: return "+";
+                case RequirementOperator.Subtract: return "-";
                 case RequirementOperator.Divide: return "/";
                 case RequirementOperator.Modulus: return "%";
                 case RequirementOperator.BitwiseAnd: return "&";

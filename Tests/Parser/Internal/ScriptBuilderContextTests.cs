@@ -62,6 +62,8 @@ namespace RATools.Parser.Tests.Internal
                   "measured(repeated(100, byte(0x001234) == 1 && byte(0x002345) == 2))")]
         [TestCase("N:0xH001234=1_C:0xH002345=2_N:0xH001234=2_M:0xH002345=3",
                   "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2, byte(0x001234) == 2 && byte(0x002345) == 3))")]
+        [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000=3", "byte(dword(0x002345) + (byte(0x001234) * 2)) == 3")]
+        [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000={recall}", "byte(dword(0x002345) + (byte(0x001234) * 2)) == (byte(0x001234) * 2)")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
@@ -81,6 +83,21 @@ namespace RATools.Parser.Tests.Internal
 
             // make sure we didn't modify the source requirements
             Assert.That(trigger.Serialize(new SerializationContext()), Is.EqualTo(input));
+        }
+
+        [Test]
+        public void TestAppendRequirementsPauseRememberUsedByEarlierNonPauseRecall()
+        {
+            string input = "{recall}=5_K:0xH001234*2_I:0xX002345+{recall}_P:0xH000000=3";
+            var context = new ScriptBuilderContext();
+            var builder = new StringBuilder();
+
+            var trigger = Trigger.Deserialize(input);
+            context.AppendRequirements(builder, trigger.Core.Requirements);
+
+            // the PauseIf will be moved forward in the logic chain so it's remember will precede the recall using it
+            var expected = "unless(byte(dword(0x002345) + (byte(0x001234) * 2)) == 3) && (byte(0x001234) * 2) == 5";
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
         [Test]

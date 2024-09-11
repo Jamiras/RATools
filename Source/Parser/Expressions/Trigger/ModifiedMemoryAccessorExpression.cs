@@ -138,6 +138,14 @@ namespace RATools.Parser.Expressions.Trigger
 
             switch (ModifyingOperator)
             {
+                case RequirementOperator.Add:
+                    builder.Append(" + ");
+                    break;
+
+                case RequirementOperator.Subtract:
+                    builder.Append(" - ");
+                    break;
+
                 case RequirementOperator.Multiply:
                     builder.Append(" * ");
                     break;
@@ -237,11 +245,9 @@ namespace RATools.Parser.Expressions.Trigger
                 case MathematicOperation.BitwiseXor:
                     return Combine(left, operation);
 
-                case MathematicOperation.Divide:
-                    return new ErrorExpression("Cannot divide by a complex runtime value");
-
                 case MathematicOperation.Modulus:
-                    return new ErrorExpression("Cannot modulus using a runtime value");
+                case MathematicOperation.Divide:
+                    return new ErrorExpression(string.Format("Cannot %s by a complex runtime value", MathematicExpression.GetOperatorVerb(operation)));
             }
 
             return null;
@@ -431,25 +437,6 @@ namespace RATools.Parser.Expressions.Trigger
             if (newModifyingOperator == RequirementOperator.None)
             {
                 // operator could not be turned into a conditional operator
-                if (operation == MathematicOperation.Modulus)
-                {
-                    if ((field.Type == FieldType.Value && field.Value == 1) ||
-                        (field.Type == FieldType.Float && field.Float == 1.0))
-                    {
-                        // a % 1  =>  0
-                        return new IntegerConstantExpression(0);
-                    }
-
-                    if ((field.Type == FieldType.Value && field.Value == 0) ||
-                        (field.Type == FieldType.Float && field.Value == 0.0))
-                    {
-                        return new ErrorExpression("Division by zero");
-                    }
-
-                    if (MemoryAccessor.Field.IsMemoryReference)
-                        return new ErrorExpression("Cannot modulus using a runtime value");
-                }
-
                 return new ErrorExpression("Cannot combine " + Type + " and " + right.Type + " using " + operation);
             }
 
@@ -465,9 +452,6 @@ namespace RATools.Parser.Expressions.Trigger
                     if ((max & 0x01) != 0)
                         field.Value &= (uint)max;
                 }
-
-                if (ModifyingOperator != RequirementOperator.None && !IsBitwiseOperator(ModifyingOperator))
-                    return new ErrorExpression("Cannot combine bitwise and arithmetic operations");
             }
 
             switch (ModifyingOperator)
@@ -499,9 +483,6 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                     else if (ModifyingOperator != newModifyingOperator)
                     {
-                        if (newModifyingOperator == RequirementOperator.Modulus)
-                            return new ErrorExpression("Cannot modulus using a runtime value");
-
                         if (Modifier.Type == FieldType.Value && field.Type == FieldType.Value)
                         {
                             if (ModifyingOperator == RequirementOperator.Multiply && newModifyingOperator == RequirementOperator.Divide)
@@ -543,7 +524,7 @@ namespace RATools.Parser.Expressions.Trigger
                     if (field.Type == FieldType.Float || Modifier.Type == FieldType.Float)
                         return new ErrorExpression("Cannot perform bitwise operations on floating point values");
                     if (!IsBitwiseOperator(newModifyingOperator))
-                        return new ErrorExpression("Cannot combine bitwise and arithmetic operations");
+                        goto default;
 
                     if (MathematicExpression.GetPriority(GetMathematicOperation(newModifyingOperator)) >
                         MathematicExpression.GetPriority(GetMathematicOperation(ModifyingOperator)))
@@ -556,8 +537,9 @@ namespace RATools.Parser.Expressions.Trigger
                     break;
 
                 default:
-                    // return a MathematicExpression for now, it may get reduced in a comparison normalization
-                    return new MathematicExpression(this, operation, right);
+                    // use Remember/Recall to do incremental logic
+                    var rememberRecallExpression = new RememberRecallExpression(this);
+                    return rememberRecallExpression.Combine(right, operation);
             }
 
             if (field.Type == FieldType.None)
@@ -670,6 +652,8 @@ namespace RATools.Parser.Expressions.Trigger
         {
             switch (operation)
             {
+                case MathematicOperation.Add: return RequirementOperator.Add;
+                case MathematicOperation.Subtract: return RequirementOperator.Subtract;
                 case MathematicOperation.Multiply: return RequirementOperator.Multiply;
                 case MathematicOperation.Divide: return RequirementOperator.Divide;
                 case MathematicOperation.Modulus: return RequirementOperator.Modulus;
@@ -683,6 +667,8 @@ namespace RATools.Parser.Expressions.Trigger
         {
             switch (operation)
             {
+                case RequirementOperator.Add: return MathematicOperation.Add;
+                case RequirementOperator.Subtract: return MathematicOperation.Subtract;
                 case RequirementOperator.Multiply: return MathematicOperation.Multiply;
                 case RequirementOperator.Divide: return MathematicOperation.Divide;
                 case RequirementOperator.Modulus: return MathematicOperation.Modulus;
@@ -733,16 +719,15 @@ namespace RATools.Parser.Expressions.Trigger
                 var result = newLeft.ApplyMathematic(modifier, opposingOperator);
 
                 var mergeSuccessful = true;
-                if (result is MathematicExpression)
+                var modifiedMemoryAccessorResult = result as ModifiedMemoryAccessorExpression;
+                if (modifiedMemoryAccessorResult != null)
                 {
-                    // could not merge 
-                    mergeSuccessful = false;
-                }
-                else
-                {
-                    var modifiedMemoryAccessorResult = result as ModifiedMemoryAccessorExpression;
-                    if (modifiedMemoryAccessorResult != null && 
-                        modifiedMemoryAccessorResult.ModifyingOperator == RequirementOperator.Divide &&
+                    if (modifiedMemoryAccessorResult.MemoryAccessor is RememberRecallExpression)
+                    {
+                        // could not merge
+                        mergeSuccessful = false;
+                    }
+                    else if (modifiedMemoryAccessorResult.ModifyingOperator == RequirementOperator.Divide &&
                         ModifyingOperator == RequirementOperator.Multiply)
                     {
                         // multiplication changed to division may result in false positives due to integer
@@ -758,8 +743,11 @@ namespace RATools.Parser.Expressions.Trigger
                     modifier = CreateModifierExpression();
                     result = newRight.ApplyMathematic(modifier, opposingOperator);
 
-                    if (result is MathematicExpression)
+                    modifiedMemoryAccessorResult = result as ModifiedMemoryAccessorExpression;
+                    if (modifiedMemoryAccessorResult != null && 
+                        modifiedMemoryAccessorResult.MemoryAccessor is RememberRecallExpression)
                     {
+                        // could not merge
                         var zero = new UnsignedIntegerConstantExpression(0U);
                         var negative = new UnsignedIntegerConstantExpression(0x80000000U);
 
@@ -826,7 +814,19 @@ namespace RATools.Parser.Expressions.Trigger
                     newLeft.ModifyingOperator = RequirementOperator.None;
 
                     var mathematic = new MathematicExpression(newLeft, mathematicOperation, modifier);
-                    return mathematic.NormalizeComparison(right, operation, canModifyRight);
+                    var result = mathematic.NormalizeComparison(right, operation, canModifyRight);
+
+                    // if the left side was using Remember/Recall for additional math that was eliminated by
+                    // NormalizeComparison, then the Remember/Recall may no longer be necessary
+                    var comparison = result as ComparisonExpression;
+                    if (comparison != null)
+                    {
+                        var rememberExpression = ReduceToSimpleExpression(comparison.Left) as RememberRecallExpression;
+                        if (rememberExpression != null)
+                            comparison.Left = rememberExpression.RememberedValue;
+                    }
+
+                    return result;
                 }
             }
 

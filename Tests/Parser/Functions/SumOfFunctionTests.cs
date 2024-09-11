@@ -94,12 +94,5 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("sum_of([1, 2, 3], (a) { return b })"),
                 Is.EqualTo("Unknown variable: b"));
         }
-
-        [Test]
-        public void TestSumOfUnrepresentableLogic()
-        {
-            Assert.That(Evaluate("sum_of([1, 2, 3], (a) => bit1(0x1234+a) * word(0x2345+a*2) / 5)"),
-                Is.EqualTo("Cannot convert mathematic expression to requirement"));
-        }
     }
 }

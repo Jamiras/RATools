@@ -87,7 +87,7 @@ namespace RATools.Data
         public static readonly SoftwareVersion _1_3 = new SoftwareVersion(1, 3);
 
         /// <summary>
-        /// 1.3.1 - TBD
+        /// 1.3.1 - 28 Aug 2024
         ///  Flags: Remember/Recall
         ///  Operators: Modulus, Add, Subtract
         /// </summary>

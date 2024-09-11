@@ -138,6 +138,16 @@ namespace RATools.Parser.Functions
                 return true;
             }
 
+            var remembered = memoryAccessor as RememberRecallExpression;
+            if (remembered != null)
+            {
+                if (!WrapMemoryValue(remembered.RememberedValue, out result))
+                    return false;
+
+                result = new RememberRecallExpression((MemoryValueExpression)result);
+                return true;
+            }
+
             memoryAccessor = memoryAccessor.Clone();
 
             switch (memoryAccessor.Field.Type)

@@ -79,6 +79,11 @@
         /// Meta-flag indicating that this condition tracks progress as a percentage.
         /// </summary>
         MeasuredPercent,
+
+        /// <summary>
+        /// Meta-flag to capture the accumulator for further modification.
+        /// </summary>
+        Remember,
     }
 
     internal static class RequirementTypeExtension
@@ -98,6 +103,7 @@
                 case RequirementType.OrNext:
                 case RequirementType.AddAddress:
                 case RequirementType.ResetNextIf:
+                case RequirementType.Remember:
                     return true;
 
                 default:
@@ -115,6 +121,7 @@
                 case RequirementType.AddSource:
                 case RequirementType.SubSource:
                 case RequirementType.AddAddress:
+                case RequirementType.Remember:
                     return true;
 
                 default:

@@ -135,6 +135,10 @@ namespace RATools.Data
                     AppendMemoryReference(builder, Value, Size, addAddress);
                     break;
 
+                case FieldType.Recall:
+                    builder.Append("{recall}");
+                    break;
+
                 case FieldType.None:
                     builder.Append("none");
                     break;
@@ -163,8 +167,11 @@ namespace RATools.Data
             {
                 if (address == 0)
                 {
-                    builder.Append(addAddress);
-                    builder.Length -= 3;
+                    if (addAddress[0] == '(' && addAddress.EndsWith(") + "))
+                        builder.Append(addAddress, 1, addAddress.Length - 5);
+                    else
+                        builder.Append(addAddress, 0, addAddress.Length - 3);
+
                     builder.Append(')');
                     return;
                 }
@@ -310,6 +317,7 @@ namespace RATools.Data
                     case FieldType.PriorValue:
                     case FieldType.BinaryCodedDecimal:
                     case FieldType.Invert:
+                    case FieldType.Recall:
                         return true;
 
                     default:
@@ -398,6 +406,10 @@ namespace RATools.Data
                     builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "f{0:0.0#####}", Float);
                     return;
 
+                case FieldType.Recall:
+                    builder.Append("{recall}");
+                    return;
+
                 default:
                     break;
             }
@@ -475,6 +487,16 @@ namespace RATools.Data
                 case '-': // explicit negative decimal value
                     tokenizer.Advance();
                     return new Field { Type = FieldType.Value, Value = (uint)(-(int)ReadNumber(tokenizer)) };
+
+                case '{': // variable
+                    tokenizer.Advance();
+                    var variable = tokenizer.ReadTo('}');
+                    tokenizer.Advance();
+
+                    if (variable == "recall")
+                        return new Field { Type = FieldType.Recall, Size = FieldSize.DWord };
+
+                    return new Field();
             }
 
             if (tokenizer.NextChar == 'f')
@@ -781,6 +803,11 @@ namespace RATools.Data
         /// The bitwise inversion of the value at a memory address.
         /// </summary>
         Invert,
+
+        /// <summary>
+        /// The accumulator captured by a Remember condition.
+        /// </summary>
+        Recall,
     }
 
     /// <summary>
