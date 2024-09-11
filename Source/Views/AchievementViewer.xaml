@@ -50,7 +50,15 @@
                         <Run> | </Run>
                         <TextBlock Style="{StaticResource achievementTypeStyle}" />                    
                     </TextBlock>
-                    <TextBlock Style="{StaticResource assetIDStyle}" />
+                    <StackPanel Margin="6,0,2,0" Orientation="Horizontal">
+                        <TextBlock Margin="0,0,25,0" Style="{StaticResource assetIDStyle}" />
+
+                        <TextBlock FontSize="10">
+                            <Hyperlink Style="{StaticResource subtleHyperlink}" Command="{Binding CopyDefinitionToClipboardCommand}">
+                                <TextBlock Text="Copy Definition to Clipboard" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
                 </StackPanel>
                 
                 <ScrollViewer Grid.Row="1" Grid.ColumnSpan="2" VerticalScrollBarVisibility="Auto"
