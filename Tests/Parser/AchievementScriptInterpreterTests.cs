@@ -1,5 +1,4 @@
-﻿using Jamiras.Components;
-using Jamiras.Core.Tests;
+﻿using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
@@ -10,65 +9,6 @@ namespace RATools.Parser.Tests
     [TestFixture]
     class AchievementScriptInterpreterTests
     {
-        private AchievementScriptInterpreter Parse(string input, bool expectedSuccess = true)
-        {
-            var tokenizer = Tokenizer.CreateTokenizer(input);
-            var parser = new AchievementScriptInterpreter();
-
-            if (expectedSuccess)
-            {
-                if (!parser.Run(tokenizer))
-                {
-                    Assert.That(parser.ErrorMessage, Is.Null);
-                    Assert.Fail("AchievementScriptInterpreter.Run failed with no error message");
-                }
-            }
-            else
-            {
-                Assert.That(parser.Run(tokenizer), Is.False);
-                Assert.That(parser.ErrorMessage, Is.Not.Null);
-            }
-
-            return parser;
-        }
-
-        private static InterpreterScope Evaluate(string script, string expectedError = null)
-        {
-            var groups = new ExpressionGroupCollection();
-            groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-
-            groups.Parse(Tokenizer.CreateTokenizer(script));
-
-            foreach (var error in groups.Errors)
-                Assert.Fail(error.Message);
-
-            var interpreter = new AchievementScriptInterpreter();
-
-            if (expectedError != null)
-            {
-                Assert.That(interpreter.Run(groups, null), Is.False);
-                Assert.That(interpreter.ErrorMessage, Is.EqualTo(expectedError));
-                return null;
-            }
-
-            if (!interpreter.Run(groups, null))
-                Assert.Fail(interpreter.ErrorMessage);
-
-            return groups.Scope;
-        }
-
-        private static string GetInnerErrorMessage(AchievementScriptInterpreter parser)
-        {
-            if (parser.Error == null)
-                return null;
-
-            var err = parser.Error;
-            while (err.InnerError != null)
-                err = err.InnerError;
-
-            return string.Format("{0}:{1} {2}", err.Location.Start.Line, err.Location.Start.Column, err.Message);
-        }
-
         private static string GetRequirements(Achievement achievement)
         {
             var builder = new AchievementBuilder(achievement);
@@ -78,7 +18,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestTitleAndGameId()
         {
-            var parser = Parse("// Title\n// #ID=1234");
+            var parser = AchievementScriptTests.Parse("// Title\n// #ID=1234");
             Assert.That(parser.GameTitle, Is.EqualTo("Title"));
             Assert.That(parser.GameId, Is.EqualTo(1234));
         }
@@ -86,7 +26,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestAchievementFunction()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -99,11 +39,12 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestVariables()
         {
-            var parser = Parse("title = \"T\"\n" +
-                               "desc = \"D\"\n" +
-                               "points = 5\n" +
-                               "trigger = byte(0x1234) == 1\n" +
-                               "achievement(title, desc, points, trigger)");
+            var parser = AchievementScriptTests.Parse(
+                "title = \"T\"\n" +
+                "desc = \"D\"\n" +
+                "points = 5\n" +
+                "trigger = byte(0x1234) == 1\n" +
+                "achievement(title, desc, points, trigger)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -116,11 +57,12 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNamedParameters()
         {
-            var parser = Parse("title = \"T\"\n" +
-                               "desc = \"D\"\n" +
-                               "points = 5\n" +
-                               "trigger = byte(0x1234) == 1\n" +
-                               "achievement(points = points, trigger = trigger, title = title, description = desc)");
+            var parser = AchievementScriptTests.Parse(
+                "title = \"T\"\n" +
+                "desc = \"D\"\n" +
+                "points = 5\n" +
+                "trigger = byte(0x1234) == 1\n" +
+                "achievement(points = points, trigger = trigger, title = title, description = desc)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -133,8 +75,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestParameterizedFunction()
         {
-            var parser = Parse("function trigger(i) => byte(0x1233 + i) == i\n" +
-                               "achievement(\"T\", \"D\", 5, trigger(1))");
+            var parser = AchievementScriptTests.Parse(
+                "function trigger(i) => byte(0x1233 + i) == i\n" +
+                "achievement(\"T\", \"D\", 5, trigger(1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -144,15 +87,16 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestAchievementNoTrigger()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5)", false);
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5)", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("1:1 Required parameter 'trigger' not provided"));
         }
 
         [Test]
         public void TestDictionaryLookup()
         {
-            var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +
-                               "achievement(dict[1], dict[2], 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1: \"T\", 2: \"D\" }\n" +
+                "achievement(dict[1], dict[2], 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -165,10 +109,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestDictionaryLogic()
         {
-            var parser = Parse("dict = { 1: \"T\", 2: \"D\" }\n" +
-                               "function f(key) => dict[key] == \"D\"\n" +
-                               "if (f(2))\n" +
-                               "    achievement(dict[1], dict[2], 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1: \"T\", 2: \"D\" }\n" +
+                "function f(key) => dict[key] == \"D\"\n" +
+                "if (f(2))\n" +
+                "    achievement(dict[1], dict[2], 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -181,8 +126,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestArrayLookup()
         {
-            var parser = Parse("array = [ \"A\", \"B\", \"C\" ]\n" +
-                               "achievement(array[1], array[2], 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "array = [ \"A\", \"B\", \"C\" ]\n" +
+                "achievement(array[1], array[2], 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -195,10 +141,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestIf()
         {
-            var parser = Parse("n = 1\n" +
-                               "t = \"S\"\n" +
-                               "if (n == 1) t = \"T\"\n" +
-                               "achievement(t, \"D\", 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "n = 1\n" +
+                "t = \"S\"\n" +
+                "if (n == 1) t = \"T\"\n" +
+                "achievement(t, \"D\", 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -211,9 +158,10 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestElse()
         {
-            var parser = Parse("n = 1\n" +
-                               "if (n == 0) t = \"S\" else t = \"T\"\n" +
-                               "achievement(t, \"D\", 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "n = 1\n" +
+                "if (n == 0) t = \"S\" else t = \"T\"\n" +
+                "achievement(t, \"D\", 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -226,9 +174,10 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestElseBraces()
         {
-            var parser = Parse("n = 1\n" +
-                               "if (n == 0) { t = \"S\" } else { t = \"T\" }\n" +
-                               "achievement(t, \"D\", 5, byte(0x1234) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "n = 1\n" +
+                "if (n == 0) { t = \"S\" } else { t = \"T\" }\n" +
+                "achievement(t, \"D\", 5, byte(0x1234) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -241,10 +190,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForDict()
         {
-            var parser = Parse("dict = { 1: \"T\", 2: \"T2\" }\n" +
-                               "for k in dict {\n" +
-                               "    achievement(dict[k], \"D\", 5, byte(0x1234) == 1)\n" +
-                               "}");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1: \"T\", 2: \"T2\" }\n" +
+                "for k in dict {\n" +
+                "    achievement(dict[k], \"D\", 5, byte(0x1234) == 1)\n" +
+                "}");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
 
             var achievement = parser.Achievements.First();
@@ -263,10 +213,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForArray()
         {
-            var parser = Parse("array = [ \"T\", \"T2\" ]\n" +
-                               "for k in array {\n" +
-                               "    achievement(k, \"D\", 5, byte(0x1234) == 1)\n" +
-                               "}");
+            var parser = AchievementScriptTests.Parse(
+                "array = [ \"T\", \"T2\" ]\n" +
+                "for k in array {\n" +
+                "    achievement(k, \"D\", 5, byte(0x1234) == 1)\n" +
+                "}");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
 
             var achievement = parser.Achievements.First();
@@ -285,9 +236,10 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForRange()
         {
-            var parser = Parse("for k in range(1, 2) {\n" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
-                               "}");
+            var parser = AchievementScriptTests.Parse(
+                "for k in range(1, 2) {\n" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                "}");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
 
             var achievement = parser.Achievements.First();
@@ -306,9 +258,10 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForRangeStep()
         {
-            var parser = Parse("for k in range(1, 5, 3) {\n" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
-                               "}");
+            var parser = AchievementScriptTests.Parse(
+                "for k in range(1, 5, 3) {\n" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                "}");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
 
             var achievement = parser.Achievements.First();
@@ -327,9 +280,10 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForRangeReverse()
         {
-            var parser = Parse("for k in range(2, 1, -1) {\n" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
-                               "}");
+            var parser = AchievementScriptTests.Parse(
+                "for k in range(2, 1, -1) {\n" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                "}");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(2));
 
             var achievement = parser.Achievements.First();
@@ -348,30 +302,35 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestForRangeReverseNoStep()
         {
-            var parser = Parse("for k in range(2, 1) {\n" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
-                               "}", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:19 step must be negative if start is after stop"));
+            var parser = AchievementScriptTests.Parse(
+                "for k in range(2, 1) {\n" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                "}", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("1:19 step must be negative if start is after stop"));
         }
 
         [Test]
         public void TestForRangeZeroStep()
         {
-            var parser = Parse("for k in range(1, 2, 0) {\n" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
-                               "}", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:22 step must not be 0"));
+            var parser = AchievementScriptTests.Parse(
+                "for k in range(1, 2, 0) {\n" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == k)\n" +
+                "}", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("1:22 step must not be 0"));
         }
 
         [Test]
         public void TestReturnFromFunction()
         {
-            var parser = Parse("function f(i) {\n" +
-                               "   if (i == 1)\n" +
-                               "       return byte(0x1234) == 1\n" +
-                               "   return byte(0x4567) == 1\n" +
-                               "}\n" +
-                               "achievement(\"T\", \"D\", 5, f(1))");
+            var parser = AchievementScriptTests.Parse(
+                "function f(i) {\n" +
+                "   if (i == 1)\n" +
+                "       return byte(0x1234) == 1\n" +
+                "   return byte(0x4567) == 1\n" +
+                "}\n" +
+                "achievement(\"T\", \"D\", 5, f(1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -384,15 +343,16 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestReturnFromLoopInFunction()
         {
-            var parser = Parse("dict = { 1: \"T\", 2: \"T2\" }\n" +
-                               "function f(i) {\n" +
-                               "   for k in dict {\n" +
-                               "       if (i == k)\n" +
-                               "           return byte(0x1234) == 1\n" +
-                               "   }\n" +
-                               "   return byte(0x4567) == 1\n" +
-                               "}\n" +
-                               "achievement(\"T\", \"D\", 5, f(1))");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1: \"T\", 2: \"T2\" }\n" +
+                "function f(i) {\n" +
+                "   for k in dict {\n" +
+                "       if (i == k)\n" +
+                "           return byte(0x1234) == 1\n" +
+                "   }\n" +
+                "   return byte(0x4567) == 1\n" +
+                "}\n" +
+                "achievement(\"T\", \"D\", 5, f(1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -405,7 +365,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestOnce()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x001234) == 1)"));
@@ -414,14 +374,14 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestOnceMalformed()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison: Cannot convert memory accessor to requirement"));
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x1234)) == 1)", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("1:31 comparison: Cannot convert memory accessor to requirement"));
         }
 
         [Test]
         public void TestRepeated()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, repeated(4, byte(0x1234) == 1))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, repeated(4, byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("repeated(4, byte(0x001234) == 1)"));
@@ -430,7 +390,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNever()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && never(byte(0x1234) == 1))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && never(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x004567) == 1) && never(byte(0x001234) == 1)"));
@@ -439,7 +399,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNeverWithOrs()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && never(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -449,7 +409,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestUnless()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && unless(byte(0x1234) == 1))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x4567) == 1) && unless(byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("once(byte(0x004567) == 1) && unless(byte(0x001234) == 1)"));
@@ -458,7 +418,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestUnlessWithOrs()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, once(byte(0x2345) == 0) && unless(byte(0x1234) == 0 || byte(0x1234) == 2 || byte(0x1234) == 5))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -468,10 +428,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestVariableScopeGlobal()
         {
-            var parser = Parse("p = 5\n" +
-                               "function test() { p = 6 }\n" +
-                               "test()\n" +
-                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "p = 5\n" +
+                "function test() { p = 6 }\n" +
+                "test()\n" +
+                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(achievement.Points, Is.EqualTo(6));
@@ -480,10 +441,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestVariableScopeParameter()
         {
-            var parser = Parse("p = 5\n" +
-                               "function test(p) { p = 6 }\n" +
-                               "test(p)\n" +
-                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "p = 5\n" +
+                "function test(p) { p = 6 }\n" +
+                "test(p)\n" +
+                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
             Assert.That(achievement.Points, Is.EqualTo(5));
@@ -492,16 +454,18 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestVariableScopeLocal()
         {
-            var parser = Parse("function test() { p = 6 }\n" +
-                               "test()\n" +
-                               "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:23 Unknown variable: p"));
+            var parser = AchievementScriptTests.Parse(
+                "function test() { p = 6 }\n" +
+                "test()\n" +
+                "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("3:23 Unknown variable: p"));
         }
 
         [Test]
         public void TestVariableScopeNested()
         {
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "function foo2(a)\n" +                            // a = 1
                 "{\n" +
                 "    a = a + 1\n" +                               // a = 2
@@ -523,7 +487,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestVariableScopeGlobalLocation()
         {
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "c = 1\n" +
                 "function foo(a)\n" +
                 "{\n" +
@@ -539,7 +503,7 @@ namespace RATools.Parser.Tests
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x000000) == 2 && byte(0x000002) == 2"));
 
-            parser = Parse(
+            parser = AchievementScriptTests.Parse(
                 "function foo(a)\n" +
                 "{\n" +
                 "    b = a + 1\n" +                     // global variable declared after function called - becomes local
@@ -548,14 +512,16 @@ namespace RATools.Parser.Tests
                 "\n" +
                 "achievement(\"Test\", \"Description\", 5, foo(1) && byte(0x0001) == b)\n" + // global b not defined yet, should error
                 "b = 1\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("7:65 Unknown variable: b"));
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("7:65 Unknown variable: b"));
         }
 
         [Test]
         public void TestAddSource()
         {
-            var parser = Parse("function f() => byte(0x1234) + byte(0x1235)" +
-                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "function f() => byte(0x1234) + byte(0x1235)" +
+                "achievement(\"T\", \"D\", 5, f() == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -565,8 +531,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestAddSourceMultiple()
         {
-            var parser = Parse("function f() => byte(0x1234) + byte(0x1235) + byte(0x1236) + byte(0x1237)" +
-                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "function f() => byte(0x1234) + byte(0x1235) + byte(0x1236) + byte(0x1237)" +
+                "achievement(\"T\", \"D\", 5, f() == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -576,8 +543,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestSubSource()
         {
-            var parser = Parse("function f() => byte(0x1234) - byte(0x1235)" +
-                               "achievement(\"T\", \"D\", 5, f() == 1)");
+            var parser = AchievementScriptTests.Parse(
+                "function f() => byte(0x1234) - byte(0x1235)" +
+                "achievement(\"T\", \"D\", 5, f() == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -587,7 +555,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestMeasuredMultipleValue()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) || measured(byte(0x2345) == 10))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) || measured(byte(0x2345) == 10))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -597,7 +565,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestMeasuredMultipleHits()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10)) || measured(repeated(6, byte(0x2345) == 4)))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10)) || measured(repeated(6, byte(0x2345) == 4)))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -607,14 +575,14 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestMeasuredMultipleDiffering()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions must have the same target."));
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1))", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions must have the same target."));
         }
 
         [Test]
         public void TestMeasuredMultipleHitsWhen()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345)==7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2346)==7))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, measured(repeated(6, byte(0x1234) == 10), when=byte(0x2345)==7) || measured(repeated(6, byte(0x2345) == 4), when=byte(0x2346)==7))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -624,7 +592,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestTransitiveOrClause()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3)");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, (byte(0x1234) == 1 || byte(0x2345) == 2) && byte(0x3456) == 3)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -634,8 +602,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestTransitiveMath()
         {
-            var parser = Parse("function f(n) => byte(n) + 1\n" +
-                               "achievement(\"T\", \"D\", 5, f(0x1234) - f(0x2345) == 3)\n");
+            var parser = AchievementScriptTests.Parse(
+                "function f(n) => byte(n) + 1\n" +
+                "achievement(\"T\", \"D\", 5, f(0x1234) - f(0x2345) == 3)\n");
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("(byte(0x001234) - byte(0x002345)) == 3"));
@@ -644,73 +613,76 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestRichPresenceDisplay()
         {
-            var parser = Parse("rich_presence_display(\"simple string\")");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"simple string\")");
             Assert.That(parser.RichPresence, Is.EqualTo("Display:\r\nsimple string\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValue()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValuePlusOne()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) + 1))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) + 1))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueMinusOne()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) - 1))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) - 1))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v-1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueMultiply()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 10 + 1))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 10 + 1))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*10_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueDivide()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) / 4))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) / 4))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234/4) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueFunction()
         {
-            var parser = Parse("function test() => byte(0x1234)\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", test()))");
+            var parser = AchievementScriptTests.Parse(
+                "function test() => byte(0x1234)\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", test()))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueReused()
         {
-            var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345)))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
+            var parser = AchievementScriptTests.Parse(
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345)))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234)))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceValueReusedDifferingFormat()
         {
-            var parser = Parse("rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345), format=\"VALUE\"))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234), format=\"FRAMES\"))", false);
+            var parser = AchievementScriptTests.Parse(
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_value(\"Test\", byte(0x2345), format=\"VALUE\"))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234), format=\"FRAMES\"))", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("1:68 Multiple rich_presence_value calls with the same name must have the same format"));
         }
 
         [Test]
         public void TestRichPresenceValueFloatModifier()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*1.5) here\r\n"));
         }
 
@@ -719,7 +691,7 @@ namespace RATools.Parser.Tests
         {
             using (var cultureOverride = new CultureOverride("fr-FR"))
             {
-                var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
+                var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(0x1234) * 1.5))");
                 Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234*1.5) here\r\n"));
             }
         }
@@ -727,7 +699,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestRichPresenceValueFloatModifierWithPointer()
         {
-            var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_A:0xH0002*f1.5_M:0) here\r\n"));
         }
 
@@ -736,7 +708,7 @@ namespace RATools.Parser.Tests
         {
             using (var cultureOverride = new CultureOverride("fr-FR"))
             {
-                var parser = Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
+                var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {0} here\", rich_presence_value(\"Test\", byte(byte(0x1234) + 2) * 1.5))");
                 Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(I:0xH1234_A:0xH0002*f1.5_M:0) here\r\n"));
             }
         }
@@ -744,26 +716,29 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestRichPresenceLookup()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceLookupNoDict()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234)))", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("2:41 Required parameter 'dictionary' not provided"));
         }
 
         [Test]
         public void TestRichPresenceLookupReused()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
@@ -771,9 +746,10 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceLookupReusedDifferingFallback()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict, fallback=\"x\"))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, fallback=\"y\"))", false);
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict, fallback=\"x\"))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, fallback=\"y\"))", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("3:99 Multiple rich_presence_lookup calls with the same name must have the same fallback"));
         }
 
@@ -781,10 +757,11 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceLookupReusedDifferingDictionary()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback
-            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "dict2 = { 1:\"Yes\", 2:\"No\", 3:\"Maybe\" }\n" +
-                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))", false);
+            var parser = AchievementScriptTests.Parse(
+                "dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                "dict2 = { 1:\"Yes\", 2:\"No\", 3:\"Maybe\" }\n" +
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))", false);
             Assert.That(parser.ErrorMessage, Is.EqualTo("4:41 Multiple rich_presence_lookup calls with the same name must have the same dictionary"));
         }
 
@@ -792,11 +769,12 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceSkippedParameter()
         {
             // {1} does not appear in the format string, so Unused should not be defined as a Format
-            var parser = Parse("rich_presence_display(\"value {0} here, {2} there\",\n" +
-                                 "rich_presence_value(\"Test\", byte(0x1234))," +
-                                 "rich_presence_value(\"Unused\", byte(0x2345))," +
-                                 "rich_presence_value(\"Third\", byte(0x3456))" +
-                               ")");
+            var parser = AchievementScriptTests.Parse(
+                "rich_presence_display(\"value {0} here, {2} there\",\n" +
+                    "rich_presence_value(\"Test\", byte(0x1234))," +
+                    "rich_presence_value(\"Unused\", byte(0x2345))," +
+                    "rich_presence_value(\"Third\", byte(0x3456))" +
+                ")");
             Assert.That(parser.RichPresence, Is.EqualTo("Format:Test\r\nFormatType=VALUE\r\n\r\nFormat:Third\r\nFormatType=VALUE\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here, @Third(0xH3456) there\r\n"));
         }
 
@@ -805,10 +783,11 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceLookupReusedEquivalentDictionary()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback
-            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))");
+            var parser = AchievementScriptTests.Parse(
+                "dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test\", byte(0x2345), dict1))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict2))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test(0xH2345) there\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
@@ -816,50 +795,57 @@ namespace RATools.Parser.Tests
         public void TestRichPresenceLookupMultipleDictionaries()
         {
             // multiple display strings can use the same lookup only if they use the same dictionary and fallback
-            var parser = Parse("dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test1\", byte(0x2345), dict1))\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test2\", byte(0x1234), dict2))");
+            var parser = AchievementScriptTests.Parse(
+                "dict1 = { 1:\"Yes\", 2:\"No\" }\n" +
+                "dict2 = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_conditional_display(byte(0) == 0, \"value {0} there\", rich_presence_lookup(\"Test1\", byte(0x2345), dict1))\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test2\", byte(0x1234), dict2))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test1\r\n1=Yes\r\n2=No\r\n\r\nLookup:Test2\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\n?0xH0000=0?value @Test1(0xH2345) there\r\nvalue @Test2(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceLookupPlusOne()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234) + 1, dict))");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234) + 1, dict))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n\r\nDisplay:\r\nvalue @Test(0xH1234_v1) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceInvalidIndex()
         {
-            var parser = Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:30 Invalid parameter index: 1"));
+            var parser = AchievementScriptTests.Parse("rich_presence_display(\"value {1} here\", rich_presence_value(\"Test\", byte(0x1234)))", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("1:30 Invalid parameter index: 1"));
         }
 
         [Test]
         public void TestRichPresenceLookupFallback()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, \"Maybe\"))");
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, \"Maybe\"))");
             Assert.That(parser.RichPresence, Is.EqualTo("Lookup:Test\r\n1=Yes\r\n2=No\r\n*=Maybe\r\n\r\nDisplay:\r\nvalue @Test(0xH1234) here\r\n"));
         }
 
         [Test]
         public void TestRichPresenceLookupInvalidFallback()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, 1))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback: Cannot convert integer to string"));
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, 1))", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("2:90 fallback: Cannot convert integer to string"));
         }
 
         [Test]
         public void TestRichPresenceLookupInvalidFallbackVariable()
         {
-            var parser = Parse("dict = { 1:\"Yes\", 2:\"No\" }\n" +
-                               "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, dict))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("2:90 fallback: Cannot convert dictionary to string"));
+            var parser = AchievementScriptTests.Parse(
+                "dict = { 1:\"Yes\", 2:\"No\" }\n" +
+                "rich_presence_display(\"value {0} here\", rich_presence_lookup(\"Test\", byte(0x1234), dict, dict))", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser),
+                Is.EqualTo("2:90 fallback: Cannot convert dictionary to string"));
         }
 
         /*
@@ -891,8 +877,8 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestErrorInFunctionParameterLocation()
         {
-            var parser = Parse("achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:45 Unknown variable: tens"));
+            var parser = AchievementScriptTests.Parse("achievement(\"Title\", \"Description\", 5, prev(tens) == 100)\n", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("1:45 Unknown variable: tens"));
         }
 
         [TestCase("word(0x1234) * 10 == 10000", true, "word(0x001234) == 1000")]
@@ -914,7 +900,7 @@ namespace RATools.Parser.Tests
         [TestCase("(word(0x1234) - 1) * 4 < 99", true, "word(0x001234) <= 25")]
         public void TestMultiplicationInExpression(string input, bool expectedResult, string output)
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, " + input + ")\n", expectedResult);
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, " + input + ")\n", expectedResult);
 
             if (expectedResult)
             {
@@ -923,28 +909,30 @@ namespace RATools.Parser.Tests
             }
             else
             {
-                Assert.That(GetInnerErrorMessage(parser), Is.EqualTo(output));
+                Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo(output));
             }
         }
 
         [Test]
         public void TestUnknownVariableInIfInFunction()
         {
-            var parser = Parse("function foo(param) {\n" +
-                               "    if param == 1\n" +
-                               "        return AREA\n" +
-                               "\n" +
-                               "    return byte(0x1234) == 0\n" +
-                               "}\n" +
-                               "achievement(\"Title\", \"Description\", 5, foo(1))\n", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("3:16 Unknown variable: AREA"));
+            var parser = AchievementScriptTests.Parse(
+                "function foo(param) {\n" +
+                "    if param == 1\n" +
+                "        return AREA\n" +
+                "\n" +
+                "    return byte(0x1234) == 0\n" +
+                "}\n" +
+                "achievement(\"Title\", \"Description\", 5, foo(1))\n", false);
+            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("3:16 Unknown variable: AREA"));
         }
 
         [Test]
         public void TestFunctionWithCommonConditionPromotedToCore()
         {
-            var parser = Parse("function test(x) => byte(0x1234) == 1 && byte(0x2345) == x\n" +
-                               "achievement(\"Title\", \"Description\", 5, test(3) || test(4))\n");
+            var parser = AchievementScriptTests.Parse(
+                "function test(x) => byte(0x1234) == 1 && byte(0x2345) == x\n" +
+                "achievement(\"Title\", \"Description\", 5, test(3) || test(4))\n");
 
             var achievement = parser.Achievements.First();
             Assert.That(GetRequirements(achievement), Is.EqualTo("byte(0x001234) == 1 && (byte(0x002345) == 3 || byte(0x002345) == 4)"));
@@ -953,8 +941,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNeverRepeatedNestedAlwaysFalse()
         {
-            var parser = Parse("function trigger(i) => always_false() || byte(0x1233 + i) == i\n" +
-                               "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) || trigger(2))))");
+            var parser = AchievementScriptTests.Parse(
+                "function trigger(i) => always_false() || byte(0x1233 + i) == i\n" +
+                "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) || trigger(2))))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -964,7 +953,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNeverRepeatedAlwaysFalse()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, never(repeated(2, always_false() || byte(0x1233 + 1) == 1 || always_false() || byte(0x1233 + 2) == 2)))");
+            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, never(repeated(2, always_false() || byte(0x1233 + 1) == 1 || always_false() || byte(0x1233 + 2) == 2)))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -974,8 +963,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNeverRepeatedNestedAlwaysTrue()
         {
-            var parser = Parse("function trigger(i) => always_true() && byte(0x1233 + i) == i\n" +
-                               "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) && trigger(2))))");
+            var parser = AchievementScriptTests.Parse(
+                "function trigger(i) => always_true() && byte(0x1233 + i) == i\n" +
+                "achievement(\"T\", \"D\", 5, never(repeated(2, trigger(1) && trigger(2))))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.First();
@@ -985,7 +975,8 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestRepeatedNever()
         {
-            var parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2222) == 0) && " +
+            var parser = AchievementScriptTests.Parse(
+                "achievement(\"T\", \"D\", 5, once(byte(0x2222) == 0) && " +
                 "repeated(2, byte(0x1234) == 1 && never(byte(0x2345) == 2)))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
@@ -994,7 +985,8 @@ namespace RATools.Parser.Tests
                 Is.EqualTo("once(byte(0x002222) == 0) && repeated(2, byte(0x001234) == 1 && never(byte(0x002345) == 2))"));
 
             // reverse the order - never should still appear first in the definition, but be displayed last
-            parser = Parse("achievement(\"T\", \"D\", 5, once(byte(0x2222) == 0) && " +
+            parser = AchievementScriptTests.Parse(
+                "achievement(\"T\", \"D\", 5, once(byte(0x2222) == 0) && " +
                 "repeated(2, never(byte(0x2345) == 2) && byte(0x1234) == 1))");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
@@ -1006,7 +998,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestAssignVariableToFunctionWithNoReturn()
         {
-            Evaluate(
+            AchievementScriptTests.Evaluate(
                 "function a(i) { b = i }\n" +
                 "c = a(3)",
 
@@ -1017,7 +1009,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestAssignFunctionToVariable()
         {
-            var scope = Evaluate(
+            var scope = AchievementScriptTests.Evaluate(
                 "function a(i) => i + 1\n" +
                 "b = a\n" +
                 "c = b\n" +
@@ -1040,7 +1032,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestPassFunctionToFunction()
         {
-            var scope = Evaluate(
+            var scope = AchievementScriptTests.Evaluate(
                 "function a(i) => i + 1\n" +
                 "function b(f,i) => f(i)\n" +
                 "function c(i) => b(a,i)\n" +
@@ -1058,7 +1050,7 @@ namespace RATools.Parser.Tests
             // the "b" function defines an "a" parameter within it's scope, which hides the
             // global "a" function. "c" calls "b" with the "a" function as the parameter.
             // make sure the function reference to "a" can still find the global "a" function.
-            var scope = Evaluate(
+            var scope = AchievementScriptTests.Evaluate(
                 "function a(n) => n + 1\n" +
                 "function b(a, n) => a(n)\n" +
                 "c = b(a, 3)\n");
@@ -1072,16 +1064,17 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestDefaultParameterPassthrough()
         {
-            var parser = Parse("function a(id = 0, badge = \"0\")\n" +
-                               "{" +
-                               "    achievement(\"T\", \"D\", 5, byte(0x1234) == 1, id=id, badge=badge)\n" +
-                               "}\n" +
-                               "\n" +
-                               "achievement(\"T\", \"D\", 5, byte(0x1234) == 1)\n" +
-                               "a()\n" +
-                               "a(id = 10)\n" +
-                               "a(badge = \"5555\")\n" +
-                               "a(20, \"12345\")\n");
+            var parser = AchievementScriptTests.Parse(
+                "function a(id = 0, badge = \"0\")\n" +
+                "{" +
+                "    achievement(\"T\", \"D\", 5, byte(0x1234) == 1, id=id, badge=badge)\n" +
+                "}\n" +
+                "\n" +
+                "achievement(\"T\", \"D\", 5, byte(0x1234) == 1)\n" +
+                "a()\n" +
+                "a(id = 10)\n" +
+                "a(badge = \"5555\")\n" +
+                "a(20, \"12345\")\n");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(5));
 
             // calling achievement() directly without a badge or id
@@ -1123,7 +1116,7 @@ namespace RATools.Parser.Tests
                   "function t() => true\nfunction f() => false\nc=p(t)+p(f)+p(f)+p(t)+p(f)")]
         public void TestAnonymousFunction(string definition)
         {
-            var scope = Evaluate(definition);
+            var scope = AchievementScriptTests.Evaluate(definition);
 
             var c = scope.GetVariable("c");
             Assert.That(c, Is.InstanceOf<IntegerConstantExpression>());
@@ -1134,26 +1127,28 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNestedComparisonFunction()
         {
-            Evaluate("function f() => byte(0x1234) == 2\n" +
-                     "achievement(\"T\", \"D\", 5, f() == 1)\n",
+            AchievementScriptTests.Evaluate(
+                "function f() => byte(0x1234) == 2\n" +
+                "achievement(\"T\", \"D\", 5, f() == 1)\n",
 
-                     "2:26 Invalid value for parameter: trigger\r\n" +
-                     "- 2:26 Cannot chain comparisons");
+                "2:26 Invalid value for parameter: trigger\r\n" +
+                "- 2:26 Cannot chain comparisons");
         }
 
         [Test]
         public void TestIfFunctionResultBoolean()
         {
-            var scope = Evaluate("function t() => true\n" +
-                                 "function f() => false\n" +
-                                 "a = 0\n" +
-                                 "b = 0\n" +
-                                 "c = 0\n" +
-                                 "d = 0\n" +
-                                 "if (t()) { a = 1 }" +
-                                 "if (!t()) { b = 1 }" +
-                                 "if (f()) { c = 1 }" +
-                                 "if (!f()) { d = 1 }");
+            var scope = AchievementScriptTests.Evaluate(
+                "function t() => true\n" +
+                "function f() => false\n" +
+                "a = 0\n" +
+                "b = 0\n" +
+                "c = 0\n" +
+                "d = 0\n" +
+                "if (t()) { a = 1 }" +
+                "if (!t()) { b = 1 }" +
+                "if (f()) { c = 1 }" +
+                "if (!f()) { d = 1 }");
 
             var a = scope.GetVariable("a");
             Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
@@ -1175,16 +1170,17 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestIfFunctionResultAlwaysTrueFalse()
         {
-            var scope = Evaluate("function t() => always_true()\n" +
-                                 "function f() => always_false()\n" +
-                                 "a = 0\n" +
-                                 "b = 0\n" +
-                                 "c = 0\n" +
-                                 "d = 0\n" +
-                                 "if (t()) { a = 1 }" +
-                                 "if (!t()) { b = 1 }" +
-                                 "if (f()) { c = 1 }" +
-                                 "if (!f()) { d = 1 }");
+            var scope = AchievementScriptTests.Evaluate(
+                "function t() => always_true()\n" +
+                "function f() => always_false()\n" +
+                "a = 0\n" +
+                "b = 0\n" +
+                "c = 0\n" +
+                "d = 0\n" +
+                "if (t()) { a = 1 }" +
+                "if (!t()) { b = 1 }" +
+                "if (f()) { c = 1 }" +
+                "if (!f()) { d = 1 }");
 
             var a = scope.GetVariable("a");
             Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
@@ -1206,14 +1202,15 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestIfAny()
         {
-            var scope = Evaluate("a = 0\n" +
-                                 "b = 0\n" +
-                                 "c = 0\n" +
-                                 "d = 0\n" +
-                                 "if (any_of([1,2,3], n => n == 2)) { a = 1 }" +
-                                 "if (any_of([1,2,3], n => n == 5)) { b = 1 }" +
-                                 "if (!any_of([1,2,3], n => n == 3)) { c = 1 }" +
-                                 "if (!any_of([1,2,3], n => n == 8)) { d = 1 }");
+            var scope = AchievementScriptTests.Evaluate(
+                "a = 0\n" +
+                "b = 0\n" +
+                "c = 0\n" +
+                "d = 0\n" +
+                "if (any_of([1,2,3], n => n == 2)) { a = 1 }" +
+                "if (any_of([1,2,3], n => n == 5)) { b = 1 }" +
+                "if (!any_of([1,2,3], n => n == 3)) { c = 1 }" +
+                "if (!any_of([1,2,3], n => n == 8)) { d = 1 }");
 
             var a = scope.GetVariable("a");
             Assert.That(a, Is.InstanceOf<IntegerConstantExpression>());
@@ -1235,8 +1232,9 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestDeltaBCDComparison()
         {
-            var parser = Parse("function f() => bcd(byte(0x1234))\n" +
-                               "achievement(\"T\", \"D\", 5, f() != prev(f()))\n");
+            var parser = AchievementScriptTests.Parse(
+                "function f() => bcd(byte(0x1234))\n" +
+                "achievement(\"T\", \"D\", 5, f() != prev(f()))\n");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
 
             var achievement = parser.Achievements.ElementAt(0);
@@ -1246,7 +1244,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestRuntimeConditional()
         {
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "function f() {\n" +
                 "  if (byte(0x1234) == 2) return byte(0x1234) else return byte(0x4321)\n" +
                 "}\n" +
@@ -1271,7 +1269,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestTallyNeverComplex()
         {
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "achievement(\"T\", \"D\", 5,\n" +
                 "  tally(8, byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3))\n"+
                 ")");
@@ -1285,7 +1283,7 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestTallyMultipleNeverComplex()
         {
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "achievement(\"T\", \"D\", 5,\n" +
                 "  tally(8,\n" +
                 "    byte(0x1234) == 1 && never(byte(0x2345) == 2 && byte(0x3456) == 3),\n" +
@@ -1304,7 +1302,7 @@ namespace RATools.Parser.Tests
         {
             // Without meta comment, minimum version will be 0.30, which doesn't support OrNext, so 
             // (A || B) && (C || D) will have to be cross-multiplied into four alts.
-            var parser = Parse(
+            var parser = AchievementScriptTests.Parse(
                 "// GameName\n" +
                 "achievement(\"T\", \"D\", 5,\n" +
                 "  byte(0x1234) == 1 && (byte(0x2345) == 5 || byte(0x2345) == 6) && (byte(0x3456) == 6 || byte(0x3456) == 7)\n" +
@@ -1317,7 +1315,7 @@ namespace RATools.Parser.Tests
                 Is.EqualTo("0xH1234=1S0xH2345=5_0xH3456=6S0xH2345=5_0xH3456=7S0xH2345=6_0xH3456=6S0xH2345=6_0xH3456=7"));
 
             // With meta comment, OrNext is supported, so alts aren't needed.
-            parser = Parse(
+            parser = AchievementScriptTests.Parse(
                 "// GameName\n" +
                 "// #MinimumVersion=1.0\n" +
                 "achievement(\"T\", \"D\", 5,\n" +
@@ -1334,13 +1332,14 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestNonExecutableExpression()
         {
-            Evaluate("byte(0x1234) == 6", "1:1 Only assignment statements, function calls and function definitions allowed at outer scope");
+            AchievementScriptTests.Evaluate("byte(0x1234) == 6",
+                "1:1 Only assignment statements, function calls and function definitions allowed at outer scope");
         }
 
         [Test]
         public void TestNonExecutableExpressionInFunction()
         {
-            Evaluate(
+            AchievementScriptTests.Evaluate(
                 "function foo()\n" +
                 "{\n" +
                 "    byte(0x1234) == 6" +
@@ -1354,31 +1353,12 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestIfInParameters()
         {
-            Evaluate("function inc(a) => a + 1\n" +
+            AchievementScriptTests.Evaluate(
+                "function inc(a) => a + 1\n" +
                 "b = 2\n" +
                 "c = inc(if (b == 1) { return 3 } else { return 5 })",
 
                 "3:9 Cannot assign if statement to parameter");
-        }
-
-        [Test]
-        public void TestArrayIndexOutOfRangeEmpty()
-        {
-            Evaluate("arr = []\n" +
-                     "index = 5\n" +
-                     "arr[index] = 3",
-
-                     "3:5 Cannot index empty array");
-        }
-
-        [Test]
-        public void TestArrayIndexOutOfRange()
-        {
-            Evaluate("arr = [1,2]\n" +
-                     "index = 5\n" +
-                     "arr[index] = 3",
-
-                     "3:5 Index 5 not in range 0-1");
         }
     }
 }
