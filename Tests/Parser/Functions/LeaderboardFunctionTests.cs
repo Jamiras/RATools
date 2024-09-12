@@ -163,6 +163,18 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueMaxOfEmpty()
+        {
+            Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of())",
+
+                "1:80 Invalid value for parameter: value\r\n" +
+                "- 1:80 max_of call failed\r\n" +
+                "- 1:80 At least one expression is required");
+        }
+
+        [Test]
         public void TestValueMeasured()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
