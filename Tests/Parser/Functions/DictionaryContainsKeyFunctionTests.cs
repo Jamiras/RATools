@@ -30,7 +30,7 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("{\"1\": true, \"2\": false}", "2", false)] // type mismatch
         public void TestEvaluate(string array, string value, bool expected)
         {
-            var scope = AchievementScriptInterpreter.GetGlobalScope();
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             var result = FunctionTests.Evaluate<DictionaryContainsKeyFunction>(
                 string.Format("dictionary_contains_key({0}, {1}", array, value), scope);
 

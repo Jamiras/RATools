@@ -37,7 +37,7 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("[byte(0x1234),byte(0x2345)]", "byte(0x2345) + 1", false)]
         public void TestEvaluate(string array, string value, bool expected)
         {
-            var scope = AchievementScriptInterpreter.GetGlobalScope();
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             var result = FunctionTests.Evaluate<ArrayContainsFunction>(
                 string.Format("array_contains({0}, {1}", array, value), scope);
 
