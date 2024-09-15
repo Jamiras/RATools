@@ -60,7 +60,7 @@ namespace RATools.Parser.Expressions
         /// </returns>
         protected override bool Equals(ExpressionBase obj)
         {
-            var that = obj as IntegerConstantExpression;
+            var that = obj as FloatConstantExpression;
             return that != null && Value == that.Value;
         }
 
