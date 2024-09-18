@@ -25,6 +25,60 @@ namespace RATools.Data
             return Serialize(new SerializationContext { AddressWidth = 4 });
         }
 
+        public override bool Equals(object obj)
+        {
+            var that = obj as RequirementGroup;
+            if (that == null)
+                return false;
+
+            var thisEnumerator = Requirements.GetEnumerator();
+            var thatEnumerator = that.Requirements.GetEnumerator();
+            while (thisEnumerator.MoveNext())
+            {
+                if (!thatEnumerator.MoveNext())
+                    return false;
+
+                if (thisEnumerator.Current != thatEnumerator.Current)
+                    return false;
+            }
+
+            if (thatEnumerator.MoveNext())
+                return false;
+
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="RequirementGroup"/>s are equivalent.
+        /// </summary>
+        public static bool operator ==(RequirementGroup left, RequirementGroup right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left is null || right is null)
+                return false;
+
+            return left.Equals(right);
+        }
+
+        /// <summary>
+        /// Determines if two <see cref="RequirementGroup"/>s are not equivalent.
+        /// </summary>
+        public static bool operator !=(RequirementGroup left, RequirementGroup right)
+        {
+            if (ReferenceEquals(left, right))
+                return false;
+            if (left is null || right is null)
+                return true;
+
+            return !left.Equals(right);
+        }
+
         /// <summary>
         /// Creates a serialized string from the requirement group.
         /// </summary>
