@@ -1,5 +1,7 @@
-﻿using Jamiras.Components;
+﻿using Jamiras.Commands;
+using Jamiras.Components;
 using Jamiras.DataModels;
+using Jamiras.Services;
 using RATools.Data;
 using RATools.Services;
 using System;
@@ -13,6 +15,7 @@ namespace RATools.ViewModels
         public AchievementViewModel(GameViewModel owner)
             : base(owner)
         {
+            CopyDefinitionToClipboardCommand = new DelegateCommand(CopyDefinitionToClipboard);
         }
 
         public override string ViewerType
@@ -95,6 +98,9 @@ namespace RATools.ViewModels
                 return new TriggerViewModel[]
                 {
                     new TriggerViewModel("", achievement.Trigger, numberFormat, _owner != null ? _owner.Notes : new Dictionary<uint, string>())
+                    {
+                        CopyToClipboardCommand = new DelegateCommand(CopyDefinitionToClipboard)
+                    }
                 };
             }
 
@@ -104,6 +110,21 @@ namespace RATools.ViewModels
         protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
         {
             _owner.UpdateLocal((Achievement)asset, (Achievement)localAsset, warning, validateAll);
+        }
+
+        public DelegateCommand CopyDefinitionToClipboardCommand { get; private set; }
+
+        private void CopyDefinitionToClipboard()
+        {
+            var achievement = Generated.Asset as Achievement;
+            if (achievement == null)
+                achievement = Published.Asset as Achievement;
+
+            if (achievement != null)
+            {
+                var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
+                clipboard.SetData(achievement.Trigger.Serialize(_owner.SerializationContext));
+            }
         }
 
         public string MeasuredTarget
