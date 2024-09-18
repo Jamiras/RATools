@@ -1035,9 +1035,9 @@ namespace RATools.Parser.Expressions
         /// </summary>
         public static bool operator ==(ExpressionBase left, ExpressionBase right)
         {
-            if (ReferenceEquals(left, null))
-                return ReferenceEquals(right, null);
-            if (ReferenceEquals(right, null))
+            if (left is null)
+                return right is null;
+            if (right is null)
                 return false;
             if (left.Type != right.Type)
                 return false;
@@ -1050,9 +1050,9 @@ namespace RATools.Parser.Expressions
         /// </summary>
         public static bool operator !=(ExpressionBase left, ExpressionBase right)
         {
-            if (ReferenceEquals(left, null))
-                return !ReferenceEquals(right, null);
-            if (ReferenceEquals(right, null))
+            if (left is null)
+                return right is not null;
+            if (right is null)
                 return true;
             if (left.Type != right.Type)
                 return true;
