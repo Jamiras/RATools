@@ -289,5 +289,27 @@ namespace RATools.Parser.Tests.Expressions
 
             Assert.That(modifications.Count, Is.EqualTo(0));
         }
+
+        [Test]
+        public void TestArrayIndexOutOfRangeEmpty()
+        {
+            AchievementScriptTests.Evaluate(
+                "arr = []\n" +
+                "index = 5\n" +
+                "arr[index] = 3",
+
+                "3:5 Cannot index empty array");
+        }
+
+        [Test]
+        public void TestArrayIndexOutOfRange()
+        {
+            AchievementScriptTests.Evaluate(
+                "arr = [1,2]\n" +
+                "index = 5\n" +
+                "arr[index] = 3",
+
+                "3:5 Index 5 not in range 0-1");
+        }
     }
 }

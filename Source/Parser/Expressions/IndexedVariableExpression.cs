@@ -218,9 +218,16 @@ namespace RATools.Parser.Expressions
                 // array index must be an integer in the range 0..count-1
                 var intIndex = index as IntegerConstantExpression;
                 if (intIndex == null)
+                {
                     container = new ErrorExpression("Index does not evaluate to an integer constant", index);
+                }
                 else if (intIndex.Value < 0 || intIndex.Value >= array.Entries.Count)
-                    container = new ErrorExpression(string.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), index);
+                {
+                    if (array.Entries.Count == 0)
+                        container = new ErrorExpression("Cannot index empty array", Index);
+                    else
+                        container = new ErrorExpression(string.Format("Index {0} not in range 0-{1}", intIndex.Value, array.Entries.Count - 1), Index);
+                }
             }
         }
 
