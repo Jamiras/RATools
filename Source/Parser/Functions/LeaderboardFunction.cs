@@ -110,7 +110,7 @@ namespace RATools.Parser.Functions
                 return null;
 
             ErrorExpression error;
-            var trigger = TriggerBuilder.BuildTrigger(expression, out error);
+            var trigger = TriggerBuilder.BuildTrigger(expression, serializationContext, out error);
             result = error;
             return trigger;
         }
@@ -122,7 +122,7 @@ namespace RATools.Parser.Functions
                 return null;
 
             ErrorExpression error;
-            var value = ValueBuilder.BuildValue(expression, out error);
+            var value = ValueBuilder.BuildValue(expression, serializationContext, out error);
             result = error;
             return value;
         }
