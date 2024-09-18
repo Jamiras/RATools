@@ -26,7 +26,7 @@ namespace RATools.Parser.Functions
                 return false;
 
             ErrorExpression error;
-            var trigger = TriggerBuilder.BuildTrigger(condition, out error);
+            var trigger = TriggerBuilder.BuildTrigger(condition, context.SerializationContext, out error);
             if (trigger == null)
             {
                 result = error;
@@ -40,7 +40,8 @@ namespace RATools.Parser.Functions
             var richPresenceContext = new RichPresenceDisplayContext
             {
                 RichPresence = context.RichPresence,
-                DisplayString = context.RichPresence.AddDisplayString(trigger, formatString)
+                DisplayString = context.RichPresence.AddDisplayString(trigger, formatString),
+                SerializationContext = context.SerializationContext
             };
             var richPresenceScope = new InterpreterScope(scope)
             {
