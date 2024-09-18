@@ -286,5 +286,29 @@ namespace RATools.Parser.Tests.Functions
             var context = new SerializationContext();
             Assert.That(leaderboard.Submit.Serialize(context), Is.EqualTo("1=1"));
         }
+
+        [Test]
+        public void TestSerializationContext()
+        {
+            string input = "leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1 && (byte(0x1001) == 4 || byte(0x1002) == 4) && (byte(0x1003) == 5 || byte(0x1004) == 5), " +
+                "byte(0x1234) == 2 && (byte(0x1001) == 6 || byte(0x1002) == 6) && (byte(0x1003) == 7 || byte(0x1004) == 7), " +
+                "byte(0x1234) == 3 && (byte(0x1001) == 8 || byte(0x1002) == 8) && (byte(0x1003) == 9 || byte(0x1004) == 9), " +
+                "byte(0x4567))";
+
+            // unspecified minimum version will result in cross-product of alts
+            var leaderboard = Evaluate(input);
+            var context = new SerializationContext();
+            Assert.That(leaderboard.Start.Serialize(context), Is.EqualTo("0xH001234=1S0xH001001=4_0xH001003=5S0xH001001=4_0xH001004=5S0xH001002=4_0xH001003=5S0xH001002=4_0xH001004=5"));
+            Assert.That(leaderboard.Cancel.Serialize(context), Is.EqualTo("0xH001234=2S0xH001001=6_0xH001003=7S0xH001001=6_0xH001004=7S0xH001002=6_0xH001003=7S0xH001002=6_0xH001004=7"));
+            Assert.That(leaderboard.Submit.Serialize(context), Is.EqualTo("0xH001234=3S0xH001001=8_0xH001003=9S0xH001001=8_0xH001004=9S0xH001002=8_0xH001003=9S0xH001002=8_0xH001004=9"));
+
+            // minimum version of 0.78+ will use OrNext instead of generating alts
+            input = "// GameName\n// #MinimumVersion=0.78\n" + input;
+            leaderboard = Evaluate(input);
+            Assert.That(leaderboard.Start.Serialize(context), Is.EqualTo("0xH001234=1_O:0xH001001=4_0xH001002=4_O:0xH001003=5_0xH001004=5"));
+            Assert.That(leaderboard.Cancel.Serialize(context), Is.EqualTo("0xH001234=2_O:0xH001001=6_0xH001002=6_O:0xH001003=7_0xH001004=7"));
+            Assert.That(leaderboard.Submit.Serialize(context), Is.EqualTo("0xH001234=3_O:0xH001001=8_0xH001002=8_O:0xH001003=9_0xH001004=9"));
+        }
     }
 }
