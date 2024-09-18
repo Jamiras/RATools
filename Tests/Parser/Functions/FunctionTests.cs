@@ -41,6 +41,20 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(result, Is.Null);
         }
 
+        public static ErrorExpression AssertExecuteError<T>(string input, InterpreterScope scope, string expectedError)
+            where T : FunctionDefinitionExpression, new()
+        {
+            var result = CallFunction<T>(input, scope);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
+
+            var error = (ErrorExpression)result;
+            while (error.InnerError != null)
+                error = error.InnerError;
+            Assert.That(error.Message, Is.EqualTo(expectedError));
+
+            return error;
+        }
+
         public static ExpressionBase Evaluate<T>(string input, InterpreterScope scope)
             where T : FunctionDefinitionExpression, new()
         {
@@ -54,16 +68,18 @@ namespace RATools.Parser.Tests.Functions
             return result;
         }
 
-        public static void AssertEvaluateError<T>(string input, InterpreterScope scope, string expectedError)
+        public static ErrorExpression AssertEvaluateError<T>(string input, InterpreterScope scope, string expectedError)
             where T : FunctionDefinitionExpression, new()
         {
-            var error = CallFunction<T>(input, scope);
-            Assert.That(error, Is.InstanceOf<ErrorExpression>());
+            var result = CallFunction<T>(input, scope);
+            Assert.That(result, Is.InstanceOf<ErrorExpression>());
 
-            var parseError = (ErrorExpression)error;
-            while (parseError.InnerError != null)
-                parseError = parseError.InnerError;
-            Assert.That(parseError.Message, Is.EqualTo(expectedError));
+            var error = (ErrorExpression)result;
+            while (error.InnerError != null)
+                error = error.InnerError;
+            Assert.That(error.Message, Is.EqualTo(expectedError));
+
+            return error;
         }
     }
 }
