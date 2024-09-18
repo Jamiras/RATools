@@ -66,6 +66,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("word(dword(0x7f6f10) + 0xB00) > word(dword(0x7f6f10) + 0xB02)", "I:0xX7f6f10_0x 000b00>0x 000b02")]
         [TestCase("word(dword(0x7f6f10) + 0xB00) > word(dword(0x7f6f10) + 0xB02) / 2", "I:0xX7f6f10_B:0x 000b02/2_I:0xX7f6f10_0x 000b00>0")] // cannot share addaddress if one value is modified
         [TestCase("word(dword(0x7f6f10) + 0xB00) / 2 > word(dword(0x7f6f10) + 0xB02)", "I:0xX7f6f10_B:0x 000b02_I:0xX7f6f10_A:0x 000b00/2_0>0")] // cannot share addaddress if one value is modified
+        [TestCase("word(0x1234) & 0x1FF > prev(word(0x1234)) & 0x1FF", "A:0x 001234&511_B:d0x 001234&511_0>0")] // has to be converted to SubSource to prevent loss of masking
+        [TestCase("word(0x1234) & 0x03 > prev(word(0x1234)) & 0xFF", "A:0xH001234&3_0>d0xH001234")] // word&0xFF -> byte
+        [TestCase("word(0x1234) & 0x3FF > prev(word(0x1234)) & 0x1FFF", "A:0x 001234&1023_B:d0x 001234&8191_0>0")] // has to be converted to SubSource to prevent loss of masking
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);

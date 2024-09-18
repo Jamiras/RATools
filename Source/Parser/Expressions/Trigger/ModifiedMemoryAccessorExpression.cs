@@ -704,8 +704,19 @@ namespace RATools.Parser.Expressions.Trigger
                 if (modifiedMemoryAccessor.ModifyingOperator == ModifyingOperator &&
                     modifiedMemoryAccessor.Modifier == Modifier)
                 {
-                    // same modifier applied to both sides, eliminate it
-                    return new ComparisonExpression(MemoryAccessor, operation, modifiedMemoryAccessor.MemoryAccessor);
+                    switch (ModifyingOperator)
+                    {
+                        case RequirementOperator.Modulus:
+                        case RequirementOperator.Divide:
+                        case RequirementOperator.BitwiseAnd:
+                            // these operations can transform multiple values into a single value so
+                            // we can't just discard the repetetive operation.
+                            break;
+
+                        default:
+                            // the same modifier was applied to both sides, eliminate it.
+                            return new ComparisonExpression(MemoryAccessor, operation, modifiedMemoryAccessor.MemoryAccessor);
+                    }
                 }
 
                 var opposingOperator = MathematicExpression.GetOppositeOperation(GetMathematicOperation(modifiedMemoryAccessor.ModifyingOperator));

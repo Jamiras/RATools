@@ -77,7 +77,7 @@ namespace RATools.Parser.Expressions.Trigger
             var left = Left;
             var right = MemoryAccessorExpressionBase.ReduceToSimpleExpression(Right);
 
-            var rightAccessor = right as MemoryAccessorExpression;
+            var rightAccessor = MemoryAccessorExpression.Extract(right);
             if (rightAccessor != null && rightAccessor.HasPointerChain)
             {
                 if (rightAccessor.PointerChainMatches(left as MemoryAccessorExpressionBase))
@@ -128,6 +128,13 @@ namespace RATools.Parser.Expressions.Trigger
             var memoryValue = left as MemoryValueExpression;
             if (memoryValue != null)
             {
+                if (right is ModifiedMemoryAccessorExpression)
+                {
+                    memoryValue = (MemoryValueExpression)memoryValue.Combine(right, MathematicOperation.Subtract);
+                    rightAccessor = null;
+                    right = new IntegerConstantExpression(0);
+                }
+
                 error = memoryValue.BuildTrigger(context, right);
             }
             else

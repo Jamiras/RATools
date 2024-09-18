@@ -42,6 +42,19 @@ namespace RATools.Parser.Expressions.Trigger
                 _pointerChain = new List<Requirement>(source._pointerChain);
         }
 
+        public static MemoryAccessorExpression Extract(ExpressionBase expression)
+        {
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor != null)
+                return memoryAccessor;
+
+            var modifiedMemoryAccessor = expression as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+                return modifiedMemoryAccessor.MemoryAccessor;
+
+            return null;
+        }
+
         /// <summary>
         /// Gets or sets the memory being read.
         /// </summary>
