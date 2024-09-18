@@ -424,6 +424,21 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestFunctionChainValue()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "function a(b) => b + 1\n" +
+                "function c(d) => a(d)\n" +
+                "function e(f) => c(f)\n" +
+                "dict = { \"func\": e }\n" +
+                "i = dict[\"func\"](6)\n");
+
+            var i = scope.GetVariable("i");
+            Assert.That(i, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)i).Value, Is.EqualTo(7));
+        }
+        
+        [Test]
         public void TestSignedUnsignedKeys()
         {
             // Values in this dictionary are both near int.MinValue and near int.MaxValue. Values more

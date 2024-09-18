@@ -67,7 +67,7 @@ namespace RATools.Parser
                     {
                         // not a function call - scope is not limiting
                     }
-                    else if (AnonymousUserFunctionDefinitionExpression.IsAnonymousFunctionName(functionCall.FunctionName.Name))
+                    else if (functionCall.IsAnonymousFunction)
                     {
                         // anonymous function may capture variables from outer scope
                     }
