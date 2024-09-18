@@ -190,6 +190,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new ArrayMapFunction());
                 _globalScope.AddFunction(new ArrayContainsFunction());
                 _globalScope.AddFunction(new DictionaryContainsKeyFunction());
+                _globalScope.AddFunction(new AssertFunction());
 
                 _globalScope.AddFunction(new ConditionalExpression.OrNextWrapperFunction());
             }

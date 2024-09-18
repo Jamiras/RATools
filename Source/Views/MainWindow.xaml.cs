@@ -73,6 +73,14 @@ namespace RATools.Views
             viewModel.Initialize();
             DataContext = viewModel;
 
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length > 1)
+            {
+                Dispatcher.InvokeAsync(() => {
+                    viewModel.DragDropScriptCommand.Execute(new string[] { args[1] });
+                });
+            }
+
             base.OnInitialized(e);
         }
 

@@ -69,6 +69,9 @@ namespace RATools.ViewModels
 
         private static Trigger WrapValue(Value value)
         {
+            if (value.Values.Count() == 0)
+                return new Trigger();
+
             var triggerBuilder = new TriggerBuilder();
             foreach (var requirement in value.Values.First().Requirements)
                 triggerBuilder.CoreRequirements.Add(requirement);

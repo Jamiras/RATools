@@ -84,6 +84,16 @@ namespace RATools.Parser.Functions
                 return false;
             leaderboard.Id = integerExpression.Value;
 
+            if (leaderboard.Submit == leaderboard.Start)
+            {
+                // if the submit trigger is true in the same frame that the start trigger activates,
+                // the achievement will automatically submit. therefore, if the submit trigger is the
+                // same as the start trigger, it will automatically submit and we can just replace
+                // the submit trigger with always_true();
+                ErrorExpression error;
+                leaderboard.Submit = TriggerBuilder.BuildTrigger(new AlwaysTrueExpression(), out error);
+            }
+
             int sourceLine = 0;
             var functionCall = scope.GetContext<FunctionCallExpression>();
             if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)

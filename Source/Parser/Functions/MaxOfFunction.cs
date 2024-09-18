@@ -22,6 +22,12 @@ namespace RATools.Parser.Functions
             if (varargs == null)
                 return false;
 
+            if (varargs.Entries.Count == 0)
+            {
+                result = new ErrorExpression("At least one expression is required");
+                return false;
+            }
+
             var maxOf = new MaxOfRequirementExpression();
             CopyLocation(maxOf);
 

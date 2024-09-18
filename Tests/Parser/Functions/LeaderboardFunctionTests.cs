@@ -35,7 +35,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(((IntegerConstantExpression)def.DefaultParameters["id"]).Value, Is.EqualTo(0));
         }
 
-        private Leaderboard Evaluate(string input, string expectedError = null)
+        private static Leaderboard Evaluate(string input, string expectedError = null)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var parser = new AchievementScriptInterpreter();
@@ -163,6 +163,18 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueMaxOfEmpty()
+        {
+            Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of())",
+
+                "1:80 Invalid value for parameter: value\r\n" +
+                "- 1:80 max_of call failed\r\n" +
+                "- 1:80 At least one expression is required");
+        }
+
+        [Test]
         public void TestValueMeasured()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
@@ -264,6 +276,15 @@ namespace RATools.Parser.Tests.Functions
                 "measured(repeated(10, byte(0x2345 + word(0x1234) * 4) == 6)))");
             var context = new SerializationContext { MinimumVersion = Version._0_77 };
             Assert.That(leaderboard.Value.Serialize(context), Is.EqualTo("I:0x 001234*4_M:0xH002345=6.10."));
+        }
+
+        [Test]
+        public void TestEliminateSubmitWhenMatchesStart()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 1, byte(0x2345))");
+            var context = new SerializationContext();
+            Assert.That(leaderboard.Submit.Serialize(context), Is.EqualTo("1=1"));
         }
     }
 }
