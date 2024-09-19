@@ -532,6 +532,33 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestEvaluateNested()
+        {
+            var script =
+                "function format_number(number)\n" +
+                "{\n" +
+                "  function add_commas(number)\n" +
+                "  {\n" +
+                "    if (length(number) < 4)\n" +
+                "      return number\n" +
+                "\n" +
+                "    return add_commas(substring(number, 0, -3)) + \",\" + substring(number, -3)\n" +
+                "  }\n" +
+                "\n" +
+                "  return add_commas(number + \"\") // convert to string\n" +
+                "}\n" +
+                "\n" +
+                "a = format_number(12345678)";
+            var scope = AchievementScriptTests.Evaluate(script);
+            var a = scope.GetVariable("a");
+            Assert.That(a, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)a).Value, Is.EqualTo("12,345,678"));
+
+            var add_commas = scope.GetFunction("add_commas");
+            Assert.That(add_commas, Is.Null);
+        }
+
+        [Test]
         public void TestInvokeNoReturnValue()
         {
             var functionDefinition = Parse("function func(i) { j = i }");

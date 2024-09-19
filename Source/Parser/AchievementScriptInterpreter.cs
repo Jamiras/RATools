@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Net.Sockets;
 using System.Text;
 
 namespace RATools.Parser
@@ -99,7 +98,7 @@ namespace RATools.Parser
         /// <summary>
         /// Gets the serialization context of the interpreted script.
         /// </summary>
-        public SerializationContext SerializationContext { get; private set; }
+        public SerializationContext SerializationContext { get; internal set; }
 
         public static ExpressionGroupCollection CreateExpressionGroupCollection()
         {
