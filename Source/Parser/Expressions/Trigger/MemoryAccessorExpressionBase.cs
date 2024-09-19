@@ -49,7 +49,12 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var memoryAccessorBase = expr as MemoryAccessorExpressionBase;
             if (memoryAccessorBase == null)
+            {
+                if (expr is INumericConstantExpression)
+                    return WrapInMemoryValue(new MemoryValueExpression().ApplyMathematic(expr, MathematicOperation.Add));
+
                 return null;
+            }
 
             var memoryValue = expr as MemoryValueExpression;
             if (memoryValue != null)
