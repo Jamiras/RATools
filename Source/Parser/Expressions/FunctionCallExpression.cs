@@ -47,6 +47,17 @@ namespace RATools.Parser.Expressions
         public ICollection<ExpressionBase> Parameters { get; private set; }
 
         /// <summary>
+        /// Gets whether the function being called was defined via a lambda expression.
+        /// </summary>
+        public bool IsAnonymousFunction
+        {
+            get
+            {
+                return FunctionName != null && AnonymousUserFunctionDefinitionExpression.IsAnonymousFunctionName(FunctionName.Name);
+            }
+        }
+
+        /// <summary>
         /// Gets whether this is non-changing.
         /// </summary>
         public override bool IsConstant
