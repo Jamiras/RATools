@@ -2,7 +2,6 @@
 using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -92,6 +91,11 @@ namespace RATools.Parser.Expressions
         public virtual bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var interpreter = new AchievementScriptInterpreter();
+
+            var context = scope.GetContext<AchievementScriptContext>();
+            if (context != null)
+                interpreter.SerializationContext = context.SerializationContext;
+
             var interpreterScope = new InterpreterScope(scope) { Context = interpreter };
 
             result = AchievementScriptInterpreter.Execute(Expressions, interpreterScope);

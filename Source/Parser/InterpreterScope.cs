@@ -78,12 +78,19 @@ namespace RATools.Parser
 
                         do
                         {
+                            // found a script scope - remember it. we only want to return the outermost script scope
                             if (scope.Context is AchievementScriptContext)
                                 outermostScriptScope = scope;
 
+                            // if this scope defines the function being called, don't skip over it.
+                            if (scope._functions != null && scope._functions.ContainsKey(functionCall.FunctionName.Name))
+                                break;
+
+                            // end of list - we're done
                             if (scope._parent == null)
                                 break;
 
+                            // not end of list - keep searching
                             scope = scope._parent;
                         } while (true);
 
