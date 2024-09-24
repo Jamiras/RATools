@@ -40,6 +40,7 @@
                 <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="30" />
+                <ColumnDefinition Width="13" />
             </Grid.ColumnDefinitions>
 
             <!-- Modified (explicitly gray to match images) -->
@@ -83,6 +84,22 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
+            
+            <!-- Type -->
+            <Image Grid.Column="4" Source="{Binding TypeImage}" ToolTip="{Binding AchievementType}">
+                <Image.Style>
+                    <Style TargetType="{x:Type Image}">
+                        <Setter Property="Width" Value="13" />
+                        <Setter Property="Height" Value="13" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding AchievementType}" Value="Missable">
+                                <Setter Property="Width" Value="11" />
+                                <Setter Property="Height" Value="11" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Image.Style>
+            </Image>
         </Grid>
     </DataTemplate>
 
