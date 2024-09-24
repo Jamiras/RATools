@@ -67,6 +67,20 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(builder.ToString(), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(0xX001234)\r\n"));
         }
 
+
+        [Test]
+        public void TestIntegerDictionaryKey()
+        {
+            var input = "lookup = {\"Zero\": \"False\", 1: \"True\" }\r\n" +
+                "\r\n" +
+                "rich_presence_display(\"{0}\", rich_presence_ascii_string_lookup(\"Name\", 0x1234, lookup))";
+
+            AchievementScriptTests.Evaluate(input,
+                "3:30 Invalid value for parameter: ...\r\n" +
+                "- 3:30 rich_presence_ascii_string_lookup call failed\r\n" +
+                "- 1:28 Cannot convert integer to string");
+        }
+
         [Test]
         public void TestCommonPrefix()
         {

@@ -117,13 +117,8 @@ namespace RATools.Parser.Functions
             }
             else
             {
-                switch (length)
-                {
-                    case 1: expression = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.Byte, (uint)(address.Value + offset)); break;
-                    case 2: expression = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.Word, (uint)(address.Value + offset)); break;
-                    case 3: expression = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.TByte, (uint)(address.Value + offset)); break;
-                    default: expression = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)(address.Value + offset)); break;
-                }
+                expression = new MemoryAccessorExpression(FieldType.MemoryAddress,
+                    Field.SizeForBytes(length), (uint)(address.Value + offset));
             }
 
             result = new RichPresenceLookupExpression(name, expression) { Items = hashedDictionary, Fallback = fallback };
