@@ -83,7 +83,7 @@ namespace RATools.Parser
                                 outermostScriptScope = scope;
 
                             // if this scope defines the function being called, don't skip over it.
-                            if (scope._functions != null && scope._functions.ContainsKey(functionCall.FunctionName.Name))
+                            if (scope._functions != null && functionCall.FunctionName != null && scope._functions.ContainsKey(functionCall.FunctionName.Name))
                                 break;
 
                             // end of list - we're done
