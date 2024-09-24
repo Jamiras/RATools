@@ -1,4 +1,6 @@
-﻿using RATools.Parser.Expressions;
+﻿using Jamiras.Components;
+using RATools.Data;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Text;
@@ -45,7 +47,8 @@ namespace RATools.Parser.Functions
             var richPresenceContext = new RichPresenceDisplayContext
             {
                 RichPresence = context.RichPresence,
-                DisplayString = context.RichPresence.AddDisplayString(null, formatString)
+                DisplayString = context.RichPresence.AddDisplayString(null, formatString),
+                SerializationContext = context.SerializationContext
             };
             var richPresenceScope = new InterpreterScope(scope)
             {
@@ -101,7 +104,7 @@ namespace RATools.Parser.Functions
                 if (error != null)
                     return error;
 
-                var value = ValueBuilder.BuildValue(richPresenceMacro.Parameter, out error);
+                var value = ValueBuilder.BuildValue(richPresenceMacro.Parameter, richPresenceContext.SerializationContext, out error);
                 if (error != null)
                     return new ErrorExpression(richPresenceMacro.FunctionName + " call failed", richPresenceMacro) { InnerError = error };
 
@@ -131,6 +134,7 @@ namespace RATools.Parser.Functions
         {
             public RichPresenceBuilder RichPresence { get; set; }
             public RichPresenceBuilder.ConditionalDisplayString DisplayString { get; set; }
+            public SerializationContext SerializationContext { get; set; }
         }
     }
 }

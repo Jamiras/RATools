@@ -68,9 +68,14 @@ namespace RATools.Parser
 
         internal static Trigger BuildTrigger(ITriggerExpression triggerExpression, out ErrorExpression error)
         {
+            return BuildTrigger(triggerExpression, new SerializationContext(), out error);
+        }
+
+        internal static Trigger BuildTrigger(ITriggerExpression triggerExpression, SerializationContext serializationContext, out ErrorExpression error)
+        {
             // TODO: modify TriggerBuilderContext to support Alts
             var builder = new AchievementBuilder();
-            var context = new AchievementBuilderContext(builder);
+            var context = new AchievementBuilderContext(builder) { MinimumVersion = serializationContext.MinimumVersion };
 
             error = triggerExpression.BuildTrigger(context);
             if (error != null)

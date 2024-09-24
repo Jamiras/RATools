@@ -52,7 +52,7 @@ namespace RATools.Parser.Expressions.Trigger
             return (that != null && CompareRequirements(_values, that._values));
         }
 
-        public Value ToValue(out ErrorExpression error)
+        public Value ToValue(SerializationContext serializationContext, out ErrorExpression error)
         {
             var values = new List<IEnumerable<Requirement>>();
 
@@ -60,7 +60,7 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 foreach (var expression in _values)
                 {
-                    var value = ValueBuilder.BuildValue(expression, out error);
+                    var value = ValueBuilder.BuildValue(expression, serializationContext, out error);
                     if (value == null)
                         return null;
 

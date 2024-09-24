@@ -40,6 +40,11 @@ namespace RATools.Parser
 
         public static Value BuildValue(ExpressionBase expression, out ErrorExpression error)
         {
+            return BuildValue(expression, new SerializationContext(), out error);
+        }
+
+        public static Value BuildValue(ExpressionBase expression, SerializationContext serializationContext, out ErrorExpression error)
+        {
             var integerConstant = expression as IntegerConstantExpression;
             if (integerConstant != null)
             {
@@ -54,7 +59,7 @@ namespace RATools.Parser
 
             var maxOf = expression as MaxOfRequirementExpression;
             if (maxOf != null)
-                return maxOf.ToValue(out error);
+                return maxOf.ToValue(serializationContext, out error);
 
             var trigger = expression as ITriggerExpression;
             if (trigger == null)
@@ -64,7 +69,7 @@ namespace RATools.Parser
             }
 
             var requirements = new List<Requirement>();
-            var context = new ValueBuilderContext { Trigger = requirements };
+            var context = new ValueBuilderContext { Trigger = requirements, MinimumVersion = serializationContext.MinimumVersion };
             error = trigger.BuildTrigger(context);
             if (error != null)
                 return null;
