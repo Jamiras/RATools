@@ -91,6 +91,19 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestComparisonConstant()
+        {
+            var input = "measured(2, when=byte(0x2345) == 6)";
+
+            // acceptable in a value
+            var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
+            TriggerExpressionTests.AssertSerializeValue(clause, "M:2_Q:0xH002345=6");
+
+            // not acceptable in a trigger
+            TriggerExpressionTests.AssertBuildTriggerError(input, "measured value in a trigger must be a comparison");
+        }
+
+        [Test]
         public void TestRepeatedZero()
         {
             TriggerExpressionTests.AssertBuildTriggerError(

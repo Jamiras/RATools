@@ -131,11 +131,15 @@ namespace RATools.Parser.Expressions.Trigger
             // make sure at least one condition is flagged with Measured
             EnsureHasMeasuredRequirement(requirements);
 
-            if (Format != RequirementType.Measured)
+            var measured = requirements.Last(r => r.Type == RequirementType.Measured);
+            if (context is not ValueBuilderContext)
             {
-                var measured = requirements.Last(r => r.Type == RequirementType.Measured);
-                measured.Type = Format;
+                if (!measured.Operator.IsComparison())
+                    return new ErrorExpression("measured value in a trigger must be a comparison", Condition);
             }
+
+            if (Format != RequirementType.Measured)
+                measured.Type = Format;
 
             // copy the Measured clauses to the context
             foreach (var requirement in requirements)
