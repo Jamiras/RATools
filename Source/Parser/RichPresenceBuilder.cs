@@ -293,7 +293,7 @@ namespace RATools.Parser
             if (_valueFields.ContainsKey(name.Value))
                 return new ErrorExpression("A rich_presence_value already exists for '" + name.Value + "'", name);
 
-            var tinyDict = new TinyDictionary<int, string>();
+            var lookupDict = new Dictionary<int, string>();
             foreach (var entry in dict.Entries)
             {
                 var key = entry.Key as IntegerConstantExpression;
@@ -304,13 +304,13 @@ namespace RATools.Parser
                 if (value == null)
                     return new ErrorExpression("value is not a string", entry.Value);
 
-                tinyDict[key.Value] = value.Value;
+                lookupDict[key.Value] = value.Value;
             }
 
             _lookupFields[name.Value] = new Lookup
             {
                 Func = func,
-                Entries = tinyDict,
+                Entries = lookupDict,
                 Fallback = fallback
             };
 

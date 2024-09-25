@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Tests.Expressions;
@@ -67,6 +68,18 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(builder.ToString(), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(0xX001234)\r\n"));
         }
 
+        [Test]
+        public void TestSimplePointer()
+        {
+            var rp = new RichPresenceAsciiStringLookupFunctionHarness();
+            var lookup = rp.DefineLookup("lookup");
+            lookup.Add(new StringConstantExpression("Zero"), new StringConstantExpression("False"));
+            lookup.Add(new StringConstantExpression("One"), new StringConstantExpression("True"));
+
+            var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(0x1234), lookup)");
+            var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
+            Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(I:0xX001234_M:0xX000000)\r\n"));
+        }
 
         [Test]
         public void TestIntegerDictionaryKey()
@@ -134,6 +147,19 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestShortStringsPointer()
+        {
+            var rp = new RichPresenceAsciiStringLookupFunctionHarness();
+            var lookup = rp.DefineLookup("lookup");
+            lookup.Add(new StringConstantExpression("Off"), new StringConstantExpression("False"));
+            lookup.Add(new StringConstantExpression("On"), new StringConstantExpression("True"));
+
+            var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(0x1234), lookup)");
+            var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
+            Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n28239=True\r\n6710863=False\r\n\r\nDisplay:\r\n@Name(I:0xX001234_M:0xW000000)\r\n"));
+        }
+
+        [Test]
         public void TestSummedKey()
         {
             var rp = new RichPresenceAsciiStringLookupFunctionHarness();
@@ -148,6 +174,24 @@ namespace RATools.Parser.Tests.Functions
 
             var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", 0x1234, lookup)");
             Assert.That(builder.ToString(), Is.EqualTo("Lookup:Name\r\n-657345593=UC\r\n-657345561=uC\r\n-657337369=uc\r\n-656887106=LC\r\n-656887074=lC\r\n-656878882=lc\r\n\r\nDisplay:\r\n@Name(0xX001234_0xX001238)\r\n"));
+        }
+
+        [Test]
+        public void TestSummedKeyPointer()
+        {
+            var rp = new RichPresenceAsciiStringLookupFunctionHarness();
+            var lookup = rp.DefineLookup("lookup");
+            // there is no unique set of four characters, so the lookup will need to combine multiple groups of four.
+            lookup.Add(new StringConstantExpression("uppercase"), new StringConstantExpression("uc"));
+            lookup.Add(new StringConstantExpression("upperCase"), new StringConstantExpression("uC"));
+            lookup.Add(new StringConstantExpression("UpperCase"), new StringConstantExpression("UC"));
+            lookup.Add(new StringConstantExpression("lowercase"), new StringConstantExpression("lc"));
+            lookup.Add(new StringConstantExpression("lowerCase"), new StringConstantExpression("lC"));
+            lookup.Add(new StringConstantExpression("LowerCase"), new StringConstantExpression("LC"));
+
+            var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(0x1234), lookup)");
+            var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
+            Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n-657345593=UC\r\n-657345561=uC\r\n-657337369=uc\r\n-656887106=LC\r\n-656887074=lC\r\n-656878882=lc\r\n\r\nDisplay:\r\n@Name(I:0xX001234_A:0xX000000_I:0xX001234_M:0xX000004)\r\n"));
         }
     }
 }

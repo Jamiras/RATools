@@ -112,7 +112,7 @@ namespace RATools.Parser.Functions
                         break;
                 }
 
-                FieldSize size = Field.SizeForBytes(Math.Min(remaining, 4));
+                FieldSize size = Field.GetSizeForBytes(Math.Min(remaining, 4));
 
                 var scan = address.Clone();
                 scan.Field = new Field { Type = address.Field.Type, Size = size, Value = address.Field.Value + (uint)offset };

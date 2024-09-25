@@ -37,7 +37,7 @@ namespace RATools.Parser.Functions
             if (fallback == null)
                 return false;
 
-            var address = GetIntegerParameter(scope, "address", out result);
+            var address = GetMemoryAddressParameter(scope, "address", out result);
             if (address == null)
                 return false;
 
@@ -102,7 +102,16 @@ namespace RATools.Parser.Functions
                     {
                         var summedExpression = new MemoryValueExpression();
                         for (int i = 0; i < length; i += 4)
-                            summedExpression.ApplyMathematic(new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)(address.Value + i)), MathematicOperation.Add);
+                        {
+                            var clone = address.Clone();
+                            clone.Field = new Field
+                            {
+                                Type = FieldType.MemoryAddress,
+                                Size = FieldSize.DWord,
+                                Value = address.Field.Value + (uint)i,
+                            };
+                            summedExpression.ApplyMathematic(clone, MathematicOperation.Add);
+                        }
 
                         expression = summedExpression;
                         break;
@@ -117,8 +126,15 @@ namespace RATools.Parser.Functions
             }
             else
             {
-                expression = new MemoryAccessorExpression(FieldType.MemoryAddress,
-                    Field.SizeForBytes(length), (uint)(address.Value + offset));
+                // apply the offset and potentially change the size of the read
+                var clone = address.Clone();
+                clone.Field = new Field
+                {
+                    Type = FieldType.MemoryAddress,
+                    Size = Field.GetSizeForBytes(length),
+                    Value = address.Field.Value + (uint)offset,
+                };
+                expression = clone;
             }
 
             result = new RichPresenceLookupExpression(name, expression) { Items = hashedDictionary, Fallback = fallback };

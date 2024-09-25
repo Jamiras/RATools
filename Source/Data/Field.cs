@@ -194,18 +194,6 @@ namespace RATools.Data
             builder.Append(')');
         }
 
-        public static FieldSize SizeForBytes(int bytes)
-        {
-            switch (bytes)
-            {
-                case 1: return FieldSize.Byte;
-                case 2: return FieldSize.Word;
-                case 3: return FieldSize.TByte;
-                case 4: return FieldSize.DWord;
-                default: return FieldSize.None;
-            }
-        }
-
         /// <summary>
         /// Gets a string representing the function call for retrieving the specified amount of memory.
         /// </summary>
@@ -312,6 +300,21 @@ namespace RATools.Data
 
                 default:
                     return 4;
+            }
+        }
+
+        /// <summary>
+        /// Gets the size needed to read the specified number of bytes in little-endian order.
+        /// </summary>
+        public static FieldSize GetSizeForBytes(int bytes)
+        {
+            switch (bytes)
+            {
+                case 1: return FieldSize.Byte;
+                case 2: return FieldSize.Word;
+                case 3: return FieldSize.TByte;
+                case 4: return FieldSize.DWord;
+                default: return FieldSize.None;
             }
         }
 
