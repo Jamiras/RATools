@@ -69,7 +69,7 @@ namespace RATools.Parser.Functions
 
             if (hashedDictionary == null)
             {
-                // could not find key aligned to 4 bytes. try intermediate offsets
+                // could not find key aligned to 4 bytes. try intermediate offsets. check 16-bit aligned first
                 for (int i = 2; i < maxLength - 3; i += 4)
                 {
                     offset = i;
@@ -79,14 +79,27 @@ namespace RATools.Parser.Functions
                         break;
                 }
 
-                // still no match, try matching the end of the string
+                // also check unaligned values
                 if (hashedDictionary == null)
                 {
-                    length = maxLength & 3;
-                    if (length > 0)
+                    for (int i = 1; i < maxLength - 3; i += 2)
                     {
-                        offset = maxLength & ~3;
+                        offset = i;
                         hashedDictionary = BuildHashedDictionary(dictionary, offset, length);
+
+                        if (hashedDictionary != null)
+                            break;
+                    }
+
+                    // still no match, try matching the end of the string
+                    if (hashedDictionary == null)
+                    {
+                        length = maxLength & 3;
+                        if (length > 0)
+                        {
+                            offset = maxLength & ~3;
+                            hashedDictionary = BuildHashedDictionary(dictionary, offset, length);
+                        }
                     }
                 }
             }
