@@ -173,7 +173,7 @@ namespace RATools.Parser.Expressions.Trigger
                     // single explicit OrNext should be joined to any other conditions via AndNext
                     joinBehavior = RequirementType.AndNext;
                 }
-                else if (context.MinimumVersion < RATools.Data.Version._0_78)
+                else if (context.MinimumVersion < RATools.Data.Version._0_78 || complexSubclauses.Any(c => NeedAltsForOr(c.Conditions)))
                 {
                     // no explicit OrNexts. if building an achievement, put the ORs into alts
                     var achievementContext = context as AchievementBuilderContext;
@@ -855,7 +855,16 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     var behavior = condition as BehavioralRequirementExpression;
                     if (behavior != null)
+                    {
+                        switch (behavior.Behavior)
+                        {
+                            case RequirementType.PauseIf:
+                            case RequirementType.Trigger:
+                                return true;
+                        }
+
                         clause = behavior.Condition as RequirementClauseExpression;
+                    }
 
                     var tallied = condition as TalliedRequirementExpression;
                     if (tallied != null)

@@ -116,6 +116,27 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestUncollapsibleOrNext()
+        {
+            // 0.78 will prefer using OrNext over Alts, but Alts are still required for trigger_when subclause
+            var script = "// #MinimumVersion=0.78\n" +
+                "achievement(\"title\", \"desc\", 5, byte(0x0001) == 6 &&" +
+                "any_of(range(1, 3), n => word(0x1234) == n && trigger_when(byte(0x2345) == n)))";
+            var tokenizer = Tokenizer.CreateTokenizer(script);
+            var parser = new AchievementScriptInterpreter();
+
+            if (!parser.Run(tokenizer))
+                Assert.Fail(parser.ErrorMessage);
+
+            var achievement = parser.Achievements.First();
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.RequirementsDebugString, Is.EqualTo("byte(0x000001) == 6 && (" +
+                "(word(0x001234) == 1 && trigger_when(byte(0x002345) == 1)) || " +
+                "(word(0x001234) == 2 && trigger_when(byte(0x002345) == 2)) || " +
+                "(word(0x001234) == 3 && trigger_when(byte(0x002345) == 3)))"));
+        }
+
+        [Test]
         public void TestPredicateWithDefaultParameter()
         {
             var script = "function p(addr, id=17) => byte(addr) == id\n" +
