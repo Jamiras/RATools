@@ -694,5 +694,19 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(expression.Location.End.Line, Is.EqualTo(7));
             Assert.That(expression.Location.End.Column, Is.EqualTo(8));
         }
+
+        [Test]
+        public void TestParseUnaryMinusVariable()
+        {
+            var tokenizer = CreateTokenizer("-a");
+            var expression = ExpressionBase.Parse(tokenizer);
+
+            Assert.That(expression, Is.InstanceOf<MathematicExpression>());
+            var mathematic = (MathematicExpression)expression;
+            Assert.That(mathematic.Left, Is.EqualTo(new IntegerConstantExpression(0)));
+            Assert.That(mathematic.Operation, Is.EqualTo(MathematicOperation.Subtract));
+            Assert.That(mathematic.Right, Is.InstanceOf<VariableExpression>());
+            Assert.That(((VariableExpression)mathematic.Right).Name, Is.EqualTo("a"));
+        }
     }
 }

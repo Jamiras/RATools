@@ -425,5 +425,83 @@ namespace RATools.Parser.Tests.Expressions
             result.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
+
+        [Test]
+        public void TestUnaryMinusVariable()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "a = 8\n" +
+                "b = -a"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-8));
+        }
+
+        [Test]
+        public void TestUnaryMinusAddition()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "a = 8\n" +
+                "b = -a + 2"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-6));
+        }
+
+        [Test]
+        public void TestUnaryMinusMultiplication()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "a = 8\n" +
+                "b = -a * 2"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-16));
+        }
+
+        [Test]
+        public void TestUnaryMinusParenthesis()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "a = 8\n" +
+                "b = -(a + 2)"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-10));
+        }
+
+        [Test]
+        public void TestUnaryMinusArrayValue()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "a = [8]\n" +
+                "b = -a[0]"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-8));
+        }
+
+        [Test]
+        public void TestUnaryMinusFunctionCall()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "function a(n) => n\n" +
+                "b = -a(8)"
+            );
+
+            var b = scope.GetVariable("b");
+            Assert.That(b, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)b).Value, Is.EqualTo(-8));
+        }
     }
 }

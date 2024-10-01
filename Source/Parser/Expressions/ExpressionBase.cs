@@ -170,6 +170,7 @@ namespace RATools.Parser.Expressions
             AddSubtract,
             MulDivMod,
             Not,
+            Negate,
             Parenthesis,
         }
 
@@ -640,6 +641,16 @@ namespace RATools.Parser.Expressions
                         }
 
                         result.Location = new TextRange(tokenStart, tokenEnd);
+                        return result;
+                    }
+                    else if (Char.IsLetter(tokenizer.NextChar) || tokenizer.NextChar == '(')
+                    {
+                        var next = ParseExpression(tokenizer, OperationPriority.Negate);
+                        if (next.Type == ExpressionType.Error)
+                            return next;
+
+                        var result = new MathematicExpression(new IntegerConstantExpression(0), MathematicOperation.Subtract, next);
+                        result.Location = new TextRange(tokenStart, next.Location.End);
                         return result;
                     }
                     return ParseError(tokenizer, "Minus without value", tokenStart.Line, tokenStart.Column);
