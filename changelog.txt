@@ -1,3 +1,28 @@
+v1.15.0 - 01 Oct 2024
+* add `double32` and `double32_be` memory accessors
+* add `array_contains` and `dictionary_contains_key` functions
+* add `rich_presence_ascii_string_lookup` function
+* add `assert` function
+* support for turning complex arithmetic into remember/recall chains
+* support for runtime modulus
+* support for unary minus
+* add `Copy Definition to Clipboard` to achievement viewer
+* add progression/win_condition/missable indicators to achievement list
+* automatically replace leaderboard submit with always_true if identical to leaderboard start
+* allow opening script from command line (allows associating .rascript with RATools.exe)
+* improve error message when indexing empty array
+* improve error message when encountering runtime code at an execution level inside a function
+* fix #MinimumVersion comment not affecting leaderboards
+* fix `lower_is_better` not being set correctly when creating new scripts
+* fix OrNext 0=1 following AddSource being improperly optimized out
+* fix bitwise inversion flag being ignored when present on boths sides of operator
+* fix ResetNextIf attached to PauseIf being turned into a ResetIf if trigger had no hit targets
+* fix explicit modifier being discarded when relocating SubSource
+* fix broken parser when shorthand function definition contains a parse error
+* fix ability to call nested function recursively
+* fix infinite loop when summation chain contains subtraction and pointers
+* fix exception calling `max_of` with no parameters
+
 v1.14.1 - 19 Jun 2024
 * no longer generate leaderboard values with operator in final measured clause
 * fix exception typing a memory accessor before a clause surrounded in parentheses
