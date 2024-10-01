@@ -112,14 +112,7 @@ namespace RATools.Parser.Functions
                         break;
                 }
 
-                FieldSize size;
-                switch (remaining)
-                {
-                    case 1: size = FieldSize.Byte; break;
-                    case 2: size = FieldSize.Word; break;
-                    case 3: size = FieldSize.TByte; break;
-                    default: size = FieldSize.DWord; break;
-                }
+                FieldSize size = Field.GetSizeForBytes(Math.Min(remaining, 4));
 
                 var scan = address.Clone();
                 scan.Field = new Field { Type = address.Field.Type, Size = size, Value = address.Field.Value + (uint)offset };

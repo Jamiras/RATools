@@ -304,6 +304,21 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets the size needed to read the specified number of bytes in little-endian order.
+        /// </summary>
+        public static FieldSize GetSizeForBytes(int bytes)
+        {
+            switch (bytes)
+            {
+                case 1: return FieldSize.Byte;
+                case 2: return FieldSize.Word;
+                case 3: return FieldSize.TByte;
+                case 4: return FieldSize.DWord;
+                default: return FieldSize.None;
+            }
+        }
+
+        /// <summary>
         /// Gets whether or not the field references memory.
         /// </summary>
         public bool IsMemoryReference

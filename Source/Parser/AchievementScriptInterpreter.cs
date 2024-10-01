@@ -168,6 +168,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new RichPresenceValueFunction());
                 _globalScope.AddFunction(new RichPresenceMacroFunction());
                 _globalScope.AddFunction(new RichPresenceLookupFunction());
+                _globalScope.AddFunction(new RichPresenceAsciiStringLookupFunction());
 
                 _globalScope.AddFunction(new AlwaysTrueFunction());
                 _globalScope.AddFunction(new AlwaysFalseFunction());
