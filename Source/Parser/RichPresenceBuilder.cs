@@ -169,11 +169,27 @@ namespace RATools.Parser
                     if (serializationContext.MinimumVersion >= Data.Version._0_77)
                     {
                         if (param.Value.Values.Count() == 1 &&
-                            param.Value.Values.First().Requirements.Count() == 1 &&
-                            !param.Value.Values.First().Requirements.First().IsComparison)
+                            param.Value.Values.First().Requirements.Count() == 1)
                         {
-                            // single field lookup - force legacy format, even if using sizes only available in 0.77+
-                            useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                            // single condition - if it's a simple value, or multiplication, then
+                            // force legacy format, even if using sizes only available in 0.77+
+                            var requirement = param.Value.Values.First().Requirements.First();
+                            switch (requirement.Operator)
+                            {
+                                case RequirementOperator.None: // single value
+                                case RequirementOperator.Multiply: // single scaled value
+                                    useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                                    break;
+
+                                case RequirementOperator.Divide:
+                                    // only integer division is supported by legacy format
+                                    if (requirement.Right.Type == FieldType.Value ||
+                                        (requirement.Right.Type == FieldType.Float && requirement.Right.Float == Math.Floor(requirement.Right.Float)))
+                                    {
+                                        useSerializationContext = serializationContext.WithVersion(Data.Version._0_76);
+                                    }
+                                    break;
+                            }
                         }
                         else if (param.Value.MinimumVersion() < Data.Version._0_77)
                         {

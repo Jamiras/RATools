@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
+using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Tests.Expressions;
@@ -94,6 +95,18 @@ namespace RATools.Parser.Tests.Functions
             var rp = Evaluate("rich_presence_value(\"Name\", " +
                 "max_of(byte(0x1234) * 3, byte(0x1235) * 5, byte(0x1236) * 8))");
             Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(0xH001234*3$0xH001235*5$0xH001236*8)\r\n"));
+        }
+
+        [Test]
+        public void TestValueFloatDivision()
+        {
+            // float division not supported by legacy format, will be converted to multiplication
+            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234) / 1.5)");
+            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(0xH001234*0.666667)\r\n"));
+
+            // float division not supported by legacy format. new format is available. use it.
+            var context = new SerializationContext { MinimumVersion = Version._0_77 };
+            Assert.That(rp.Serialize(context), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(A:0xH001234/f1.5_M:0)\r\n"));
         }
 
         [Test]

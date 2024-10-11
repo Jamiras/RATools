@@ -142,7 +142,7 @@ namespace RATools.Parser.Tests
         [Test]
         [TestCase("byte(0x1234) * 2.5", "0xH001234*2.5")]
         [TestCase("byte(0x1234) * 10.0 / 3", "0xH001234*3.333333")]
-        [TestCase("(byte(0) + byte(1)) / 1.5", "0xH000000/1.5_0xH000001/1.5")]
+        [TestCase("(byte(0) + byte(1)) / 1.5", "0xH000000*0.666667_0xH000001*0.666667")]
         [TestCase("byte(0x1234) * 2.0", "0xH001234*2")]
         [TestCase("byte(0x1234) / 2.0", "0xH001234/2")]
         [TestCase("(byte(0x1234) / (2 * 20)) * 100.0", "0xH001234*2.5")]
