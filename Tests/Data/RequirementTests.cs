@@ -1,5 +1,4 @@
 ﻿using NUnit.Framework;
-using System.Text;
 
 namespace RATools.Data.Tests
 {
