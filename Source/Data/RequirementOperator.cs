@@ -163,6 +163,8 @@
         {
             switch (op)
             {
+                case RequirementOperator.Add:
+                case RequirementOperator.Subtract:
                 case RequirementOperator.Multiply:
                 case RequirementOperator.Divide:
                 case RequirementOperator.Modulus:

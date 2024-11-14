@@ -729,40 +729,14 @@ namespace RATools.Parser
             }
 
             // handle comparison operators
-            switch (requirement.Operator)
+            if (requirement.Operator.IsComparison())
             {
-                case RequirementOperator.Equal:
-                    builder.Append(" == ");
-                    break;
-                case RequirementOperator.NotEqual:
-                    builder.Append(" != ");
-                    break;
-                case RequirementOperator.LessThan:
-                    builder.Append(" < ");
-                    break;
-                case RequirementOperator.LessThanOrEqual:
-                    builder.Append(" <= ");
-                    break;
-                case RequirementOperator.GreaterThan:
-                    builder.Append(" > ");
-                    break;
-                case RequirementOperator.GreaterThanOrEqual:
-                    builder.Append(" >= ");
-                    break;
+                builder.Append(' ');
+                builder.Append(requirement.Operator.ToOperatorString());
+                builder.Append(' ');
 
-                case RequirementOperator.Multiply:
-                case RequirementOperator.Divide:
-                case RequirementOperator.Modulus:
-                case RequirementOperator.BitwiseAnd:
-                // handled by AppendFieldModifier above, treat like none
-
-                case RequirementOperator.None:
-                    if (suffix != null)
-                        builder.Append(suffix);
-                    return;
+                AppendField(builder, requirement.Right, _addAddress?.ToString());
             }
-
-            AppendField(builder, requirement.Right, _addAddress?.ToString());
 
             if (suffix != null)
                 builder.Append(suffix);
@@ -807,40 +781,26 @@ namespace RATools.Parser
 
         private void AppendFieldModifier(StringBuilder builder, Requirement requirement)
         {
-            switch (requirement.Operator)
+            if (requirement.Operator.IsModifier())
             {
-                case RequirementOperator.Add:
-                    builder.Append(" + ");
-                    AppendField(builder, requirement.Right, _addAddress?.ToString());
-                    break;
+                builder.Append(' ');
+                builder.Append(requirement.Operator.ToOperatorString());
+                builder.Append(' ');
 
-                case RequirementOperator.Subtract:
-                    builder.Append(" - ");
-                    AppendField(builder, requirement.Right, _addAddress?.ToString());
-                    break;
+                switch (requirement.Operator)
+                {
+                    case RequirementOperator.BitwiseAnd:
+                    case RequirementOperator.BitwiseXor:
+                        // force right side to be hexadecimal for bitwise operators
+                        var context = Clone();
+                        context.NumberFormat = NumberFormat.Hexadecimal;
+                        context.AppendField(builder, requirement.Right, _addAddress?.ToString());
+                        break;
 
-                case RequirementOperator.Multiply:
-                    builder.Append(" * ");
-                    AppendField(builder, requirement.Right, _addAddress?.ToString());
-                    break;
-
-                case RequirementOperator.Divide:
-                    builder.Append(" / ");
-                    AppendField(builder, requirement.Right, _addAddress?.ToString());
-                    break;
-
-                case RequirementOperator.Modulus:
-                    builder.Append(" % ");
-                    AppendField(builder, requirement.Right, _addAddress?.ToString());
-                    break;
-
-                case RequirementOperator.BitwiseAnd:
-                    builder.Append(" & ");
-                    if (requirement.Right.Type == FieldType.Recall && _remember.Length > 0)
-                        builder.Append(_remember);
-                    else
-                        requirement.Right.AppendString(builder, NumberFormat.Hexadecimal, _addAddress?.ToString());
-                    break;
+                    default:
+                        AppendField(builder, requirement.Right, _addAddress?.ToString());
+                        break;
+                }
             }
         }
 
