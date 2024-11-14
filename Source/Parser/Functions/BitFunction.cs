@@ -53,7 +53,7 @@ namespace RATools.Parser.Functions
             if (accessor != null)
                 accessor.Field = new Field { Type = accessor.Field.Type, Size = size, Value = accessor.Field.Value + offset };
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }

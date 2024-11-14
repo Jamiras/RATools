@@ -46,7 +46,7 @@ namespace RATools.Parser.Functions
             }
 
             result = new RichPresenceValueExpression(name, expression) { Format = valueFormat };
-            CopyLocation(result);
+            CopyLocation(result, scope);
             result.MakeReadOnly();
             return true;
         }

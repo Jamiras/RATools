@@ -80,6 +80,13 @@ namespace RATools.Parser.Expressions
             builder.Append(')');
         }
 
+        protected void CopyLocation(ExpressionBase target, InterpreterScope scope)
+        {
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+            if (functionCall != null)
+                functionCall.CopyLocation(target);
+        }
+
         /// <summary>
         /// Gets the return value from calling a function.
         /// </summary>

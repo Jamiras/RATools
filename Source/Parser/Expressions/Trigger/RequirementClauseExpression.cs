@@ -147,13 +147,26 @@ namespace RATools.Parser.Expressions.Trigger
             var subclauses = new List<RequirementExpressionBase>();
             foreach (var condition in conditions)
             {
-                var clause = condition as RequirementClauseExpression;
-                if (clause != null && clause._conditions != null)
+                if (HasComplexSubclause(condition))
                 {
-                    if (clause is OrNextRequirementClauseExpression && joinBehavior == RequirementType.None)
+                    if (condition is OrNextRequirementClauseExpression && joinBehavior == RequirementType.None)
+                    {
                         subclauses.Add(condition);
+                    }
                     else
-                        complexSubclauses.Add(clause);
+                    {
+                        var clause = condition as RequirementClauseExpression;
+                        if (clause == null && joinBehavior != RequirementType.None)
+                        {
+                            clause = new RequirementClauseExpression() { Operation = ConditionalOperation.And };
+                            clause.AddCondition(condition);
+                        }
+
+                        if (clause != null)
+                            complexSubclauses.Add(clause);
+                        else
+                            subclauses.Add(condition);
+                    }
                 }
                 else
                 {

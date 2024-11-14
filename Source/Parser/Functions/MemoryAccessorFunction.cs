@@ -36,7 +36,7 @@ namespace RATools.Parser.Functions
             if (result.Type == ExpressionType.Error)
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             result.MakeReadOnly();
             return true;
         }

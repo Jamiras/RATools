@@ -53,7 +53,7 @@ namespace RATools.Parser.Functions
             }
 
             result = new RichPresenceLookupExpression(name, expression) { Items = dictionary, Fallback = fallback };
-            CopyLocation(result);
+            CopyLocation(result, scope);
             result.MakeReadOnly();
             return true;
         }

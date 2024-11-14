@@ -29,7 +29,7 @@ namespace RATools.Parser.Functions
             }
 
             var maxOf = new MaxOfRequirementExpression();
-            CopyLocation(maxOf);
+            CopyLocation(maxOf, scope);
 
             foreach (var entry in varargs.Entries)
             {

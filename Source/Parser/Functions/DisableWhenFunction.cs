@@ -30,7 +30,7 @@ namespace RATools.Parser.Functions
                 return false;
 
             result = new DisableWhenRequirementExpression() { Condition = comparison, Until = until };
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }

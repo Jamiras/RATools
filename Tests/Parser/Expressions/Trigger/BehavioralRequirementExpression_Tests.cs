@@ -1,6 +1,7 @@
 ﻿using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -162,6 +163,19 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             var input = "byte(0x1234) == 1 && trigger_when(measured(repeated(3, byte(0x2345) == 6)))";
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
             TriggerExpressionTests.AssertSerializeAchievement(clause, "0xH001234=1SM:0xH002345=6.3.ST:0=1");
+        }
+
+        [Test]
+        public void TestRepeatedNestedRepeatedWithOr()
+        {
+            var input = "never(repeated(2700, once(prev(byte(0x1234)) == 1 && byte(0x1234) == 2) && " +
+                                             "(byte(0x2345) != prev(byte(0x2345)) || byte(0x3456) != prev(byte(0x3456)))))";
+            var expression = TriggerExpressionTests.Parse<BehavioralRequirementExpression>(input);
+
+            var context = new AchievementBuilderContext();
+            var result = expression.BuildTrigger(context);
+
+            ExpressionTests.AssertError(result, "Cannot logically join multiple subclauses");
         }
     }
 }

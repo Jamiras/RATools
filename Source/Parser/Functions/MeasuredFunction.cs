@@ -55,7 +55,7 @@ namespace RATools.Parser.Functions
             }
 
             result = new MeasuredRequirementExpression() { Condition = expression, When = when, Format = format };
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }

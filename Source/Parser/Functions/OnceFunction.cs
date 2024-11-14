@@ -24,7 +24,7 @@ namespace RATools.Parser.Functions
             if (!RepeatedFunction.CreateTallyExpression(comparison, 1, out result))
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }

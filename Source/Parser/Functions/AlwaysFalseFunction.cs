@@ -19,7 +19,7 @@ namespace RATools.Parser.Functions
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             result = new AlwaysFalseExpression();
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
 

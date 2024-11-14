@@ -33,7 +33,7 @@ namespace RATools.Parser.Functions
             if (!ReplaceVariables(result, scope, out result))
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
 

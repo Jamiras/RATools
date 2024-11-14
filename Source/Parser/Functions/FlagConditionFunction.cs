@@ -46,7 +46,7 @@ namespace RATools.Parser.Functions
                         result = SplitClause(clause, ConditionalOperation.And, _type);
                     }
 
-                    CopyLocation(result);
+                    CopyLocation(result, scope);
                     return true;
                 }
             }
@@ -57,7 +57,7 @@ namespace RATools.Parser.Functions
                 Condition = comparison,
             };
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
 
