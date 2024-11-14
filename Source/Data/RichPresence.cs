@@ -26,6 +26,10 @@ namespace RATools.Data
                 if (!value.Contains('\r'))
                     value = value.Replace("\n", "\r\n");
 
+                // ignore any leading/trailing whitespace. normally, the server value won't have
+                // a trailing newline, but the generated script will.
+                value = value.Trim();
+
                 _script = value;
                 Description = string.Format("{0}/{1} characters", _script.Length, ScriptMaxLength);
             }
