@@ -334,8 +334,19 @@ namespace RATools.Data
                             {
                                 if (enumerator.Current.Operator == RequirementOperator.Divide && multiplier < 1.0f)
                                 {
-                                    builder.Append('/');
-                                    multiplier = 1.0 / multiplier;
+                                    // legacy format supports integer division, but not floating point
+                                    // division. if the divisor is a floating point number, we have to
+                                    // multiply by the fraction.
+                                    var divisor = 1.0 / multiplier;
+                                    if (divisor == Math.Floor(divisor))
+                                    {
+                                        builder.Append('/');
+                                        multiplier = 1.0 / multiplier;
+                                    }
+                                    else
+                                    {
+                                        builder.Append('*');
+                                    }
                                 }
                                 else
                                 {
