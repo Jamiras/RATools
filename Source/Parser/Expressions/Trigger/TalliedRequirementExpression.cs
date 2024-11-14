@@ -209,7 +209,8 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     HitTarget = HitTarget,
                     _conditions = newConditions,
-                    ResetCondition = newResetCondition
+                    ResetCondition = newResetCondition,
+                    Location = Location
                 };
             }
 
@@ -315,7 +316,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 error = condition.BuildSubclauseTrigger(context);
                 if (error != null)
-                    return error;
+                    return new ErrorExpression("Cannot tally expression", this) { InnerError = error };
 
                 var behaviorRequirement = condition as BehavioralRequirementExpression;
                 if (behaviorRequirement != null && behaviorRequirement.Behavior == RequirementType.SubHits)

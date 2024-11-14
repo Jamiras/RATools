@@ -39,7 +39,7 @@ namespace RATools.Parser.Functions
             if (!CreateTallyExpression(comparison, (uint)count.Value, out result))
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
 

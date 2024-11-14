@@ -98,7 +98,7 @@ namespace RATools.Parser.Functions
             }
 
             result = new RichPresenceMacroExpression(macro, expression) { Format = valueFormat };
-            CopyLocation(result);
+            CopyLocation(result, scope);
             result.MakeReadOnly();
             return true;
         }
