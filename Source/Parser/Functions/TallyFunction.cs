@@ -55,7 +55,7 @@ namespace RATools.Parser.Functions
             if (!BuildTalliedRequirementExpression((uint)count.Value, varargs, tallyScope, out result))
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
 
@@ -142,7 +142,7 @@ namespace RATools.Parser.Functions
                 Condition = (RequirementExpressionBase)comparison
             };
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }

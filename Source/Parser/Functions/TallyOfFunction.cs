@@ -35,7 +35,7 @@ namespace RATools.Parser.Functions
             if (!TallyFunction.BuildTalliedRequirementExpression((uint)count.Value, array, tallyScope, out result))
                 return false;
 
-            CopyLocation(result);
+            CopyLocation(result, scope);
             return true;
         }
     }
