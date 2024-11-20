@@ -13,7 +13,15 @@ namespace RATools.Data
             Title = "Rich Presence";
         }
 
-        public static int ScriptMaxLength = 65535;
+        /// <summary>
+        /// Gets the maximum number of characters allowed in a rich presence script.
+        /// </summary>
+        /// <remarks>
+        /// The database field actually supports 65535 bytes, but the field on the
+        /// webpage limits submissions to 60000 characters so it doesn't have to
+        /// convert characters to bytes.
+        /// </remarks>
+        public const int ScriptMaxLength = 60000;
 
         public string Script 
         { 
