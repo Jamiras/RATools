@@ -609,6 +609,10 @@ namespace RATools.Data
                 case '&':
                     tokenizer.Advance();
                     return RequirementOperator.BitwiseAnd;
+
+                case '^':
+                    tokenizer.Advance();
+                    return RequirementOperator.BitwiseXor;
             }
 
             return RequirementOperator.None;
