@@ -42,6 +42,11 @@ namespace RATools.Services
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private static RAWebCache _instance;
 
+        public string UserAgent
+        {
+            get { return _userAgent; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private string _userAgent;
 
         public JsonObject GetGameJson(int gameId)
