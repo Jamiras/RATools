@@ -61,6 +61,14 @@ namespace RATools.Parser
             if (maxOf != null)
                 return maxOf.ToValue(serializationContext, out error);
 
+            var memoryValue = expression as MemoryValueExpression;
+            if (memoryValue != null)
+            {
+                var normalized = memoryValue.MergeBitCounts();
+                if (normalized != null)
+                    expression = normalized;
+            }
+
             var trigger = expression as ITriggerExpression;
             if (trigger == null)
             {

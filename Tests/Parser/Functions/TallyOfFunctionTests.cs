@@ -91,5 +91,12 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("tally_of([1, 2, 3], 4, (a) { return b })"),
                 Is.EqualTo("Unknown variable: b"));
         }
+
+        [Test]
+        public void TestDeduct()
+        {
+            Assert.That(Evaluate("tally_of(range(1,5,2), 11, (a) { if (a == 3) return deduct(byte(a) == 9) else return byte(a) == 9 })"),
+                Is.EqualTo("tally(11, byte(0x000001) == 9, deduct(byte(0x000003) == 9), byte(0x000005) == 9)"));
+        }
     }
 }

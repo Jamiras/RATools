@@ -153,6 +153,7 @@ namespace RATools.ViewModels
             var url = String.Format("https://retroachievements.org/dorequest.php?u={0}&t={1}&g={2}&h=1&r=patch", 
                 _settings.UserName, _settings.DoRequestToken, gameId);
             var request = httpRequestService.CreateRequest(url);
+            request.Headers["User-Agent"] = RAWebCache.Instance.UserAgent;
             var response = httpRequestService.Request(request);
             if (response.Status == System.Net.HttpStatusCode.OK)
             {

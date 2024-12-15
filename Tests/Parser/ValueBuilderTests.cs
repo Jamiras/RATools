@@ -3,6 +3,7 @@ using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Tests.Expressions;
 using RATools.Parser.Tests.Expressions.Trigger;
 
 namespace RATools.Parser.Tests
@@ -162,5 +163,16 @@ namespace RATools.Parser.Tests
             }
         }
 
+        [Test]
+        public void TestMergeBits()
+        {
+            string input = ExpressionTests.ReplacePlaceholders("mA + nA + oA + pA + qA + rA + sA + tA", true);
+            var clause = TriggerExpressionTests.Parse(input);
+
+            ErrorExpression error;
+            var value = ValueBuilder.BuildValue(clause, out error);
+            var serialized = value.Serialize(new SerializationContext { MinimumVersion = Version._1_0 });
+            Assert.That(serialized, Is.EqualTo("M:0xK000001"));
+        }
     }
 }
