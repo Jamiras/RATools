@@ -27,7 +27,7 @@ namespace RATools.Parser.Tests.Internal
             return achievement;
         }
 
-        private void AssertLogicalMerge(string input, string y, string expected)
+        private static void AssertLogicalMerge(string input, string y, string expected)
         {
             input = input.Replace("X", "6");
             input = input.Replace("Y", y);

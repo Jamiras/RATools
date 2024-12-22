@@ -232,6 +232,12 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("prev(byte(0x001234)) == 1 && prev(byte(0x001234)) == 1", "prev(byte(0x001234)) == 1")]
         [TestCase("once(byte(0x001234) == 1) && once(byte(0x001234) == 1)", "once(byte(0x001234) == 1)")]
         [TestCase("never(byte(0x001234) != prev(byte(0x001234))) && never(byte(0x001234) != prev(byte(0x001234)))", "byte(0x001234) == prev(byte(0x001234))")]
+        [TestCase("never(byte(0x001234) != 1) && byte(0x001234) != 3 && once(byte(0x002345) == 1)",
+                  "never(byte(0x001234) != 1) && once(byte(0x002345) == 1)")] // never(a!=1) is effectively a==1, so a!=3 can be eliminated
+        [TestCase("never(byte(0x001234) == 1) && byte(0x001234) == 3 && once(byte(0x002345) == 1)",
+                  "never(byte(0x001234) == 1) && byte(0x001234) == 3 && once(byte(0x002345) == 1)")] // never(a==1) is effectively a!=1, a==3 is more specific and cannot be eliminated
+        [TestCase("never(byte(0x001234) == 1) && byte(0x001234) != 3 && once(byte(0x002345) == 1)",
+                  "never(byte(0x001234) == 1) && byte(0x001234) != 3 && once(byte(0x002345) == 1)")] // never(a==1) is effectively a!=1, so a!=3 cannot be eliminated
         [TestCase("byte(0x001234) == 1 && byte(0x002345) + byte(0x001234) == 1", "byte(0x001234) == 1 && (byte(0x002345) + byte(0x001234)) == 1")] // duplicate in AddSource clause should be ignored
         [TestCase("byte(0x002345) + byte(0x001234) == 1 && byte(0x002345) + byte(0x001234) == 1", "(byte(0x002345) + byte(0x001234)) == 1")] // complete AddSource duplicate should be elimiated
         [TestCase("byte(0x001234) == 1 && once(byte(0x002345) == 1 && byte(0x001234) == 1)", "byte(0x001234) == 1 && once(byte(0x002345) == 1 && byte(0x001234) == 1)")] // duplicate in AndNext clause should be ignored
