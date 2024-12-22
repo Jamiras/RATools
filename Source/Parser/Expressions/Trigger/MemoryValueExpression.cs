@@ -682,8 +682,37 @@ namespace RATools.Parser.Expressions.Trigger
             if (valueExpression == null || valueExpression._memoryAccessors.Count < 4)
                 return expression;
 
+            var newValueExpression = valueExpression.MergeBitCounts();
+            if (ReferenceEquals(newValueExpression, valueExpression))
+                return expression;
+
+            if (canModifyRight && newValueExpression._memoryAccessors.Count == 1)
+            {
+                var rightInteger = comparison.Right as IntegerConstantExpression;
+                if (rightInteger != null)
+                {
+                    if (rightInteger.Value == 8)
+                    {
+                        // prefer byte(X) == 255 over bitcount(X) == 8
+                        var byteAccessor = newValueExpression._memoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
+                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(255));
+                    }
+                    else if (rightInteger.Value == 0)
+                    {
+                        // prefer byte(X) == 0 over bitcount(X) == 0
+                        var byteAccessor = newValueExpression._memoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
+                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(0));
+                    }
+                }
+            }
+
+            return new ComparisonExpression(newValueExpression, comparison.Operation, comparison.Right);
+        }
+
+        public MemoryValueExpression MergeBitCounts()
+        {
             // identify bit accessors in the MemoryValueExpression
-            var newMemoryAccessors = new List<ModifiedMemoryAccessorExpression>(valueExpression._memoryAccessors);
+            var newMemoryAccessors = new List<ModifiedMemoryAccessorExpression>(_memoryAccessors);
             var bitReferences = new List<BitReference>();
 
             foreach (var memoryAccessor in newMemoryAccessors)
@@ -756,39 +785,17 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             // if nothing was collapsed, return the original expression
-            if (newMemoryAccessors.Count == valueExpression._memoryAccessors.Count)
-                return expression;
-
-            if (canModifyRight && newMemoryAccessors.Count == 1)
-            {
-                var rightInteger = comparison.Right as IntegerConstantExpression;
-                if (rightInteger != null)
-                {
-                    if (rightInteger.Value == 8)
-                    {
-                        // prefer byte(X) == 255 over bitcount(X) == 8
-                        var byteAccessor = newMemoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
-                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(255));
-                    }
-                    else if (rightInteger.Value == 0)
-                    {
-                        // prefer byte(X) == 0 over bitcount(X) == 0
-                        var byteAccessor = newMemoryAccessors[0].MemoryAccessor.ChangeFieldSize(FieldSize.Byte);
-                        return new ComparisonExpression(byteAccessor, comparison.Operation, new IntegerConstantExpression(0));
-                    }
-                }
-            }
+            if (newMemoryAccessors.Count == _memoryAccessors.Count)
+                return this;
 
             // create a new expression
-            var newValueExpression = new MemoryValueExpression
+            return new MemoryValueExpression
             {
-                Location = valueExpression.Location,
-                IntegerConstant = valueExpression.IntegerConstant,
-                FloatConstant = valueExpression.FloatConstant,
+                Location = this.Location,
+                IntegerConstant = this.IntegerConstant,
+                FloatConstant = this.FloatConstant,
                 _memoryAccessors = newMemoryAccessors
             };
-
-            return new ComparisonExpression(newValueExpression, comparison.Operation, comparison.Right);
         }
 
         private ExpressionBase SwapSubtractionWithConstant(ExpressionBase constant, ComparisonOperation operation)
