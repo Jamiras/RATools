@@ -33,8 +33,16 @@ namespace RATools.Parser.Functions
             }
 
             var accumulatorExpression = GetParameter(scope, "initial", out result);
+            if (accumulatorExpression == null)
+            {
+                return false;
+            }
 
             var funcParam = GetFunctionParameter(scope, "reducer", out result);
+            if (funcParam == null)
+            {
+                return false;
+            }
             if ((funcParam.Parameters.Count - funcParam.DefaultParameters.Count) != 2)
             {
                 result = new ErrorExpression("reducer function must accept two parameters (acc, value)");
@@ -49,7 +57,10 @@ namespace RATools.Parser.Functions
 
             foreach (var input in inputs.IterableExpressions())
             {
-                input.ReplaceVariables(iteratorScope, out result);
+                if (!input.ReplaceVariables(iteratorScope, out result))
+                {
+                    return false;
+                }
                 iteratorScope.AssignVariable(new VariableExpression(funcParam.Parameters.First().Name), accumulatorExpression);
                 iteratorScope.AssignVariable(new VariableExpression(funcParam.Parameters.Last().Name), input);
                 if (!funcParam.Evaluate(iteratorScope, out result))
