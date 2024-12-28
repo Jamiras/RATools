@@ -14,13 +14,13 @@ namespace RATools.Parser.Functions
         {
         }
 
-        protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
+        protected override ExpressionBase Combine(ExpressionBase accumulator, ExpressionBase predicateResult, ExpressionBase predicateInput)
         {
-            var array = left as ArrayExpression;
+            var array = accumulator as ArrayExpression;
             if (array == null)
                 array = new ArrayExpression();
 
-            array.Entries.Add(right);
+            array.Entries.Add(predicateResult);
             return array;
         }
 

@@ -9,12 +9,12 @@ namespace RATools.Parser.Functions
         {
         }
 
-        protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
+        protected override ExpressionBase Combine(ExpressionBase accumulator, ExpressionBase predicateResult, ExpressionBase predicateInput)
         {
-            if (left == null)
-                return right;
+            if (accumulator == null)
+                return predicateResult;
 
-            var combined = new MathematicExpression(left, MathematicOperation.Add, right);
+            var combined = new MathematicExpression(accumulator, MathematicOperation.Add, predicateResult);
             return combined.MergeOperands();
         }
 
