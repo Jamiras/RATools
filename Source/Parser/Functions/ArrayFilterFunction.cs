@@ -22,9 +22,8 @@ namespace RATools.Parser.Functions
 
             var boolResult = predicateResult as BooleanConstantExpression;
             if (boolResult.Value)
-            { 
                 array.Entries.Add(predicateInput);
-            }
+
             return array;
         }
 
