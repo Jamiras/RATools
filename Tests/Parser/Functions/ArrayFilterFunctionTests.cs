@@ -64,7 +64,7 @@ namespace RATools.Parser.Tests.Functions
             dict.Add(key, array);
             scope.DefineVariable(new VariableDefinitionExpression("dict"), dict);
 
-            var result = FunctionTests.Evaluate<ArrayMapFunction>("array_filter(dict[0], a => a > 1)", scope);
+            var result = FunctionTests.Evaluate<ArrayFilterFunction>("array_filter(dict[0], a => a > 1)", scope);
             Assert.That(result, Is.Not.Null);
 
             var builder = new StringBuilder();
