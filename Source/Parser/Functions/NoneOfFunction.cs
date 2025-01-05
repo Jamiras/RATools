@@ -11,39 +11,39 @@ namespace RATools.Parser.Functions
         {
         }
 
-        protected override ExpressionBase Combine(ExpressionBase left, ExpressionBase right)
+        protected override ExpressionBase Combine(ExpressionBase accumulator, ExpressionBase predicateResult, ExpressionBase predicateInput)
         {
-            var booleanRight = right as BooleanConstantExpression;
+            var booleanRight = predicateResult as BooleanConstantExpression;
             if (booleanRight != null)
             {
-                var booleanLeft = left as BooleanConstantExpression;
+                var booleanLeft = accumulator as BooleanConstantExpression;
                 if (booleanLeft == null)
                     return new BooleanConstantExpression(!booleanRight.Value);
 
                 return new BooleanConstantExpression(booleanLeft.Value && !booleanRight.Value);
             }
 
-            var rightRequirement = right as RequirementExpressionBase;
+            var rightRequirement = predicateResult as RequirementExpressionBase;
             if (rightRequirement == null)
-                return new ErrorExpression("condition is not a requirement", right);
+                return new ErrorExpression("condition is not a requirement", predicateResult);
 
             rightRequirement = rightRequirement.InvertLogic();
             if (rightRequirement == null)
-                return new ErrorExpression("Could not invert logic", right);
+                return new ErrorExpression("Could not invert logic", predicateResult);
 
             rightRequirement.IsLogicalUnit = true;
 
-            if (left == null)
+            if (accumulator == null)
                 return rightRequirement;
 
-            var clause = left as RequirementClauseExpression;
+            var clause = accumulator as RequirementClauseExpression;
             if (clause == null || clause.Operation != ConditionalOperation.And)
             {
                 clause = new RequirementClauseExpression { Operation = ConditionalOperation.And };
 
-                var leftRequirement = left as RequirementExpressionBase;
+                var leftRequirement = accumulator as RequirementExpressionBase;
                 if (leftRequirement == null)
-                    return new ErrorExpression("condition is not a requirement", left);
+                    return new ErrorExpression("condition is not a requirement", accumulator);
 
                 clause.AddCondition(leftRequirement);
             }

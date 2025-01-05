@@ -67,7 +67,7 @@ namespace RATools.Parser.Functions
                     return false;
                 }
 
-                expression = Combine(expression, result);
+                expression = Combine(expression, result, predicateParameter.GetValue(iteratorScope));
                 if (expression.Type == ExpressionType.Error)
                 {
                     result = expression;
@@ -84,7 +84,7 @@ namespace RATools.Parser.Functions
             return true;
         }
 
-        protected abstract ExpressionBase Combine(ExpressionBase left, ExpressionBase right);
+        protected abstract ExpressionBase Combine(ExpressionBase accumulator, ExpressionBase predicateResult, ExpressionBase predicateInput);
 
         protected abstract ExpressionBase GenerateEmptyResult();
     }

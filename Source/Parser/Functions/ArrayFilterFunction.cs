@@ -2,14 +2,14 @@
 
 namespace RATools.Parser.Functions
 {
-    internal class ArrayMapFunction : IterableJoiningFunction
+    internal class ArrayFilterFunction : IterableJoiningFunction
     {
-        public ArrayMapFunction()
-            : base("array_map")
+        public ArrayFilterFunction()
+            : base("array_filter")
         {
         }
 
-        protected ArrayMapFunction(string name)
+        protected ArrayFilterFunction(string name)
             : base(name)
         {
         }
@@ -20,7 +20,10 @@ namespace RATools.Parser.Functions
             if (array == null)
                 array = new ArrayExpression();
 
-            array.Entries.Add(predicateResult);
+            var boolResult = predicateResult as BooleanConstantExpression;
+            if (boolResult.Value)
+                array.Entries.Add(predicateInput);
+
             return array;
         }
 
