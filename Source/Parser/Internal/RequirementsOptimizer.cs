@@ -821,20 +821,49 @@ namespace RATools.Parser.Internal
                             continue;
                         if (compareRequirement.Type != RequirementType.ResetIf && compareRequirement.Type != RequirementType.None)
                             continue;
-                        if (requirement.Left != compareRequirement.Left || requirement.Right != compareRequirement.Right)
-                            continue;
 
-                        var opposingOperator = requirement.Operator.OppositeOperator();
-                        if (compareRequirement.Operator == opposingOperator)
+                        if (requirement.Left == compareRequirement.Left && requirement.Right == compareRequirement.Right)
                         {
-                            // if a HitCount exists, keep the ResetIf, otherwise keep the non-ResetIf
-                            bool isResetIf = (requirement.Type == RequirementType.ResetIf);
-                            if (hasHitCount == isResetIf)
-                                group[j].Requirements[0] = requirement;
+                            var opposingOperator = requirement.Operator.OppositeOperator();
+                            if (compareRequirement.Operator == opposingOperator)
+                            {
+                                // if a HitCount exists, keep the ResetIf, otherwise keep the non-ResetIf
+                                bool isResetIf = (requirement.Type == RequirementType.ResetIf);
+                                if (hasHitCount == isResetIf)
+                                    group[j].Requirements[0] = requirement;
 
-                            group.RemoveAt(i);
-                            merged = true;
-                            break;
+                                group.RemoveAt(i);
+                                merged = true;
+                                break;
+                            }
+                        }
+                        else if (compareRequirement.HitCount == 0)
+                        {
+                            Requirement inverted, notInverted;
+                            if (compareRequirement.Type == RequirementType.ResetIf)
+                            {
+                                inverted = compareRequirement.Clone();
+                                notInverted = requirement;
+                            }
+                            else
+                            {
+                                inverted = requirement.Clone();
+                                notInverted = compareRequirement;
+                            }
+
+                            inverted.Operator = inverted.Operator.OppositeOperator();
+                            inverted.Type = RequirementType.None;
+                            var mergedRequirement = RequirementMerger.MergeRequirements(inverted, notInverted, ConditionalOperation.And);
+                            if (mergedRequirement == inverted)
+                            {
+                                // ResetIf is more restrictive than other comparison. Only keep the ResetIf
+                                if (compareRequirement.Type != RequirementType.ResetIf)
+                                    group[j].Requirements[0] = requirement;
+
+                                group.RemoveAt(i);
+                                merged = true;
+                                break;
+                            }
                         }
                     }
 

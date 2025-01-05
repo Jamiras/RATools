@@ -471,6 +471,13 @@ namespace RATools.Parser.Internal
             }
         }
 
+        public static Requirement MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition)
+        {
+            Requirement merged;
+            MergeRequirements(left, right, condition, out merged);
+            return merged;
+        }
+
         private static MoreRestrictiveRequirement MergeRequirements(Requirement left, Requirement right, ConditionalOperation condition, out Requirement merged)
         {
             merged = null;
