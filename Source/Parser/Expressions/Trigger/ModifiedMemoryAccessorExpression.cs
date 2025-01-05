@@ -82,6 +82,21 @@ namespace RATools.Parser.Expressions.Trigger
         private Field _modifier;
 
         /// <summary>
+        /// Gets the remembered value to use as a modifier.
+        /// </summary>
+        public RememberRecallExpression RememberModifier
+        {
+            get { return _rememberModifier; }
+            set
+            {
+                Debug.Assert(!IsReadOnly);
+                _rememberModifier = value;
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        protected RememberRecallExpression _rememberModifier;
+
+        /// <summary>
         /// Gets or sets the operator used to combine this <see cref="ModifiedMemoryAccessorExpression"/>
         /// with other <see cref="ModifiedMemoryAccessorExpression"/>s in a <see cref="MemoryValueExpression"/>.
         /// </summary>
@@ -136,41 +151,18 @@ namespace RATools.Parser.Expressions.Trigger
 
             MemoryAccessor.AppendString(builder);
 
-            switch (ModifyingOperator)
+            if (!ModifyingOperator.IsModifier())
+                return;
+
+            builder.Append(' ');
+            builder.Append(ModifyingOperator.ToOperatorString());
+            builder.Append(' ');
+
+            if (_rememberModifier != null)
             {
-                case RequirementOperator.Add:
-                    builder.Append(" + ");
-                    break;
-
-                case RequirementOperator.Subtract:
-                    builder.Append(" - ");
-                    break;
-
-                case RequirementOperator.Multiply:
-                    builder.Append(" * ");
-                    break;
-
-                case RequirementOperator.Divide:
-                    builder.Append(" / ");
-                    break;
-
-                case RequirementOperator.Modulus:
-                    builder.Append(" % ");
-                    break;
-
-                case RequirementOperator.BitwiseAnd:
-                    builder.Append(" & ");
-                    break;
-
-                case RequirementOperator.BitwiseXor:
-                    builder.Append(" ^ ");
-                    break;
-
-                default:
-                    return;
+                _rememberModifier.AppendString(builder);
             }
-
-            if (Modifier.IsMemoryReference && MemoryAccessor.PointerChain.Any())
+            else if (Modifier.IsMemoryReference && MemoryAccessor.PointerChain.Any())
             {
                 var clone = MemoryAccessor.Clone();
                 clone.Field = Modifier;
@@ -247,7 +239,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 case MathematicOperation.Modulus:
                 case MathematicOperation.Divide:
-                    return new ErrorExpression(string.Format("Cannot %s by a complex runtime value", MathematicExpression.GetOperatorVerb(operation)));
+                    return new ErrorExpression(string.Format("Cannot %s by a complex runtime value", operation.ToOperatorVerbString()));
             }
 
             return null;
@@ -358,19 +350,6 @@ namespace RATools.Parser.Expressions.Trigger
             return this;
         }
 
-        private static bool IsBitwiseOperator(RequirementOperator op)
-        {
-            switch (op)
-            {
-                case RequirementOperator.BitwiseAnd:
-                case RequirementOperator.BitwiseXor:
-                    return true;
-
-                default:
-                    return false;
-            }
-        }
-
         public ExpressionBase ApplyMathematic(ExpressionBase right, MathematicOperation operation)
         {
             switch (operation)
@@ -390,30 +369,37 @@ namespace RATools.Parser.Expressions.Trigger
             var rightAccessor = right as MemoryAccessorExpression;
             if (rightAccessor != null)
             {
-                // FieldFactory won't process a MemoryAccessor with a Pointer chain. We want
-                // to allow it, but only if it matches the pointer chain of this MemoryAccessor.
-                if (!MemoryAccessor.PointerChainMatches(rightAccessor))
+                if (right is RememberRecallExpression)
                 {
+                    field = FieldFactory.CreateField(right);
+                }
+                else if (!MemoryAccessor.PointerChainMatches(rightAccessor))
+                {
+                    // FieldFactory won't process a MemoryAccessor with a Pointer chain. We want
+                    // to allow it, but only if it matches the pointer chain of this MemoryAccessor.
                     if (!MemoryAccessor.HasPointerChain)
                     {
-                        if (operation == MathematicOperation.Multiply)
+                        // right side has a pointer chain, but left side doesn't.
+                        if (operation.IsCommutative())
                         {
-                            // right has a pointer chain. left does not. multiplication is communitive. invert
-                            return rightAccessor.Combine(this, MathematicOperation.Multiply);
+                            // if it's communitive, try evaluating the pointer chain first
+                            return rightAccessor.Combine(this, operation);
                         }
-
-                        return new ErrorExpression(
-                            string.Format("Cannot {0} pointer value and modified value",
-                                            MathematicExpression.GetOperatorVerb(operation)), right);
                     }
 
-                    return new ErrorExpression(
-                        string.Format("Cannot {0} two values with differing pointers",
-                                      MathematicExpression.GetOperatorVerb(operation)), right);
-                }
+                    // use Remember/Recall to capture one pointer chain
+                    var rightModifiedAccessor = right as ModifiedMemoryAccessorExpression;
+                    if (rightModifiedAccessor == null)
+                        rightModifiedAccessor = new ModifiedMemoryAccessorExpression(rightAccessor);
 
-                // pointer chain matched. extract the field
-                field = FieldFactory.CreateField(right, true);
+                    right = new RememberRecallExpression(rightModifiedAccessor);
+                    field = FieldFactory.CreateField(right);
+                }
+                else
+                {
+                    // pointer chain matched. extract the field
+                    field = FieldFactory.CreateField(right, true);
+                }
             }
             else
             {
@@ -421,11 +407,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     var rightModifiedAccessor = right as ModifiedMemoryAccessorExpression;
                     if (rightModifiedAccessor != null && rightModifiedAccessor.ModifyingOperator != RequirementOperator.None)
-                    {
-                        return new ErrorExpression(
-                            string.Format("Cannot {0} pointer value and modified value",
-                                          MathematicExpression.GetOperatorVerb(operation)), right);
-                    }
+                        right = new RememberRecallExpression(rightModifiedAccessor);
                 }
 
                 field = FieldFactory.CreateField(right);
@@ -433,14 +415,14 @@ namespace RATools.Parser.Expressions.Trigger
                     return new ErrorExpression("Could not create condition from " + right.Type);
             }
 
-            var newModifyingOperator = GetModifyingOperator(operation);
+            var newModifyingOperator = operation.ToRequirementOperator();
             if (newModifyingOperator == RequirementOperator.None)
             {
                 // operator could not be turned into a conditional operator
                 return new ErrorExpression("Cannot combine " + Type + " and " + right.Type + " using " + operation);
             }
 
-            if (IsBitwiseOperator(newModifyingOperator))
+            if (newModifyingOperator.IsBitwiseOperator())
             {
                 if (field.IsFloat || Modifier.IsFloat || MemoryAccessor.Field.IsFloat)
                     return new ErrorExpression("Cannot perform bitwise operations on floating point values");
@@ -523,11 +505,11 @@ namespace RATools.Parser.Expressions.Trigger
                 case RequirementOperator.BitwiseXor:
                     if (field.Type == FieldType.Float || Modifier.Type == FieldType.Float)
                         return new ErrorExpression("Cannot perform bitwise operations on floating point values");
-                    if (!IsBitwiseOperator(newModifyingOperator))
+                    if (!newModifyingOperator.IsBitwiseOperator())
                         goto default;
 
-                    if (MathematicExpression.GetPriority(GetMathematicOperation(newModifyingOperator)) >
-                        MathematicExpression.GetPriority(GetMathematicOperation(ModifyingOperator)))
+                    if (MathematicExpression.GetPriority(newModifyingOperator.ToMathematicOperator()) >
+                        MathematicExpression.GetPriority(ModifyingOperator.ToMathematicOperator()))
                     {
                         // new operator has priority, don't merge
                         goto default;
@@ -537,6 +519,9 @@ namespace RATools.Parser.Expressions.Trigger
                     break;
 
                 default:
+                    if (right is RememberRecallExpression)
+                        return new ErrorExpression(string.Format("Cannot {0} two complex expressions", operation.ToOperatorVerbString()));
+
                     // use Remember/Recall to do incremental logic
                     var rememberRecallExpression = new RememberRecallExpression(this);
                     return rememberRecallExpression.Combine(right, operation);
@@ -585,6 +570,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
+            _rememberModifier = right as RememberRecallExpression;
             Modifier = field;
             return this;
         }
@@ -648,36 +634,6 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
-        private static RequirementOperator GetModifyingOperator(MathematicOperation operation)
-        {
-            switch (operation)
-            {
-                case MathematicOperation.Add: return RequirementOperator.Add;
-                case MathematicOperation.Subtract: return RequirementOperator.Subtract;
-                case MathematicOperation.Multiply: return RequirementOperator.Multiply;
-                case MathematicOperation.Divide: return RequirementOperator.Divide;
-                case MathematicOperation.Modulus: return RequirementOperator.Modulus;
-                case MathematicOperation.BitwiseAnd: return RequirementOperator.BitwiseAnd;
-                case MathematicOperation.BitwiseXor: return RequirementOperator.BitwiseXor;
-                default: return RequirementOperator.None;
-            }
-        }
-
-        private static MathematicOperation GetMathematicOperation(RequirementOperator operation)
-        {
-            switch (operation)
-            {
-                case RequirementOperator.Add: return MathematicOperation.Add;
-                case RequirementOperator.Subtract: return MathematicOperation.Subtract;
-                case RequirementOperator.Multiply: return MathematicOperation.Multiply;
-                case RequirementOperator.Divide: return MathematicOperation.Divide;
-                case RequirementOperator.Modulus: return MathematicOperation.Modulus;
-                case RequirementOperator.BitwiseAnd: return MathematicOperation.BitwiseAnd;
-                case RequirementOperator.BitwiseXor: return MathematicOperation.BitwiseXor;
-                default: return MathematicOperation.None;
-            }
-        }
-
         /// <summary>
         /// Normalizes the comparison between the current expression and the <paramref name="right"/> expression using the <paramref name="operation"/> operator.
         /// </summary>
@@ -719,7 +675,7 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                 }
 
-                var opposingOperator = MathematicExpression.GetOppositeOperation(GetMathematicOperation(modifiedMemoryAccessor.ModifyingOperator));
+                var opposingOperator = modifiedMemoryAccessor.ModifyingOperator.ToMathematicOperator().OppositeOperation();
                 if (opposingOperator != MathematicOperation.Multiply && opposingOperator != MathematicOperation.Divide)
                     return null;
 
@@ -750,7 +706,7 @@ namespace RATools.Parser.Expressions.Trigger
                 if (!mergeSuccessful)
                 {
                     // could not merge left. try merging right
-                    opposingOperator = MathematicExpression.GetOppositeOperation(GetMathematicOperation(ModifyingOperator));
+                    opposingOperator = ModifyingOperator.ToMathematicOperator().OppositeOperation();
                     modifier = CreateModifierExpression();
                     result = newRight.ApplyMathematic(modifier, opposingOperator);
 
@@ -815,7 +771,7 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ComparisonExpression(result, operation, newRight);
             }
 
-            var mathematicOperation = GetMathematicOperation(ModifyingOperator);
+            var mathematicOperation = ModifyingOperator.ToMathematicOperator();
             if (mathematicOperation != MathematicOperation.None)
             {
                 var modifier = CreateModifierExpression();
@@ -864,6 +820,17 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
+            if (_rememberModifier != null)
+            {
+                var error = _rememberModifier.BuildTrigger(context);
+                if (error != null)
+                    return error;
+
+                // RememberRecallExpression automatically generates a trailing {recall} for chaining
+                // into the next expression. remove it. we'll add it back soon.
+                context.Trigger.Remove(context.LastRequirement);
+            }    
+
             MemoryAccessor.BuildTrigger(context);
             if (context.LastRequirement.Type != RequirementType.None)
                 return new ErrorExpression("Cannot combine modified requirement", MemoryAccessor);

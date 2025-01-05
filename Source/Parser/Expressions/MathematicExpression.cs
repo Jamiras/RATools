@@ -45,7 +45,7 @@ namespace RATools.Parser.Expressions
 
             builder.Append(' ');
 
-            builder.Append(GetOperatorCharacter(Operation));
+            builder.Append(Operation.ToOperatorString());
 
             builder.Append(' ');
 
@@ -58,54 +58,6 @@ namespace RATools.Parser.Expressions
             else
             {
                 Right.AppendString(builder);
-            }
-        }
-
-        internal static char GetOperatorCharacter(MathematicOperation operation)
-        {
-            switch (operation)
-            {
-                case MathematicOperation.Add: return '+';
-                case MathematicOperation.Subtract: return '-';
-                case MathematicOperation.Multiply: return '*';
-                case MathematicOperation.Divide: return '/';
-                case MathematicOperation.Modulus: return '%';
-                case MathematicOperation.BitwiseAnd: return '&';
-                case MathematicOperation.BitwiseXor: return '^';
-                case MathematicOperation.BitwiseInvert: return '~';
-                default: return '?';
-            }
-        }
-
-        internal static string GetOperatorType(MathematicOperation operation)
-        {
-            switch (operation)
-            {
-                case MathematicOperation.Add: return "addition";
-                case MathematicOperation.Subtract: return "subtraction";
-                case MathematicOperation.Multiply: return "multiplication";
-                case MathematicOperation.Divide: return "division";
-                case MathematicOperation.Modulus: return "modulus";
-                case MathematicOperation.BitwiseAnd: return "bitwise and";
-                case MathematicOperation.BitwiseXor: return "bitwise xor";
-                case MathematicOperation.BitwiseInvert: return "bitwise invert";
-                default: return "mathematic";
-            }
-        }
-
-        internal static string GetOperatorVerb(MathematicOperation operation)
-        {
-            switch (operation)
-            {
-                case MathematicOperation.Add: return "add";
-                case MathematicOperation.Subtract: return "subtract";
-                case MathematicOperation.Multiply: return "multiply";
-                case MathematicOperation.Divide: return "divide";
-                case MathematicOperation.Modulus: return "modulus";
-                case MathematicOperation.BitwiseAnd: return "bitwise and";
-                case MathematicOperation.BitwiseXor: return "bitwise xor";
-                case MathematicOperation.BitwiseInvert: return "bitwise invert";
-                default: return "mathematic";
             }
         }
 
@@ -133,18 +85,6 @@ namespace RATools.Parser.Expressions
 
                 default:
                     return MathematicPriority.None;
-            }
-        }
-
-        internal static MathematicOperation GetOppositeOperation(MathematicOperation op)
-        {
-            switch (op)
-            {
-                case MathematicOperation.Add: return MathematicOperation.Subtract;
-                case MathematicOperation.Subtract: return MathematicOperation.Add;
-                case MathematicOperation.Multiply: return MathematicOperation.Divide;
-                case MathematicOperation.Divide: return MathematicOperation.Multiply;
-                default: return MathematicOperation.None;
             }
         }
 
@@ -264,7 +204,7 @@ namespace RATools.Parser.Expressions
 
         private static ErrorExpression CreateCannotCombineError(ExpressionBase left, MathematicOperation operation, ExpressionBase right)
         {
-            return new ErrorExpression(string.Format("Cannot {0} {1} and {2}", GetOperatorVerb(operation), left.Type.ToLowerString(), right.Type.ToLowerString()));
+            return new ErrorExpression(string.Format("Cannot {0} {1} and {2}", operation.ToOperatorVerbString(), left.Type.ToLowerString(), right.Type.ToLowerString()));
         }
 
         private static bool MergeOperands(ExpressionBase left, MathematicOperation operation, ExpressionBase right, out ExpressionBase result)
@@ -627,57 +567,6 @@ namespace RATools.Parser.Expressions
     }
 
     /// <summary>
-    /// Specifies how the two sides of the <see cref="MathematicExpression"/> should be combined.
-    /// </summary>
-    public enum MathematicOperation
-    {
-        /// <summary>
-        /// Unspecified
-        /// </summary>
-        None = 0,
-
-        /// <summary>
-        /// Add the two values.
-        /// </summary>
-        Add,
-
-        /// <summary>
-        /// Subtract the second value from the first.
-        /// </summary>
-        Subtract,
-
-        /// <summary>
-        /// Multiply the two values.
-        /// </summary>
-        Multiply,
-
-        /// <summary>
-        /// Divide the first value by the second.
-        /// </summary>
-        Divide,
-
-        /// <summary>
-        /// Get the remainder from dividing the first value by the second.
-        /// </summary>
-        Modulus,
-
-        /// <summary>
-        /// Gets the bits that are set in both the first value and the second.
-        /// </summary>
-        BitwiseAnd,
-
-        /// <summary>
-        /// Gets the bits that are set in either the first or and the second, but not both.
-        /// </summary>
-        BitwiseXor,
-
-        /// <summary>
-        /// Toggles all bits in the first value (effectively XOR 0xFFFFFFFF)
-        /// </summary>
-        BitwiseInvert,
-    }
-
-    /// <summary>
     /// Gets the priority of a mathematic operation
     /// </summary>
     internal enum MathematicPriority
@@ -757,7 +646,7 @@ namespace RATools.Parser.Expressions
         /// <returns>The modified value.</returns>
         public int Remove(int value)
         {
-            return Apply(value, MathematicExpression.GetOppositeOperation(Operation), Amount);
+            return Apply(value, Operation.OppositeOperation(), Amount);
         }
 
         /// <summary>

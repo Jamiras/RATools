@@ -176,5 +176,21 @@
                     return false;
             }
         }
+
+        /// <summary>
+        /// Gets whether or not the operator combines bits between operands.
+        /// </summary>
+        public static bool IsBitwiseOperator(this RequirementOperator op)
+        {
+            switch (op)
+            {
+                case RequirementOperator.BitwiseAnd:
+                case RequirementOperator.BitwiseXor:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
     }
 }

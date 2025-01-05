@@ -51,6 +51,10 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(dword(0x001234) + 0x10) * byte(dword(0x001234) + 0x14)", "I:0xX001234_0xH000010*0xH000014")]
         [TestCase("byte(dword(0x001234) + 0x10) / 10", "I:0xX001234_0xH000010/10")]
         [TestCase("byte(dword(0x001234) + 0x10) / byte(dword(0x001234) + 0x14)", "I:0xX001234_0xH000010/0xH000014")]
+        [TestCase("((dword(0x1234) + 0x6073) / 0x10000) ^ dword(0x12345 + byte(0x2345))",
+            "A:24691_K:0xX001234_K:{recall}/65536_I:0xH002345_0xX012345^{recall}")]
+        [TestCase("dword(0x12345 + byte(0x2345)) ^ (dword(0x1234) + 0x6073) / 0x10000))",
+            "A:24691_K:0xX001234_K:{recall}/65536_I:0xH002345_0xX012345^{recall}")]
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<ModifiedMemoryAccessorExpression>(input);
@@ -105,17 +109,17 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) & 10", "^", "6",
             ExpressionType.MemoryAccessor, "remembered(byte(0x001234) & 0x0000000A) ^ 0x00000006")] // cannot merge
         [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.Error, "Cannot multiply two values with differing pointers")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) * remembered(byte(dword(0x002345) + 20))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.Error, "Cannot divide two values with differing pointers")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) / remembered(byte(dword(0x002345) + 20))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(0x10)",
-            ExpressionType.Error, "Cannot multiply two values with differing pointers")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) * remembered(byte(0x000010))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(0x10)",
-            ExpressionType.Error, "Cannot divide two values with differing pointers")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) / remembered(byte(0x000010))")]
         [TestCase("byte(0x10) * 10", "*", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.Error, "Cannot multiply pointer value and modified value")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x002345) + 20) * remembered(byte(0x000010) * 10)")]
         [TestCase("byte(0x10) * 10", "/", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.Error, "Cannot divide pointer value and modified value")]
+            ExpressionType.Error, "Cannot divide two complex expressions")]
         [TestCase("byte(0x001234) * 10", "&", "2.5",
             ExpressionType.Error, "Cannot perform bitwise operations on floating point values")]
         [TestCase("byte(0x001234) * 10", "^", "2.5",
