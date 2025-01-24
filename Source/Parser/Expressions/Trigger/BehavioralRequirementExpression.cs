@@ -126,6 +126,16 @@ namespace RATools.Parser.Expressions.Trigger
                         return new AlwaysFalseExpression();
                     }
 
+                    if (Behavior == RequirementType.ResetIf)
+                    {
+                        // ResetIf with a hit target of 1 will be automatically clear its
+                        // hit count when true, so it's no different than a ResetIf without
+                        // a hit target. Discard the hit target.
+                        var tallied = optimized as TalliedRequirementExpression;
+                        if (tallied != null && tallied.HitTarget == 1 && tallied.Conditions.Count() == 1)
+                            optimized = tallied.Conditions.First();
+                    }
+
                     break;
 
                 case RequirementType.Trigger:

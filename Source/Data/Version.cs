@@ -9,6 +9,7 @@ namespace RATools.Data
 
         /// <summary>
         /// 0.73 - 31 Aug 2018
+        ///  Other: HitTargets on ResetIf/PauseIf
         ///  Other: RichPresence fallback values
         /// </summary>
         public static readonly SoftwareVersion _0_73 = new SoftwareVersion(0, 73);

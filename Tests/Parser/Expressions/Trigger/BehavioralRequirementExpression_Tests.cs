@@ -26,6 +26,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("never(repeated(3, always_true()))", "R:1=1.3.")]
         [TestCase("never(byte(1) == 56 || byte(2) == 3)", "R:0xH000001=56_R:0xH000002=3")] // or clauses can be separated
         [TestCase("never(byte(1) == 56 && byte(2) == 3)", "N:0xH000001=56_R:0xH000002=3")] // and clauses cannot be separated
+        [TestCase("never(once(byte(1) == 56))", "R:0xH000001=56")] // hitcount of 1 is redundant on a ResetIf
         [TestCase("unless(byte(0x001234) == 3)", "P:0xH001234=3")]
         [TestCase("unless(repeated(6, byte(1) == 56))", "P:0xH000001=56.6.")]
         [TestCase("unless(byte(1) == 56 || byte(2) == 3)", "P:0xH000001=56_P:0xH000002=3")] // or clauses can be separated
