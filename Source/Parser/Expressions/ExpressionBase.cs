@@ -817,7 +817,7 @@ namespace RATools.Parser.Expressions
                     if (expressionTokenizer != null)
                         expressionTokenizer.QueueExpression(right);
 
-                    right = new KeywordExpression(MathematicExpression.GetOperatorCharacter(operation).ToString(), joinerLine, joinerColumn);
+                    right = new KeywordExpression(operation.ToOperatorString(), joinerLine, joinerColumn);
                     return ParseError(tokenizer, "Incompatible mathematical operation", right);
             }
 
