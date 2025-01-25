@@ -211,7 +211,6 @@ namespace RATools.Parser.Tests.Functions
             context.AppendRequirements(builder, requirements);
 
             Assert.That(builder.ToString(), Is.EqualTo(expected));
-
         }
 
         [Test]

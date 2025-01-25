@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Internal;
+using System.Linq;
 
 namespace RATools.Parser.Expressions.Trigger
 {
@@ -35,7 +36,19 @@ namespace RATools.Parser.Expressions.Trigger
                 if (!memoryValue.HasMemoryAccessor)
                     return memoryValue.ExtractConstant();
 
-                expression = memoryValue.ConvertToModifiedMemoryAccessor() ?? expression;
+                if (!memoryValue.HasConstant && memoryValue.MemoryAccessors.Count() == 1)
+                {
+                    var memoryAccessor = memoryValue.MemoryAccessors.First();
+                    if (memoryAccessor.CombiningOperator == RequirementType.AddSource)
+                    {
+                        if (memoryAccessor.ModifyingOperator == RequirementOperator.None)
+                            return memoryAccessor.MemoryAccessor;
+
+                        memoryAccessor = memoryAccessor.Clone();
+                        memoryAccessor.CombiningOperator = RequirementType.None;
+                        return memoryAccessor;
+                    }
+                }
             }
 
             var modifiedMemoryAccessor = expression as ModifiedMemoryAccessorExpression;

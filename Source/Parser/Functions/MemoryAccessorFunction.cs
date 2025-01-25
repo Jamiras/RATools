@@ -4,7 +4,6 @@ using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Parser.Functions
 {
@@ -64,6 +63,19 @@ namespace RATools.Parser.Functions
             {
                 if (memoryValue.MemoryAccessors.Count() > 1)
                 {
+                    accessor = memoryValue.ConvertToMemoryAccessor();
+                    if (accessor != null)
+                    {
+                        if (accessor.Field.Size != Size)
+                        {
+                            if (accessor.IsReadOnly)
+                                accessor = accessor.Clone();
+
+                            accessor.Field = accessor.Field.ChangeSize(Size);
+                        }
+                        return accessor;
+                    }
+
                     // chain of logic to build address has to be stored in the recall accumulator
                     accessor = new MemoryAccessorExpression();
                     accessor.RememberPointer = new RememberRecallExpression(memoryValue);
