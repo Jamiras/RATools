@@ -794,11 +794,13 @@ namespace RATools.Parser
                         // force right side to be hexadecimal for bitwise operators
                         var context = Clone();
                         context.NumberFormat = NumberFormat.Hexadecimal;
-                        context.AppendField(builder, requirement.Right, _addAddress?.ToString());
+                        context.AppendField(builder, requirement.Right,
+                            ReferenceEquals(builder, _addAddress) ? null : _addAddress?.ToString());
                         break;
 
                     default:
-                        AppendField(builder, requirement.Right, _addAddress?.ToString());
+                        AppendField(builder, requirement.Right,
+                            ReferenceEquals(builder, _addAddress) ? null : _addAddress?.ToString());
                         break;
                 }
             }

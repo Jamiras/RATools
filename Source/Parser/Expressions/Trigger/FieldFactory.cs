@@ -85,6 +85,12 @@ namespace RATools.Parser.Expressions.Trigger
                         case RequirementOperator.Divide:
                             intResult /= right.Value;
                             break;
+                        case RequirementOperator.Add:
+                            intResult += right.Value;
+                            break;
+                        case RequirementOperator.Subtract:
+                            intResult -= right.Value;
+                            break;
                         case RequirementOperator.Modulus:
                             intResult %= right.Value;
                             break;
@@ -109,6 +115,12 @@ namespace RATools.Parser.Expressions.Trigger
                             break;
                         case RequirementOperator.Divide:
                             floatResult /= right.Float;
+                            break;
+                        case RequirementOperator.Add:
+                            floatResult += right.Float;
+                            break;
+                        case RequirementOperator.Subtract:
+                            floatResult -= right.Float;
                             break;
                         case RequirementOperator.Modulus:
                             floatResult %= right.Float;

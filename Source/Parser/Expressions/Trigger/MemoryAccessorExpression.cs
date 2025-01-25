@@ -270,6 +270,14 @@ namespace RATools.Parser.Expressions.Trigger
                             builder.Append(" / ");
                             _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
                             break;
+                        case RequirementOperator.Add:
+                            builder.Append(" + ");
+                            _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
+                            break;
+                        case RequirementOperator.Subtract:
+                            builder.Append(" - ");
+                            _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
+                            break;
                         case RequirementOperator.Modulus:
                             builder.Append(" % ");
                             _pointerChain[i].Right.AppendString(builder, NumberFormat.Decimal);
@@ -422,26 +430,17 @@ namespace RATools.Parser.Expressions.Trigger
                     }
                 }
 
-                var converted = memoryValue.ConvertToModifiedMemoryAccessor();
-                if (converted != null)
+                var newRight = memoryValue.ClearConstant();
+                if (newRight is not MemoryValueExpression)
                 {
-                    // right side can be simplified to a ModifierMemoryAccessor, treat it as such.
-                    right = converted;
+                    // just move the constant
+                    var newLeft = new MemoryValueExpression();
+                    newLeft.ApplyMathematic(this, MathematicOperation.Add);
+                    newLeft.ApplyMathematic(memoryValue.ExtractConstant(), MathematicOperation.Subtract);
+                    return new ComparisonExpression(newLeft, operation, newRight);
                 }
-                else
-                {
-                    var newRight = memoryValue.ClearConstant();
-                    if (newRight is not MemoryValueExpression)
-                    {
-                        // just move the constant
-                        var newLeft = new MemoryValueExpression();
-                        newLeft.ApplyMathematic(this, MathematicOperation.Add);
-                        newLeft.ApplyMathematic(memoryValue.ExtractConstant(), MathematicOperation.Subtract);
-                        return new ComparisonExpression(newLeft, operation, newRight);
-                    }
 
-                    swap = true;
-                }
+                swap = true;
             }
 
             var modifiedMemoryAccessor = right as ModifiedMemoryAccessorExpression;

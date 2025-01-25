@@ -696,6 +696,13 @@ namespace RATools.Data
             return newField;
         }
 
+        public Field ChangeSize(FieldSize newSize)
+        {
+            var newField = Clone();
+            newField.Size = newSize;
+            return newField;
+        }
+
         /// <summary>
         /// Determines whether the specified <see cref="System.Object" />, is equal to this instance.
         /// </summary>

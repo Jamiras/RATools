@@ -108,7 +108,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return Combine(left, operation);
 
                 case MathematicOperation.Divide:
-                    var reduced = ConvertToModifiedMemoryAccessor();
+                    var reduced = ConvertToMemoryAccessor();
                     if (reduced == null)
                         return new ErrorExpression("Cannot divide by complex memory reference");
                     return reduced.CombineInverse(left, operation);
@@ -983,9 +983,8 @@ namespace RATools.Parser.Expressions.Trigger
                     newLeft._memoryAccessors.Remove(memoryAccessor);
                     memoryAccessor.CombiningOperator = RequirementType.None;
 
-                    var collapsed = newLeft.ConvertToModifiedMemoryAccessor();
-                    if (collapsed != null && collapsed.ModifyingOperator == RequirementOperator.None &&
-                        !collapsed.MemoryAccessor.HasPointerChain)
+                    var collapsed = newLeft.ConvertToMemoryAccessor();
+                    if (collapsed != null && !collapsed.HasPointerChain)
                     { 
                         if (((IntegerConstantExpression)comparison.Right).Value > 0)
                         {
@@ -1197,17 +1196,40 @@ namespace RATools.Parser.Expressions.Trigger
             return comparison;
         }
 
-        public ModifiedMemoryAccessorExpression ConvertToModifiedMemoryAccessor()
+        public MemoryAccessorExpression ConvertToMemoryAccessor()
         {
-            if (IntegerConstant == 0 && FloatConstant == 0.0)
+            if (_memoryAccessors == null)
+                return null;
+
+            if (_memoryAccessors.Count <= 2 &&
+                _memoryAccessors.All(m => m.CombiningOperator == RequirementType.AddSource &&
+                                          m.ModifyingOperator == RequirementOperator.None))
             {
-                if (_memoryAccessors != null && _memoryAccessors.Count == 1 &&
-                    _memoryAccessors[0].CombiningOperator == RequirementType.AddSource)
+                if (_memoryAccessors.Count == 1 && !HasConstant)
+                    return _memoryAccessors[0].MemoryAccessor;
+
+                var requirement = new Requirement
                 {
-                    var accessor = _memoryAccessors[0].Clone();
-                    accessor.CombiningOperator = RequirementType.None;
-                    return accessor;
+                    Type = RequirementType.AddAddress,
+                    Left = _memoryAccessors[0].MemoryAccessor.Field
+                };
+
+                if (_memoryAccessors.Count == 2)
+                {
+                    if (HasConstant)
+                        return null;
+
+                    requirement.Operator = RequirementOperator.Add;
+                    requirement.Right = _memoryAccessors[1].MemoryAccessor.Field;
                 }
+
+                var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)IntegerConstant);
+                foreach (var pointer in _memoryAccessors[0].MemoryAccessor.PointerChain)
+                    memoryAccessor.AddPointer(pointer);
+                memoryAccessor.AddPointer(requirement);
+
+                CopyLocation(memoryAccessor);
+                return memoryAccessor;
             }
 
             return null;

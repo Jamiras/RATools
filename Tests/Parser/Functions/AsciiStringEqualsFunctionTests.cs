@@ -45,6 +45,8 @@ namespace RATools.Parser.Tests.Functions
             "I:0xX001234_0xX000000=1953719668_I:0xX001234_0x 000004=49")] // 0x74736574 3100
         [TestCase("dword(0x1234) + 32", "Testing1234", 11,
             "I:0xX001234_0xX000020=1953719636_I:0xX001234_0xX000024=828862057_I:0xX001234_0xW000028=3420978")] // 0x74736554 31676E69 343332
+        [TestCase("dword(0x1234) + byte(0x2345)", "test1", 6,
+            "I:0xX001234+0xH002345_0xX000000=1953719668_I:0xX001234+0xH002345_0x 000004=49")] // 0x74736574 3100
         [TestCase("dword(dword(0x1234) + 8) + 0x2c", "test1", 6,
             "I:0xX001234_I:0xX000008_0xX00002c=1953719668_I:0xX001234_I:0xX000008_0x 000030=49")] // 0x74736574 3100
         public void TestEvaluate(string address, string input, int length, string expected)
