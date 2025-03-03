@@ -220,7 +220,7 @@ namespace RATools.Parser.Expressions
                 }
             } while (true);
 
-            // if it's a memory comparison, wrap it is a RequirementClause
+            // if it's a memory comparison, wrap it in a RequirementClause
             switch (comparison.Left.Type)
             {
                 case ExpressionType.MemoryAccessor:

@@ -348,18 +348,11 @@ namespace RATools.Parser.Expressions
             }
 
             var memoryValueParameter = parameter as MemoryValueExpression;
-            if (memoryValueParameter != null && memoryValueParameter.MemoryAccessors.Count() == 1)
+            if (memoryValueParameter != null)
             {
-                var pointerBase = memoryValueParameter.MemoryAccessors.First();
-                if (pointerBase.ModifyingOperator == RequirementOperator.None)
-                {
-                    var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)memoryValueParameter.IntegerConstant);
-                    foreach (var pointer in pointerBase.MemoryAccessor.PointerChain)
-                        memoryAccessor.AddPointer(pointer);
-                    memoryAccessor.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = pointerBase.MemoryAccessor.Field });
-                    parameter.CopyLocation(memoryAccessor);
+                var memoryAccessor = memoryValueParameter.ConvertToMemoryAccessor();
+                if (memoryAccessor != null)
                     return memoryAccessor;
-                }
             }
 
             parseError = InvalidParameter(parameter, scope, name, "memory address");
