@@ -393,7 +393,7 @@ namespace RATools.Parser
 
         public override string ToString()
         {
-            return Serialize(new SerializationContext());
+            return Serialize(new SerializationContext { MinimumVersion = MinimumVersion() });
         }
 
         public string Serialize(SerializationContext serializationContext)

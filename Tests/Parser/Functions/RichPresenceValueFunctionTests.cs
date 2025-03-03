@@ -64,10 +64,12 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        public void TestValueExpression()
+        [TestCase("byte(0x1234) + 1", "0xH001234_v1")]
+        [TestCase("byte(0x1234) % 3", "A:0xH001234%3_M:0")]
+        public void TestValueExpression(string input, string expected)
         {
-            // more expressions are validated via TriggerBuilderTests.TestGetValueString
-            var rp = Evaluate("rich_presence_value(\"Name\", byte(0x1234) + 1)");
+            // more expressions are validated via ValueBuilderTests.TestGetValueString
+            var rp = Evaluate("rich_presence_value(\"Name\", " + input + ")");
             var rpString = rp.ToString();
             var index = rpString.IndexOf("@Name(");
             if (index == -1)
@@ -78,7 +80,7 @@ namespace RATools.Parser.Tests.Functions
             {
                 var index2 = rpString.LastIndexOf(")");
                 var subString = rpString.Substring(index + 6, index2 - index - 6);
-                Assert.That(subString, Is.EqualTo("0xH001234_v1"));
+                Assert.That(subString, Is.EqualTo(expected));
             }
         }
 

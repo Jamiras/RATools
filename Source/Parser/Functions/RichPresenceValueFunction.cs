@@ -1,8 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
-using static RATools.Parser.Functions.RichPresenceDisplayFunction;
 
 namespace RATools.Parser.Functions
 {

@@ -66,6 +66,7 @@ namespace RATools.Parser.Tests
         [TestCase("byte(0x1234) - byte(0x1235)", "0xH001235*-1_0xH001234")]
         [TestCase("byte(0x1234) * byte(0x2345)", "A:0xH001234*0xH002345_M:0")]
         [TestCase("byte(0x1234) / byte(0x2345)", "A:0xH001234/0xH002345_M:0")]
+        [TestCase("byte(0x1234) % 3", "A:0xH001234%3_M:0")]
         [TestCase("byte(0x1234 + byte(0x2345))", "I:0xH002345_M:0xH001234")]
         [TestCase("byte(0x1234 + byte(0x2345)) + 1", "I:0xH002345_A:0xH001234_M:1")]
         [TestCase("byte(0x1234 + byte(0x2345)) + byte(0x1235 + byte(0x2345))", "I:0xH002345_A:0xH001234_I:0xH002345_M:0xH001235")]
@@ -136,7 +137,7 @@ namespace RATools.Parser.Tests
 
             ErrorExpression error;
             var value = ValueBuilder.BuildValue(clause, out error);
-            var serialized = value.Serialize(new SerializationContext {  MinimumVersion = Version._1_0 });
+            var serialized = value.Serialize(new SerializationContext { MinimumVersion = Version._1_0 });
             Assert.That(serialized, Is.EqualTo(expected));
         }
 
