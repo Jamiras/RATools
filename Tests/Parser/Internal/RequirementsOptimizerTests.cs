@@ -167,7 +167,8 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("unless(byte(0x001234) < 5)", "byte(0x001234) >= 5")]
         [TestCase("unless(byte(0x001234) != 1 && byte(0x002345) == 2)", "byte(0x001234) == 1 || byte(0x002345) != 2")] // AndNext becomes OrNext, both operators inverted
         [TestCase("unless(byte(0x001234) == 5) && byte(0x002345) == 1", "byte(0x001234) != 5 && byte(0x002345) == 1")] // unless without HitCount should be inverted to a requirement
-        [TestCase("unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))", "unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))")] // PauseLock is affected by Pause, so other Pause won't be inverted
+        [TestCase("unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))", // PauseLock is affected by Pause, so other Pause won't be inverted
+                  "unless(byte(0x001234) != 1) && disable_when(byte(0x002345) == 1)")]
         [TestCase("byte(0x001234) == 5 && never(byte(0x001234) != 5)", "byte(0x001234) == 5")] // common pattern in older achievements to fix HitCount at 0, the ResetIf is functionally redundant
         [TestCase("(byte(0x002345) == 5 && never(byte(0x001234) == 6)) || (byte(0x002345) == 6 && never(byte(0x001235) == 3))", 
                   "(byte(0x002345) == 5 && byte(0x001234) != 6) || (byte(0x002345) == 6 && byte(0x001235) != 3)")] // same logic applies to alt groups
@@ -181,6 +182,8 @@ namespace RATools.Parser.Tests.Internal
                   "trigger_when(repeated(3, byte(0x001234) == 1 && never(byte(0x002345) == 2))) && byte(0x003456) == 3")]
         [TestCase("byte(0x001234) == 1 || (unless(byte(0x002345) == 1) && never(always_true()))", // ResetIf guarded by PauseIf should be kept
                   "byte(0x001234) == 1 || (unless(byte(0x002345) == 1) && never(always_true()))")]
+        [TestCase("once(byte(0x001234) == 1) && disable_when(byte(0x002345) == 2, until=byte(0x003456) == 1) && never(byte(0x003456) == 1)", // inner ResetNextIf must be kept to reset PauseIf even if handled by outer ResetIf
+                  "once(byte(0x001234) == 1) && disable_when(byte(0x002345) == 2, until=byte(0x003456) == 1) && never(byte(0x003456) == 1)")]
         public void TestOptimizeNormalizeResetIfsAndPauseIfs(string input, string expected)
         {
             var achievement = CreateAchievement(input);
@@ -219,7 +222,7 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("once(byte(0x001234) == 1) && (always_false() || once(byte(0x002345) == 2) && unless(byte(0x002345) == 1))", // always_false group is discarded, unless is not promoted because of hit target
                   "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)))")]
         [TestCase("once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (always_false() || never(byte(0x002345) == 1))", // never should not be promoted to core containing unless
-                  "once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (never(byte(0x002345) == 1))")]
+                  "once(byte(0x001234) == 1) && disable_when(byte(0x001234) == 1) && (never(byte(0x002345) == 1))")]
         public void TestOptimizePromoteCommonAltsToCore(string input, string expected)
         {
             var achievement = CreateAchievement(input);

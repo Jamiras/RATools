@@ -1253,14 +1253,24 @@ namespace RATools.Parser.Internal
                                 for (int k = j; k <= i; k++)
                                     subclause.Requirements.Add(requirementEx.Requirements[k]);
 
-                                Debug.Assert(j < requirementEx.Requirements.Count - 1);
-                                subclause.Requirements.Last().Type = RequirementType.ResetIf;
-                                if (group.Any(reqEx => reqEx == subclause))
+                                if (lastRequirement.Type == RequirementType.PauseIf)
                                 {
-                                    requirementEx.Requirements.RemoveRange(j, i - j + 1);
-                                    continue;
+                                    // ResetNextIf used to clear hits on a Pause cannot be extracted
+                                    resetNextIsForPause = true;
                                 }
-                                subclause.Requirements.Last().Type = RequirementType.ResetNextIf;
+                                else
+                                {
+                                    // ResetNextIf that exactly matches a ResetIf outside the clause
+                                    // is covered by the ResetIf outside the clause.
+                                    Debug.Assert(j < requirementEx.Requirements.Count - 1);
+                                    subclause.Requirements.Last().Type = RequirementType.ResetIf;
+                                    if (group.Any(reqEx => reqEx == subclause))
+                                    {
+                                        requirementEx.Requirements.RemoveRange(j, i - j + 1);
+                                        continue;
+                                    }
+                                    subclause.Requirements.Last().Type = RequirementType.ResetNextIf;
+                                }
 
                                 hasResetNextIf = true;
 
@@ -1294,8 +1304,6 @@ namespace RATools.Parser.Internal
                         }
 
                         resetNextIfClauses.Add(requirementEx);
-
-                        resetNextIsForPause |= (lastRequirement.Type == RequirementType.PauseIf);
                     }
                 }
             }
