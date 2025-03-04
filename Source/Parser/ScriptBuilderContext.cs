@@ -475,7 +475,7 @@ namespace RATools.Parser
                     break;
 
                 case RequirementType.PauseIf:
-                    if (_resetNextIf != null)
+                    if (_resetNextIf != null || requirement.HitCount != 0)
                     {
                         var nestedContext = CreatedNestedContext();
                         nestedContext._resetNextIf = null;
@@ -489,12 +489,17 @@ namespace RATools.Parser
                         }
 
                         builder.Append("disable_when(");
-                        builder.Append(comparison.ToString());
-                        builder.Append(", until=");
-                        builder.Append(_resetNextIf);
-                        builder.Append(')');
+                        builder.Append(comparison);
 
-                        _resetNextIf.Clear();
+                        if (_resetNextIf != null)
+                        {
+                            builder.Append(", until=");
+                            builder.Append(_resetNextIf);
+
+                            _resetNextIf.Clear();
+                        }
+
+                        builder.Append(')');
                     }
                     else
                     {
@@ -884,11 +889,20 @@ namespace RATools.Parser
             var repeated = new StringBuilder();
             nestedContext.AppendRequirementEx(repeated, requirementEx);
 
+            string suffix = "";
             var repeatedString = repeated.ToString();
+            var index = repeated.Length;
             var repeatedIndex = repeatedString.IndexOf("repeated(");
-            var onceIndex = repeatedString.IndexOf("once(");
-            var index = 0;
-            if (repeatedIndex >= 0 && (onceIndex == -1 || repeatedIndex < onceIndex))
+            if (repeatedIndex != -1)
+                index = repeatedIndex;
+            var onceIndex = repeatedString.IndexOf("once(", 0, index);
+            if (onceIndex != -1)
+                index = onceIndex;
+            var disableWhenIndex = repeatedString.IndexOf("disable_when(", 0, index);
+            if (disableWhenIndex != -1)
+                index = disableWhenIndex;
+
+            if (index == repeatedIndex)
             {
                 // replace the "repeated(" with "tally("
                 builder.Append(repeatedString, 0, repeatedIndex);
@@ -901,13 +915,35 @@ namespace RATools.Parser
 
                 index = repeatedIndex + 2;
             }
-            else if (onceIndex >= 0)
+            else if (index == onceIndex)
             {
                 // replace the "once(" with "tally(1, "
                 builder.Append(repeatedString, 0, onceIndex);
                 builder.Append("tally(1, ");
 
                 index = onceIndex + 5;
+            }
+            else if (index == disableWhenIndex)
+            {
+                builder.Append(repeatedString, 0, disableWhenIndex);
+                index = disableWhenIndex + 13;
+
+                if (index == repeatedIndex)
+                {
+                    // replace the "disable_when(repeated(N, " with "disable_when(tally(N, "
+                    builder.Append("disable_when(tally(");
+                    index += 9;
+                    var comma = repeatedString.IndexOf(',', index);
+                    builder.Append(repeatedString, index, comma - index);
+                    index = comma + 2; // assume ", "
+                    builder.Append(", ");
+                }
+                else
+                {
+                    // replace the "disable_when(" with "unless(tally(1, "
+                    builder.Append("disable_when(tally(1, ");
+                    suffix = ")";
+                }
             }
 
             // append the AddHits subclauses
@@ -983,6 +1019,8 @@ namespace RATools.Parser
             }
 
             builder.Append(remaining);
+            builder.Append(suffix);
+
             _remainingWidth = WrapWidth - Indent - remaining.Length;
         }
     }
