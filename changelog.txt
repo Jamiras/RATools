@@ -1,3 +1,17 @@
+v1.15.1 - 10 Mar 2025
+* add `array_filter` and `array_reduce` functions
+* support using Remember/Recall when combining two modified memrefs for use in another memory accessor.
+* support collapsing neighboring bits into bitcount when used in rich presence macros
+* lower rich presence max length to match server value which is lower to accomodate the presence of unicode characters
+* eliminate non-ResetIf condition that would always be true when a ResetIf is not true
+* eliminate hit target on `never(once(...))`
+* fix OpenClipboard Failed error that occurs when some other applications (like a VM) are running
+* fix "^" operator not displaying in achievement viewer
+* fix error not being reported when repeated clause contains multiple OrNext subclauses ANDed together
+* fix rich presence appearing modified due to extra trailing whitespace
+* fix dividing by floats incorrectly serializing to legacy value format
+* fix ResetNextIf attached to PauseIf being discarded if it matches a ResetIf outside the PauseIf.
+
 v1.15.0 - 01 Oct 2024
 * add `double32` and `double32_be` memory accessors
 * add `array_contains` and `dictionary_contains_key` functions
