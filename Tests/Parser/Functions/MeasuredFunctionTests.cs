@@ -62,6 +62,8 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("measured(byte(0x1234) - 6 >= 100, format=\"percent\")", "B:6_G:0xH001234>=100")] // measurements include adjustment so target is unchanged
         [TestCase("measured(tally(2, byte(0x1234) == 120, byte(0x1234) == 126))", "C:0xH001234=120_M:0xH001234=126.2.")]
         [TestCase("measured(bitcount(0x1234) == 8)", "M:0xK001234=8")] // should not be optimized to byte=255
+        [TestCase("measured(byte(0x1234) + (60 - byte(0x2345)) * 100 / 60 == 9)",
+            "K:0xH002345*100_B:{recall}/60_A:100_M:0xH001234=9")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
