@@ -5,8 +5,10 @@ using RATools.Data;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Windows.Input;
 
 namespace RATools.ViewModels
 {
@@ -23,9 +25,24 @@ namespace RATools.ViewModels
                 if (asset.IsGenerated || asset.Local.Asset != null)
                     _assets.Add(new UpdateAssetViewModel(asset));
             }
+
+            if (File.Exists(LocalFilePath))
+                GoToFileCommand = new DelegateCommand(GoToFile);
+            else
+                GoToFileCommand = DisabledCommand.Instance;
         }
 
         private readonly GameViewModel _game;
+
+        public string LocalFile { get { return Path.GetFileName(_game.LocalFilePath); } }
+        public string LocalFilePath { get { return _game.LocalFilePath; } }
+
+        public ICommand GoToFileCommand { get; private set; }
+
+        private void GoToFile()
+        {
+            Process.Start("explorer.exe", "/select,\"" + LocalFilePath + "\"");
+        }
 
         /// <summary>
         /// Gets the list of local and generated assets.

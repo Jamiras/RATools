@@ -13,6 +13,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="216" />
@@ -75,5 +76,13 @@
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Margin="2,0,3,0"
+                    ToolTip="{Binding LocalFilePath}">
+            <TextBlock Margin="0,0,2,0">File:</TextBlock>
+            <Hyperlink Command="{Binding GoToFileCommand}">
+                <TextBlock Text="{Binding LocalFile}" />
+            </Hyperlink>
+        </TextBlock>
     </Grid>
 </UserControl>
