@@ -524,7 +524,17 @@ namespace RATools.Parser.Expressions.Trigger
 
                     // use Remember/Recall to do incremental logic
                     var rememberRecallExpression = new RememberRecallExpression(this);
-                    return rememberRecallExpression.Combine(right, operation);
+                    var result = rememberRecallExpression.Combine(right, operation);
+                    var modifiedMemoryAccessor = result as ModifiedMemoryAccessorExpression;
+                    if (modifiedMemoryAccessor == null) {
+                        var memoryAccessor = result as MemoryAccessorExpression;
+                        if (memoryAccessor != null)
+                            result = modifiedMemoryAccessor = new ModifiedMemoryAccessorExpression(memoryAccessor);
+                    }
+                    if (modifiedMemoryAccessor != null)
+                        modifiedMemoryAccessor.CombiningOperator = CombiningOperator;
+                    CopyLocation(result);
+                    return result;
             }
 
             if (field.Type == FieldType.None)

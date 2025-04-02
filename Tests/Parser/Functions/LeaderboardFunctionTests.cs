@@ -207,6 +207,18 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueMeasuredWhenMaxOfComplex()
+        {
+            var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
+                "max_of(" +
+                  "measured(byte(0xbbbb) + (60 - byte(0xaaaa)) * 100 / 60, when = byte(0x5678) != 0)," +
+                  "measured(byte(0xbbbb), when = byte(0x5678) == 0)" +
+                "))");
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("K:0xHaaaa*100_B:{recall}/60_A:0xHbbbb_M:100_Q:0xH5678!=0$M:0xHbbbb_Q:0xH5678=0"));
+        }
+
+        [Test]
         public void TestValueMeasuredFrameCount()
         {
             var leaderboard = Evaluate("leaderboard(\"T\", \"D\", " +
