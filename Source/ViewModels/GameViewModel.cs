@@ -79,6 +79,8 @@ namespace RATools.ViewModels
         internal Dictionary<uint, string> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
 
+        public string LocalFilePath { get { return _localAssets.Filename; } }
+
         public ScriptViewModel Script { get; protected set; }
 
         public CommandBase<int> GoToSourceCommand { get; private set; }
