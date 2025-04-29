@@ -302,22 +302,38 @@ namespace RATools.Data
                         enumerator.Current.Left.Serialize(builder, serializationContext);
 
                         double multiplier = 1.0;
+                        double divisor = 1.0;
                         if (enumerator.Current.Type == RequirementType.SubSource)
+                        {
                             multiplier = -1.0;
+                            divisor = -1.0;
+                        }
 
                         if (enumerator.Current.Operator == RequirementOperator.Multiply)
                         {
                             if (enumerator.Current.Right.IsFloat)
+                            {
                                 multiplier *= enumerator.Current.Right.Float;
+                                divisor /= enumerator.Current.Right.Float;
+                            }
                             else
+                            {
                                 multiplier *= enumerator.Current.Right.Value;
+                                divisor /= enumerator.Current.Right.Value;
+                            }
                         }
                         else if (enumerator.Current.Operator == RequirementOperator.Divide)
                         {
                             if (enumerator.Current.Right.IsFloat)
+                            {
+                                divisor *= enumerator.Current.Right.Float;
                                 multiplier /= enumerator.Current.Right.Float;
+                            }
                             else
+                            {
+                                divisor *= enumerator.Current.Right.Value;
                                 multiplier /= enumerator.Current.Right.Value;
+                            }
                         }
 
                         if (multiplier != 1.0)
@@ -330,28 +346,20 @@ namespace RATools.Data
                                 builder.Append('*');
                                 builder.Append(scalar);
                             }
+                            else if (divisor == Math.Floor(divisor) && divisor <= 0xFFFFFFFF && divisor >= -0x80000000)
+                            {
+                                int scalar = (divisor > 0x7FFFFFFF) ?
+                                    (int)(uint)divisor : (int)divisor;
+
+                                builder.Append('/');
+                                builder.Append(scalar);
+                            }
                             else
                             {
-                                if (enumerator.Current.Operator == RequirementOperator.Divide && multiplier < 1.0f)
-                                {
-                                    // legacy format supports integer division, but not floating point
-                                    // division. if the divisor is a floating point number, we have to
-                                    // multiply by the fraction.
-                                    var divisor = 1.0 / multiplier;
-                                    if (divisor == Math.Floor(divisor))
-                                    {
-                                        builder.Append('/');
-                                        multiplier = 1.0 / multiplier;
-                                    }
-                                    else
-                                    {
-                                        builder.Append('*');
-                                    }
-                                }
-                                else
-                                {
-                                    builder.Append('*');
-                                }
+                                // legacy format supports integer division, but not floating point
+                                // division. if the divisor is a floating point number, we have to
+                                // multiply by the fraction.
+                                builder.Append('*');
                                 builder.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, "{0:0.0#####}", multiplier);
 
                                 while (builder[builder.Length - 1] == '0')
