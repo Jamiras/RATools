@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Parser.Expressions;
 using System.Collections.Generic;
 using System.Linq;
@@ -263,6 +264,19 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestNestedExpressionsFunctionCall()
+        {
+            var tokenizer = Tokenizer.CreateTokenizer("lookup()[1]");
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var nested = ((INestedExpressions)expr).NestedExpressions;
+
+            Assert.That(nested.Count(), Is.EqualTo(2));
+            Assert.That(nested.First(), Is.InstanceOf<FunctionCallExpression>());
+            Assert.That(nested.ElementAt(1), Is.InstanceOf<IntegerConstantExpression>());
+        }
+
+        [Test]
         public void TestGetDependencies()
         {
             var variable = new VariableExpression("variable1");
@@ -275,6 +289,19 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(dependencies.Count, Is.EqualTo(2));
             Assert.That(dependencies.Contains("variable1"));
             Assert.That(dependencies.Contains("variable2"));
+        }
+
+        [Test]
+        public void TestGetDependenciesFunctionCall()
+        {
+            var tokenizer = Tokenizer.CreateTokenizer("lookup()[1]");
+            var expr = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(1));
+            Assert.That(dependencies.Contains("lookup"));
         }
 
         [Test]
