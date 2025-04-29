@@ -144,6 +144,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.Comparison, "byte(0x001234) == 9")]
         [TestCase("byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7", ">=", "byte(tbyte(0x001234) + 3)",
             ExpressionType.Comparison, "byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7 >= byte(tbyte(0x001234) + 3)")]
+        [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234))) - prev(dword(dword(0x001236)))", ">", "0",
+            ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) > prev(dword(dword(0x001236)))")] // SubSource prev moved to right side, AddSource moved to line up with right side
+        [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234)))", ">", "prev(dword(dword(0x001236)))",
+            ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) > prev(dword(dword(0x001236)))")] // AddSource moved to line up with right side
+        [TestCase("dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236))", ">", "prev(dword(dword(0x001236)))",
+            ExpressionType.None, null)] // no change necessary
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);
