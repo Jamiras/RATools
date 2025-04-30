@@ -197,5 +197,19 @@ namespace RATools.Parser.Tests.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.Type, Is.EqualTo(expectedType));
         }
+
+        [Test]
+        public void TestRememberRecallChain()
+        {
+            var achievement = Evaluate(
+                "function f(x,y) => x/2 + y*(byte(0x1234)*2 + byte(0x1235)*3 + 1)\n" +
+                "function d(n) => byte(0x5555 + n*4)\n" +
+                "achievement(\"T\", \"D\", 5, d(f(byte(0x2222), byte(0x3333))) == 8)");
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.SerializeRequirements(new SerializationContext()), 
+                Is.EqualTo("A:0xH001234*2_A:0xH001235*3_K:1_A:0xH003333*{recall}_K:0xH002222/2_I:{recall}*4_0xH005555=8"));
+            //              ^-----------------------------^ ^------------------^ ^-----------^ ^----------^ ^---------^
+            //              byte(0x1234)*2+byte(0x1235)*3+1         *y    +           x / 2        * 4      byte(0x555+...)=8
+        }
     }
 }
