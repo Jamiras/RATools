@@ -162,10 +162,9 @@ namespace RATools.Parser.Expressions
 
                     if (result == null)
                     {
-                        var memoryValue = right as MemoryValueExpression;
-                        if (memoryValue != null)
+                        var remember = RememberRecallExpression.WrapInRemember(right);
+                        if (remember != null)
                         {
-                            var remember = new RememberRecallExpression(memoryValue);
                             result = remember.CombineInverse(left, Operation);
 
                             if (result == null && combinable != null)
@@ -173,10 +172,9 @@ namespace RATools.Parser.Expressions
                         }
                         else
                         {
-                            memoryValue = left as MemoryValueExpression;
-                            if (memoryValue != null)
+                            remember = RememberRecallExpression.WrapInRemember(left);
+                            if (remember != null)
                             {
-                                var remember = new RememberRecallExpression(memoryValue);
                                 result = remember.Combine(right, Operation);
 
                                 if (result == null&& inverseCombinable != null)

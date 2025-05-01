@@ -211,5 +211,16 @@ namespace RATools.Parser.Tests.Functions
             //              ^-----------------------------^ ^------------------^ ^-----------^ ^----------^ ^---------^
             //              byte(0x1234)*2+byte(0x1235)*3+1         *y    +           x / 2        * 4      byte(0x555+...)=8
         }
+
+        [Test]
+        public void TestRememberRecallChain2()
+        {
+            var achievement = Evaluate(
+                "function d(n) => byte(n) * (byte(n + 1) / 8)\n" +
+                "achievement(\"T\", \"D\", 5, d(0x2222) + d(0x2224) == 6)");
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("K:0xH002225/8_A:0xH002224*{recall}_K:0xH002223/8_A:0xH002222*{recall}_0=6"));
+        }
     }
 }

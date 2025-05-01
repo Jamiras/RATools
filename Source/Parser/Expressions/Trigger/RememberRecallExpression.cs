@@ -36,6 +36,19 @@ namespace RATools.Parser.Expressions.Trigger
             Location = source.Location;
         }
 
+        public static RememberRecallExpression WrapInRemember(ExpressionBase expression)
+        {
+            var memoryValue = expression as MemoryValueExpression;
+            if (memoryValue != null)
+                return new RememberRecallExpression(memoryValue);
+
+            var modifiedMemoryAccessor = expression as ModifiedMemoryAccessorExpression;
+            if (modifiedMemoryAccessor != null)
+                return new RememberRecallExpression(modifiedMemoryAccessor);
+
+            return null;
+        }
+
         /// <summary>
         /// Gets or sets the <see cref="MemoryAccessor"/> that is to be further modified.
         /// </summary>

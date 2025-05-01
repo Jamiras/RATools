@@ -406,24 +406,19 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else
             {
-                var memoryValue = right as MemoryValueExpression;
-                if (memoryValue != null)
-                {
-                    _rememberModifier = new RememberRecallExpression(memoryValue);
-                    ModifyingOperator = operation.ToRequirementOperator();
-                    _modifier = FieldFactory.CreateField(_rememberModifier);
-                    return this;
-                }
-                else if (MemoryAccessor.HasPointerChain)
-                {
-                    var rightModifiedAccessor = right as ModifiedMemoryAccessorExpression;
-                    if (rightModifiedAccessor != null && rightModifiedAccessor.ModifyingOperator != RequirementOperator.None)
-                        right = new RememberRecallExpression(rightModifiedAccessor);
-                }
-
                 field = FieldFactory.CreateField(right);
                 if (field.Type == FieldType.None)
+                {
+                    _rememberModifier = RememberRecallExpression.WrapInRemember(right);
+                    if (_rememberModifier != null)
+                    {
+                        ModifyingOperator = operation.ToRequirementOperator();
+                        _modifier = FieldFactory.CreateField(_rememberModifier);
+                        return this;
+                    }
+
                     return new ErrorExpression("Could not create condition from " + right.Type);
+                }
             }
 
             var newModifyingOperator = operation.ToRequirementOperator();
