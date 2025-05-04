@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -340,7 +341,7 @@ namespace RATools.Parser.Expressions
             if (accessorParameter != null)
             {
                 var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, 0U);
-                foreach (var pointer in memoryAccessor.PointerChain)
+                foreach (var pointer in accessorParameter.PointerChain)
                     memoryAccessor.AddPointer(pointer);
                 memoryAccessor.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = accessorParameter.Field });
                 parameter.CopyLocation(memoryAccessor);
@@ -350,7 +351,7 @@ namespace RATools.Parser.Expressions
             var memoryValueParameter = parameter as MemoryValueExpression;
             if (memoryValueParameter != null)
             {
-                var memoryAccessor = memoryValueParameter.ConvertToMemoryAccessor();
+                var memoryAccessor = MemoryAccessorFunction.CreateMemoryAccessorExpression(memoryValueParameter, FieldSize.DWord) as MemoryAccessorExpression;
                 if (memoryAccessor != null)
                     return memoryAccessor;
             }
