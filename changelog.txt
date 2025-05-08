@@ -1,3 +1,14 @@
+v1.15.2 - 8 May 2025
+* add link to local file in the Update Local dialog
+* fix infinite loop trying to rebalance SubSource prev comparison with multiple pointers
+* fix multiplication of two memrefs in rich presence macros
+* fix AddSource being used with Remember/Recall in an AddAddress calculation
+* fix AddSource being used with Remember/Recall in a Measured calculation
+* fix reading memory at pointer address with no offset
+* fix division by large number being converted to multiplication by zero
+* fix exception indexing function result
+* fix exception when multiple clauses of a complex subclause can be elimiated by a parent clause
+
 v1.15.1 - 10 Mar 2025
 * add `array_filter` and `array_reduce` functions
 * support using Remember/Recall when combining two modified memrefs for use in another memory accessor.
