@@ -241,14 +241,19 @@ namespace RATools.Parser.Expressions
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as IndexedVariableExpression;
-            return that != null && Variable == that.Variable && Index == that.Index;
+            return that != null && Variable == that.Variable && Index == that.Index &&
+                _source == that._source;
         }
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
             {
-                yield return Variable;
+                if (Variable != null)
+                    yield return Variable;
+                else if (_source is ExpressionBase)
+                    yield return (ExpressionBase)_source;
+
                 yield return Index;
             }
         }
@@ -256,6 +261,10 @@ namespace RATools.Parser.Expressions
         void INestedExpressions.GetDependencies(HashSet<string> dependencies)
         {
             var nested = Variable as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
+
+            nested = _source as INestedExpressions;
             if (nested != null)
                 nested.GetDependencies(dependencies);
 
