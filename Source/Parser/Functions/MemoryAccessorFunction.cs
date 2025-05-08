@@ -31,20 +31,23 @@ namespace RATools.Parser.Functions
             if (address == null)
                 return false;
 
-            result = CreateMemoryAccessorExpression(address);
-            if (result.Type == ExpressionType.Error)
+            result = CreateMemoryAccessorExpression(address, Size);
+            if (result == null)
+            {
+                result = new ConversionErrorExpression(address, "memory address", address.Location);
                 return false;
+            }
 
             CopyLocation(result, scope);
             result.MakeReadOnly();
             return true;
         }
 
-        protected ExpressionBase CreateMemoryAccessorExpression(ExpressionBase address)
+        public static MemoryAccessorExpression CreateMemoryAccessorExpression(ExpressionBase address, FieldSize size)
         {
             var integerConstant = address as IntegerConstantExpression;
             if (integerConstant != null)
-                return new MemoryAccessorExpression(FieldType.MemoryAddress, Size, (uint)integerConstant.Value);
+                return new MemoryAccessorExpression(FieldType.MemoryAddress, size, (uint)integerConstant.Value);
 
             var accessor = address as MemoryAccessorExpression;
             if (accessor != null)
@@ -54,68 +57,88 @@ namespace RATools.Parser.Functions
                     result.AddPointer(pointer);
 
                 result.AddPointer(new Requirement { Type = RequirementType.AddAddress, Left = accessor.Field });
-                result.Field = new Field { Type = FieldType.MemoryAddress, Size = Size, Value = 0 };
+                result.Field = new Field { Type = FieldType.MemoryAddress, Size = size, Value = 0 };
                 return result;
             }
 
             var memoryValue = address as MemoryValueExpression;
             if (memoryValue != null)
             {
-                if (memoryValue.MemoryAccessors.Count() > 1)
-                {
-                    accessor = memoryValue.ConvertToMemoryAccessor();
-                    if (accessor != null)
-                    {
-                        if (accessor.Field.Size != Size)
-                        {
-                            if (accessor.IsReadOnly)
-                                accessor = accessor.Clone();
-
-                            accessor.Field = accessor.Field.ChangeSize(Size);
-                        }
-                        return accessor;
-                    }
-
-                    // chain of logic to build address has to be stored in the recall accumulator
-                    accessor = new MemoryAccessorExpression();
-                    accessor.RememberPointer = new RememberRecallExpression(memoryValue);
-                    accessor.Field = new Field { Type = FieldType.MemoryAddress, Size = Size, Value = 0 };
-                    return accessor;
-                }
-
-                var result = CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First());
+                var result = CreateMemoryAccessorExpression(memoryValue, size);
                 if (result != null)
-                {
-                    result.Field = new Field
-                    {
-                        Type = FieldType.MemoryAddress,
-                        Size = Size,
-                        Value = (uint)memoryValue.IntegerConstant
-                    };
                     return result;
-                }
             }
 
             var modifiedMemoryAccessor = address as ModifiedMemoryAccessorExpression;
             if (modifiedMemoryAccessor != null)
             {
-                var result = CreateMemoryAccessorExpression(modifiedMemoryAccessor);
+                var result = CreateMemoryAccessorExpression(modifiedMemoryAccessor, size, 0);
                 if (result != null)
-                {
-                    result.Field = new Field
-                    {
-                        Type = FieldType.MemoryAddress,
-                        Size = Size,
-                        Value = 0 // no offset
-                    };
                     return result;
-                }
             }
 
-            return new ConversionErrorExpression(address, "memory address", address.Location);
+            return null;
         }
 
-        private static MemoryAccessorExpression CreateMemoryAccessorExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
+        private static MemoryAccessorExpression CreateMemoryAccessorExpression(MemoryValueExpression memoryValue, FieldSize size)
+        {
+            var count = memoryValue.MemoryAccessors.Count();
+            if (count == 1)
+                return CreateMemoryAccessorExpression(memoryValue.MemoryAccessors.First(), size, (uint)memoryValue.IntegerConstant);
+
+            var first = memoryValue.MemoryAccessors.First();
+            bool needRemember = false;
+
+            if (count > 2)
+            {
+                needRemember = true;
+            }
+            else if (memoryValue.HasConstant)
+            {
+                needRemember = true;
+            }
+            else if (!memoryValue.MemoryAccessors.All(m => m.ModifyingOperator == RequirementOperator.None))
+            {
+                needRemember = true;
+            }
+            else
+            {
+                var second = memoryValue.MemoryAccessors.ElementAt(1).MemoryAccessor;
+                needRemember = !first.MemoryAccessor.PointerChainMatches(second);
+            }
+
+            MemoryAccessorExpression memoryAccessor;
+
+            if (needRemember)
+            {
+                memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, size, 0U);
+                memoryAccessor.RememberPointer = new RememberRecallExpression(memoryValue);
+            }
+            else
+            {
+                memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, size, (uint)memoryValue.IntegerConstant);
+
+                foreach (var pointer in first.MemoryAccessor.PointerChain)
+                    memoryAccessor.AddPointer(pointer);
+
+                var requirement = new Requirement
+                {
+                    Type = RequirementType.AddAddress,
+                    Left = first.MemoryAccessor.Field
+                };
+
+                var second = memoryValue.MemoryAccessors.ElementAt(1);
+                requirement.Operator = second.CombiningOperator == RequirementType.AddSource ? RequirementOperator.Add : RequirementOperator.Subtract;
+                requirement.Right = second.MemoryAccessor.Field;
+
+                memoryAccessor.AddPointer(requirement);
+            }
+
+            memoryValue.CopyLocation(memoryAccessor);
+            return memoryAccessor;
+        }
+
+        private static MemoryAccessorExpression CreateMemoryAccessorExpression(ModifiedMemoryAccessorExpression modifiedMemoryAccessor, FieldSize size, uint offset)
         {
             if (modifiedMemoryAccessor.CombiningOperator == RequirementType.SubSource)
             {
@@ -128,7 +151,7 @@ namespace RATools.Parser.Functions
                         var negativeMemoryAccessor = modifiedMemoryAccessor.Clone();
                         negativeMemoryAccessor.Modifier = negativeValue;
                         negativeMemoryAccessor.CombiningOperator = RequirementType.AddSource;
-                        return CreateMemoryAccessorExpression(negativeMemoryAccessor);
+                        return CreateMemoryAccessorExpression(negativeMemoryAccessor, size, offset);
                     }
                 }
                 else if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
@@ -137,7 +160,7 @@ namespace RATools.Parser.Functions
                     multipliedMemoryAccessor.Modifier = FieldFactory.CreateField(new IntegerConstantExpression(-1));
                     multipliedMemoryAccessor.ModifyingOperator = RequirementOperator.Multiply;
                     multipliedMemoryAccessor.CombiningOperator = RequirementType.AddSource;
-                    return CreateMemoryAccessorExpression(multipliedMemoryAccessor);
+                    return CreateMemoryAccessorExpression(multipliedMemoryAccessor, size, offset);
                 }
 
                 return null;
@@ -181,6 +204,13 @@ namespace RATools.Parser.Functions
 
             foreach (var requirement in requirements)
                 result.AddPointer(requirement);
+
+            result.Field = new Field
+            {
+                Type = FieldType.MemoryAddress,
+                Size = size,
+                Value = offset
+            };
 
             return result;
         }

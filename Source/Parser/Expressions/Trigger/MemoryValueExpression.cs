@@ -1238,40 +1238,15 @@ namespace RATools.Parser.Expressions.Trigger
             return comparison;
         }
 
-        public MemoryAccessorExpression ConvertToMemoryAccessor()
+        private MemoryAccessorExpression ConvertToMemoryAccessor()
         {
             if (_memoryAccessors == null)
                 return null;
 
-            if (_memoryAccessors.Count <= 2 &&
-                _memoryAccessors.All(m => m.CombiningOperator == RequirementType.AddSource &&
-                                          m.ModifyingOperator == RequirementOperator.None))
+            if (_memoryAccessors.Count == 1 && !HasConstant &&
+                _memoryAccessors[0].ModifyingOperator == RequirementOperator.None)
             {
-                if (_memoryAccessors.Count == 1 && !HasConstant)
-                    return _memoryAccessors[0].MemoryAccessor;
-
-                var requirement = new Requirement
-                {
-                    Type = RequirementType.AddAddress,
-                    Left = _memoryAccessors[0].MemoryAccessor.Field
-                };
-
-                if (_memoryAccessors.Count == 2)
-                {
-                    if (HasConstant)
-                        return null;
-
-                    requirement.Operator = RequirementOperator.Add;
-                    requirement.Right = _memoryAccessors[1].MemoryAccessor.Field;
-                }
-
-                var memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, FieldSize.DWord, (uint)IntegerConstant);
-                foreach (var pointer in _memoryAccessors[0].MemoryAccessor.PointerChain)
-                    memoryAccessor.AddPointer(pointer);
-                memoryAccessor.AddPointer(requirement);
-
-                CopyLocation(memoryAccessor);
-                return memoryAccessor;
+                return _memoryAccessors[0].MemoryAccessor;
             }
 
             return null;
