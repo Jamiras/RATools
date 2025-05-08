@@ -3,7 +3,6 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -79,6 +78,32 @@ namespace RATools.Parser.Tests.Functions
             var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(0x1234), lookup)");
             var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
             Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(I:0xX001234_M:0xX000000)\r\n"));
+        }
+
+        [Test]
+        public void TestPointerChain()
+        {
+            var rp = new RichPresenceAsciiStringLookupFunctionHarness();
+            var lookup = rp.DefineLookup("lookup");
+            lookup.Add(new StringConstantExpression("Zero"), new StringConstantExpression("False"));
+            lookup.Add(new StringConstantExpression("One"), new StringConstantExpression("True"));
+
+            var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(dword(0x1234)), lookup)");
+            var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
+            Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(I:0xX001234_I:0xX000000_M:0xX000000)\r\n"));
+        }
+
+        [Test]
+        public void TestPointerChainWithOffset()
+        {
+            var rp = new RichPresenceAsciiStringLookupFunctionHarness();
+            var lookup = rp.DefineLookup("lookup");
+            lookup.Add(new StringConstantExpression("Zero"), new StringConstantExpression("False"));
+            lookup.Add(new StringConstantExpression("One"), new StringConstantExpression("True"));
+
+            var builder = rp.Evaluate("rich_presence_ascii_string_lookup(\"Name\", dword(dword(0x1234) + 0x10) + 6, lookup)");
+            var serializationContext = new SerializationContext { MinimumVersion = builder.MinimumVersion() };
+            Assert.That(builder.Serialize(serializationContext), Is.EqualTo("Lookup:Name\r\n6647375=True\r\n1869768026=False\r\n\r\nDisplay:\r\n@Name(I:0xX001234_I:0xX000010_M:0xX000006)\r\n"));
         }
 
         [Test]

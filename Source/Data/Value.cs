@@ -301,6 +301,19 @@ namespace RATools.Data
 
                         enumerator.Current.Left.Serialize(builder, serializationContext);
 
+                        if (enumerator.Current.Right.IsMemoryReference)
+                        {
+                            switch (enumerator.Current.Operator)
+                            {
+                                case RequirementOperator.Multiply: builder.Append('*'); break;
+                                case RequirementOperator.Divide: builder.Append('/'); break;
+                                default: builder.Append('?'); break;
+                            }
+
+                            enumerator.Current.Right.Serialize(builder, serializationContext);
+                            return;
+                        }
+
                         double multiplier = 1.0;
                         double divisor = 1.0;
                         if (enumerator.Current.Type == RequirementType.SubSource)

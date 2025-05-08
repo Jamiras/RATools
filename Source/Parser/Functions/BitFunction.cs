@@ -45,14 +45,17 @@ namespace RATools.Parser.Functions
                 case 7: size = FieldSize.Bit7; break;
             }
 
-            result = CreateMemoryAccessorExpression(address);
-            if (result.Type == ExpressionType.Error)
+            var accessor = CreateMemoryAccessorExpression(address, size);
+            if (accessor == null)
+            {
+                result = new ConversionErrorExpression(address, "memory address", address.Location);
                 return false;
+            }
 
-            var accessor = result as MemoryAccessorExpression;
-            if (accessor != null)
+            if (offset != 0)
                 accessor.Field = new Field { Type = accessor.Field.Type, Size = size, Value = accessor.Field.Value + offset };
 
+            result = accessor;
             CopyLocation(result, scope);
             return true;
         }

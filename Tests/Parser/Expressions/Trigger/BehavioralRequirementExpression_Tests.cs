@@ -178,5 +178,22 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             ExpressionTests.AssertError(result, "Cannot logically join multiple subclauses");
         }
+
+        [Test]
+        public void TestIncorrectlyNestedUnless()
+        {
+            var input = "byte(0x1234) == 1 && " +
+                        "unless(byte(0x2345) == 1 && byte(0x2346) == 2 && "+
+                               "unless(byte(0x2345) == 2 && byte(0x2346) == 4))";
+
+            // the inner unless gets inverted because there's no hits to protect:
+            //   unless(byte(0x2345) == 1 && byte(0x2346) == 2 && (byte(0x2345) != 2 || byte(0x2346 != 4))
+            // the first condition of the inverted clause gets eliminated by the first condition
+            // and the second condition of the inverted clause gets eliminated by the second condition
+            // leaving just the first two conditions.
+
+            var expression = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);
+            TriggerExpressionTests.AssertSerialize(expression, "0xH001234=1_N:0xH002345=1_P:0xH002346=2");
+        }
     }
 }

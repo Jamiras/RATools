@@ -793,6 +793,7 @@ namespace RATools.Parser.Expressions.Trigger
                     var subclause = clause._conditions[j] as RequirementClauseExpression; // AND
                     if (subclause == null)
                     {
+                        bool wasRemoved = false;
                         foreach (var coreCondition in conditions.OfType<RequirementConditionExpression>())
                         {
                             var intersect = clause._conditions[j].LogicalIntersect(coreCondition, ConditionalOperation.And);
@@ -803,11 +804,16 @@ namespace RATools.Parser.Expressions.Trigger
                                 // and can be removed from conditions.
                                 conditions.RemoveAt(i);
                                 newClause = null;
+
+                                wasRemoved = true; // break out of outer loop
                                 break;
                             }
                         }
 
-                        continue;
+                        if (wasRemoved)
+                            break;
+                        else
+                            continue;
                     }
 
                     RequirementClauseExpression newSubclause = null;
