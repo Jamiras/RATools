@@ -749,6 +749,23 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestDeferenceReturnedDictionary2()
+        {
+            var userFunc = Parse("function f() { return {0:\"no\",1:\"yes\"}}");
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.AddFunction(userFunc);
+
+            var tokenizer = Tokenizer.CreateTokenizer("v = f()[1]");
+            var assignment = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
+            Assert.That(assignment, Is.InstanceOf<AssignmentExpression>());
+            Assert.That(((AssignmentExpression)assignment).Execute(scope), Is.Null);
+
+            var value = scope.GetVariable("v");
+            Assert.That(value, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)value).Value, Is.EqualTo("yes"));
+        }
+
+        [Test]
         public void TestDeferenceReturnedArray()
         {
             var userFunc = Parse("function f() => [\"no\",\"yes\"]");

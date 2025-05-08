@@ -3,7 +3,6 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
-using RATools.Parser.Tests.Expressions;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions

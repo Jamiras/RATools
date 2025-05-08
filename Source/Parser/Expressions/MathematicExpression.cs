@@ -161,6 +161,29 @@ namespace RATools.Parser.Expressions
                         result = inverseCombinable.CombineInverse(left, Operation);
 
                     if (result == null)
+                    {
+                        var remember = RememberRecallExpression.WrapInRemember(right);
+                        if (remember != null)
+                        {
+                            result = remember.CombineInverse(left, Operation);
+
+                            if (result == null && combinable != null)
+                                result = combinable.Combine(remember, Operation);
+                        }
+                        else
+                        {
+                            remember = RememberRecallExpression.WrapInRemember(left);
+                            if (remember != null)
+                            {
+                                result = remember.Combine(right, Operation);
+
+                                if (result == null&& inverseCombinable != null)
+                                    result = inverseCombinable.CombineInverse(remember, Operation);
+                            }
+                        }
+                    }
+
+                    if (result == null)
                         result = CreateCannotCombineError(left, Operation, right);
                 }
             }
