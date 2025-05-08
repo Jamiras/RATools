@@ -66,6 +66,7 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         [TestCase("byte(0x1234) + 1", "0xH001234_v1")]
         [TestCase("byte(0x1234) % 3", "A:0xH001234%3_M:0")]
+        [TestCase("dword(0x1234) / 1000000000", "0xX001234/1000000000")]
         [TestCase("float(0x1234) * ~bit(31, 0x2345)", "fF001234*~0xT002348")]
         public void TestValueExpression(string input, string expected)
         {
