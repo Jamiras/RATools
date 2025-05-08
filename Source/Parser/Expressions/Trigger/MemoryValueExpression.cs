@@ -577,8 +577,46 @@ namespace RATools.Parser.Expressions.Trigger
             return value;
         }
 
+        private ModifiedMemoryAccessorExpression FindSharedAddSourcePointerChain(MemoryAccessorExpression memoryAccessor)
+        {
+            return _memoryAccessors.FirstOrDefault(a =>
+                    a.CombiningOperator == RequirementType.AddSource &&
+                    a.ModifyingOperator == RequirementOperator.None &&
+                    a.MemoryAccessor.Field.Value == memoryAccessor.Field.Value &&
+                    a.MemoryAccessor.Field.Size == memoryAccessor.Field.Size &&
+                    a.MemoryAccessor.PointerChainMatches(memoryAccessor));
+        }
+
         private ExpressionBase RebalanceForPointerChain(ExpressionBase right, ComparisonOperation operation)
         {
+            // if there's already a pointer chain on the right, don't try to rearrange anything
+            var rightMemoryAccessor = right as MemoryAccessorExpression;
+            if (rightMemoryAccessor == null)
+            {
+                var rightMemoryValue = right as MemoryValueExpression;
+                if (rightMemoryValue != null && rightMemoryValue.HasMemoryAccessor)
+                    rightMemoryAccessor = rightMemoryValue._memoryAccessors.Last().MemoryAccessor;
+            }
+
+            if (rightMemoryAccessor != null && rightMemoryAccessor.HasPointerChain)
+            {
+                var sharedPointer = FindSharedAddSourcePointerChain(rightMemoryAccessor);
+                if (sharedPointer != null)
+                {
+                    // shared pointer already in last position. do nothing
+                    if (ReferenceEquals(sharedPointer, _memoryAccessors.Last()))
+                        return null;
+
+                    // move shared pointer to last position
+                    var newLeft = Clone();
+                    var index = _memoryAccessors.IndexOf(sharedPointer);
+                    var clonedPointer = _memoryAccessors[index];
+                    newLeft._memoryAccessors.RemoveAt(index);
+                    newLeft._memoryAccessors.Add(clonedPointer);
+                    return new ComparisonExpression(newLeft, operation, right);
+                }
+            }
+
             for (int i = _memoryAccessors.Count - 1; i >= 0; i--)
             {
                 if (_memoryAccessors[i].CombiningOperator != RequirementType.SubSource)
@@ -592,13 +630,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                 // found a SubSource with a pointer. see if there's an AddSource with the same pointer
                 // try to match a prev with it's non-prev first
-                var searchMemoryAccessor = _memoryAccessors[i].MemoryAccessor;
-                var paired = _memoryAccessors.FirstOrDefault(a =>
-                    a.CombiningOperator == RequirementType.AddSource &&
-                    a.ModifyingOperator == RequirementOperator.None &&
-                    a.MemoryAccessor.Field.Value == searchMemoryAccessor.Field.Value &&
-                    a.MemoryAccessor.Field.Size == searchMemoryAccessor.Field.Size &&
-                    a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor));
+                var paired = FindSharedAddSourcePointerChain(_memoryAccessors[i].MemoryAccessor);
 
                 if (paired == null)
                 {
@@ -616,6 +648,16 @@ namespace RATools.Parser.Expressions.Trigger
                     var newLeft = (MemoryValueExpression)Combine(right, MathematicOperation.Subtract);
                     var newRight = newLeft._memoryAccessors[i].MemoryAccessor;
                     newLeft._memoryAccessors.RemoveAt(i);
+
+                    // also make sure the corresponding AddSource is moved to the last index
+                    if (!newRight.PointerChainMatches(newLeft._memoryAccessors.Last()))
+                    {
+                        var index = newLeft._memoryAccessors.IndexOf(paired);
+                        var addSource = newLeft._memoryAccessors[index];
+                        newLeft._memoryAccessors.RemoveAt(index);
+                        newLeft._memoryAccessors.Add(addSource);
+                    }
+
                     return new ComparisonExpression(newLeft, operation, newRight);
                 }
             }
