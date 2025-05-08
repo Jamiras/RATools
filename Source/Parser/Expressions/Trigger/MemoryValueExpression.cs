@@ -1501,7 +1501,7 @@ namespace RATools.Parser.Expressions.Trigger
             for (int i = 1; i < memoryAccessors.Count; i++)
             {
                 var memoryAccessor = memoryAccessors[i];
-                if (memoryAccessor.MemoryAccessor is RememberRecallExpression)
+                if (memoryAccessor.HasRememberRecall)
                 {
                     memoryAccessors.RemoveAt(i);
                     memoryAccessors.Insert(insertIndex++, memoryAccessor);

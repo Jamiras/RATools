@@ -149,12 +149,38 @@ namespace RATools.Parser.Functions
             var context = new TriggerBuilderContext();
             context.Trigger = requirements;
             modifiedMemoryAccessor.BuildTrigger(context);
+            requirements.Last().Type = RequirementType.AddAddress;
+
+            // a pointer chain can only contain AddAddress conditions.
+            // however, the AddAdress can use {recall}, which can be
+            // constructed from Remembering AddSource and SubSource conditions
+            RequirementType accumulatorType = RequirementType.None;
             foreach (var requirement in requirements)
             {
-                if (requirement.Type != RequirementType.Remember)
-                    requirement.Type = RequirementType.AddAddress;
-                result.AddPointer(requirement);
+                switch (requirement.Type)
+                {
+                    case RequirementType.AddAddress:
+                        break;
+
+                    case RequirementType.Remember:
+                        accumulatorType = RequirementType.None;
+                        break;
+
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        accumulatorType = requirement.Type;
+                        break;
+
+                    default:
+                        return null;
+                }
             }
+
+            if (accumulatorType != RequirementType.None)
+                return null;
+
+            foreach (var requirement in requirements)
+                result.AddPointer(requirement);
 
             return result;
         }

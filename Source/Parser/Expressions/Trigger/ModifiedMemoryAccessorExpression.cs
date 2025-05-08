@@ -34,6 +34,7 @@ namespace RATools.Parser.Expressions.Trigger
             ModifyingOperator = source.ModifyingOperator;
             Modifier = source.Modifier;
             Location = source.Location;
+            _rememberModifier = source._rememberModifier;
         }
 
         /// <summary>
@@ -80,21 +81,21 @@ namespace RATools.Parser.Expressions.Trigger
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private Field _modifier;
+        protected RememberRecallExpression _rememberModifier;
 
-        /// <summary>
-        /// Gets the remembered value to use as a modifier.
-        /// </summary>
-        public RememberRecallExpression RememberModifier
+        public bool HasRememberRecall
         {
-            get { return _rememberModifier; }
-            set
+            get
             {
-                Debug.Assert(!IsReadOnly);
-                _rememberModifier = value;
+                if (_rememberModifier != null)
+                    return true;
+
+                if (MemoryAccessor is RememberRecallExpression)
+                    return true;
+
+                return false;
             }
         }
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        protected RememberRecallExpression _rememberModifier;
 
         /// <summary>
         /// Gets or sets the operator used to combine this <see cref="ModifiedMemoryAccessorExpression"/>
@@ -366,6 +367,8 @@ namespace RATools.Parser.Expressions.Trigger
 
             Field field;
 
+            right = ReduceToSimpleExpression(right);
+
             var rightAccessor = right as MemoryAccessorExpression;
             if (rightAccessor != null)
             {
@@ -403,16 +406,19 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else
             {
-                if (MemoryAccessor.HasPointerChain)
-                {
-                    var rightModifiedAccessor = right as ModifiedMemoryAccessorExpression;
-                    if (rightModifiedAccessor != null && rightModifiedAccessor.ModifyingOperator != RequirementOperator.None)
-                        right = new RememberRecallExpression(rightModifiedAccessor);
-                }
-
                 field = FieldFactory.CreateField(right);
                 if (field.Type == FieldType.None)
+                {
+                    _rememberModifier = RememberRecallExpression.WrapInRemember(right);
+                    if (_rememberModifier != null)
+                    {
+                        ModifyingOperator = operation.ToRequirementOperator();
+                        _modifier = FieldFactory.CreateField(_rememberModifier);
+                        return this;
+                    }
+
                     return new ErrorExpression("Could not create condition from " + right.Type);
+                }
             }
 
             var newModifyingOperator = operation.ToRequirementOperator();
