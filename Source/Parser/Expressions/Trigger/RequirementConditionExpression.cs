@@ -76,6 +76,7 @@ namespace RATools.Parser.Expressions.Trigger
             var comparison = Comparison;
             var left = Left;
             var right = MemoryAccessorExpressionBase.ReduceToSimpleExpression(Right);
+            bool sharedPointerChain = false;
 
             var rightAccessor = MemoryAccessorExpression.Extract(right);
             if (rightAccessor != null && rightAccessor.HasPointerChain)
@@ -84,6 +85,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     rightAccessor = rightAccessor.Clone();
                     rightAccessor.ClearPointerChain();
+                    sharedPointerChain = true;
                 }
                 else
                 {
@@ -152,9 +154,30 @@ namespace RATools.Parser.Expressions.Trigger
             var lastRequirement = context.LastRequirement;
 
             if (rightAccessor != null)
+            {
+                // if the right side is a non-pointer chain memory reference and the left side
+                // has a pointer chain, we have to inject an extra condition so the pointer
+                // chain isn't applied to the right side.
+                if (!sharedPointerChain && rightAccessor.Field.IsMemoryReference && !rightAccessor.HasPointerChain)
+                {
+                    var leftAccessor = left as MemoryAccessorExpression;
+                    if (leftAccessor != null && leftAccessor.HasPointerChain)
+                    {
+                        lastRequirement.Type = RequirementType.AddSource;
+
+                        lastRequirement = new Requirement();
+                        lastRequirement.Left = new Field { Size = FieldSize.Byte, Type = FieldType.Value, Value = 0 };
+                        lastRequirement.Operator = RequirementOperator.Equal;
+                        context.Trigger.Add(lastRequirement);
+                    }
+                }
+
                 lastRequirement.Right = FieldFactory.CreateField(rightAccessor);
+            }
             else
+            {
                 lastRequirement.Right = FieldFactory.CreateField(right);
+            }
 
             if (lastRequirement.Right.Type == FieldType.None)
                 return new ErrorExpression(string.Format("Cannot compare {0} in a trigger", Right.Type.ToLowerString()), Right);
