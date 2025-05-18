@@ -128,12 +128,12 @@ namespace RATools.Parser.Expressions.Trigger
 
                     if (Behavior == RequirementType.ResetIf)
                     {
-                        // ResetIf with a hit target of 1 will be automatically clear its
+                        // ResetIf with a hit target of 1 will automatically clear its
                         // hit count when true, so it's no different than a ResetIf without
                         // a hit target. Discard the hit target.
                         var tallied = optimized as TalliedRequirementExpression;
-                        if (tallied != null && tallied.HitTarget == 1 && tallied.Conditions.Count() == 1)
-                            optimized = tallied.Conditions.First();
+                        if (tallied != null && tallied.HitTarget == 1)
+                            optimized = OptimizeNeverOnce(tallied);
                     }
 
                     break;
@@ -186,6 +186,52 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return base.Optimize(context);
+        }
+
+        private static RequirementExpressionBase OptimizeNeverOnce(TalliedRequirementExpression tallied)
+        {
+            // multiple tallied conditions is an AddHits chain. we could try to convert it
+            // to an OrNext chain, but let's keep things simple for now.
+            if (tallied.Conditions.Count() != 1)
+                return tallied; 
+
+            RequirementExpressionBase optimized = tallied.Conditions.First();
+
+            // if there's no nested reset clause, just return the condition
+            if (tallied.ResetCondition == null)
+                return optimized;
+
+            // if there is a Reset subclause, merge it in
+            var logicalCombining = optimized as ILogicalCombineExpression;
+            if (logicalCombining != null)
+            {
+                RequirementExpressionBase combined = null;
+
+                // if A can never accumulate a hit, the ResetNextIf acts as a blocker for A,
+                // so it can just be logically inverted and appeneded as another condition
+                //
+                //    never(once(A) && never(B)) => never(A && !B)
+                //
+                var notCondition = tallied.ResetCondition.InvertLogic();
+                if (notCondition != null)
+                    combined = logicalCombining.Combine(notCondition, ConditionalOperation.And) as RequirementExpressionBase;
+
+                if (combined == null)
+                {
+                    // - if B cannot be inverted, keep it as a ResetNextIf
+                    var resetCondition = new BehavioralRequirementExpression
+                    {
+                        Behavior = RequirementType.ResetIf,
+                        Condition = tallied.ResetCondition,
+                    };
+
+                    combined = logicalCombining.Combine(resetCondition, ConditionalOperation.And) as RequirementExpressionBase;
+                }
+
+                optimized = combined ?? tallied; // fallback to never(once(...))
+            }
+
+            return optimized;
         }
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
