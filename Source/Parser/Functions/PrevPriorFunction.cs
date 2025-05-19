@@ -186,6 +186,12 @@ namespace RATools.Parser.Functions
 
         private bool WrapMemoryValue(MemoryValueExpression memoryValue, out ExpressionBase result)
         {
+            if (_fieldType == FieldType.BinaryCodedDecimal && memoryValue.HasConstant)
+            {
+                result = new ErrorExpression("Cannot apply bcd() to a modified memory accessor", memoryValue);
+                return false;
+            }
+
             var clone = memoryValue.Clone();
             foreach (var memoryAccessor in clone.MemoryAccessors)
             {
