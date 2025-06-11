@@ -558,30 +558,41 @@ namespace RATools.Parser
         {
             if (requirement.HitCount == 0 && NullOrEmpty(_addHits))
             {
-                bool wrapInParenthesis = false;
-
-                if (!NullOrEmpty(_andNext) && _andNext[0] != '(')
-                {
-                    var andNext = _andNext.ToString();
-                    if (andNext.Contains(" && ") || andNext.Contains(" || "))
-                        wrapInParenthesis = true;
-                }
-
-                if (wrapInParenthesis)
-                    builder.Append('(');
-
-                AppendCondition(builder, requirement);
-
                 if (!NullOrEmpty(_resetNextIf))
                 {
+                    bool wrapInParenthesis = _lastAndNext?.Type == RequirementType.OrNext;
+                    if (wrapInParenthesis)
+                        builder.Append('(');
+
+                    AppendCondition(builder, requirement);
+
+                    if (wrapInParenthesis)
+                        builder.Append(')');
+
                     builder.Append(" && never(");
                     builder.Append(RemoveOuterParentheses(_resetNextIf));
                     builder.Append(')');
                     _resetNextIf.Clear();
                 }
+                else
+                {
+                    bool wrapInParenthesis = false;
 
-                if (wrapInParenthesis)
-                    builder.Append(')');
+                    if (!NullOrEmpty(_andNext) && _andNext[0] != '(')
+                    {
+                        var andNext = _andNext.ToString();
+                        if (andNext.Contains(" && ") || andNext.Contains(" || "))
+                            wrapInParenthesis = true;
+                    }
+
+                    if (wrapInParenthesis)
+                        builder.Append('(');
+
+                    AppendCondition(builder, requirement);
+
+                    if (wrapInParenthesis)
+                        builder.Append(')');
+                }
             }
             else
             {
@@ -593,12 +604,8 @@ namespace RATools.Parser
                     builder.AppendFormat("repeated({0}, ", requirement.HitCount);
 
                 bool wrapInParenthesis = false;
-                if (!NullOrEmpty(_resetNextIf) && !NullOrEmpty(_andNext))
-                {
-                    var andNext = _andNext.ToString();
-                    if (andNext.LastIndexOf(" || ") > andNext.LastIndexOf(')'))
-                        wrapInParenthesis = true;
-                }
+                if (!NullOrEmpty(_resetNextIf))
+                    wrapInParenthesis = _lastAndNext?.Type == RequirementType.OrNext;
 
                 if (wrapInParenthesis)
                     builder.Append('(');
