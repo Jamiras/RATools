@@ -72,6 +72,7 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("prev(byte(0x1234) - byte(0x2345)) == 7", "B:d0xH002345=0_d0xH001234=7")] // prev is distributed
         [TestCase("prev(byte(0x1234) == 56)", "d0xH001234=56")] // prev is distributed
         [TestCase("prev(byte(0x1234) == byte(0x2345))", "d0xH001234=d0xH002345")] // prev is distributed
+        [TestCase("prev(byte(0x1234) == byte(0x2345) && byte(0x3456) == 8)", "d0xH001234=d0xH002345_d0xH003456=8")] // prev is distributed
         public void TestPrev(string input, string expected)
         {
             var definition = Process(input);
