@@ -50,6 +50,11 @@ namespace RATools.Parser.Functions
                     var condition = parameter as RequirementConditionExpression;
                     if (condition != null)
                         return DistributeFlag(condition, scope, out result);
+
+                    // convert "prev(a == b && c == d)" => "prev(a) == prev(b) && prev(c) == prev(d)"
+                    var clause = parameter as RequirementClauseExpression;
+                    if (clause != null)
+                        return DistributeFlag(clause, scope, out result);
                     break;
 
                 case ExpressionType.MemoryAccessor:
@@ -119,6 +124,38 @@ namespace RATools.Parser.Functions
 
             result = new RequirementConditionExpression { Left = left, Comparison = condition.Comparison, Right = right };
             condition.CopyLocation(result);
+            return true;
+        }
+
+        private bool DistributeFlag(RequirementClauseExpression clause, InterpreterScope scope, out ExpressionBase result)
+        {
+            var newClause = new RequirementClauseExpression
+            {
+                Operation = clause.Operation,
+            };
+
+            foreach (var expr in clause.Conditions)
+            {
+                ExpressionBase newCondition;
+                var condition = expr as RequirementConditionExpression;
+                if (condition == null)
+                {
+                    result = new ConversionErrorExpression(expr, ExpressionType.Conditional);
+                    return false;
+                }
+
+                if (!DistributeFlag(condition, scope, out newCondition))
+                {
+                    result = newCondition;
+                    return false;
+                }
+
+                newClause.AddCondition((RequirementExpressionBase)newCondition);
+            }
+
+            clause.CopyLocation(newClause);
+            result = newClause;
+
             return true;
         }
 
