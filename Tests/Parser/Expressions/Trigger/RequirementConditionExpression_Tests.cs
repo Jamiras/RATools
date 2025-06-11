@@ -147,9 +147,12 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("bcd(dword(1)) <= 100000000", "always_true()")]
         [TestCase("bcd(dword(1)) > 100000000", "always_false()")]
         [TestCase("bcd(dword(1)) >= 100000000", "always_false()")]
+        // adjustments can be converted too
         [TestCase("prev(bcd(byte(1)) - 1) >= 12", "prev(byte(0x000001)) >= 19")]
         [TestCase("prev(bcd(byte(1)) - 1) == 14", "prev(byte(0x000001)) == 21")]
         [TestCase("prev(bcd(byte(1)) - 1) == 19", "prev(byte(0x000001)) == 32")]
+        [TestCase("prev(bcd(byte(1))) - 1 >= 19", "prev(byte(0x000001)) >= 32")]
+        [TestCase("bcd(byte(1)) >= prev(bcd(byte(1))) + 10", "prev(byte(0x000001)) + 16 <= byte(0x000001)")]
         public void TestNormalizeBCD(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);
@@ -159,6 +162,15 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                 result = condition.Normalize();
 
             ExpressionTests.AssertAppendString(result, expected);
+        }
+
+        [Test]
+        // bcd adjustment cannot be applied after adjustment
+        [TestCase("prev(bcd(byte(1) - 1)) >= 19", "Cannot apply bcd() to a modified memory accessor")]
+        [TestCase("bcd(byte(1)) == prev(bcd(byte(1))) + 10", "Cannot eliminate bcd from equality comparison with modifier")]
+        public void TestNormalizeBCDError(string input, string expectedError)
+        {
+            TriggerExpressionTests.AssertParseError(input, expectedError);
         }
 
         [Test]

@@ -227,6 +227,35 @@ namespace RATools.Parser.Expressions.Trigger
                 return true;
             }
 
+            var memoryValue = simpleExpression as MemoryValueExpression;
+            if (memoryValue != null && memoryValue.MemoryAccessors.Count() == 1)
+            {
+                bcdWrapper = memoryValue.MemoryAccessors.First().MemoryAccessor as BinaryCodedDecimalExpression;
+                if (bcdWrapper != null)
+                {
+                    // this removes the wrapper from the BCD expression by copying it into
+                    // an unwrapped MemoryAccessorExpression
+                    newExpression = new MemoryAccessorExpression(bcdWrapper);
+
+                    var newMemoryValue = new MemoryValueExpression();
+                    newMemoryValue.ApplyMathematic(newExpression, MathematicOperation.Add);
+
+                    if (memoryValue.HasConstant)
+                    {
+                        if (!ConvertToBCD(memoryValue.ExtractConstant(), out newExpression))
+                        {
+                            newExpression = expression;
+                            return false;
+                        }
+
+                        newMemoryValue.ApplyMathematic(newExpression, MathematicOperation.Add);
+                    }
+
+                    newExpression = newMemoryValue;
+                    return true;
+                }
+            }
+
             newExpression = expression;
             return false;
         }
@@ -262,7 +291,7 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private RequirementExpressionBase NormalizeBCD()
+        private ErrorExpression NormalizeBCD(out RequirementExpressionBase result)
         {
             ExpressionBase newLeft;
             ExpressionBase newRight;
@@ -272,7 +301,10 @@ namespace RATools.Parser.Expressions.Trigger
             if (!rightHasBCD)
             {
                 if (!leftHasBCD)
-                    return this;
+                {
+                    result = this;
+                    return null;
+                }
 
                 rightHasBCD = ConvertToBCD(Right, out newRight);
                 if (newRight == null)
@@ -283,10 +315,12 @@ namespace RATools.Parser.Expressions.Trigger
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.LessThan:
                         case ComparisonOperation.LessThanOrEqual:
-                            return new AlwaysTrueExpression();
+                            result = new AlwaysTrueExpression();
+                            return null;
 
                         default:
-                            return new AlwaysFalseExpression();
+                            result = new AlwaysFalseExpression();
+                            return null;
                     }
                 }
             }
@@ -301,26 +335,48 @@ namespace RATools.Parser.Expressions.Trigger
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.GreaterThan:
                         case ComparisonOperation.GreaterThanOrEqual:
-                            return new AlwaysTrueExpression();
+                            result = new AlwaysTrueExpression();
+                            return null;
 
                         default:
-                            return new AlwaysFalseExpression();
+                            result = new AlwaysFalseExpression();
+                            return null;
                     }
                 }
             }
 
             if (leftHasBCD && rightHasBCD)
             {
-                return new RequirementConditionExpression()
+                if (Comparison == ComparisonOperation.Equal || Comparison == ComparisonOperation.NotEqual)
+                {
+                    var leftMemoryValue = newLeft as MemoryValueExpression;
+                    if (leftMemoryValue != null && leftMemoryValue.HasConstant)
+                    {
+                        result = null;
+                        return new ErrorExpression("Cannot eliminate bcd from equality comparison with modifier", leftMemoryValue);
+                    }
+
+                    var rightMemoryValue = newLeft as MemoryValueExpression;
+                    if (rightMemoryValue != null && rightMemoryValue.HasConstant)
+                    {
+                        result = null;
+                        return new ErrorExpression("Cannot eliminate bcd from equality comparison with modifier", rightMemoryValue);
+                    }
+                }
+
+                result = new RequirementConditionExpression()
                 {
                     Left = newLeft,
                     Comparison = Comparison,
                     Right = newRight,
                     Location = Location,
                 };
+
+                return null;
             }
 
-            return this;
+            result = this;
+            return null;
         }
 
         private static bool ExtractInversion(ExpressionBase expression, out ExpressionBase newExpression)
@@ -605,7 +661,11 @@ namespace RATools.Parser.Expressions.Trigger
                 Left = new MemoryValueExpression(modifiedMemoryAccessor);
             }
 
-            var result = NormalizeBCD();
+            RequirementExpressionBase result;
+            var error = NormalizeBCD(out result);
+            if (error != null)
+                return error;
+
             NormalizeInvert(ref result);
             NormalizeLimits(ref result);
 
