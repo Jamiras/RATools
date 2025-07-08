@@ -27,6 +27,7 @@ namespace RATools.Parser
         {
             _fileSystemService = fileSystemService;
 
+            _sets = new List<AchievementSet>();
             _achievements = new List<Achievement>();
             _leaderboards = new List<Leaderboard>();
             RichPresence = null;
@@ -47,6 +48,16 @@ namespace RATools.Parser
         public string Title { get; set; }
 
         public string Filename { get { return _filename; } }
+
+        /// <summary>
+        /// Gets the achievement sets read from the file.
+        /// </summary>
+        public IEnumerable<AchievementSet> Sets
+        {
+            get { return _sets; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private List<AchievementSet> _sets;
 
         /// <summary>
         /// Gets the achievements read from the file.
@@ -96,6 +107,12 @@ namespace RATools.Parser
                 else
                 {
                     GameId = publishedData.GetField("ID").IntegerValue.GetValueOrDefault();
+                    _sets.Add(new AchievementSet
+                    {
+                        OwnerGameId = GameId,
+                        Title = Title,
+                        Type = AchievementSetType.Core,
+                    });
 
                     var publishedAchievements = publishedData.GetField("Achievements");
                     if (publishedAchievements.Type == JsonFieldType.ObjectArray)
@@ -122,12 +139,33 @@ namespace RATools.Parser
             }
         }
 
+        private static AchievementSetType ConvertType(string type)
+        {
+            switch (type)
+            {
+                case "core": return AchievementSetType.Core;
+                case "bonus": return AchievementSetType.Bonus;
+                case "specialty": return AchievementSetType.Specialty;
+                case "exclusive": return AchievementSetType.Exclusive;
+                default: return AchievementSetType.None;
+            }
+        }
+
         private void ReadSets(JsonField sets)
         {
             foreach (var set in sets.ObjectArrayValue)
             {
                 var gameId = set.GetField("GameId").IntegerValue.GetValueOrDefault();
                 var setId = set.GetField("AchievementSetId").IntegerValue.GetValueOrDefault();
+
+                _sets.Add(new AchievementSet
+                {
+                    Id = setId,
+                    OwnerSetId = setId,
+                    OwnerGameId = gameId,
+                    Title = set.GetField("Title").StringValue ?? Title,
+                    Type = ConvertType(set.GetField("Type").StringValue),
+                });
 
                 var publishedAchievements = set.GetField("Achievements");
                 if (publishedAchievements.Type == JsonFieldType.ObjectArray)

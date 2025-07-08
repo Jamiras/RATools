@@ -221,6 +221,17 @@ namespace RATools
                 return ReturnCode.ParseError;
             }
 
+            var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
+            var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
+
+            if (_verbose && File.Exists(publishedAssetsFilename))
+            {
+                OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}.json",
+                    publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
+            }
+
+            interpreter.Initialize(publishedAssets.Sets);
+
             interpreter.Run(groups, null);
 
             if (groups.HasEvaluationErrors)
@@ -234,15 +245,6 @@ namespace RATools
                     reporter.PrintError(ErrorStream, error);
 
                 return ReturnCode.EvaluationError;
-            }
-
-            var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
-            var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
-
-            if (_verbose && File.Exists(publishedAssetsFilename))
-            {
-                OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}.json",
-                    publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
             var outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-User.txt", interpreter.GameId));
