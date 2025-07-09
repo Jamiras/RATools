@@ -167,6 +167,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MeasuredFunction());
                 _globalScope.AddFunction(new DisableWhenFunction());
 
+                _globalScope.AddFunction(new AchievementSetFunction());
                 _globalScope.AddFunction(new AchievementFunction());
                 _globalScope.AddFunction(new LeaderboardFunction());
                 _globalScope.AddFunction(new MaxOfFunction());
