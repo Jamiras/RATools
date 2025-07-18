@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using RATools.Parser.Tests.Expressions;
 using System.Linq;
 using System.Text;
 
@@ -16,7 +17,7 @@ namespace RATools.Parser.Tests.Functions
         {
             var def = new AchievementFunction();
             Assert.That(def.Name.Name, Is.EqualTo("achievement"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(9));
+            Assert.That(def.Parameters.Count, Is.EqualTo(10));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("title"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("description"));
             Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("points"));
@@ -25,9 +26,10 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(5).Name, Is.EqualTo("published"));
             Assert.That(def.Parameters.ElementAt(6).Name, Is.EqualTo("modified"));
             Assert.That(def.Parameters.ElementAt(7).Name, Is.EqualTo("badge"));
-            Assert.That(def.Parameters.ElementAt(8).Name, Is.EqualTo("type"));    
+            Assert.That(def.Parameters.ElementAt(8).Name, Is.EqualTo("type"));
+            Assert.That(def.Parameters.ElementAt(9).Name, Is.EqualTo("set"));
 
-            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(5));
+            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(6));
             Assert.That(def.DefaultParameters["id"], Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)def.DefaultParameters["id"]).Value, Is.EqualTo(0));
             Assert.That(def.DefaultParameters["published"], Is.InstanceOf<StringConstantExpression>());
@@ -38,9 +40,11 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("0"));
             Assert.That(def.DefaultParameters["type"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["type"]).Value, Is.EqualTo(""));
+            Assert.That(def.DefaultParameters["set"], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)def.DefaultParameters["set"]).Value, Is.EqualTo(0));
         }
 
-        private Achievement Evaluate(string input, string expectedError = null)
+        private static Achievement Evaluate(string input, string expectedError = null)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var parser = new AchievementScriptInterpreter();
@@ -69,6 +73,8 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(achievement.Title, Is.EqualTo("T"));
             Assert.That(achievement.Description, Is.EqualTo("D"));
             Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(achievement.OwnerGameId, Is.EqualTo(0));
+            Assert.That(achievement.OwnerSetId, Is.EqualTo(0));
 
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.SerializeRequirements(new SerializationContext()), Is.EqualTo("0xH001234=1"));
@@ -221,6 +227,76 @@ namespace RATools.Parser.Tests.Functions
             var builder = new AchievementBuilder(achievement);
             Assert.That(builder.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("K:0xH002225/8_A:0xH002224*{recall}_K:0xH002223/8_A:0xH002222*{recall}_0=6"));
+        }
+
+        [Test]
+        public void TestSetIdNotProvided()
+        {
+            var achievement = Evaluate(
+                "// #ID=2222\r\n" +
+                "achievement(\"T\", \"D\", 5, byte(0x1234) == 1)");
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(achievement.OwnerGameId, Is.EqualTo(2222));
+            Assert.That(achievement.OwnerSetId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestSetIdNoSets()
+        {
+            var achievement = Evaluate(
+                "// #ID=2222\r\n" +
+                "achievement(\"T\", \"D\", 5, byte(0x1234) == 1, set=9999)");
+
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(achievement.OwnerGameId, Is.EqualTo(2222));
+            Assert.That(achievement.OwnerSetId, Is.EqualTo(9999));
+        }
+
+        [Test]
+        public void TestSetIdUnknown()
+        {
+            string input =
+                "// #ID=2222\r\n" +
+                "achievement(\"T\", \"D\", 5, byte(0x1234) == 1, set=9999)";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            parser.Initialize(new[]
+            {
+                new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
+            });
+
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:1 achievement call failed\r\n- 2:49 Unknown set id: 9999"));
+        }
+
+        [Test]
+        public void TestSetIdValid()
+        {
+            string input =
+                "// #ID=2222\r\n" +
+                "achievement(\"T\", \"D\", 5, byte(0x1234) == 1, set=9999)";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            parser.Initialize(new[]
+            {
+                new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
+                new AchievementSet { Id = 9999, OwnerSetId = 9999, OwnerGameId = 3333, Title = "Bonus", Type = AchievementSetType.Bonus },
+            });
+
+            Assert.That(parser.Run(tokenizer), Is.True);
+
+            var achievement = parser.Achievements.FirstOrDefault();
+            Assert.That(achievement.Title, Is.EqualTo("T"));
+            Assert.That(achievement.Description, Is.EqualTo("D"));
+            Assert.That(achievement.Points, Is.EqualTo(5));
+            Assert.That(achievement.OwnerGameId, Is.EqualTo(3333));
+            Assert.That(achievement.OwnerSetId, Is.EqualTo(9999));
         }
     }
 }

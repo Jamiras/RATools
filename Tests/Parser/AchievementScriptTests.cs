@@ -28,10 +28,10 @@ namespace RATools.Parser.Tests
             return parser;
         }
 
-        public static InterpreterScope Evaluate(string script, string expectedError = null)
+        public static InterpreterScope Evaluate(string script, InterpreterScope scope, string expectedError = null)
         {
             var groups = new ExpressionGroupCollection();
-            groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            groups.Scope = scope;
 
             groups.Parse(Tokenizer.CreateTokenizer(script));
 
@@ -51,6 +51,12 @@ namespace RATools.Parser.Tests
                 Assert.Fail(interpreter.ErrorMessage);
 
             return groups.Scope;
+        }
+
+        public static InterpreterScope Evaluate(string script, string expectedError = null)
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            return Evaluate(script, scope, expectedError);
         }
 
         public static string GetInnerErrorMessage(AchievementScriptInterpreter parser)

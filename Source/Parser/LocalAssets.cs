@@ -90,7 +90,7 @@ namespace RATools.Parser
 
         public RichPresence RichPresence { get; private set; }
 
-        private static DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        private static readonly DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private void Read()
         {
@@ -152,12 +152,17 @@ namespace RATools.Parser
         private void ReadAchievement(Tokenizer tokenizer)
         {
             var achievement = new AchievementBuilder();
+            int setId = 0;
 
             var part = tokenizer.ReadTo(':'); // id
+            var parts = part.Split('|');
 
             int num;
-            if (Int32.TryParse(part.ToString(), out num))
+            if (Int32.TryParse(parts[0].ToString(), out num))
                 achievement.Id = num;
+            if (parts.Length > 1 && Int32.TryParse(parts[1].ToString(), out num))
+                setId = num;
+
             tokenizer.Advance();
 
             if (tokenizer.NextChar == '"')
@@ -225,6 +230,7 @@ namespace RATools.Parser
                 builtAchievement.Published = _unixEpoch.AddSeconds(num);
             if (updated != "0" && Int32.TryParse(updated.ToString(), out num))
                 builtAchievement.LastModified = _unixEpoch.AddSeconds(num);
+            builtAchievement.OwnerSetId = setId;
 
             _achievements.Add(builtAchievement);
         }
@@ -233,10 +239,13 @@ namespace RATools.Parser
         {
             var leaderboard = new Leaderboard();
             var part = tokenizer.ReadTo(':'); // id
+            var parts = part.Split('|');
 
             int num;
-            if (Int32.TryParse(part.ToString(), out num))
+            if (Int32.TryParse(parts[0].ToString(), out num))
                 leaderboard.Id = num;
+            if (parts.Length > 1 && Int32.TryParse(parts[1].ToString(), out num))
+                leaderboard.OwnerSetId = num;
             tokenizer.Advance();
 
             leaderboard.Start = Trigger.Deserialize(tokenizer.ReadQuotedString().ToString());
@@ -506,7 +515,9 @@ namespace RATools.Parser
         /// <summary>
         /// Commits the asset list back to the 'XXX-User.txt' file.
         /// </summary>
-        public void Commit(string author, StringBuilder warning, SerializationContext serializationContext, List<AssetBase> assetsToValidate)
+        public void Commit(string author, StringBuilder warning,
+            SerializationContext serializationContext, List<AssetBase> assetsToValidate,
+            IEnumerable<AchievementSet> sets = null)
         {
             SoftwareVersion minimumVersion = serializationContext.MinimumVersion.OrNewer(Version);
 
@@ -528,6 +539,16 @@ namespace RATools.Parser
             if (minimumVersion > serializationContext.MinimumVersion)
                 serializationContext = serializationContext.WithVersion(minimumVersion);
 
+            int coreSetId = 0;
+            if (sets != null)
+            {
+                var coreSet = sets.FirstOrDefault(s => s.Type == AchievementSetType.Core);
+                if (coreSet == null)
+                    coreSet = sets.FirstOrDefault();
+                if (coreSet != null)
+                    coreSetId = coreSet.OwnerSetId;
+            }
+
             using (var writer = new StreamWriter(_fileSystemService.CreateFile(_filename)))
             {
                 writer.WriteLine(minimumVersion);
@@ -541,10 +562,16 @@ namespace RATools.Parser
                 }
 
                 foreach (var achievement in _achievements)
-                    WriteAchievement(writer, author, achievement, serializationContext, (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
+                {
+                    WriteAchievement(writer, author, achievement, serializationContext, coreSetId,
+                        (assetsToValidate == null || assetsToValidate.Contains(achievement)) ? warning : null);
+                }
 
                 foreach (var leaderboard in _leaderboards)
-                    WriteLeaderboard(writer, leaderboard, serializationContext, (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
+                {
+                    WriteLeaderboard(writer, leaderboard, serializationContext, coreSetId,
+                        (assetsToValidate == null || assetsToValidate.Contains(leaderboard)) ? warning : null);
+                }
 
                 foreach (var line in _extraLines)
                     writer.WriteLine(line);
@@ -583,9 +610,16 @@ namespace RATools.Parser
             }
         }
 
-        private static void WriteAchievement(StreamWriter writer, string author, Achievement achievement, SerializationContext serializationContext, StringBuilder warning)
+        private static void WriteAchievement(StreamWriter writer, string author, Achievement achievement,
+            SerializationContext serializationContext, int coreSetId, StringBuilder warning)
         {
             writer.Write(achievement.Id);
+            if (coreSetId != 0 && achievement.OwnerSetId != coreSetId && achievement.OwnerSetId != 0)
+            {
+                writer.Write('|');
+                writer.Write(achievement.OwnerSetId);
+            }
+
             writer.Write(":\"");
 
             var requirements = AchievementBuilder.SerializeRequirements(achievement, serializationContext);
@@ -621,10 +655,16 @@ namespace RATools.Parser
             writer.WriteLine();
         }
 
-        private static void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard, SerializationContext serializationContext, StringBuilder warning)
+        private static void WriteLeaderboard(StreamWriter writer, Leaderboard leaderboard,
+            SerializationContext serializationContext, int coreSetId, StringBuilder warning)
         {
             writer.Write('L');
             writer.Write(leaderboard.Id);
+            if (coreSetId != 0 && leaderboard.OwnerSetId != coreSetId && leaderboard.OwnerSetId != 0)
+            {
+                writer.Write('|');
+                writer.Write(leaderboard.OwnerSetId);
+            }
             writer.Write(":\"");
 
             var start = leaderboard.Start.Serialize(serializationContext);

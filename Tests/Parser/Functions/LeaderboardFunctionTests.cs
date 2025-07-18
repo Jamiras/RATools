@@ -15,7 +15,7 @@ namespace RATools.Parser.Tests.Functions
         {
             var def = new LeaderboardFunction();
             Assert.That(def.Name.Name, Is.EqualTo("leaderboard"));
-            Assert.That(def.Parameters.Count, Is.EqualTo(9));
+            Assert.That(def.Parameters.Count, Is.EqualTo(10));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("title"));
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("description"));
             Assert.That(def.Parameters.ElementAt(2).Name, Is.EqualTo("start"));
@@ -25,14 +25,17 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Parameters.ElementAt(6).Name, Is.EqualTo("format"));
             Assert.That(def.Parameters.ElementAt(7).Name, Is.EqualTo("lower_is_better"));
             Assert.That(def.Parameters.ElementAt(8).Name, Is.EqualTo("id"));
+            Assert.That(def.Parameters.ElementAt(9).Name, Is.EqualTo("set"));
 
-            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(3));
+            Assert.That(def.DefaultParameters.Count(), Is.EqualTo(4));
             Assert.That(def.DefaultParameters["format"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["format"]).Value, Is.EqualTo("value"));
             Assert.That(def.DefaultParameters["lower_is_better"], Is.InstanceOf<BooleanConstantExpression>());
             Assert.That(((BooleanConstantExpression)def.DefaultParameters["lower_is_better"]).Value, Is.False);
             Assert.That(def.DefaultParameters["id"], Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)def.DefaultParameters["id"]).Value, Is.EqualTo(0));
+            Assert.That(def.DefaultParameters["set"], Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)def.DefaultParameters["set"]).Value, Is.EqualTo(0));
         }
 
         private static Leaderboard Evaluate(string input, string expectedError = null)
@@ -321,6 +324,92 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(leaderboard.Start.Serialize(context), Is.EqualTo("0xH001234=1_O:0xH001001=4_0xH001002=4_O:0xH001003=5_0xH001004=5"));
             Assert.That(leaderboard.Cancel.Serialize(context), Is.EqualTo("0xH001234=2_O:0xH001001=6_0xH001002=6_O:0xH001003=7_0xH001004=7"));
             Assert.That(leaderboard.Submit.Serialize(context), Is.EqualTo("0xH001234=3_O:0xH001001=8_0xH001002=8_O:0xH001003=9_0xH001004=9"));
+        }
+
+        [Test]
+        public void TestSetIdNotProvided()
+        {
+            var leaderboard = Evaluate("// #ID=2222\r\n" +
+                "leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567))");
+
+            Assert.That(leaderboard.Title, Is.EqualTo("T"));
+            Assert.That(leaderboard.Description, Is.EqualTo("D"));
+            Assert.That(leaderboard.Start.ToString(), Is.EqualTo("0xH1234=1"));
+            Assert.That(leaderboard.Cancel.ToString(), Is.EqualTo("0xH1234=2"));
+            Assert.That(leaderboard.Submit.ToString(), Is.EqualTo("0xH1234=3"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH4567"));
+            Assert.That(leaderboard.Format, Is.EqualTo(ValueFormat.Value));
+            Assert.That(leaderboard.OwnerGameId, Is.EqualTo(2222));
+            Assert.That(leaderboard.OwnerSetId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TestSetIdNoSets()
+        {
+            var leaderboard = Evaluate("// #ID=2222\r\n" +
+                "leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), set=9999)");
+
+            Assert.That(leaderboard.Title, Is.EqualTo("T"));
+            Assert.That(leaderboard.Description, Is.EqualTo("D"));
+            Assert.That(leaderboard.Start.ToString(), Is.EqualTo("0xH1234=1"));
+            Assert.That(leaderboard.Cancel.ToString(), Is.EqualTo("0xH1234=2"));
+            Assert.That(leaderboard.Submit.ToString(), Is.EqualTo("0xH1234=3"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH4567"));
+            Assert.That(leaderboard.Format, Is.EqualTo(ValueFormat.Value));
+            Assert.That(leaderboard.OwnerGameId, Is.EqualTo(2222));
+            Assert.That(leaderboard.OwnerSetId, Is.EqualTo(9999));
+        }
+
+        [Test]
+        public void TestSetIdUnknown()
+        {
+            var input =
+                "// #ID=2222\r\n" +
+                "leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), set=9999)";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            parser.Initialize(new[]
+            {
+                new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
+            });
+
+            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.ErrorMessage, Is.EqualTo("2:1 leaderboard call failed\r\n- 2:98 Unknown set id: 9999"));
+        }
+
+        [Test]
+        public void TestSetIdValid()
+        {
+            var input =
+                "// #ID=2222\r\n" +
+                "leaderboard(\"T\", \"D\", " +
+                "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), set=9999)";
+
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var parser = new AchievementScriptInterpreter();
+            parser.Initialize(new[]
+            {
+                new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
+                new AchievementSet { Id = 9999, OwnerSetId = 9999, OwnerGameId = 3333, Title = "Bonus", Type = AchievementSetType.Bonus },
+            });
+
+            Assert.That(parser.Run(tokenizer), Is.True);
+
+            var leaderboard = parser.Leaderboards.FirstOrDefault();
+
+            Assert.That(leaderboard.Title, Is.EqualTo("T"));
+            Assert.That(leaderboard.Description, Is.EqualTo("D"));
+            Assert.That(leaderboard.Start.ToString(), Is.EqualTo("0xH1234=1"));
+            Assert.That(leaderboard.Cancel.ToString(), Is.EqualTo("0xH1234=2"));
+            Assert.That(leaderboard.Submit.ToString(), Is.EqualTo("0xH1234=3"));
+            Assert.That(leaderboard.Value.ToString(), Is.EqualTo("0xH4567"));
+            Assert.That(leaderboard.Format, Is.EqualTo(ValueFormat.Value));
+            Assert.That(leaderboard.OwnerGameId, Is.EqualTo(3333));
+            Assert.That(leaderboard.OwnerSetId, Is.EqualTo(9999));
         }
     }
 }

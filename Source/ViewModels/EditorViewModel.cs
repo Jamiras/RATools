@@ -169,6 +169,7 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
+                        interpreter.Initialize(_owner.PublishedSets);
 
                         bool hadErrors, hasErrors;
                         lock (_parsedContent)
