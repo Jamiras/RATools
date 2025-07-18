@@ -201,6 +201,7 @@ namespace RATools
                 return ReturnCode.InvalidParmeter;
             }
 
+            // ===== load and parse the script =====
             var interpreter = new AchievementScriptInterpreter();
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(InputFile));
             var groups = interpreter.Parse(tokenizer);
@@ -221,6 +222,7 @@ namespace RATools
                 return ReturnCode.ParseError;
             }
 
+            // ===== run the script =====
             interpreter.Run(groups, null);
 
             if (groups.HasEvaluationErrors)
@@ -236,6 +238,7 @@ namespace RATools
                 return ReturnCode.EvaluationError;
             }
 
+            // ===== load the published assets file =====
             var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
             var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
 
@@ -245,58 +248,74 @@ namespace RATools
                     publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
+            // ===== update IDs and badges for generated assets that don't specify IDs or badges and have since been published =====
+            foreach (var achievement in publishedAssets.Achievements)
+            {
+                var generatedAchievement = Achievement.FindMergeAchievement(interpreter.Achievements, achievement);
+                if (generatedAchievement != null)
+                {
+                    if (generatedAchievement.Id == 0)
+                        generatedAchievement.Id = achievement.Id;
+                    if (String.IsNullOrEmpty(generatedAchievement.BadgeName) || generatedAchievement.BadgeName == "0")
+                        generatedAchievement.BadgeName = achievement.BadgeName;
+                }
+            }
+
+            // ===== load the local assets file =====
             var outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-User.txt", interpreter.GameId));
-            var localAchievements = new LocalAssets(outputFileName, _fileSystemService);
-            localAchievements.Title = interpreter.GameTitle ?? publishedAssets.Title ?? Path.GetFileNameWithoutExtension(_inputFileName);
+            var localAssets = new LocalAssets(outputFileName, _fileSystemService);
+            localAssets.Title = interpreter.GameTitle ?? publishedAssets.Title ?? Path.GetFileNameWithoutExtension(_inputFileName);
 
             if (_verbose)
             {
                 OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}-User.txt",
-                    localAchievements.Achievements.Count(), localAchievements.Leaderboards.Count(), interpreter.GameId);
+                    localAssets.Achievements.Count(), localAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
+            // ==== merge the generated assets into the local assets collection =====
             var nextLocalId = AssetBase.FirstLocalId;
-            var existingAchievements = new List<Achievement>(localAchievements.Achievements);
-            foreach (var achievement in interpreter.Achievements)
+            var unmatchedLocalAchievements = new List<Achievement>(localAssets.Achievements);
+            foreach (var achievement in unmatchedLocalAchievements)
+                nextLocalId = Math.Max(nextLocalId, achievement.Id + 1);
+
+            foreach (var generatedAchievement in interpreter.Achievements)
             {
-                var existingAchievement = Achievement.FindMergeAchievement(existingAchievements, achievement);
-                if (existingAchievement != null)
+                var localAchievement = Achievement.FindMergeAchievement(unmatchedLocalAchievements, generatedAchievement);
+                if (localAchievement != null)
                 {
-                    existingAchievements.Remove(existingAchievement);
-                    achievement.Id = existingAchievement.Id;
-                }
-                else if (achievement.Id == 0)
-                {
-                    existingAchievement = Achievement.FindMergeAchievement(publishedAssets.Achievements, achievement);
-                    if (existingAchievement != null)
-                        achievement.Id = existingAchievement.Id;
+                    // generated achievement already exists in local file. keep the previous ID
+                    unmatchedLocalAchievements.Remove(localAchievement);
+                    generatedAchievement.Id = localAchievement.Id;
                 }
 
-                if (achievement.Id == 0)
-                    achievement.Id = nextLocalId++;
+                if (generatedAchievement.Id == 0)
+                    generatedAchievement.Id = nextLocalId++;
 
-                localAchievements.Replace(existingAchievement, achievement);
+                localAssets.Replace(localAchievement, generatedAchievement);
             }
 
-            var existingLeaderboards = new List<Leaderboard>(localAchievements.Leaderboards);
-            foreach (var leaderboard in interpreter.Leaderboards)
+            var unmatchedLeaderboards = new List<Leaderboard>(localAssets.Leaderboards);
+            foreach (var generatedLeaderboard in interpreter.Leaderboards)
             {
-                var existingLeaderboard = Leaderboard.FindMergeLeaderboard(existingLeaderboards, leaderboard);
-                if (existingLeaderboard != null)
+                var localLeaderboard = Leaderboard.FindMergeLeaderboard(unmatchedLeaderboards, generatedLeaderboard);
+                if (localLeaderboard != null)
                 {
-                    existingLeaderboards.Remove(existingLeaderboard);
-                    leaderboard.Id = existingLeaderboard.Id;
+                    unmatchedLeaderboards.Remove(localLeaderboard);
+                    generatedLeaderboard.Id = localLeaderboard.Id;
                 }
-                localAchievements.Replace(existingLeaderboard, leaderboard);
+                localAssets.Replace(localLeaderboard, generatedLeaderboard);
             }
-            localAchievements.Commit(Author, null, interpreter.SerializationContext, null);
+
+            // ===== write the local assets file =====
+            localAssets.Commit(Author, null, interpreter.SerializationContext, null);
 
             if (!_quiet)
             {
                 OutputStream.WriteLine("Wrote {0} achievements and {1} leaderboards to {2}-User.txt",
-                    localAchievements.Achievements.Count(), localAchievements.Leaderboards.Count(), interpreter.GameId);
+                    localAssets.Achievements.Count(), localAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
+            // ===== write the rich presence file =====
             if (!String.IsNullOrEmpty(interpreter.RichPresence))
             {
                 outputFileName = Path.Combine(OutputDirectory, String.Format("{0}-Rich.txt", interpreter.GameId));
