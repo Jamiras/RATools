@@ -111,7 +111,10 @@ namespace RATools.Data
                 builder.Append(Operator.ToOperatorString());
                 builder.Append(' ');
 
-                Right.AppendString(builder, NumberFormat.Decimal);
+                if (Operator.IsBitwiseOperator())
+                    Right.AppendString(builder, NumberFormat.Hexadecimal);
+                else
+                    Right.AppendString(builder, NumberFormat.Decimal);
             }
 
             if (HitCount > 0)

@@ -58,7 +58,7 @@ namespace RATools.Data
         public static readonly int FirstLocalId = 111000001;
 
         /// <summary>
-        /// Gets the unique identifier of the game that owns this assset.
+        /// Gets the unique identifier of the game that owns this asset.
         /// </summary>
         public int OwnerGameId { get; set; }
 
