@@ -611,6 +611,29 @@ namespace RATools.Parser.Tests
         }
 
         [Test]
+        public void TestDoubleRecall()
+        {
+            var parser = AchievementScriptTests.Parse(
+                "p1 = dword(0x1234)\n" +
+                "p2 = dword(0x2345)\n" +
+                "v1 = byte(p1 + 4)\n" +
+                "v2 = byte(p2 + 8)\n" +
+                "achievement(\"T\", \"D\", 5, (prev(v1) ^ v2) - (v1 ^ v2) == 200)\n");
+
+            // Remember  v2
+            // AddSource prev(v1) ^ recall
+            // Remember  v2
+            // SubSource v1 ^ recall
+            //           0 = 200
+
+            // second remember should be eliminated. it's redundant with the first, and breaks the AddSource chain
+
+            var achievement = parser.Achievements.First();
+            var serialized = achievement.Trigger.Serialize(new SerializationContext { AddressWidth = 4 });
+            Assert.That(serialized, Is.EqualTo("I:0xX2345_K:0xH0008_I:0xX1234_A:d0xH0004^{recall}_I:0xX1234_B:0xH0004^{recall}_0=200"));
+        }
+
+        [Test]
         public void TestRichPresenceDisplay()
         {
             var parser = AchievementScriptTests.Parse("rich_presence_display(\"simple string\")");

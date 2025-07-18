@@ -81,21 +81,25 @@ namespace RATools.Parser.Expressions.Trigger
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private Field _modifier;
-        protected RememberRecallExpression _rememberModifier;
 
-        public bool HasRememberRecall
+        /// <summary>
+        /// Gets the remembered value.
+        /// </summary>
+        public MemoryValueExpression RememberedValue
         {
             get
             {
                 if (_rememberModifier != null)
-                    return true;
+                    return _rememberModifier.RememberedValue;
 
-                if (MemoryAccessor is RememberRecallExpression)
-                    return true;
+                var rememberRecallExpression = MemoryAccessor as RememberRecallExpression;
+                if (rememberRecallExpression != null)
+                    return rememberRecallExpression.RememberedValue;
 
-                return false;
+                return null;
             }
         }
+        protected RememberRecallExpression _rememberModifier;
 
         /// <summary>
         /// Gets or sets the operator used to combine this <see cref="ModifiedMemoryAccessorExpression"/>
@@ -838,13 +842,18 @@ namespace RATools.Parser.Expressions.Trigger
         {
             if (_rememberModifier != null)
             {
-                var error = _rememberModifier.BuildTrigger(context);
-                if (error != null)
-                    return error;
+                if (_rememberModifier.RememberedValue != context.RememberedValue)
+                {
+                    context.RememberedValue = _rememberModifier.RememberedValue;
 
-                // RememberRecallExpression automatically generates a trailing {recall} for chaining
-                // into the next expression. remove it. we'll add it back soon.
-                context.Trigger.Remove(context.LastRequirement);
+                    var error = _rememberModifier.BuildTrigger(context);
+                    if (error != null)
+                        return error;
+
+                    // RememberRecallExpression automatically generates a trailing {recall} for chaining
+                    // into the next expression. remove it. we'll add it back soon.
+                    context.Trigger.Remove(context.LastRequirement);
+                }
             }    
 
             MemoryAccessor.BuildTrigger(context);

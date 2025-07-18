@@ -24,7 +24,15 @@ namespace RATools.Parser.Internal
             get { return Trigger.LastOrDefault(); }
         }
 
+        /// <summary>
+        /// Gets or sets the MinimumVersion for supported serialization features.
+        /// </summary>
         public SoftwareVersion MinimumVersion { get; set; }
+
+        /// <summary>
+        /// Gets the last Remembered expression.
+        /// </summary>
+        public MemoryValueExpression RememberedValue { get; internal set; }
 
         [DebuggerDisplay("{field} * {Multiplier}")]
         private class Term
