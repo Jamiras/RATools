@@ -124,6 +124,11 @@
         /// A rich presence macro parameter.
         /// </summary>
         RichPresenceMacro,
+
+        /// <summary>
+        /// A class definition.
+        /// </summary>
+        ClassDefinition,
     }
 
     internal static class ExpressionTypeExtension

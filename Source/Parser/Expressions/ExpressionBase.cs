@@ -694,6 +694,8 @@ namespace RATools.Parser.Expressions
                         return new BooleanConstantExpression(true, line, column);
                     if (identifier == "false")
                         return new BooleanConstantExpression(false, line, column);
+                    if (identifier == "class")
+                        return ClassDefinitionExpression.Parse(tokenizer, line, column);
 
                     if (tokenizer.NextChar == '(')
                     {
