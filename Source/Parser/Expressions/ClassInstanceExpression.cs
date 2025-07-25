@@ -17,6 +17,11 @@ namespace RATools.Parser.Expressions
         private readonly ClassDefinitionExpression _classDefinition;
         private readonly Dictionary<string, ExpressionBase> _fieldValues;
 
+        public string ClassName
+        {
+            get { return _classDefinition.Name.Name; }
+        }
+
         public void SetFieldValue(string fieldName, ExpressionBase value)
         {
             _fieldValues[fieldName] = value;
@@ -26,9 +31,14 @@ namespace RATools.Parser.Expressions
         {
             ExpressionBase value;
             if (!_fieldValues.TryGetValue(fieldName, out value))
-                return new ErrorExpression(fieldName + " does not exist on " + _classDefinition.Name.Name);
+                return null;
 
             return value;
+        }
+
+        public FunctionDefinitionExpression GetFunctionDefinition(string functionName)
+        {
+            return _classDefinition.GetFunctionDefinition(functionName);
         }
 
         protected override bool Equals(ExpressionBase obj)

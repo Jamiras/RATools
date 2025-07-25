@@ -395,23 +395,15 @@ namespace RATools.Parser.Expressions
                         break;
 
                     case '(':
-                        var value = clause as IValueExpression;
-                        if (value == null || clause.IsConstant)
-                            return clause;
-
-                        tokenizer.Advance();
-
-                        var parameters = new List<ExpressionBase>();
-                        ParseParameters(tokenizer, parameters);
-
-                        clause = new FunctionCallExpression(value, parameters)
-                        {
-                            Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1)
-                        };
+                        clause = FunctionCallExpression.Parse(clause, tokenizer);
                         break;
 
                     case '[':
                         clause = IndexedVariableExpression.Parse(clause, tokenizer);
+                        break;
+
+                    case '.':
+                        clause = ClassMemberReferenceExpression.Parse(clause, tokenizer);
                         break;
 
                     default:
@@ -699,67 +691,12 @@ namespace RATools.Parser.Expressions
 
                     if (tokenizer.NextChar == '(')
                     {
-                        tokenizer.Advance();
-
-                        var parameters = new List<ExpressionBase>();
-                        ParseParameters(tokenizer, parameters);
-
-                        var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
-                        functionCall.Location = new TextRange(line, column, tokenizer.Line, tokenizer.Column - 1);
-                        return functionCall;
+                        var functionName = new FunctionNameExpression(identifier.ToString(), line, column);
+                        return FunctionCallExpression.Parse(functionName, tokenizer);
                     }
 
                     return new VariableExpression(identifier.ToString(), line, column);
             }
-        }
-
-        private static ExpressionBase ParseParameters(PositionalTokenizer tokenizer, ICollection<ExpressionBase> parameters)
-        {
-            int line = tokenizer.Line;
-            int column = tokenizer.Column;
-
-            SkipWhitespace(tokenizer);
-
-            if (tokenizer.NextChar != ')')
-            {
-                do
-                {
-                    var parameter = ExpressionBase.Parse(tokenizer);
-                    if (parameter.Type == ExpressionType.Error)
-                        return ParseError(tokenizer, "Invalid expression", parameter);
-
-                    parameters.Add(parameter);
-
-                    SkipWhitespace(tokenizer);
-
-                    if (tokenizer.NextChar != ',')
-                        break;
-
-                    var commaLocation = tokenizer.Location;
-                    tokenizer.Advance();
-                    SkipWhitespace(tokenizer);
-
-                    if (tokenizer.NextChar == ')')
-                    {
-                        tokenizer.Advance(); // skip parenthesis at end of list
-                        var error = ParseError(tokenizer, "Trailing comma in parameter list");
-                        error.Location = new TextRange(commaLocation,
-                            new TextLocation(commaLocation.Line, commaLocation.Column + 1));
-                        return error;
-                    }
-                } while (true);
-            }
-
-            if (tokenizer.NextChar == ')')
-            {
-                tokenizer.Advance();
-                return null;
-            }
-
-            if (tokenizer.NextChar == '\0')
-                return ParseError(tokenizer, "No closing parenthesis found", line, column);
-
-            return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
         }
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
@@ -915,8 +852,7 @@ namespace RATools.Parser.Expressions
             switch (value.Type)
             {
                 case ExpressionType.Error:
-                    value = new KeywordExpression("=", joinerLine, joinerColumn);
-                    break;
+                    return value;
 
                 case ExpressionType.Array:
                 case ExpressionType.BooleanConstant:
@@ -941,7 +877,7 @@ namespace RATools.Parser.Expressions
                     return ParseError(tokenizer, "Incompatible assignment", value);
             }
 
-            return new AssignmentExpression((VariableExpression)variable, value);
+            return new AssignmentExpression((VariableExpressionBase)variable, value);
         }
 
         internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)

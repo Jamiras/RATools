@@ -22,7 +22,18 @@ namespace RATools.Parser.Expressions
             Name = name;
             Parameters = new List<VariableDefinitionExpression>();
             Expressions = new List<ExpressionBase>();
-            DefaultParameters = new TinyDictionary<string, ExpressionBase>();
+            DefaultParameters = new Dictionary<string, ExpressionBase>();
+
+            MakeReadOnly();
+        }
+
+        protected FunctionDefinitionExpression(FunctionDefinitionExpression source)
+            : base(ExpressionType.FunctionDefinition)
+        {
+            Name = source.Name;
+            Parameters = source.Parameters;
+            Expressions = source.Expressions;
+            DefaultParameters = source.DefaultParameters;
 
             MakeReadOnly();
         }

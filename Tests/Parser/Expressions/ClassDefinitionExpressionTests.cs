@@ -1,11 +1,8 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
-using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace RATools.Parser.Tests.Expressions
 {
@@ -90,7 +87,7 @@ namespace RATools.Parser.Tests.Expressions
                 "  function hp() => word(addr + 8)\n" +
                 "}",
 
-                "2:12 Incompatible mathematical operation");
+                "2:10 Unexpected character: +");
         }
 
         [Test]

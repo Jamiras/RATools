@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -36,6 +37,11 @@ namespace RATools.Parser.Expressions
 
             _fields.Add(new AssignmentExpression(variable, initialValue));
             return null;
+        }
+
+        public FunctionDefinitionExpression GetFunctionDefinition(string functionName)
+        {
+            return _functions.FirstOrDefault(f => f.Name.Name == functionName);
         }
 
         public override bool IsConstant { get { return true; } }

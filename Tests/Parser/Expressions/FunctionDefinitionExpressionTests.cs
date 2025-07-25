@@ -288,7 +288,7 @@ namespace RATools.Parser.Tests.Expressions
             var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)expr).Message, Is.EqualTo("Unexpected end of script"));
+            Assert.That(((ErrorExpression)expr).Message, Is.EqualTo("Unexpected character: }"));
         }
 
         [Test]
@@ -300,7 +300,7 @@ namespace RATools.Parser.Tests.Expressions
             var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
-            Assert.That(group.ParseErrors.Count(), Is.EqualTo(2));
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
             Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Unexpected character: }"));
         }
 

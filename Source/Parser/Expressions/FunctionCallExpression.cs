@@ -1,4 +1,4 @@
-﻿using RATools.Data;
+﻿using Jamiras.Components;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
@@ -21,7 +21,7 @@ namespace RATools.Parser.Expressions
             FunctionName = functionName;
             Parameters = parameters;
 
-            Location = new Jamiras.Components.TextRange(functionName.Location.Start.Line, functionName.Location.Start.Column, 0, 0);
+            Location = new TextRange(functionName.Location.Start.Line, functionName.Location.Start.Column, 0, 0);
         }
 
         internal FunctionCallExpression(IValueExpression source, ICollection<ExpressionBase> parameters)
@@ -31,7 +31,7 @@ namespace RATools.Parser.Expressions
             Parameters = parameters;
 
             var expression = (ExpressionBase)source;
-            Location = new Jamiras.Components.TextRange(expression.Location.Start.Line, expression.Location.Start.Column, 0, 0);
+            Location = new TextRange(expression.Location.Start.Line, expression.Location.Start.Column, 0, 0);
         }
 
         private readonly IValueExpression _source;
@@ -508,6 +508,93 @@ namespace RATools.Parser.Expressions
 
             error = null;
             return parameterScope;
+        }
+
+        internal static ExpressionBase Parse(ExpressionBase clause, PositionalTokenizer tokenizer)
+        {
+            if (tokenizer.NextChar != '(')
+                return clause;
+
+            IValueExpression value = null;
+            var name = clause as FunctionNameExpression;
+            if (name == null)
+            {
+                var variableExpression = clause as VariableExpression;
+                if (variableExpression != null && !string.IsNullOrEmpty(variableExpression.Name))
+                {
+                    name = new FunctionNameExpression(variableExpression.Name);
+                    clause.CopyLocation(name);
+                }
+                else
+                {
+                    value = clause as IValueExpression;
+                    if (value == null || clause.IsConstant)
+                        return clause;
+                }
+            }
+
+            tokenizer.Advance();
+
+            var parameters = new List<ExpressionBase>();
+            ParseParameters(tokenizer, parameters);
+
+            FunctionCallExpression functionCall;
+            if (name != null)
+                functionCall = new FunctionCallExpression(name, parameters);
+            else
+                functionCall = new FunctionCallExpression(value, parameters);
+
+            functionCall.Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1);
+            return functionCall;
+        }
+
+        private static ExpressionBase ParseParameters(PositionalTokenizer tokenizer, ICollection<ExpressionBase> parameters)
+        {
+            int line = tokenizer.Line;
+            int column = tokenizer.Column;
+
+            SkipWhitespace(tokenizer);
+
+            if (tokenizer.NextChar != ')')
+            {
+                do
+                {
+                    var parameter = ExpressionBase.Parse(tokenizer);
+                    if (parameter.Type == ExpressionType.Error)
+                        return ParseError(tokenizer, "Invalid expression", parameter);
+
+                    parameters.Add(parameter);
+
+                    SkipWhitespace(tokenizer);
+
+                    if (tokenizer.NextChar != ',')
+                        break;
+
+                    var commaLocation = tokenizer.Location;
+                    tokenizer.Advance();
+                    SkipWhitespace(tokenizer);
+
+                    if (tokenizer.NextChar == ')')
+                    {
+                        tokenizer.Advance(); // skip parenthesis at end of list
+                        var error = ParseError(tokenizer, "Trailing comma in parameter list");
+                        error.Location = new TextRange(commaLocation,
+                            new TextLocation(commaLocation.Line, commaLocation.Column + 1));
+                        return error;
+                    }
+                } while (true);
+            }
+
+            if (tokenizer.NextChar == ')')
+            {
+                tokenizer.Advance();
+                return null;
+            }
+
+            if (tokenizer.NextChar == '\0')
+                return ParseError(tokenizer, "No closing parenthesis found", line, column);
+
+            return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
         }
 
         /// <summary>
