@@ -111,7 +111,10 @@ namespace RATools.Data
                 builder.Append(Operator.ToOperatorString());
                 builder.Append(' ');
 
-                Right.AppendString(builder, NumberFormat.Decimal);
+                if (Operator.IsBitwiseOperator())
+                    Right.AppendString(builder, NumberFormat.Hexadecimal);
+                else
+                    Right.AppendString(builder, NumberFormat.Decimal);
             }
 
             if (HitCount > 0)
@@ -172,6 +175,8 @@ namespace RATools.Data
                     case RequirementOperator.LessThanOrEqual: builder.Append("<="); break;
                     case RequirementOperator.GreaterThan: builder.Append('>'); break;
                     case RequirementOperator.GreaterThanOrEqual: builder.Append(">="); break;
+                    case RequirementOperator.Add: builder.Append('+'); break;
+                    case RequirementOperator.Subtract: builder.Append('-'); break;
                     case RequirementOperator.Multiply: builder.Append('*'); break;
                     case RequirementOperator.Divide: builder.Append('/'); break;
                     case RequirementOperator.Modulus: builder.Append('%'); break;
@@ -613,6 +618,10 @@ namespace RATools.Data
                 case '^':
                     tokenizer.Advance();
                     return RequirementOperator.BitwiseXor;
+
+                case '%':
+                    tokenizer.Advance();
+                    return RequirementOperator.Modulus;
             }
 
             return RequirementOperator.None;

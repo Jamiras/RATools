@@ -39,6 +39,7 @@ namespace RATools.ViewModels
 
             _publishedAchievements = new List<Achievement>();
             _publishedLeaderboards = new List<Leaderboard>();
+            _publishedSets = new List<AchievementSet>();
             _publishedRichPresence = null;
 
             _logger = logger;
@@ -52,6 +53,7 @@ namespace RATools.ViewModels
         protected readonly IFileSystemService _fileSystemService;
         protected readonly List<Achievement> _publishedAchievements;
         protected readonly List<Leaderboard> _publishedLeaderboards;
+        protected readonly List<AchievementSet> _publishedSets;
         protected RichPresence _publishedRichPresence;
         protected LocalAssets _localAssets;
 
@@ -534,6 +536,8 @@ namespace RATools.ViewModels
             private set { SetValue(TitleProperty, value); }
         }
 
+        public IEnumerable<AchievementSet> PublishedSets { get { return _publishedSets; } }
+
         public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
         public int GeneratedAchievementCount
         {
@@ -628,6 +632,7 @@ namespace RATools.ViewModels
         {
             _publishedAchievements.Clear();
             _publishedLeaderboards.Clear();
+            _publishedSets.Clear();
             _publishedRichPresence = null;
 
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
@@ -658,6 +663,7 @@ namespace RATools.ViewModels
 
             _publishedAchievements.AddRange(publishedAssets.Achievements);
             _publishedLeaderboards.AddRange(publishedAssets.Leaderboards);
+            _publishedSets.AddRange(publishedAssets.Sets);
             _publishedRichPresence = publishedAssets.RichPresence;
             Title = publishedAssets.Title;
 

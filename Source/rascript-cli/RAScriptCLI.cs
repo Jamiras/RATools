@@ -222,6 +222,18 @@ namespace RATools
                 return ReturnCode.ParseError;
             }
 
+            // ===== load the published assets file =====
+            var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
+            var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
+
+            if (_verbose && File.Exists(publishedAssetsFilename))
+            {
+                OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}.json",
+                    publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
+            }
+
+            interpreter.Initialize(publishedAssets.Sets);
+
             // ===== run the script =====
             interpreter.Run(groups, null);
 
@@ -236,16 +248,6 @@ namespace RATools
                     reporter.PrintError(ErrorStream, error);
 
                 return ReturnCode.EvaluationError;
-            }
-
-            // ===== load the published assets file =====
-            var publishedAssetsFilename = Path.Combine(OutputDirectory, String.Format("{0}.json", interpreter.GameId));
-            var publishedAssets = new PublishedAssets(publishedAssetsFilename, _fileSystemService);
-
-            if (_verbose && File.Exists(publishedAssetsFilename))
-            {
-                OutputStream.WriteLine("Read {0} achievements and {1} leaderboards from {2}.json",
-                    publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
             // ===== update IDs and badges for generated assets that don't specify IDs or badges and have since been published =====

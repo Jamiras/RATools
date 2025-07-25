@@ -54,8 +54,9 @@ namespace RATools.ViewModels
 
             _assets = new ObservableCollection<DumpAsset>();
             _memoryItems = new List<MemoryItem>();
-            _ticketNotes = new TinyDictionary<int, string>();
+            _ticketNotes = new Dictionary<int, string>();
             _macros = new List<RichPresenceMacro>();
+            _achievementSetVariables = new Dictionary<int, string>();
 
             CodeNoteFilters = new[]
             {
@@ -563,7 +564,7 @@ namespace RATools.ViewModels
         }
 
         private GameViewModel _game;
-        private readonly TinyDictionary<int, string> _ticketNotes;
+        private readonly Dictionary<int, string> _ticketNotes;
         
         public enum DumpAssetType
         {
@@ -683,6 +684,55 @@ namespace RATools.ViewModels
             PascalCase, // UpperEachFirst
             CamelCase,  // upperInMiddle
         }
+
+        private static string BuildVariableName(string fromText, FunctionNameStyle style)
+        {
+            bool valid = false;
+            var functionName = new StringBuilder();
+
+            var newWord = true;
+            foreach (var c in fromText)
+            {
+                if (Char.IsLetter(c) || (valid && Char.IsDigit(c)))
+                {
+                    valid = true;
+
+                    if (newWord)
+                    {
+                        newWord = false;
+
+                        switch (style)
+                        {
+                            case FunctionNameStyle.PascalCase:
+                                functionName.Append(Char.ToUpper(c));
+                                continue;
+
+                            case FunctionNameStyle.CamelCase:
+                                if (functionName.Length != 0)
+                                {
+                                    functionName.Append(Char.ToUpper(c));
+                                    continue;
+                                }
+                                break;
+
+                            case FunctionNameStyle.SnakeCase:
+                                if (functionName.Length != 0)
+                                    functionName.Append('_');
+                                break;
+                        }
+                    }
+
+                    functionName.Append(Char.ToLower(c));
+                }
+                else if (valid)
+                {
+                    newWord = true;
+                }
+            }
+
+            return valid ? functionName.ToString() : string.Empty;
+        }
+
 
         public class CodeNoteFilterLookupItem
         {
@@ -1001,50 +1051,8 @@ namespace RATools.ViewModels
                     note += " - " + bitSuffix.ToString();
 
                 // build the function name
-                bool valid = false;
-                var functionName = new StringBuilder();
-
-                var newWord = true;
-                foreach (var c in note)
-                {
-                    if (Char.IsLetter(c) || (valid && Char.IsDigit(c)))
-                    {
-                        valid = true;
-
-                        if (newWord)
-                        {
-                            newWord = false;
-
-                            switch (style)
-                            {
-                                case FunctionNameStyle.PascalCase:
-                                    functionName.Append(Char.ToUpper(c));
-                                    continue;
-
-                                case FunctionNameStyle.CamelCase:
-                                    if (functionName.Length != 0)
-                                    {
-                                        functionName.Append(Char.ToUpper(c));
-                                        continue;
-                                    }
-                                    break;
-
-                                case FunctionNameStyle.SnakeCase:
-                                    if (functionName.Length != 0)
-                                        functionName.Append('_');
-                                    break;
-                            }
-                        }
-
-                        functionName.Append(Char.ToLower(c));
-                    }
-                    else if (valid)
-                    {
-                        newWord = true;
-                    }
-                }
-
-                if (valid)
+                var functionName = BuildVariableName(note, style);
+                if (!String.IsNullOrEmpty(functionName))
                     FunctionName = functionName.ToString();
             }
         }
@@ -1100,6 +1108,9 @@ namespace RATools.ViewModels
                 stream.Write("// #ID = ");
                 stream.WriteLine(String.Format("{0}", _game.GameId));
 
+                if (_game.PublishedSets.Count() > 1)
+                    DumpSets(stream, _game.PublishedSets);
+
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
                 DumpMemoryAccessors(stream, lookupsToDump);
@@ -1114,6 +1125,46 @@ namespace RATools.ViewModels
                 {
                     var displayMacro = _macros.FirstOrDefault(m => m.DisplayLines != null);
                     DumpRichPresence(stream, displayMacro, dumpRichPresence, scriptBuilderContext);
+                }
+            }
+        }
+
+        private readonly Dictionary<int, string> _achievementSetVariables;
+
+        private void DumpSets(StreamWriter stream, IEnumerable<AchievementSet> publishedSets)
+        {
+            stream.WriteLine();
+
+            foreach (var set in publishedSets)
+            {
+                if (set.OwnerGameId != _game.GameId)
+                {
+                    var name = "achievement set " + set.Title;
+                    var variableName = BuildVariableName(name, SelectedFunctionNameStyle);
+                    _achievementSetVariables[set.Id] = variableName;
+
+                    stream.Write(variableName);
+                    stream.Write(" = achievement_set(\"");
+                    stream.Write(EscapeString(set.Title));
+                    stream.Write("\", type=\"");
+                    switch (set.Type)
+                    {
+                        case AchievementSetType.Bonus:
+                            stream.Write("BONUS");
+                            break;
+                        case AchievementSetType.Specialty:
+                            stream.Write("SPECIALTY");
+                            break;
+                        case AchievementSetType.Exclusive:
+                            stream.Write("EXCLUSIVE");
+                            break;
+                        default:
+                            stream.Write(set.Type.ToString());
+                            break;
+                    }
+                    stream.Write("\", id=");
+                    stream.Write(set.Id);
+                    stream.WriteLine(")");
                 }
             }
         }
@@ -1314,6 +1365,14 @@ namespace RATools.ViewModels
                 stream.Write(EscapeString(achievementData.Description));
                 stream.WriteLine("\",");
 
+                string setVariable;
+                if (_achievementSetVariables.TryGetValue(achievementData.OwnerSetId, out setVariable))
+                {
+                    stream.Write("    set = ");
+                    stream.Write(setVariable);
+                    stream.WriteLine(",");
+                }
+
                 if (dumpAchievement.ViewerType != "Local Achievement")
                 {
                     stream.Write("    id = ");
@@ -1363,6 +1422,14 @@ namespace RATools.ViewModels
                 stream.Write("    description = \"");
                 stream.Write(EscapeString(leaderboardData.Description));
                 stream.WriteLine("\",");
+
+                string setVariable;
+                if (_achievementSetVariables.TryGetValue(leaderboardData.OwnerSetId, out setVariable))
+                {
+                    stream.Write("    set = ");
+                    stream.Write(setVariable);
+                    stream.WriteLine(",");
+                }
 
                 stream.Write("    start  = ");
                 DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.First());
