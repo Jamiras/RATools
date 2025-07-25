@@ -239,7 +239,9 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 // trigger_when(A || B) => trigger_when(A) || trigger_when(B), but only if they can be put into alts
                 triggerOr = conditions.OfType<BehavioralRequirementExpression>().FirstOrDefault(c =>
-                    c.Behavior == RequirementType.Trigger && c.Condition is RequirementClauseExpression &&
+                    c.Behavior == RequirementType.Trigger &&
+                    c.Condition is RequirementClauseExpression &&
+                    c.Condition is not OrNextRequirementClauseExpression &&
                     ((RequirementClauseExpression)c.Condition).Operation == ConditionalOperation.Or);
             }
 
