@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class ClassDefinitionExpression : ExpressionBase, INestedExpressions
+    public class ClassDefinitionExpression : ExpressionBase, INestedExpressions, IExecutableExpression
     {
         public ClassDefinitionExpression(string name)
             : this(new VariableDefinitionExpression(name))
@@ -103,7 +103,6 @@ namespace RATools.Parser.Expressions
 
             return true;
         }
-
 
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
@@ -224,6 +223,68 @@ namespace RATools.Parser.Expressions
 
             Location = new TextRange(Location.Start, tokenizer.Location);
             return MakeReadOnly();
+        }
+
+        private class InstantiateClassFunction : FunctionDefinitionExpression
+        {
+            public InstantiateClassFunction(ClassDefinitionExpression classDefiniton)
+                : base(classDefiniton.Name)
+            {
+                _classDefinition = classDefiniton;
+            }
+
+            private readonly ClassDefinitionExpression _classDefinition;
+
+            public ErrorExpression Initialize(InterpreterScope scope)
+            {
+                var tempScope = new InterpreterScope(scope);
+                foreach (var field in _classDefinition._fields)
+                {
+                    var error = field.Execute(tempScope);
+                    if (error != null)
+                        return error;
+
+                    var value = tempScope.GetVariable(field.Variable.Name);
+                    if (value == null)
+                        return new ErrorExpression("Could not initialize field: " + field.Variable.Name, field);
+
+                    Parameters.Add(new VariableDefinitionExpression(field.Variable.Name));
+                    DefaultParameters[field.Variable.Name] = value;
+                }
+
+                return null;
+            }
+
+            public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
+            {
+                var instance = new ClassInstanceExpression(_classDefinition);
+
+                foreach (var field in _classDefinition._fields)
+                {
+                    var value = scope.GetVariable(field.Variable.Name);
+                    if (value == null)
+                    {
+                        result = new ErrorExpression("No value for field: " + field.Variable.Name, field);
+                        return false;
+                    }
+
+                    instance.SetFieldValue(field.Variable.Name, value);
+                }
+
+                result = instance;
+                return true;
+            }
+        }
+
+        public ErrorExpression Execute(InterpreterScope scope)
+        {
+            var functionDefinition = new InstantiateClassFunction(this);
+            var error = functionDefinition.Initialize(scope);
+            if (error != null)
+                return error;
+
+            scope.AddFunction(functionDefinition);
+            return null;
         }
     }
 }

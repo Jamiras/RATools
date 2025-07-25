@@ -148,7 +148,65 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(nested.ElementAt(2), Is.InstanceOf<AssignmentExpression>());         // addr = 0
             Assert.That(nested.ElementAt(3), Is.InstanceOf<FunctionDefinitionExpression>()); // function hp() => ...
         }
-/* TODO
+
+        [Test]
+        public void TestExecute()
+        {
+            var expr = Parse(
+                "class Point {\n" +
+                "  x = 0\n" +
+                "  y = 1\n" +
+                "}");
+
+            var scope = new InterpreterScope();
+            Assert.That(expr.Execute(scope), Is.Null);
+
+            var functionDefinition = scope.GetFunction("Point");
+            Assert.That(functionDefinition.Parameters.Count, Is.EqualTo(2));
+            Assert.That(functionDefinition.Parameters.ElementAt(0).Name, Is.EqualTo("x"));
+            Assert.That(functionDefinition.Parameters.ElementAt(1).Name, Is.EqualTo("y"));
+
+            Assert.That(functionDefinition.DefaultParameters.Count, Is.EqualTo(2));
+            Assert.That(functionDefinition.DefaultParameters["x"], Is.EqualTo(new IntegerConstantExpression(0)));
+            Assert.That(functionDefinition.DefaultParameters["y"], Is.EqualTo(new IntegerConstantExpression(1)));
+
+            void testPoint(int? x, int? y)
+            {
+                var parameters = new List<ExpressionBase>();
+                if (x != null)
+                    parameters.Add(new AssignmentExpression(new VariableExpression("x"), new IntegerConstantExpression(x.Value)));
+                if (y != null)
+                    parameters.Add(new AssignmentExpression(new VariableExpression("y"), new IntegerConstantExpression(y.Value)));
+
+                ExpressionBase result;
+                var functionCall = new FunctionCallExpression("Point", parameters);
+                Assert.That(functionCall.Evaluate(scope, out result), Is.True);
+
+                Assert.That(result, Is.Not.Null.And.InstanceOf<ClassInstanceExpression>());
+                var instance = (ClassInstanceExpression)result;
+
+                var xValue = instance.GetFieldValue("x");
+                Assert.That(xValue, Is.InstanceOf<IntegerConstantExpression>());
+                if (x != null)
+                    Assert.That(((IntegerConstantExpression)xValue).Value, Is.EqualTo(x.Value));
+                else
+                    Assert.That(((IntegerConstantExpression)xValue).Value, Is.EqualTo(0));
+
+                var yValue = instance.GetFieldValue("y");
+                Assert.That(yValue, Is.InstanceOf<IntegerConstantExpression>());
+                if (y != null)
+                    Assert.That(((IntegerConstantExpression)yValue).Value, Is.EqualTo(y.Value));
+                else
+                    Assert.That(((IntegerConstantExpression)yValue).Value, Is.EqualTo(1));
+            }
+
+            testPoint(null, null);
+            testPoint(99, null);
+            testPoint(4, -7);
+            testPoint(null, 11);
+        }
+
+        /* TODO
         [Test]
         public void TestGetDependencies()
         {
@@ -178,6 +236,6 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(modifications.Count, Is.EqualTo(1));
             Assert.That(modifications.Contains("func"));
         }
-*/
+        */
     }
 }
