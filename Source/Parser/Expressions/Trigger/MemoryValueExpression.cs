@@ -1471,15 +1471,29 @@ namespace RATools.Parser.Expressions.Trigger
             if (appendConstantAccessor)
                 memoryAccessors.Add(constantAccessor);
 
-            // move all RememberRecall expressions to the front
-            int insertIndex = 0;
-            for (int i = 1; i < memoryAccessors.Count; i++)
+            // A Remember cannot occur in the middle of a chain. If one exists, move it
+            // to the front. If more than one exists, generate an error.
+            MemoryValueExpression rememberedExpression = null;
+            for (int i = 0; i < memoryAccessors.Count; i++)
             {
                 var memoryAccessor = memoryAccessors[i];
-                if (memoryAccessor.HasRememberRecall)
+                var memoryAccessorRememberedExpression = memoryAccessor.RememberedValue;
+                if (memoryAccessorRememberedExpression != null)
                 {
-                    memoryAccessors.RemoveAt(i);
-                    memoryAccessors.Insert(insertIndex++, memoryAccessor);
+                    if (rememberedExpression == null)
+                    {
+                        rememberedExpression = memoryAccessorRememberedExpression;
+
+                        if (i != 0)
+                        {
+                            memoryAccessors.RemoveAt(i);
+                            memoryAccessors.Insert(0, memoryAccessor);
+                        }
+                    }
+                    else if (rememberedExpression != memoryAccessorRememberedExpression)
+                    {
+                        return new ErrorExpression("Cannot combine multiple expressions with unique Remembered requirements", memoryAccessor);
+                    }
                 }
             }
 

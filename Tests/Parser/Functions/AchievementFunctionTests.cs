@@ -221,12 +221,26 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestRememberRecallChain2()
         {
-            var achievement = Evaluate(
+            var input =
                 "function d(n) => byte(n) * (byte(n + 1) / 8)\n" +
-                "achievement(\"T\", \"D\", 5, d(0x2222) + d(0x2224) == 6)");
-            var builder = new AchievementBuilder(achievement);
-            Assert.That(builder.SerializeRequirements(new SerializationContext()),
-                Is.EqualTo("K:0xH002225/8_A:0xH002224*{recall}_K:0xH002223/8_A:0xH002222*{recall}_0=6"));
+                "achievement(\"T\", \"D\", 5, d(0x2222) + d(0x2224) == 6)";
+
+            // This will become:
+            //
+            //   Remember  byte(0x2223) / 8
+            //   AddSource byte(0x2222) * {recall}
+            //   Remember  byte(0x2225) / 8
+            //   AddSource byte(0x2224) * {recall}
+            //             0            = 6
+            //
+            // Since Remember has a higher precedence than AddSource, line 3 will
+            // remember the division added to line 2, which is not what was inteded.
+            // The intended result is impossible with the current toolkit, so generate an error.
+
+            Evaluate(input,
+                "2:1 achievement call failed\r\n" +
+                "- 2:26 Cannot combine multiple expressions with unique Remembered requirements\r\n" +
+                "- 2:38 Cannot combine multiple expressions with unique Remembered requirements");
         }
 
         [Test]
