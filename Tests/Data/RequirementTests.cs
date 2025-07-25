@@ -1,4 +1,6 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
+using System.Text;
 
 namespace RATools.Data.Tests
 {
@@ -15,7 +17,7 @@ namespace RATools.Data.Tests
             Value66,
         }
 
-        private Field GetField(TestField field)
+        private static Field GetField(TestField field)
         {
             switch (field)
             {
@@ -67,6 +69,208 @@ namespace RATools.Data.Tests
         {
             var field = new Requirement();
             Assert.That(field.ToString(), Is.EqualTo("none"));
+        }
+
+        [Test]
+        [TestCase(RequirementType.None, "")]
+        [TestCase(RequirementType.ResetIf, "R:")]
+        [TestCase(RequirementType.PauseIf, "P:")]
+        [TestCase(RequirementType.AddSource, "A:")]
+        [TestCase(RequirementType.SubSource, "B:")]
+        [TestCase(RequirementType.AddHits, "C:")]
+        [TestCase(RequirementType.SubHits, "D:")]
+        [TestCase(RequirementType.AndNext, "N:")]
+        [TestCase(RequirementType.OrNext, "O:")]
+        [TestCase(RequirementType.Measured, "M:")]
+        [TestCase(RequirementType.MeasuredPercent, "G:")]
+        [TestCase(RequirementType.MeasuredIf, "Q:")]
+        [TestCase(RequirementType.AddAddress, "I:")]
+        [TestCase(RequirementType.ResetNextIf, "Z:")]
+        [TestCase(RequirementType.Trigger, "T:")]
+        [TestCase(RequirementType.Remember, "K:")]
+        public void TestSerializeRequirementType(RequirementType type, string expectedPrefix)
+        {
+            var requirement = new Requirement
+            {
+                Type = type,
+                Left = GetField(TestField.Byte1234),
+                Operator = RequirementOperator.Equal,
+                Right = GetField(TestField.Value99),
+            };
+
+            var builder = new StringBuilder();
+            var context = new SerializationContext { AddressWidth = 4 };
+            requirement.Serialize(builder, context);
+
+            if (type.IsScalable())
+                Assert.That(builder.ToString(), Is.EqualTo(expectedPrefix + "0xH1234=0"));
+            else
+                Assert.That(builder.ToString(), Is.EqualTo(expectedPrefix + "0xH1234=99"));
+        }
+
+        [Test]
+        [TestCase(RequirementOperator.None, "0xH1234")]
+        [TestCase(RequirementOperator.Equal, "0xH1234=99")]
+        [TestCase(RequirementOperator.NotEqual, "0xH1234!=99")]
+        [TestCase(RequirementOperator.LessThan, "0xH1234<99")]
+        [TestCase(RequirementOperator.LessThanOrEqual, "0xH1234<=99")]
+        [TestCase(RequirementOperator.GreaterThan, "0xH1234>99")]
+        [TestCase(RequirementOperator.GreaterThanOrEqual, "0xH1234>=99")]
+        [TestCase(RequirementOperator.Add, "0xH1234+99")]
+        [TestCase(RequirementOperator.Subtract, "0xH1234-99")]
+        [TestCase(RequirementOperator.Multiply, "0xH1234*99")]
+        [TestCase(RequirementOperator.Divide, "0xH1234/99")]
+        [TestCase(RequirementOperator.Modulus, "0xH1234%99")]
+        [TestCase(RequirementOperator.BitwiseAnd, "0xH1234&99")]
+        [TestCase(RequirementOperator.BitwiseXor, "0xH1234^99")]
+        public void TestSerializeOperatorComparison(RequirementOperator requirementOperator, string expected)
+        {
+            var requirement = new Requirement
+            {
+                Left = GetField(TestField.Byte1234),
+                Operator = requirementOperator,
+                Right = GetField(TestField.Value99),
+            };
+
+            var builder = new StringBuilder();
+            var context = new SerializationContext { AddressWidth = 4 };
+            requirement.Serialize(builder, context);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase(RequirementOperator.None, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.Equal, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.NotEqual, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.LessThan, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.LessThanOrEqual, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.GreaterThan, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.GreaterThanOrEqual, "A:0xH1234=0")]
+        [TestCase(RequirementOperator.Add, "A:0xH1234+99")]
+        [TestCase(RequirementOperator.Subtract, "A:0xH1234-99")]
+        [TestCase(RequirementOperator.Multiply, "A:0xH1234*99")]
+        [TestCase(RequirementOperator.Divide, "A:0xH1234/99")]
+        [TestCase(RequirementOperator.Modulus, "A:0xH1234%99")]
+        [TestCase(RequirementOperator.BitwiseAnd, "A:0xH1234&99")]
+        [TestCase(RequirementOperator.BitwiseXor, "A:0xH1234^99")]
+        public void TestSerializeOperatorScaler(RequirementOperator requirementOperator, string expected)
+        {
+            var requirement = new Requirement
+            {
+                Type = RequirementType.AddSource,
+                Left = GetField(TestField.Byte1234),
+                Operator = requirementOperator,
+                Right = GetField(TestField.Value99),
+            };
+
+            var builder = new StringBuilder();
+            var context = new SerializationContext { AddressWidth = 4 };
+            requirement.Serialize(builder, context);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase(0U, "0xH1234=99")]
+        [TestCase(1U, "0xH1234=99.1.")]
+        [TestCase(1000U, "0xH1234=99.1000.")]
+        public void TestSerializeHitTarget(uint hitTarget, string expected)
+        {
+            var requirement = new Requirement
+            {
+                Left = GetField(TestField.Byte1234),
+                Operator = RequirementOperator.Equal,
+                Right = GetField(TestField.Value99),
+                HitCount = hitTarget,
+            };
+
+            var builder = new StringBuilder();
+            var context = new SerializationContext { AddressWidth = 4 };
+            requirement.Serialize(builder, context);
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase(RequirementType.None, "")]
+        [TestCase(RequirementType.ResetIf, "R:")]
+        [TestCase(RequirementType.PauseIf, "P:")]
+        [TestCase(RequirementType.AddSource, "A:")]
+        [TestCase(RequirementType.SubSource, "B:")]
+        [TestCase(RequirementType.AddHits, "C:")]
+        [TestCase(RequirementType.SubHits, "D:")]
+        [TestCase(RequirementType.AndNext, "N:")]
+        [TestCase(RequirementType.OrNext, "O:")]
+        [TestCase(RequirementType.Measured, "M:")]
+        [TestCase(RequirementType.MeasuredPercent, "G:")]
+        [TestCase(RequirementType.MeasuredIf, "Q:")]
+        [TestCase(RequirementType.AddAddress, "I:")]
+        [TestCase(RequirementType.ResetNextIf, "Z:")]
+        [TestCase(RequirementType.Trigger, "T:")]
+        [TestCase(RequirementType.Remember, "K:")]
+        public void TestDeserializeRequirementType(RequirementType type, string prefix)
+        {
+            var requirement = Requirement.Deserialize(Tokenizer.CreateTokenizer(prefix + "0xH1234=99"));
+
+            Assert.That(requirement.Type, Is.EqualTo(type));
+            Assert.That(requirement.Left, Is.EqualTo(GetField(TestField.Byte1234)));
+
+            if (type.IsScalable())
+            {
+                Assert.That(requirement.Operator, Is.EqualTo(RequirementOperator.None));
+                Assert.That(requirement.Right, Is.EqualTo(GetField(TestField.None)));
+            }
+            else
+            {
+                Assert.That(requirement.Operator, Is.EqualTo(RequirementOperator.Equal));
+                Assert.That(requirement.Right, Is.EqualTo(GetField(TestField.Value99)));
+            }
+
+            Assert.That(requirement.HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        [TestCase(RequirementOperator.None, "0xH1234")]
+        [TestCase(RequirementOperator.Equal, "0xH1234=99")]
+        [TestCase(RequirementOperator.NotEqual, "0xH1234!=99")]
+        [TestCase(RequirementOperator.LessThan, "0xH1234<99")]
+        [TestCase(RequirementOperator.LessThanOrEqual, "0xH1234<=99")]
+        [TestCase(RequirementOperator.GreaterThan, "0xH1234>99")]
+        [TestCase(RequirementOperator.GreaterThanOrEqual, "0xH1234>=99")]
+        [TestCase(RequirementOperator.Add, "0xH1234+99")]
+        [TestCase(RequirementOperator.Subtract, "0xH1234-99")]
+        [TestCase(RequirementOperator.Multiply, "0xH1234*99")]
+        [TestCase(RequirementOperator.Divide, "0xH1234/99")]
+        [TestCase(RequirementOperator.Modulus, "0xH1234%99")]
+        [TestCase(RequirementOperator.BitwiseAnd, "0xH1234&99")]
+        [TestCase(RequirementOperator.BitwiseXor, "0xH1234^99")]
+        public void TestDeserializeOperatorComparison(RequirementOperator requirementOperator, string input)
+        {
+            var requirement = Requirement.Deserialize(Tokenizer.CreateTokenizer(input));
+
+            Assert.That(requirement.Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirement.Left, Is.EqualTo(GetField(TestField.Byte1234)));
+            Assert.That(requirement.Operator, Is.EqualTo(requirementOperator));
+
+            if (requirementOperator != RequirementOperator.None)
+                Assert.That(requirement.Right, Is.EqualTo(GetField(TestField.Value99)));
+            else
+                Assert.That(requirement.Right, Is.EqualTo(GetField(TestField.None)));
+
+            Assert.That(requirement.HitCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        [TestCase(0U, "0xH1234=99")]
+        [TestCase(1U, "0xH1234=99.1.")]
+        [TestCase(1000U, "0xH1234=99.1000.")]
+        public void TestDeserializeHitTarget(uint hitTarget, string input)
+        {
+            var requirement = Requirement.Deserialize(Tokenizer.CreateTokenizer(input));
+
+            Assert.That(requirement.Type, Is.EqualTo(RequirementType.None));
+            Assert.That(requirement.Left, Is.EqualTo(GetField(TestField.Byte1234)));
+            Assert.That(requirement.Operator, Is.EqualTo(RequirementOperator.Equal));
+            Assert.That(requirement.Right, Is.EqualTo(GetField(TestField.Value99)));
+            Assert.That(requirement.HitCount, Is.EqualTo(hitTarget));
         }
 
         [Test]
