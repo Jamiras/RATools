@@ -56,5 +56,15 @@ namespace RATools.Data
         /// Gets the first unique identifier reserved for locally generated assets.
         /// </summary>
         public static readonly int FirstLocalId = 111000001;
+
+        /// <summary>
+        /// Gets the unique identifier of the game that owns this asset.
+        /// </summary>
+        public int OwnerGameId { get; set; }
+
+        /// <summary>
+        /// Gets the unique identifier of the achievement set that owns this asset.
+        /// </summary>
+        public int OwnerSetId { get; set; }
     }
 }

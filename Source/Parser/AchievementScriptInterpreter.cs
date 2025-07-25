@@ -24,6 +24,7 @@ namespace RATools.Parser
             _achievements = new Dictionary<Achievement, int>();
             _leaderboards = new Dictionary<Leaderboard, int>();
             _richPresence = new RichPresenceBuilder();
+            _sets = new List<AchievementSet>();
 
             _minimumVersion = RATools.Data.Version.MinimumVersion;
         }
@@ -59,6 +60,13 @@ namespace RATools.Parser
         /// Gets the game identifier from the script.
         /// </summary>
         public int GameId { get; private set; }
+
+        public IEnumerable<AchievementSet> Sets
+        {
+            get { return _sets; }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly List<AchievementSet> _sets;
 
         private SoftwareVersion _minimumVersion;
 
@@ -159,6 +167,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new MeasuredFunction());
                 _globalScope.AddFunction(new DisableWhenFunction());
 
+                _globalScope.AddFunction(new AchievementSetFunction());
                 _globalScope.AddFunction(new AchievementFunction());
                 _globalScope.AddFunction(new LeaderboardFunction());
                 _globalScope.AddFunction(new MaxOfFunction());
@@ -277,6 +286,7 @@ namespace RATools.Parser
             if (scriptContext == null)
             {
                 scriptContext = new AchievementScriptContext();
+                scriptContext.Sets = _sets;
                 scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
             }
 
@@ -286,6 +296,7 @@ namespace RATools.Parser
             if (firstGroup != null)
             {
                 ProcessHeaderComment(firstGroup);
+                scriptContext.GameId = GameId;
                 scriptContext.SerializationContext.MinimumVersion = _minimumVersion;
             }
 
@@ -506,6 +517,11 @@ namespace RATools.Parser
             }
 
             return null;
+        }
+
+        public void Initialize(IEnumerable<AchievementSet> publishedSets)
+        {
+            _sets.AddRange(publishedSets);
         }
     }
 }

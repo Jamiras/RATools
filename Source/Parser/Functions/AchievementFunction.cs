@@ -25,8 +25,11 @@ namespace RATools.Parser.Functions
             DefaultParameters["modified"] = new StringConstantExpression("");
             Parameters.Add(new VariableDefinitionExpression("badge"));
             DefaultParameters["badge"] = new StringConstantExpression("0");
+
             Parameters.Add(new VariableDefinitionExpression("type"));
             DefaultParameters["type"] = new StringConstantExpression("");
+            Parameters.Add(new VariableDefinitionExpression("set"));
+            DefaultParameters["set"] = new IntegerConstantExpression(0);
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
@@ -72,6 +75,23 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            integerExpression = GetIntegerParameter(scope, "set", out result);
+            if (integerExpression == null)
+                return false;
+
+            var context = scope.GetContext<AchievementScriptContext>();
+            Debug.Assert(context != null);
+            AchievementSet set = null;
+            if (integerExpression.Value != 0)
+            {
+                set = context.GetSet(integerExpression.Value);
+                if (set == null)
+                {
+                    result = new ErrorExpression("Unknown set id: " + integerExpression.Value, integerExpression);
+                    return false;
+                }
+            }
+
             var trigger = GetRequirementParameter(scope, "trigger", out result);
             if (trigger == null)
                 return false;
@@ -87,14 +107,15 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
-            var sourceLine = 0;
             var newAchievement = achievement.ToAchievement();
+            newAchievement.OwnerSetId = set?.OwnerSetId ?? 0;
+            newAchievement.OwnerGameId = set?.OwnerGameId ?? context?.GameId ?? 0;
+
+            var sourceLine = 0;
             var functionCall = scope.GetOutermostContext<FunctionCallExpression>();
             if (functionCall != null)
                 sourceLine = functionCall.Location.Start.Line;
 
-            var context = scope.GetContext<AchievementScriptContext>();
-            Debug.Assert(context != null);
             context.Achievements[newAchievement] = sourceLine;
             return true;
         }
