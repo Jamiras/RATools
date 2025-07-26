@@ -49,16 +49,13 @@ namespace RATools.Parser.Expressions
         /// <remarks>
         /// Assumes the 'for' keyword has already been consumed.
         /// </remarks>
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
         {
-            SkipWhitespace(tokenizer);
-            var keywordFor = new KeywordExpression("for", line, column);
-
-            line = tokenizer.Line;
-            column = tokenizer.Column;
+            var line = tokenizer.Line;
+            var column = tokenizer.Column;
             var iteratorName = tokenizer.ReadIdentifier();
             if (iteratorName.IsEmpty)
-                return ParseError(tokenizer, "Invalid function name", line, column);
+                return null;
             var iterator = new VariableDefinitionExpression(iteratorName.ToString(), line, column);
 
             SkipWhitespace(tokenizer);
@@ -85,9 +82,9 @@ namespace RATools.Parser.Expressions
                 expressionTokenizer.AddError((ErrorExpression)error);
             }
 
-            loop._keywordFor = keywordFor;
+            loop._keywordFor = keyword;
             loop._keywordIn = keywordIn;
-            loop.Location = new TextRange(keywordFor.Location.Start, tokenizer.Location);
+            loop.Location = new TextRange(keyword.Location.Start, tokenizer.Location);
 
             return loop;
         }

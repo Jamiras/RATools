@@ -527,9 +527,17 @@ namespace RATools.Parser.Expressions
                 }
                 else
                 {
-                    value = clause as IValueExpression;
-                    if (value == null || clause.IsConstant)
-                        return clause;
+                    var keyword = clause as KeywordExpression;
+                    if (keyword != null)
+                    {
+                        name = new FunctionNameExpression(keyword.Keyword);
+                    }
+                    else
+                    {
+                        value = clause as IValueExpression;
+                        if (value == null || clause.IsConstant)
+                            return clause;
+                    }
                 }
             }
 
@@ -561,7 +569,12 @@ namespace RATools.Parser.Expressions
                 {
                     var parameter = ExpressionBase.Parse(tokenizer);
                     if (parameter.Type == ExpressionType.Error)
+                    {
+                        if (IsErrorReported(tokenizer, parameter))
+                            return parameter;
+
                         return ParseError(tokenizer, "Invalid expression", parameter);
+                    }
 
                     parameters.Add(parameter);
 

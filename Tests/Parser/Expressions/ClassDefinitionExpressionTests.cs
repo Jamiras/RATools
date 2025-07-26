@@ -12,8 +12,7 @@ namespace RATools.Parser.Tests.Expressions
         private static ClassDefinitionExpression Parse(string input, string expectedError = null)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("class");
-            var expr = ClassDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             if (expectedError != null)
             {

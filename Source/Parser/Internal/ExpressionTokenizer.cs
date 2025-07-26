@@ -31,6 +31,16 @@ namespace RATools.Parser.Internal
                 _expressionGroup.AddParseError(error);
         }
 
+        public bool HasError(ErrorExpression error)
+        {
+            return _expressionGroup.ParseErrors.Any(e => e == error);
+        }
+
+        public void RemoveError(ErrorExpression error)
+        {
+            _expressionGroup.RemoveParseError(error);
+        }
+
         public void AdvanceToLine(int line)
         {
             while (Line < line && NextChar != '\0')

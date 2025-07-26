@@ -148,12 +148,40 @@ namespace RATools.Parser.Expressions
             return ParseError(tokenizer, message, tokenizer.Line, tokenizer.Column);
         }
 
+        protected static bool RollbackUnexpectedCharacter(PositionalTokenizer tokenizer, ExpressionBase expression)
+        {
+            var error = expression as ErrorExpression;
+            if (error != null && error.Message.StartsWith("Unexpected character: "))
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer != null)
+                    expressionTokenizer.RemoveError(error);
+
+                return true;
+            }
+
+            return false;
+        }
+
         internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
         {
             var error = ParseError(tokenizer, message);
             error.InnerError = expression as ErrorExpression;
             expression.CopyLocation(error);
             return error;
+        }
+
+        protected static bool IsErrorReported(PositionalTokenizer tokenizer, ExpressionBase expression)
+        {
+            var error = expression as ErrorExpression;
+            if (error != null)
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer != null)
+                    return expressionTokenizer.HasError(error);
+            }
+
+            return false;
         }
 
         // logical evalation happens from highest priority to lowest
@@ -666,38 +694,57 @@ namespace RATools.Parser.Expressions
 
                     SkipWhitespace(tokenizer);
 
-                    if (identifier == "return")
-                    {
-                        clause = ExpressionBase.Parse(tokenizer);
-                        if (clause.Type == ExpressionType.Error)
-                            return clause;
-
-                        return new ReturnExpression(new KeywordExpression(identifier.ToString(), line, column), clause);
-                    }
-
-                    if (identifier == "function")
-                        return UserFunctionDefinitionExpression.Parse(tokenizer, line, column);
-                    if (identifier == "for")
-                        return ForExpression.Parse(tokenizer, line, column);
-                    if (identifier == "if")
-                        return IfExpression.Parse(tokenizer, line, column);
-
                     if (identifier == "true")
                         return new BooleanConstantExpression(true, line, column);
                     if (identifier == "false")
                         return new BooleanConstantExpression(false, line, column);
-                    if (identifier == "class")
-                        return ClassDefinitionExpression.Parse(tokenizer, line, column);
+
+                    string identifierString = identifier.ToString();
+
+                    var handler = GetReservedWordHandler(identifierString);
+                    if (handler != null)
+                    {
+                        var keyword = new KeywordExpression(identifierString, line, column);
+
+                        clause = handler(keyword, tokenizer);
+                        if (clause == null)
+                        {
+                            ParseError(tokenizer, keyword.Keyword + " is a reserved word", keyword);
+                            return keyword;
+                        }
+                            
+                        return clause;
+                    }
 
                     if (tokenizer.NextChar == '(')
                     {
-                        var functionName = new FunctionNameExpression(identifier.ToString(), line, column);
+                        var functionName = new FunctionNameExpression(identifierString, line, column);
                         return FunctionCallExpression.Parse(functionName, tokenizer);
                     }
 
-                    return new VariableExpression(identifier.ToString(), line, column);
+                    return new VariableExpression(identifierString, line, column);
             }
         }
+
+        private static Func<KeywordExpression, PositionalTokenizer, ExpressionBase> GetReservedWordHandler(string name)
+        {
+            switch (name)
+            {
+                case "class":
+                    return ClassDefinitionExpression.Parse;
+                case "if":
+                    return IfExpression.Parse;
+                case "for":
+                    return ForExpression.Parse;
+                case "function":
+                    return UserFunctionDefinitionExpression.Parse;
+                case "return":
+                    return ReturnExpression.Parse;
+                default:
+                    return null;
+            }
+        }
+
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
         {
@@ -785,6 +832,10 @@ namespace RATools.Parser.Expressions
                 case ExpressionType.Mathematic:
                 case ExpressionType.StringConstant:
                 case ExpressionType.Variable:
+                    break;
+
+                case ExpressionType.Keyword:
+                    ParseError(tokenizer, ((KeywordExpression)right).Keyword + " is a reserved word", right);
                     break;
 
                 default:

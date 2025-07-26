@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System.Linq;
 using System.Text;
 

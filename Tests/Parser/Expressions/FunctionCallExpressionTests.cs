@@ -93,9 +93,10 @@ namespace RATools.Parser.Tests.Expressions
 
         private static FunctionDefinitionExpression Parse(string input)
         {
-            var def = UserFunctionDefinitionExpression.ParseForTest(input);
-            Assert.That(def, Is.Not.Null);
-            return def;
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expr = ExpressionBase.Parse(tokenizer);
+            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
+            return (FunctionDefinitionExpression)expr;
         }
 
         [Test]

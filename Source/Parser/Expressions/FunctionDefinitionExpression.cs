@@ -38,6 +38,8 @@ namespace RATools.Parser.Expressions
             MakeReadOnly();
         }
 
+        protected KeywordExpression _keyword;
+
         /// <summary>
         /// Gets the name of the function.
         /// </summary>
@@ -567,8 +569,8 @@ namespace RATools.Parser.Expressions
         {
             get
             {
-                if (!Location.IsEmpty)
-                    yield return new KeywordExpression("function", Location.Start.Line, Location.Start.Column);
+                if (_keyword != null)
+                    yield return _keyword;
 
                 if (Name != null)
                     yield return Name;
@@ -623,32 +625,25 @@ namespace RATools.Parser.Expressions
         {
         }
 
-        internal static UserFunctionDefinitionExpression ParseForTest(string definition)
-        {
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(definition));
-            tokenizer.Match("function");
-            return Parse(tokenizer, 0, 0) as UserFunctionDefinitionExpression;
-        }
-
         /// <summary>
         /// Parses a function definition.
         /// </summary>
         /// <remarks>
         /// Assumes the 'function' keyword has already been consumed.
         /// </remarks>
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
         {
-            var locationStart = new TextLocation(line, column); // location of 'function' keyword
-
-            SkipWhitespace(tokenizer);
-
-            line = tokenizer.Line;
-            column = tokenizer.Column;
+            var line = tokenizer.Line;
+            var column = tokenizer.Column;
 
             var functionName = tokenizer.ReadIdentifier();
+            if (functionName.IsEmpty)
+                return null;
+
             var functionNameVariable = new VariableDefinitionExpression(functionName.ToString(), line, column);
             var function = new UserFunctionDefinitionExpression(functionNameVariable);
-            function.Location = new TextRange(locationStart.Line, locationStart.Column, 0, 0);
+            function._keyword = keyword;
+            function.Location = keyword.Location;
 
             if (functionName.IsEmpty)
                 return ParseError(tokenizer, "Invalid function name");

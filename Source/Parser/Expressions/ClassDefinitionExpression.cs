@@ -22,6 +22,8 @@ namespace RATools.Parser.Expressions
             _functions = new List<FunctionDefinitionExpression>();
         }
 
+        private KeywordExpression _keyword;
+
         /// <summary>
         /// Gets the name of the function.
         /// </summary>
@@ -114,8 +116,8 @@ namespace RATools.Parser.Expressions
         {
             get
             {
-                if (!Location.IsEmpty)
-                    yield return new KeywordExpression("class", Location.Start.Line, Location.Start.Column);
+                if (_keyword != null)
+                    yield return _keyword;
 
                 if (Name != null)
                     yield return Name;
@@ -169,22 +171,19 @@ namespace RATools.Parser.Expressions
         /// <remarks>
         /// Assumes the 'class' keyword has already been consumed.
         /// </remarks>
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
         {
-            var locationStart = new TextLocation(line, column); // location of 'class' keyword
-
-            SkipWhitespace(tokenizer);
-
-            line = tokenizer.Line;
-            column = tokenizer.Column;
+            var line = tokenizer.Line;
+            var column = tokenizer.Column;
 
             var className = tokenizer.ReadIdentifier();
             if (className.IsEmpty)
-                return ParseError(tokenizer, "Invalid function name");
+                return null;
 
             var classNameVariable = new VariableDefinitionExpression(className.ToString(), line, column);
             var classDefinition = new ClassDefinitionExpression(classNameVariable);
-            classDefinition.Location = new TextRange(locationStart.Line, locationStart.Column, 0, 0);
+            classDefinition._keyword = keyword;
+            classDefinition.Location = keyword.Location;
 
             return classDefinition.Parse(tokenizer);
         }

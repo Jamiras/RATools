@@ -1,7 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -39,10 +38,8 @@ namespace RATools.Parser.Expressions
         /// <remarks>
         /// Assumes the 'if' keyword has already been consumed.
         /// </remarks>
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
         {
-            SkipWhitespace(tokenizer);
-
             ExpressionBase condition;
             if (tokenizer.NextChar == '(')
             {
@@ -74,11 +71,16 @@ namespace RATools.Parser.Expressions
             {
                 condition = ExpressionBase.Parse(tokenizer);
                 if (condition.Type == ExpressionType.Error)
+                {
+                    if (RollbackUnexpectedCharacter(tokenizer, condition))
+                        return null;
+
                     return condition;
+                }
             }
 
             var ifExpression = new IfExpression(condition);
-            ifExpression._keyword = new KeywordExpression("if", line, column);
+            ifExpression._keyword = keyword;
 
             var error = ParseStatementBlock(tokenizer, ifExpression.Expressions);
             if (error != null)

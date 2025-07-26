@@ -1,4 +1,5 @@
-﻿using RATools.Parser.Internal;
+﻿using Jamiras.Components;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Text;
 
@@ -74,6 +75,22 @@ namespace RATools.Parser.Expressions
             var that = obj as ReturnExpression;
             return that != null && Value == that.Value;
         }
+
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
+        {
+            var clause = ExpressionBase.Parse(tokenizer);
+            if (clause.Type == ExpressionType.Error)
+            {
+                if (RollbackUnexpectedCharacter(tokenizer, clause))
+                    return null;
+
+                return clause;
+            }
+
+            return new ReturnExpression(keyword, clause);
+        }
+
+
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get
