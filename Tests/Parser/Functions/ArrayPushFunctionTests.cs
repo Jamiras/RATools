@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using Jamiras.Components;
+using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
@@ -93,9 +94,11 @@ namespace RATools.Parser.Tests.Functions
 
         private static void AddHappyFunction(InterpreterScope scope)
         {
-            scope.AddFunction(UserFunctionDefinitionExpression.ParseForTest(
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(
                 "function happy(num1) => num1"
             ));
+            var function = ExpressionBase.Parse(tokenizer) as FunctionDefinitionExpression;
+            scope.AddFunction(function);
         }
 
         [Test]

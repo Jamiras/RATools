@@ -57,6 +57,12 @@ namespace RATools.Parser.Expressions
             _parseErrors.Add(error);
         }
 
+        internal void RemoveParseError(ErrorExpression error)
+        {
+            if (_parseErrors != null)
+                _parseErrors.Remove(error);
+        }
+
         public IEnumerable<ExpressionBase> Expressions
         {
             get

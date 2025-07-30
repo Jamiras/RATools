@@ -5,7 +5,7 @@ using System.Text;
 
 namespace RATools.Parser.Expressions
 {
-    public class IndexedVariableExpression : VariableExpression, INestedExpressions, IValueExpression
+    public class IndexedVariableExpression : VariableExpression, INestedExpressions, IValueExpression, IAssignableExpression
     {
         public IndexedVariableExpression(VariableExpression variable, ExpressionBase index)
             : base(string.Empty)
@@ -144,6 +144,10 @@ namespace RATools.Parser.Expressions
             return result;
         }
 
+        /// <summary>
+        /// Updates the data referenced by the expression to the <see cref="newValue"/>.
+        /// </summary>
+        /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
         public ErrorExpression Assign(InterpreterScope scope, ExpressionBase newValue)
         {
             ExpressionBase container, index;

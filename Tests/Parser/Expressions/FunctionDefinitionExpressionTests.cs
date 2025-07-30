@@ -39,8 +39,7 @@ namespace RATools.Parser.Tests.Expressions
         private static FunctionDefinitionExpression Parse(string input, string expectedError = null)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("function");
-            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             if (expectedError != null)
             {
@@ -284,11 +283,10 @@ namespace RATools.Parser.Tests.Expressions
         public void TestParseErrorInsideDefinition()
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() { j = }"));
-            tokenizer.Match("function");
-            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)expr).Message, Is.EqualTo("Unexpected end of script"));
+            Assert.That(((ErrorExpression)expr).Message, Is.EqualTo("Unexpected character: }"));
         }
 
         [Test]
@@ -296,11 +294,10 @@ namespace RATools.Parser.Tests.Expressions
         {
             var group = new ExpressionGroup();
             var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { j = }"), group);
-            tokenizer.Match("function");
-            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
-            Assert.That(group.ParseErrors.Count(), Is.EqualTo(2));
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
             Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Unexpected character: }"));
         }
 
@@ -308,8 +305,7 @@ namespace RATools.Parser.Tests.Expressions
         public void TestParseErrorInsideShorthandDefinition()
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func() => > 0"));
-            tokenizer.Match("function");
-            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             ExpressionTests.AssertError(expr, "Unexpected character: >");
         }
@@ -319,13 +315,25 @@ namespace RATools.Parser.Tests.Expressions
         {
             var group = new ExpressionGroup();
             var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() => > 0"), group);
-            tokenizer.Match("function");
-            var expr = UserFunctionDefinitionExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
 
             Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
 
             Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
             Assert.That(group.ParseErrors.First().Message, Is.EqualTo("Unexpected character: >"));
+        }
+
+        [Test]
+        public void TestParseErrorIncompleteReturn()
+        {
+            var group = new ExpressionGroup();
+            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { return }"), group);
+            var expr = ExpressionBase.Parse(tokenizer);
+
+            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
+
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
+            Assert.That(group.ParseErrors.First().Message, Is.EqualTo("return statement without value"));
         }
 
         [Test]

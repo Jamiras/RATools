@@ -1,7 +1,9 @@
-﻿using Jamiras.Core.Tests;
+﻿using Jamiras.Components;
+using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Parser.Tests
@@ -1382,6 +1384,20 @@ namespace RATools.Parser.Tests
                 "c = inc(if (b == 1) { return 3 } else { return 5 })",
 
                 "3:9 Cannot assign if statement to parameter");
+        }
+
+        [Test]
+        public void TestReservedWordFunctionCall()
+        {
+            var interpreter = AchievementScriptTests.Parse("a = class()", false);
+            Assert.That(interpreter.ErrorMessage, Is.EqualTo("1:5 class is a reserved word"));
+        }
+
+        [Test]
+        public void TestReservedWordFunctionParameter()
+        {
+            var interpreter = AchievementScriptTests.Parse("function f(class, i) => class + i", false);
+            Assert.That(interpreter.ErrorMessage, Is.EqualTo("1:25 class is a reserved word"));
         }
     }
 }
