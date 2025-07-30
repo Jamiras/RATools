@@ -143,13 +143,19 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("0 + byte(0x001234) - 9", "=", "0",
             ExpressionType.Comparison, "byte(0x001234) == 9")]
         [TestCase("byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7", ">=", "byte(tbyte(0x001234) + 3)",
-            ExpressionType.Comparison, "byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7 >= byte(tbyte(0x001234) + 3)")]
+            ExpressionType.Comparison, "byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - byte(tbyte(0x001234) + 3) + 255 >= 262")] // undeflow applied
+        [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234))) - prev(dword(dword(0x001236)))", "==", "0",
+            ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) == prev(dword(dword(0x001236)))")] // SubSource prev moved to right side, AddSource moved to line up with right side
         [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234))) - prev(dword(dword(0x001236)))", ">", "0",
-            ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) > prev(dword(dword(0x001236)))")] // SubSource prev moved to right side, AddSource moved to line up with right side
+            ExpressionType.None, null)] // possible underflow, don't modify
         [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234)))", ">", "prev(dword(dword(0x001236)))",
             ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) > prev(dword(dword(0x001236)))")] // AddSource moved to line up with right side
         [TestCase("dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236))", ">", "prev(dword(dword(0x001236)))",
             ExpressionType.None, null)] // no change necessary
+        [TestCase("dword(dword(0x001234) + 5) - dword(dword(0x001234) + 6) + dword(dword(0x001234) + 7)", "==", "500",
+            ExpressionType.Comparison, "dword(dword(0x001234) + 5) + dword(dword(0x001234) + 7) - 500 == dword(dword(0x001234) + 6)")]
+        [TestCase("dword(dword(0x001234) + 5) - dword(dword(0x001234) + 6) + dword(dword(0x001234) + 7)", ">", "500",
+            ExpressionType.None, null)] // non-equality comparison may underflow if the "500" is changed to "-500" and moved to the left. don't change it.
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertNormalizeComparison(left, operation, right, expectedType, expected);
@@ -308,7 +314,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         // invalid syntax (indirect memory references are not allowed on the right side), so go
         // one step farther to see the final optimized logic.
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > 100",
-                  "byte(byte(0x000002) + 1) - 100 > byte(byte(0x000002) + 2)", // A - B > 100  ~>  A - 100 > B
+                  "byte(byte(0x000002) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
                   "A:100_I:0xH000002_0xH000002<0xH000001")]      // both A and B have the same base pointer
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > -100",
                   "byte(byte(0x000002) + 1) + 100 > byte(byte(0x000002) + 2)", // A - B > -100  ~>  A + 100 > B

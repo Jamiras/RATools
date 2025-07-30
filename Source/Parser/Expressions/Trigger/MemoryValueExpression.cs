@@ -577,14 +577,22 @@ namespace RATools.Parser.Expressions.Trigger
             return value;
         }
 
+        private static bool CanSharePointerChain(ModifiedMemoryAccessorExpression testAccessor, MemoryAccessorExpression memoryAccessor)
+        {
+            return testAccessor.CombiningOperator == RequirementType.AddSource &&
+                    testAccessor.ModifyingOperator == RequirementOperator.None &&
+                    testAccessor.MemoryAccessor.PointerChainMatches(memoryAccessor);
+        }
+
+        private static bool CanSharePointerChain(ModifiedMemoryAccessorExpression testAccessor, ModifiedMemoryAccessorExpression memoryAccessor)
+        {
+            return memoryAccessor.ModifyingOperator == RequirementOperator.None &&
+                CanSharePointerChain(testAccessor, memoryAccessor.MemoryAccessor);
+        }
+
         private ModifiedMemoryAccessorExpression FindSharedAddSourcePointerChain(MemoryAccessorExpression memoryAccessor)
         {
-            return _memoryAccessors.FirstOrDefault(a =>
-                    a.CombiningOperator == RequirementType.AddSource &&
-                    a.ModifyingOperator == RequirementOperator.None &&
-                    a.MemoryAccessor.Field.Value == memoryAccessor.Field.Value &&
-                    a.MemoryAccessor.Field.Size == memoryAccessor.Field.Size &&
-                    a.MemoryAccessor.PointerChainMatches(memoryAccessor));
+            return _memoryAccessors.LastOrDefault(a => CanSharePointerChain(a, memoryAccessor));
         }
 
         private ExpressionBase RebalanceForPointerChain(ExpressionBase right, ComparisonOperation operation)
@@ -631,32 +639,63 @@ namespace RATools.Parser.Expressions.Trigger
                 // found a SubSource with a pointer. see if there's an AddSource with the same pointer
                 // try to match a prev with it's non-prev first
                 var paired = FindSharedAddSourcePointerChain(_memoryAccessors[i].MemoryAccessor);
-
                 if (paired == null)
                 {
                     // could not find a prev/non-prev match. try again for any shared pointer chain
-                    paired = _memoryAccessors.FirstOrDefault(a =>
-                        a.CombiningOperator == RequirementType.AddSource &&
-                        a.ModifyingOperator == _memoryAccessors[i].ModifyingOperator &&
-                        a.MemoryAccessor.PointerChainMatches(_memoryAccessors[i].MemoryAccessor) &&
-                        a.Modifier == _memoryAccessors[i].Modifier);
+                    paired = _memoryAccessors.FirstOrDefault(a => CanSharePointerChain(a, _memoryAccessors[i]));
                 }
 
                 if (paired != null)
                 {
                     // found a pair, move the SubSource to the right side and the constant to the left
                     var newLeft = (MemoryValueExpression)Combine(right, MathematicOperation.Subtract);
-                    var newRight = newLeft._memoryAccessors[i].MemoryAccessor;
+                    var rightAccessor = newLeft._memoryAccessors[i];
+                    var newRight = rightAccessor.MemoryAccessor;
                     newLeft._memoryAccessors.RemoveAt(i);
 
+                    if (newLeft.HasSubtractedMemoryAccessor &&
+                        operation != ComparisonOperation.Equal &&
+                        operation != ComparisonOperation.NotEqual)
+                    {
+                        // if there's still a SubSource on the left side, an underflow adjustment will be
+                        // added, which will prevent the right side from sharing the AddAddress. ignore.
+                        return null;
+                    }
+
                     // also make sure the corresponding AddSource is moved to the last index
-                    if (!newRight.PointerChainMatches(newLeft._memoryAccessors.Last()))
+                    if (!CanSharePointerChain(newLeft._memoryAccessors.Last(), rightAccessor))
                     {
                         var index = newLeft._memoryAccessors.IndexOf(paired);
+                        if (index == newLeft._memoryAccessors.Count - 1)
+                        {
+                            // already at end of list - can't move and it didn't match. ignore
+                            return null;
+                        }
+
                         var addSource = newLeft._memoryAccessors[index];
                         newLeft._memoryAccessors.RemoveAt(index);
                         newLeft._memoryAccessors.Add(addSource);
                     }
+
+                    if (newLeft.HasConstant && newLeft.IntegerConstant < 0 &&
+                        operation != ComparisonOperation.Equal &&
+                        operation != ComparisonOperation.NotEqual)
+                    {
+                        // a negative constant may underflow. keep it on the right side so it stays positive.
+                        // if there's only one accessor remaining on the left, we can invert the entire comparison
+                        //   A - B > 100  ~>  B + 100 < A
+                        if (newLeft.MemoryAccessors.Count() == 1 && newLeft.MemoryAccessors.First().ModifyingOperator == RequirementOperator.None)
+                        {
+                            newRight = newLeft.MemoryAccessors.First().MemoryAccessor;
+                            newLeft = new MemoryValueExpression(rightAccessor);
+                            newLeft = (MemoryValueExpression)newLeft.Combine(right, MathematicOperation.Add);
+                            return new ComparisonExpression(newLeft, ComparisonExpression.ReverseComparisonOperation(operation), newRight);
+                        }
+
+                        return null;
+                    }
+
+
 
                     return new ComparisonExpression(newLeft, operation, newRight);
                 }
