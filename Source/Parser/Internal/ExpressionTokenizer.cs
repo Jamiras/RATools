@@ -1,5 +1,6 @@
 ﻿using Jamiras.Components;
 using RATools.Parser.Expressions;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -25,15 +26,15 @@ namespace RATools.Parser.Internal
             _expressionGroup.AddExpression(comment);
         }
 
+        public IEnumerable<ErrorExpression> ParseErrors
+        {
+            get {  return _expressionGroup.ParseErrors; }
+        }
+
         public void AddError(ErrorExpression error)
         {
             if (!_expressionGroup.ParseErrors.Contains(error))
                 _expressionGroup.AddParseError(error);
-        }
-
-        public bool HasError(ErrorExpression error)
-        {
-            return _expressionGroup.ParseErrors.Any(e => e == error);
         }
 
         public void RemoveError(ErrorExpression error)

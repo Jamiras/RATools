@@ -324,6 +324,19 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestParseErrorIncompleteReturn()
+        {
+            var group = new ExpressionGroup();
+            var tokenizer = new ExpressionTokenizer(Tokenizer.CreateTokenizer("function func() { return }"), group);
+            var expr = ExpressionBase.Parse(tokenizer);
+
+            Assert.That(expr, Is.InstanceOf<FunctionDefinitionExpression>());
+
+            Assert.That(group.ParseErrors.Count(), Is.EqualTo(1));
+            Assert.That(group.ParseErrors.First().Message, Is.EqualTo("return statement without value"));
+        }
+
+        [Test]
         public void TestNestedExpressions()
         {
             var expr = Parse("function func(i) => func2(i) + j");

@@ -761,6 +761,13 @@ namespace RATools.Parser.Expressions
                 else if (seenReturn)
                     ParseError(tokenizer, "Expression after return statement", expression);
 
+                if (expression.Type == ExpressionType.Keyword && ((KeywordExpression)expression).Keyword == "return")
+                {
+                    // return statement without value
+                    if (RollbackReservedWordError(tokenizer))
+                        ParseError(tokenizer, "return statement without value", expression);
+                }
+
                 Expressions.Add(expression);
 
                 SkipWhitespace(tokenizer);

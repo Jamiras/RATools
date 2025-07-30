@@ -72,8 +72,12 @@ namespace RATools.Parser.Expressions
                 condition = ExpressionBase.Parse(tokenizer);
                 if (condition.Type == ExpressionType.Error)
                 {
-                    if (RollbackUnexpectedCharacter(tokenizer, condition))
+                    var unexpectedCharacterError = condition as UnexpectedCharacterParseErrorExpression;
+                    if (unexpectedCharacterError != null)
+                    {
+                        unexpectedCharacterError.Ignore();
                         return null;
+                    }
 
                     return condition;
                 }

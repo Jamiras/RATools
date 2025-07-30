@@ -118,6 +118,26 @@ namespace RATools.Parser.Expressions
         }
     }
 
+    internal class UnexpectedCharacterParseErrorExpression : ErrorExpression
+    {
+        public UnexpectedCharacterParseErrorExpression(PositionalTokenizer tokenizer)
+            : base("Unexpected character: " + tokenizer.NextChar,
+                  new TextRange(tokenizer.Location, new TextLocation(tokenizer.Line, tokenizer.Column + 1)))
+        {
+            _tokenizer = tokenizer;
+
+            tokenizer.PushState();
+            tokenizer.Advance();
+        }
+
+        private readonly PositionalTokenizer _tokenizer;
+
+        public void Ignore()
+        {
+            _tokenizer.PopState();
+        }
+    }
+
     internal class ConversionErrorExpression : ErrorExpression
     {
         public ConversionErrorExpression(ExpressionBase value, ExpressionType expectedType)

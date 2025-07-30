@@ -3,6 +3,7 @@ using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -148,16 +149,17 @@ namespace RATools.Parser.Expressions
             return ParseError(tokenizer, message, tokenizer.Line, tokenizer.Column);
         }
 
-        protected static bool RollbackUnexpectedCharacter(PositionalTokenizer tokenizer, ExpressionBase expression)
+        protected static bool RollbackReservedWordError(PositionalTokenizer tokenizer)
         {
-            var error = expression as ErrorExpression;
-            if (error != null && error.Message.StartsWith("Unexpected character: "))
+            var expressionTokenizer = tokenizer as ExpressionTokenizer;
+            if (expressionTokenizer != null)
             {
-                var expressionTokenizer = tokenizer as ExpressionTokenizer;
-                if (expressionTokenizer != null)
-                    expressionTokenizer.RemoveError(error);
-
-                return true;
+                var lastError = expressionTokenizer.ParseErrors.LastOrDefault();
+                if (lastError != null && lastError.Message.EndsWith(" is a reserved word"))
+                {
+                    expressionTokenizer.RemoveError(lastError);
+                    return true;
+                }
             }
 
             return false;
@@ -178,7 +180,7 @@ namespace RATools.Parser.Expressions
             {
                 var expressionTokenizer = tokenizer as ExpressionTokenizer;
                 if (expressionTokenizer != null)
-                    return expressionTokenizer.HasError(error);
+                    return expressionTokenizer.ParseErrors.Any(e => e == error);
             }
 
             return false;
@@ -686,11 +688,7 @@ namespace RATools.Parser.Expressions
                     var column = tokenizer.Column;
                     var identifier = tokenizer.ReadIdentifier();
                     if (identifier.IsEmpty)
-                    {
-                        var error = ParseError(tokenizer, "Unexpected character: "+ tokenizer.NextChar);
-                        tokenizer.Advance();
-                        return error;
-                    }
+                        return new UnexpectedCharacterParseErrorExpression(tokenizer);
 
                     SkipWhitespace(tokenizer);
 
