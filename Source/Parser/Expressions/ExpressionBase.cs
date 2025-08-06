@@ -133,15 +133,19 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, ErrorExpression error)
         {
-            var error = new ErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
-
             var expressionTokenizer = tokenizer as ExpressionTokenizer;
             if (expressionTokenizer != null)
                 expressionTokenizer.AddError(error);
 
             return error;
+        }
+
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        {
+            var error = new ErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
+            return ParseError(tokenizer, error);
         }
 
         internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message)
@@ -155,7 +159,7 @@ namespace RATools.Parser.Expressions
             if (expressionTokenizer != null)
             {
                 var lastError = expressionTokenizer.ParseErrors.LastOrDefault();
-                if (lastError != null && lastError.Message.EndsWith(" is a reserved word"))
+                if (lastError != null && lastError is ReservedWordErrorExpression)
                 {
                     expressionTokenizer.RemoveError(lastError);
                     return true;
@@ -707,7 +711,7 @@ namespace RATools.Parser.Expressions
                         clause = handler(keyword, tokenizer);
                         if (clause == null)
                         {
-                            ParseError(tokenizer, keyword.Keyword + " is a reserved word", keyword);
+                            ParseError(tokenizer, new ReservedWordErrorExpression(keyword));
                             return keyword;
                         }
                             
@@ -738,6 +742,8 @@ namespace RATools.Parser.Expressions
                     return UserFunctionDefinitionExpression.Parse;
                 case "return":
                     return ReturnExpression.Parse;
+                case "this":
+                    return ClassMemberReferenceExpression.Parse;
                 default:
                     return null;
             }
@@ -746,6 +752,12 @@ namespace RATools.Parser.Expressions
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
         {
+            if (left.Type == ExpressionType.Keyword)
+            {
+                ParseError(tokenizer, new ReservedWordErrorExpression(left));
+                // continue processing so the parser isn't in an invalid state
+            }
+
             OperationPriority priority;
             switch (operation)
             {
@@ -833,7 +845,7 @@ namespace RATools.Parser.Expressions
                     break;
 
                 case ExpressionType.Keyword:
-                    ParseError(tokenizer, ((KeywordExpression)right).Keyword + " is a reserved word", right);
+                    ParseError(tokenizer, new ReservedWordErrorExpression(right));
                     break;
 
                 default:
@@ -895,7 +907,12 @@ namespace RATools.Parser.Expressions
         private static ExpressionBase ParseAssignment(PositionalTokenizer tokenizer, ExpressionBase variable, int joinerLine, int joinerColumn)
         {
             if (variable.Type != ExpressionType.Variable)
+            {
+                if (variable.Type == ExpressionType.Keyword)
+                    return ParseError(tokenizer, new ReservedWordErrorExpression(variable));
+
                 return ParseError(tokenizer, "Cannot assign value to non-variable", variable);
+            }
 
             var value = ParseExpression(tokenizer, OperationPriority.Assign);
             switch (value.Type)

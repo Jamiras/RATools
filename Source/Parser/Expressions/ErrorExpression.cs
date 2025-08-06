@@ -160,4 +160,17 @@ namespace RATools.Parser.Expressions
         {
         }
     }
+
+    internal class ReservedWordErrorExpression : ErrorExpression
+    {
+        public ReservedWordErrorExpression(ExpressionBase keyword)
+            : this((KeywordExpression)keyword)
+        {
+        }
+
+        public ReservedWordErrorExpression(KeywordExpression keyword)
+            : base(String.Format("{0} is a reserved word", keyword.Keyword), keyword.Location)
+        {
+        }
+    }
 }

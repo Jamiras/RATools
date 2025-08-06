@@ -51,7 +51,7 @@ namespace RATools.Parser.Expressions
         internal static ExpressionBase Parse(ExpressionBase clause, PositionalTokenizer tokenizer)
         {
             if (tokenizer.NextChar != '.')
-                return clause;
+                return null;
             tokenizer.Advance();
 
             int line = tokenizer.Line;
@@ -70,11 +70,20 @@ namespace RATools.Parser.Expressions
             }
             else
             {
-                var value = clause as IValueExpression;
-                if (value != null)
-                    memberReference = new ClassMemberReferenceExpression(value, member);
+                var keyword = clause as KeywordExpression;
+                if (keyword != null && keyword.Keyword == "this")
+                {
+                    variable = new VariableExpression(keyword.Keyword, keyword.Location.Start.Line, keyword.Location.Start.Column);
+                    memberReference = new ClassMemberReferenceExpression(variable, member);
+                }
                 else
-                    return new ErrorExpression("Cannot reference members of " + clause.Type.ToLowerString(), clause);
+                {
+                    var value = clause as IValueExpression;
+                    if (value != null)
+                        memberReference = new ClassMemberReferenceExpression(value, member);
+                    else
+                        return new ErrorExpression("Cannot reference members of " + clause.Type.ToLowerString(), clause);
+                }
             }
 
             memberReference.Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1);

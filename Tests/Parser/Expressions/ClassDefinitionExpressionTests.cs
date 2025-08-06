@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -56,7 +57,7 @@ namespace RATools.Parser.Tests.Expressions
             var expr = Parse(
                 "class Entity {\n" +
                 "  addr = 0\n" +
-                "  function hp() => word(addr + 8)\n" +
+                "  function hp() => word(this.addr + 8)\n" +
                 "}");
             Assert.That(expr.Name.Name, Is.EqualTo("Entity"));
             Assert.That(expr.ToString(), Is.EqualTo("class Entity(1 field, 1 function)"));
@@ -70,7 +71,7 @@ namespace RATools.Parser.Tests.Expressions
                 "  addr = 0\n" +
                 "  function hp()\n" +
                 "  {\n" +
-                "     return word(addr + 8)\n" +
+                "     return word(this.addr + 8)\n" +
                 "  }\n" +
                 "}");
             Assert.That(expr.Name.Name, Is.EqualTo("Entity"));
@@ -83,7 +84,7 @@ namespace RATools.Parser.Tests.Expressions
             Parse(
                 "class Entity {\n" +
                 "  addr = + +\n" +
-                "  function hp() => word(addr + 8)\n" +
+                "  function hp() => word(this.addr + 8)\n" +
                 "}",
 
                 "2:10 Unexpected character: +");
@@ -95,10 +96,10 @@ namespace RATools.Parser.Tests.Expressions
             Parse(
                 "class Entity {\n" +
                 "  addr = 0\n" +
-                "  function hp() => word(addr + +)\n" +
+                "  function hp() => word(this.addr + +)\n" +
                 "}",
 
-                "3:33 Unexpected character: )");
+                "3:38 Unexpected character: )");
         }
 
         [Test]
@@ -120,10 +121,58 @@ namespace RATools.Parser.Tests.Expressions
             Parse(
                 "class Entity {\n" +
                 "  addr[1] = 0\n" +
-                "  function hp() => word(addr + 8)\n" +
+                "  function hp() => word(this.addr + 8)\n" +
                 "}",
 
                 "2:3 Complex field name not allowed");
+        }
+
+        [Test]
+        public void TestThisReservedField()
+        {
+            Parse(
+                "class Entity {\n" +
+                "  this = 3\n" +
+                "  function hp() => word(8)\n" +
+                "}",
+
+                "2:3 this is a reserved word");
+        }
+
+        [Test]
+        public void TestThisReservedImmutable()
+        {
+            Parse(
+                "class Entity {\n" +
+                "  addr = 0\n" +
+                "  function hp()\n" +
+                "  {\n" +
+                "     this = Entity(7)\n" +
+                "     return word(this.addr + 8)\n" +
+                "  }\n" +
+                "}",
+
+                "5:6 this is a reserved word");
+        }
+
+        [Test]
+        public void TestThisReservedMissingMember()
+        {
+            string input =
+                "class Entity {\n" +
+                "  addr = 0\n" +
+                "  function hp() => word(this + 8)\n" +
+                "}";
+            var groups = new ExpressionGroup();
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
+            var expr = ExpressionBase.Parse(new ExpressionTokenizer(tokenizer, groups));
+
+            // parse should be successful
+            Assert.That(expr, Is.InstanceOf<ClassDefinitionExpression>());
+
+            var error = groups.ParseErrors.FirstOrDefault();
+            var formattedErrorMessage = string.Format("{0}:{1} {2}", error.Location.Start.Line, error.Location.Start.Column, error.Message);
+            Assert.That(formattedErrorMessage, Is.EqualTo("3:25 this is a reserved word"));
         }
 
 
@@ -133,7 +182,7 @@ namespace RATools.Parser.Tests.Expressions
             var expr = Parse(
                 "class Entity {\n" +
                 "  addr = 0\n" +
-                "  function hp() => word(addr + 8)\n" +
+                "  function hp() => word(this.addr + 8)\n" +
                 "}");
 
             var nested = ((INestedExpressions)expr).NestedExpressions;
