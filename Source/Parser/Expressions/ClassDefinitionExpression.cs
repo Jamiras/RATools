@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
 using System.Linq;
@@ -134,7 +135,7 @@ namespace RATools.Parser.Expressions
         {
             foreach (var field in _fields)
             {
-                var nested = field as INestedExpressions;
+                var nested = field.Value as INestedExpressions;
                 if (nested != null)
                     nested.GetDependencies(dependencies);
             }
@@ -152,16 +153,22 @@ namespace RATools.Parser.Expressions
             modifies.Add(Name.Name);
 
             foreach (var field in _fields)
-            {
-                // TODO: class field variable reference (this, field.Variable.Name)
-            }
+                modifies.Add("." + field.Variable.Name);
 
+            var functionModifies = new HashSet<string>();
             foreach (var function in _functions)
             {
-                // TODO: replace function name with class field function reference
                 var nested = function as INestedExpressions;
                 if (nested != null)
-                    nested.GetModifications(modifies);
+                {
+                    functionModifies.Clear();
+                    nested.GetModifications(functionModifies);
+
+                    functionModifies.Remove(function.Name.Name);
+                    modifies.Add("." + function.Name.Name);
+                    foreach (var m in functionModifies)
+                        modifies.Add(m);
+                }
             }
         }
 

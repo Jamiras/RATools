@@ -251,36 +251,64 @@ namespace RATools.Parser.Tests.Expressions
             testPoint(null, 11);
         }
 
-        /* TODO
         [Test]
         public void TestGetDependencies()
         {
             var expr = Parse(
                 "class Entity {\n" +
                 "  addr = 0\n" +
-                "  function hp() => word(addr + 8)\n" +
+                "  function hp() => word(this.addr + global_var)\n" +
                 "}");
 
             var dependencies = new HashSet<string>();
             ((INestedExpressions)expr).GetDependencies(dependencies);
 
-            Assert.That(dependencies.Count, Is.EqualTo(2));
-            Assert.That(dependencies.Contains("func2"));
-            Assert.That(dependencies.Contains("j"));
-            Assert.That(dependencies.Contains("i"), Is.False); // parameter is self-contained
+            Assert.That(dependencies.Count, Is.EqualTo(3));
+            Assert.That(dependencies.Contains("word"));
+            Assert.That(dependencies.Contains(".addr"));
+            Assert.That(dependencies.Contains("global_var"));
+        }
+
+        [Test]
+        public void TestGetDependenciesNested()
+        {
+            var expr = Parse(
+                "class Entity {\n" +
+                "  addr = 0\n" +
+                "  function hp() => word(this.addr.x + global.val)\n" +
+                "}");
+
+            var dependencies = new HashSet<string>();
+            ((INestedExpressions)expr).GetDependencies(dependencies);
+
+            Assert.That(dependencies.Count, Is.EqualTo(5));
+            Assert.That(dependencies.Contains("word"));
+            Assert.That(dependencies.Contains(".addr"));
+            Assert.That(dependencies.Contains(".x"));
+            Assert.That(dependencies.Contains("global"));
+            Assert.That(dependencies.Contains(".val"));
         }
 
         [Test]
         public void TestGetModifications()
         {
-            var expr = Parse("function func(i) => func2(i) + j");
+            var expr = Parse(
+                "class Entity {\n" +
+                "  addr = 0\n" +
+                "  function do() {" +
+                "    global.val = this.addr\n" +
+                "    this.addr = global_func(this.addr)\n" +
+                "  }\n" +
+                "}");
 
             var modifications = new HashSet<string>();
             ((INestedExpressions)expr).GetModifications(modifications);
 
-            Assert.That(modifications.Count, Is.EqualTo(1));
-            Assert.That(modifications.Contains("func"));
+            Assert.That(modifications.Count, Is.EqualTo(4));
+            Assert.That(modifications.Contains("Entity"));
+            Assert.That(modifications.Contains(".addr"));
+            Assert.That(modifications.Contains(".do"));
+            Assert.That(modifications.Contains(".val"));
         }
-        */
     }
 }

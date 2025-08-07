@@ -138,13 +138,17 @@ namespace RATools.Parser.Expressions
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
-            IndexedVariableExpression indexedVariable;
             var variable = Variable;
 
+            IndexedVariableExpression indexedVariable;
             while ((indexedVariable = variable as IndexedVariableExpression) != null)
                 variable = indexedVariable.Variable;
 
-            modifies.Add(variable.Name);
+            var classMember = variable as ClassMemberReferenceExpression;
+            if (classMember != null)
+                modifies.Add("." + classMember.Member.Name);
+            else
+                modifies.Add(variable.Name);
         }
     }
 }
