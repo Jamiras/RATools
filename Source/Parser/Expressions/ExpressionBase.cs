@@ -3,6 +3,7 @@ using RATools.Parser.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Parser.Expressions
@@ -132,10 +133,8 @@ namespace RATools.Parser.Expressions
             }
         }
 
-        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, ErrorExpression error)
         {
-            var error = new ErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
-
             var expressionTokenizer = tokenizer as ExpressionTokenizer;
             if (expressionTokenizer != null)
                 expressionTokenizer.AddError(error);
@@ -143,9 +142,31 @@ namespace RATools.Parser.Expressions
             return error;
         }
 
+        internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, int line, int column)
+        {
+            var error = new ErrorExpression(message, line, column, tokenizer.Line, tokenizer.Column);
+            return ParseError(tokenizer, error);
+        }
+
         internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message)
         {
             return ParseError(tokenizer, message, tokenizer.Line, tokenizer.Column);
+        }
+
+        protected static bool RollbackReservedWordError(PositionalTokenizer tokenizer)
+        {
+            var expressionTokenizer = tokenizer as ExpressionTokenizer;
+            if (expressionTokenizer != null)
+            {
+                var lastError = expressionTokenizer.ParseErrors.LastOrDefault();
+                if (lastError != null && lastError is ReservedWordErrorExpression)
+                {
+                    expressionTokenizer.RemoveError(lastError);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         internal static ErrorExpression ParseError(PositionalTokenizer tokenizer, string message, ExpressionBase expression)
@@ -154,6 +175,19 @@ namespace RATools.Parser.Expressions
             error.InnerError = expression as ErrorExpression;
             expression.CopyLocation(error);
             return error;
+        }
+
+        protected static bool IsErrorReported(PositionalTokenizer tokenizer, ExpressionBase expression)
+        {
+            var error = expression as ErrorExpression;
+            if (error != null)
+            {
+                var expressionTokenizer = tokenizer as ExpressionTokenizer;
+                if (expressionTokenizer != null)
+                    return expressionTokenizer.ParseErrors.Any(e => e == error);
+            }
+
+            return false;
         }
 
         // logical evalation happens from highest priority to lowest
@@ -395,23 +429,15 @@ namespace RATools.Parser.Expressions
                         break;
 
                     case '(':
-                        var value = clause as IValueExpression;
-                        if (value == null || clause.IsConstant)
-                            return clause;
-
-                        tokenizer.Advance();
-
-                        var parameters = new List<ExpressionBase>();
-                        ParseParameters(tokenizer, parameters);
-
-                        clause = new FunctionCallExpression(value, parameters)
-                        {
-                            Location = new TextRange(clause.Location.Start.Line, clause.Location.Start.Column, tokenizer.Line, tokenizer.Column - 1)
-                        };
+                        clause = FunctionCallExpression.Parse(clause, tokenizer);
                         break;
 
                     case '[':
                         clause = IndexedVariableExpression.Parse(clause, tokenizer);
+                        break;
+
+                    case '.':
+                        clause = ClassMemberReferenceExpression.Parse(clause, tokenizer);
                         break;
 
                     default:
@@ -666,102 +692,72 @@ namespace RATools.Parser.Expressions
                     var column = tokenizer.Column;
                     var identifier = tokenizer.ReadIdentifier();
                     if (identifier.IsEmpty)
-                    {
-                        var error = ParseError(tokenizer, "Unexpected character: "+ tokenizer.NextChar);
-                        tokenizer.Advance();
-                        return error;
-                    }
+                        return new UnexpectedCharacterParseErrorExpression(tokenizer);
 
                     SkipWhitespace(tokenizer);
-
-                    if (identifier == "return")
-                    {
-                        clause = ExpressionBase.Parse(tokenizer);
-                        if (clause.Type == ExpressionType.Error)
-                            return clause;
-
-                        return new ReturnExpression(new KeywordExpression(identifier.ToString(), line, column), clause);
-                    }
-
-                    if (identifier == "function")
-                        return UserFunctionDefinitionExpression.Parse(tokenizer, line, column);
-                    if (identifier == "for")
-                        return ForExpression.Parse(tokenizer, line, column);
-                    if (identifier == "if")
-                        return IfExpression.Parse(tokenizer, line, column);
 
                     if (identifier == "true")
                         return new BooleanConstantExpression(true, line, column);
                     if (identifier == "false")
                         return new BooleanConstantExpression(false, line, column);
 
+                    string identifierString = identifier.ToString();
+
+                    var handler = GetReservedWordHandler(identifierString);
+                    if (handler != null)
+                    {
+                        var keyword = new KeywordExpression(identifierString, line, column);
+
+                        clause = handler(keyword, tokenizer);
+                        if (clause == null)
+                        {
+                            ParseError(tokenizer, new ReservedWordErrorExpression(keyword));
+                            return keyword;
+                        }
+                            
+                        return clause;
+                    }
+
                     if (tokenizer.NextChar == '(')
                     {
-                        tokenizer.Advance();
-
-                        var parameters = new List<ExpressionBase>();
-                        ParseParameters(tokenizer, parameters);
-
-                        var functionCall = new FunctionCallExpression(new FunctionNameExpression(identifier.ToString(), line, column), parameters);
-                        functionCall.Location = new TextRange(line, column, tokenizer.Line, tokenizer.Column - 1);
-                        return functionCall;
+                        var functionName = new FunctionNameExpression(identifierString, line, column);
+                        return FunctionCallExpression.Parse(functionName, tokenizer);
                     }
 
-                    return new VariableExpression(identifier.ToString(), line, column);
+                    return new VariableExpression(identifierString, line, column);
             }
         }
 
-        private static ExpressionBase ParseParameters(PositionalTokenizer tokenizer, ICollection<ExpressionBase> parameters)
+        private static Func<KeywordExpression, PositionalTokenizer, ExpressionBase> GetReservedWordHandler(string name)
         {
-            int line = tokenizer.Line;
-            int column = tokenizer.Column;
-
-            SkipWhitespace(tokenizer);
-
-            if (tokenizer.NextChar != ')')
+            switch (name)
             {
-                do
-                {
-                    var parameter = ExpressionBase.Parse(tokenizer);
-                    if (parameter.Type == ExpressionType.Error)
-                        return ParseError(tokenizer, "Invalid expression", parameter);
-
-                    parameters.Add(parameter);
-
-                    SkipWhitespace(tokenizer);
-
-                    if (tokenizer.NextChar != ',')
-                        break;
-
-                    var commaLocation = tokenizer.Location;
-                    tokenizer.Advance();
-                    SkipWhitespace(tokenizer);
-
-                    if (tokenizer.NextChar == ')')
-                    {
-                        tokenizer.Advance(); // skip parenthesis at end of list
-                        var error = ParseError(tokenizer, "Trailing comma in parameter list");
-                        error.Location = new TextRange(commaLocation,
-                            new TextLocation(commaLocation.Line, commaLocation.Column + 1));
-                        return error;
-                    }
-                } while (true);
+                case "class":
+                    return ClassDefinitionExpression.Parse;
+                case "if":
+                    return IfExpression.Parse;
+                case "for":
+                    return ForExpression.Parse;
+                case "function":
+                    return UserFunctionDefinitionExpression.Parse;
+                case "return":
+                    return ReturnExpression.Parse;
+                case "this":
+                    return ClassMemberReferenceExpression.Parse;
+                default:
+                    return null;
             }
-
-            if (tokenizer.NextChar == ')')
-            {
-                tokenizer.Advance();
-                return null;
-            }
-
-            if (tokenizer.NextChar == '\0')
-                return ParseError(tokenizer, "No closing parenthesis found", line, column);
-
-            return ParseError(tokenizer, "Expected closing parenthesis, found: " + tokenizer.NextChar);
         }
+
 
         private static ExpressionBase ParseMathematic(PositionalTokenizer tokenizer, ExpressionBase left, MathematicOperation operation, int joinerLine, int joinerColumn)
         {
+            if (left.Type == ExpressionType.Keyword)
+            {
+                ParseError(tokenizer, new ReservedWordErrorExpression(left));
+                // continue processing so the parser isn't in an invalid state
+            }
+
             OperationPriority priority;
             switch (operation)
             {
@@ -848,6 +844,10 @@ namespace RATools.Parser.Expressions
                 case ExpressionType.Variable:
                     break;
 
+                case ExpressionType.Keyword:
+                    ParseError(tokenizer, new ReservedWordErrorExpression(right));
+                    break;
+
                 default:
                     var expressionTokenizer = tokenizer as ExpressionTokenizer;
                     if (expressionTokenizer != null)
@@ -907,14 +907,18 @@ namespace RATools.Parser.Expressions
         private static ExpressionBase ParseAssignment(PositionalTokenizer tokenizer, ExpressionBase variable, int joinerLine, int joinerColumn)
         {
             if (variable.Type != ExpressionType.Variable)
+            {
+                if (variable.Type == ExpressionType.Keyword)
+                    return ParseError(tokenizer, new ReservedWordErrorExpression(variable));
+
                 return ParseError(tokenizer, "Cannot assign value to non-variable", variable);
+            }
 
             var value = ParseExpression(tokenizer, OperationPriority.Assign);
             switch (value.Type)
             {
                 case ExpressionType.Error:
-                    value = new KeywordExpression("=", joinerLine, joinerColumn);
-                    break;
+                    return value;
 
                 case ExpressionType.Array:
                 case ExpressionType.BooleanConstant:
@@ -939,7 +943,7 @@ namespace RATools.Parser.Expressions
                     return ParseError(tokenizer, "Incompatible assignment", value);
             }
 
-            return new AssignmentExpression((VariableExpression)variable, value);
+            return new AssignmentExpression((VariableExpressionBase)variable, value);
         }
 
         internal static ExpressionBase ParseStatementBlock(PositionalTokenizer tokenizer, ICollection<ExpressionBase> expressions)

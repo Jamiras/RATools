@@ -24,8 +24,7 @@ namespace RATools.Parser.Tests.Expressions
         private ForExpression Parse(string input)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("for");
-            var expr = ForExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
             Assert.That(expr, Is.InstanceOf<ForExpression>());
             return (ForExpression)expr;
         }

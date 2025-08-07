@@ -225,9 +225,9 @@ namespace RATools.Parser
         /// <param name="value">The value.</param>
         public ErrorExpression AssignVariable(VariableExpression variable, ExpressionBase value)
         {
-            var indexedVariable = variable as IndexedVariableExpression;
-            if (indexedVariable != null)
-                return indexedVariable.Assign(this, value);
+            IAssignableExpression assignable = variable as IAssignableExpression;
+            if (assignable != null)
+                return assignable.Assign(this, value);
 
             var variableDefinition = new VariableDefinitionExpression(variable);
 

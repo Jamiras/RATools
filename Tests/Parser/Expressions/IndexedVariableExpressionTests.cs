@@ -150,7 +150,8 @@ namespace RATools.Parser.Tests.Expressions
         [Test]
         public void TestReplaceVariablesIndexFunctionCall()
         {
-            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => 6");
+            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer("function func(i) => 6"));
+            var functionDefinition = ExpressionBase.Parse(tokenizer) as FunctionDefinitionExpression;
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value = new IntegerConstantExpression(98);
@@ -247,6 +248,59 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
             Assert.That(result, Is.InstanceOf<ErrorExpression>());
             Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Index does not evaluate to an integer constant"));
+        }
+
+        [Test]
+        public void TestAssignVariableIndexed()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var dict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(6);
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, dict);
+
+            var index = new IndexedVariableExpression(variable, key);
+            index.Assign(scope, value);
+
+            Assert.That(dict.Count, Is.EqualTo(1));
+            Assert.That(dict[0].Value, Is.SameAs(value));
+        }
+
+        [Test]
+        public void TestAssignVariableIndexedUpdate()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var value2 = new IntegerConstantExpression(98);
+            var dict = new DictionaryExpression();
+            var key = new IntegerConstantExpression(6);
+            dict.Add(key, value);
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, dict);
+
+            var index = new IndexedVariableExpression(variable, key);
+            index.Assign(scope, value2);
+
+            Assert.That(dict[0].Value, Is.SameAs(value2));
+        }
+
+        [Test]
+        public void TestAssignVariableIndexedArrayUpdate()
+        {
+            var variable = new VariableExpression("test");
+            var value = new IntegerConstantExpression(99);
+            var value2 = new IntegerConstantExpression(98);
+            var array = new ArrayExpression();
+            var key = new IntegerConstantExpression(0);
+            array.Entries.Add(value);
+            var scope = new InterpreterScope();
+            scope.AssignVariable(variable, array);
+
+            var index = new IndexedVariableExpression(variable, key);
+            index.Assign(scope, value2);
+
+            Assert.That(array.Entries[0], Is.SameAs(value2));
         }
 
         [Test]

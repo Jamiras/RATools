@@ -118,6 +118,26 @@ namespace RATools.Parser.Expressions
         }
     }
 
+    internal class UnexpectedCharacterParseErrorExpression : ErrorExpression
+    {
+        public UnexpectedCharacterParseErrorExpression(PositionalTokenizer tokenizer)
+            : base("Unexpected character: " + tokenizer.NextChar,
+                  new TextRange(tokenizer.Location, new TextLocation(tokenizer.Line, tokenizer.Column + 1)))
+        {
+            _tokenizer = tokenizer;
+
+            tokenizer.PushState();
+            tokenizer.Advance();
+        }
+
+        private readonly PositionalTokenizer _tokenizer;
+
+        public void Ignore()
+        {
+            _tokenizer.PopState();
+        }
+    }
+
     internal class ConversionErrorExpression : ErrorExpression
     {
         public ConversionErrorExpression(ExpressionBase value, ExpressionType expectedType)
@@ -137,6 +157,19 @@ namespace RATools.Parser.Expressions
 
         public ConversionErrorExpression(ExpressionBase value, string expectedType, TextRange location, string parameterName)
             : base(String.Format("{0}: Cannot convert {1} to {2}", parameterName, value.Type.ToLowerString(), expectedType), location)
+        {
+        }
+    }
+
+    internal class ReservedWordErrorExpression : ErrorExpression
+    {
+        public ReservedWordErrorExpression(ExpressionBase keyword)
+            : this((KeywordExpression)keyword)
+        {
+        }
+
+        public ReservedWordErrorExpression(KeywordExpression keyword)
+            : base(String.Format("{0} is a reserved word", keyword.Keyword), keyword.Location)
         {
         }
     }

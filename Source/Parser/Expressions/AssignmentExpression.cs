@@ -12,7 +12,7 @@ namespace RATools.Parser.Expressions
         /// <summary>
         /// Initializes a new instance of the <see cref="AssignmentExpression"/> class.
         /// </summary>
-        public AssignmentExpression(VariableExpression variable, ExpressionBase value)
+        public AssignmentExpression(VariableExpressionBase variable, ExpressionBase value)
             : base(ExpressionType.Assignment)
         {
             Variable = variable;
@@ -24,7 +24,7 @@ namespace RATools.Parser.Expressions
         /// <summary>
         /// Gets the variable where the value will be stored.
         /// </summary>
-        public VariableExpression Variable { get; private set; }
+        public VariableExpressionBase Variable { get; private set; }
 
         /// <summary>
         /// Gets the expression that will be resolved into the value to be stored.
@@ -83,7 +83,15 @@ namespace RATools.Parser.Expressions
             if (error != null)
                 return error;
 
-            return scope.AssignVariable(Variable, result);
+            var assignable = Variable as IAssignableExpression;
+            if (assignable != null)
+                return assignable.Assign(scope, result);
+
+            var variable = Variable as VariableExpression;
+            if (variable != null)
+                return scope.AssignVariable(variable, result);
+
+            return new ErrorExpression("Cannot assign value to " + Variable.Type.ToLowerString(), this);
         }
 
         /// <summary>
@@ -130,13 +138,17 @@ namespace RATools.Parser.Expressions
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
-            IndexedVariableExpression indexedVariable;
             var variable = Variable;
 
+            IndexedVariableExpression indexedVariable;
             while ((indexedVariable = variable as IndexedVariableExpression) != null)
                 variable = indexedVariable.Variable;
 
-            modifies.Add(variable.Name);
+            var classMember = variable as ClassMemberReferenceExpression;
+            if (classMember != null)
+                modifies.Add("." + classMember.Member.Name);
+            else
+                modifies.Add(variable.Name);
         }
     }
 }

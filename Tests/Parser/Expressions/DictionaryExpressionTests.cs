@@ -107,7 +107,7 @@ namespace RATools.Parser.Tests.Expressions
         [Test]
         public void TestReplaceVariablesFunctionCall()
         {
-            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => 6");
+            var functionDefinition = ExpressionTests.Parse<FunctionDefinitionExpression>("function func(i) => 6");
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value1 = new IntegerConstantExpression(98);
@@ -129,7 +129,7 @@ namespace RATools.Parser.Tests.Expressions
         [Test]
         public void TestReplaceVariablesLogicalFunctionCall()
         {
-            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) => byte(i) == 1");
+            var functionDefinition = ExpressionTests.Parse<FunctionDefinitionExpression>("function func(i) => byte(i) == 1");
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value1 = new IntegerConstantExpression(98);
@@ -166,7 +166,7 @@ namespace RATools.Parser.Tests.Expressions
         [Test]
         public void TestReplaceVariablesMethodCall()
         {
-            var functionDefinition = UserFunctionDefinitionExpression.ParseForTest("function func(i) { j = i }");
+            var functionDefinition = ExpressionTests.Parse<FunctionDefinitionExpression>("function func(i) { j = i }");
 
             var functionCall = new FunctionCallExpression("func", new ExpressionBase[] { new IntegerConstantExpression(2) });
             var value1 = new IntegerConstantExpression(98);

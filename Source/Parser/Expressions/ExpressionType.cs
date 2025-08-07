@@ -124,6 +124,16 @@
         /// A rich presence macro parameter.
         /// </summary>
         RichPresenceMacro,
+
+        /// <summary>
+        /// A class definition.
+        /// </summary>
+        ClassDefinition,
+
+        /// <summary>
+        /// An instance of a class.
+        /// </summary>
+        ClassInstance,
     }
 
     internal static class ExpressionTypeExtension
@@ -135,6 +145,8 @@
                 case ExpressionType.Array: return "array";
                 case ExpressionType.Assignment: return "assignment";
                 case ExpressionType.BooleanConstant: return "boolean";
+                case ExpressionType.ClassDefinition: return "class definition";
+                case ExpressionType.ClassInstance: return "class instance";
                 case ExpressionType.Comment: return "comment";
                 case ExpressionType.Comparison: return "comparison";
                 case ExpressionType.Conditional: return "conditional expression";
