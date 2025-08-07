@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Data
 {
@@ -11,18 +12,19 @@ namespace RATools.Data
         public CodeNote(uint address, string note)
         {
             Address = address;
-            Note = note;
-            _length = 0;
-            _fieldSize = FieldSize.None;
+
+            SetNote(note);
         }
 
-        public string Note { get; set; }
+        public string Note { get; private set; }
 
         public uint Address { get; private set; }
 
-        private uint _length;
-        private FieldSize _fieldSize;
-        private string _summary;
+        public uint Length { get; private set; }
+
+        public FieldSize Size { get; private set; }
+
+        public string Summary { get; private set; }
 
         private class PointerData
         {
@@ -30,6 +32,7 @@ namespace RATools.Data
             {
                 OffsetNotes = new List<CodeNote>();
             }
+
             public enum PointerOffsetType
             {
                 None = 0,
@@ -37,59 +40,46 @@ namespace RATools.Data
                 Overflow,
             };
 
-            public Token Header { get; set; }
-            public PointerOffsetType OffsetType { get; set; }
             public List<CodeNote> OffsetNotes { get; private set; }
+            public PointerOffsetType OffsetType { get; set; }
             public bool HasPointers { get; set; }
         };
         private PointerData _pointerData;
 
-        public uint Length
+        public bool IsPointer
         {
             get
             {
-                if (_length == 0)
-                    Process();
-
-                return _length;
+                return (_pointerData != null);
             }
         }
 
-        public FieldSize FieldSize
+        public IEnumerable<CodeNote> OffsetNotes
         {
             get
             {
-                if (_length == 0)
-                    Process();
+                if (_pointerData != null)
+                    return _pointerData.OffsetNotes;
 
-                return _fieldSize;
+                return Enumerable.Empty<CodeNote>();
             }
         }
 
-        public string Summary
+        private void SetNote(string note)
         {
-            get
-            {
-                if (_length == 0)
-                    Process();
-
-                return _summary.ToString();
-            }
-        }
-
-        private void Process()
-        {
-            _length = 1;
-            _fieldSize = FieldSize.None;
-            _summary = String.Empty;
+            Note = note;
+            Length = 1;
+            Size = FieldSize.None;
+            Summary = String.Empty;
 
             var tokenizer = Tokenizer.CreateTokenizer(Note);
             do
             {
                 var line = tokenizer.ReadTo('\n').Trim();
+                tokenizer.Advance();
 
-                if (_summary.Length == 0 && !line.IsEmpty)
-                    _summary = TrimSize(line.Trim().ToString(), false);
+                if (Summary.Length == 0 && !line.IsEmpty)
+                    Summary = TrimSize(line.Trim().ToString(), false);
 
                 if (line.Length >= 4) // nBit is smallest parsable note
                 {
@@ -111,7 +101,7 @@ namespace RATools.Data
                     }
 
                     // if we found a size, we're done.
-                    if (_fieldSize != FieldSize.None)
+                    if (Size != FieldSize.None)
                         break;
                 }
             } while (tokenizer.NextChar != '\0');
@@ -123,17 +113,74 @@ namespace RATools.Data
 
             ExtractSize(line, true);
 
-            if (_fieldSize == FieldSize.None)
+            if (Size == FieldSize.None)
             {
                 // pointer size not specified. assume 32-bit
-                _fieldSize = FieldSize.DWord;
-                _length = 4;
+                Size = FieldSize.DWord;
+                Length = 4;
             }
 
-            _pointerData.Header = tokenizer.ReadTo("\n+");
-            if (tokenizer.NextChar != '\0')
+            if (tokenizer.NextChar == '\0')
+                return;
+
+            int startIndex = 0;
+            var remaining = tokenizer.ReadTo('\0');
+            do
             {
-                // process indirect notes
+                var index = remaining.IndexOf("\n+", startIndex);
+                if (index != -1 && index < remaining.Length - 2 && !Char.IsDigit(remaining[index + 2]))
+                    index = remaining.IndexOf("\n+", index + 1);
+
+                var nextNoteToken = index == -1 ? remaining.SubToken(startIndex) : remaining.SubToken(startIndex, index - startIndex);
+                startIndex = index == -1 ? -1 : index + 1;
+                var nextNote = nextNoteToken.TrimRight().SubToken(1).ToString().Replace("\n+", "\n");
+
+                uint offset;
+                bool success;
+                index = 0;
+                if (nextNote.StartsWith("0x"))
+                {
+                    index = 2;
+                    while (Char.IsLetterOrDigit(nextNote[index]))
+                        index++;
+
+                    success = UInt32.TryParse(nextNote.Substring(2, index - 2),
+                        System.Globalization.NumberStyles.HexNumber, null, out offset);
+                }
+                else
+                {
+                    while (Char.IsDigit(nextNote[index]))
+                        index++;
+
+                    success = UInt32.TryParse(nextNote.Substring(0, index), out offset);
+                }
+
+                if (success)
+                {
+                    // skip over [whitespace] [optional separator] [whitespace]
+                    while (index < nextNote.Length && Char.IsWhiteSpace(nextNote[index]) && nextNote[index] != '\n')
+                        index++;
+                    if (index < nextNote.Length && !Char.IsLetterOrDigit(nextNote[index]))
+                        index++;
+                    while (index < nextNote.Length && Char.IsWhiteSpace(nextNote[index]) && nextNote[index] != '\n')
+                        index++;
+
+                    var nestedNote = new CodeNote(offset, nextNote.Substring(index));
+                    _pointerData.OffsetNotes.Add(nestedNote);
+                    _pointerData.HasPointers |= nestedNote.IsPointer;
+                }
+            } while (startIndex != -1);
+
+            // assume anything annotated as a 32-bit pointer will read the whole pointer
+            // and apply a conversion
+            if (Length == 4)
+            {
+                _pointerData.OffsetType = PointerData.PointerOffsetType.Converted;
+
+                // if any offset exceeds the memory available for the system, assume it's leveraging
+                // overflow math insteaed of masking, and don't attempt to translate the addresses.
+                if (_pointerData.OffsetNotes.Any(n => n.Address >= 0x10000000))
+                    _pointerData.OffsetType = PointerData.PointerOffsetType.Overflow;
             }
         }
 
@@ -164,15 +211,15 @@ namespace RATools.Data
                         {
                             if (bits == 32)
                             {
-                                _length = 4;
-                                _fieldSize = FieldSize.MBF32;
+                                Length = 4;
+                                Size = FieldSize.MBF32;
                                 bWordIsSize = true;
                                 wasSizeFound = true;
                             }
                             else if (bits == 40)
                             {
-                                _length = 5;
-                                _fieldSize = FieldSize.MBF32;
+                                Length = 5;
+                                Size = FieldSize.MBF32;
                                 bWordIsSize = true;
                                 wasSizeFound = true;
                             }
@@ -180,8 +227,8 @@ namespace RATools.Data
                     }
                     else if (lastTokenType == TokenType.Double && token == "32")
                     {
-                        _length = 4;
-                        _fieldSize = FieldSize.Double32;
+                        Length = 4;
+                        Size = FieldSize.Double32;
                         bWordIsSize = true;
                         wasSizeFound = true;
                     }
@@ -190,41 +237,41 @@ namespace RATools.Data
                 {
                     if (tokenType == TokenType.Float)
                     {
-                        if (_fieldSize == FieldSize.DWord)
+                        if (Size == FieldSize.DWord)
                         {
-                            _fieldSize = FieldSize.Float;
+                            Size = FieldSize.Float;
                             bWordIsSize = true; // allow trailing be/bigendian
                         }
                     }
                     else if (tokenType == TokenType.Double)
                     {
-                        if (_fieldSize == FieldSize.DWord || _length == 8)
+                        if (Size == FieldSize.DWord || Length == 8)
                         {
-                            _fieldSize = FieldSize.Double32;
+                            Size = FieldSize.Double32;
                             bWordIsSize = true; // allow trailing be/bigendian
                         }
                     }
                     else if (tokenType == TokenType.BigEndian)
                     {
-                        switch (_fieldSize)
+                        switch (Size)
                         {
-                            case FieldSize.Word: _fieldSize = FieldSize.BigEndianWord; break;
-                            case FieldSize.TByte: _fieldSize = FieldSize.BigEndianTByte; break;
-                            case FieldSize.DWord: _fieldSize = FieldSize.BigEndianDWord; break;
-                            case FieldSize.Float: _fieldSize = FieldSize.BigEndianFloat; break;
-                            case FieldSize.Double32: _fieldSize = FieldSize.BigEndianDouble32; break;
+                            case FieldSize.Word: Size = FieldSize.BigEndianWord; break;
+                            case FieldSize.TByte: Size = FieldSize.BigEndianTByte; break;
+                            case FieldSize.DWord: Size = FieldSize.BigEndianDWord; break;
+                            case FieldSize.Float: Size = FieldSize.BigEndianFloat; break;
+                            case FieldSize.Double32: Size = FieldSize.BigEndianDouble32; break;
                             default: break;
                         }
                     }
                     else if (tokenType == TokenType.LittleEndian)
                     {
-                        if (_fieldSize == FieldSize.MBF32)
-                            _fieldSize = FieldSize.LittleEndianMBF32;
+                        if (Size == FieldSize.MBF32)
+                            Size = FieldSize.LittleEndianMBF32;
                     }
                     else if (tokenType == TokenType.MBF)
                     {
-                        if (_length == 4 || _length == 5)
-                            _fieldSize = FieldSize.MBF32;
+                        if (Length == 4 || Length == 5)
+                            Size = FieldSize.MBF32;
                     }
                 }
                 else if (lastTokenType == TokenType.Number)
@@ -236,8 +283,8 @@ namespace RATools.Data
                             uint bits;
                             if (UInt32.TryParse(lastToken.ToString(), out bits))
                             {
-                                _length = (bits + 7) / 8;
-                                _fieldSize = FieldSize.None;
+                                Length = (bits + 7) / 8;
+                                Size = FieldSize.None;
                                 isBytesFromBits = true;
                                 bWordIsSize = true;
                                 wasSizeFound = true;
@@ -251,8 +298,8 @@ namespace RATools.Data
                             uint bits;
                             if (UInt32.TryParse(lastToken.ToString(), out bits))
                             {
-                                _length = bits;
-                                _fieldSize = FieldSize.None;
+                                Length = bits;
+                                Size = FieldSize.None;
                                 isBytesFromBits = false;
                                 bWordIsSize = true;
                                 wasSizeFound = true;
@@ -262,14 +309,14 @@ namespace RATools.Data
 
                     if (bWordIsSize)
                     {
-                        switch (_length)
+                        switch (Length)
                         {
-                            case 0: _length = 1; break; // Unexpected size, reset to defaults (1 byte, Unknown)
-                            case 1: _fieldSize = FieldSize.Byte; break;
-                            case 2: _fieldSize = FieldSize.Word; break;
-                            case 3: _fieldSize = FieldSize.TByte; break;
-                            case 4: _fieldSize = FieldSize.DWord; break;
-                            default: _fieldSize = FieldSize.Array; break;
+                            case 0: Length = 1; break; // Unexpected size, reset to defaults (1 byte, Unknown)
+                            case 1: Size = FieldSize.Byte; break;
+                            case 2: Size = FieldSize.Word; break;
+                            case 3: Size = FieldSize.TByte; break;
+                            case 4: Size = FieldSize.DWord; break;
+                            default: Size = FieldSize.Array; break;
                         }
                     }
                 }
@@ -277,24 +324,24 @@ namespace RATools.Data
                 {
                     if (!wasSizeFound)
                     {
-                        _length = 4;
-                        _fieldSize = FieldSize.Float;
+                        Length = 4;
+                        Size = FieldSize.Float;
                         bWordIsSize = true; // allow trailing be/bigendian
 
                         if (lastTokenType == TokenType.BigEndian)
-                            _fieldSize = FieldSize.BigEndianFloat;
+                            Size = FieldSize.BigEndianFloat;
                     }
                 }
                 else if (tokenType == TokenType.Double)
                 {
                     if (!wasSizeFound)
                     {
-                        _length = 8;
-                        _fieldSize = FieldSize.Double32;
+                        Length = 8;
+                        Size = FieldSize.Double32;
                         bWordIsSize = true; // allow trailing be/bigendian
 
                         if (lastTokenType == TokenType.BigEndian)
-                            _fieldSize = FieldSize.BigEndianDouble32;
+                            Size = FieldSize.BigEndianDouble32;
                     }
                 }
 
@@ -409,7 +456,7 @@ namespace RATools.Data
             if (endIndex == -1)
                 return line;
 
-            var tokenizer = Tokenizer.CreateTokenizer(line, startIndex, endIndex - startIndex);
+            var tokenizer = Tokenizer.CreateTokenizer(line.ToLower(), startIndex, endIndex - startIndex);
             Token token;
             bool isPointer = false;
             while (tokenizer.NextChar != '\0')
@@ -429,7 +476,7 @@ namespace RATools.Data
             while (endIndex < line.Length - 1 && Char.IsWhiteSpace(line[endIndex + 1]))
                 ++endIndex;
 
-            line = line.Remove(startIndex, endIndex - startIndex);
+            line = line.Remove(startIndex, endIndex - startIndex + 1);
             if (isPointer && keepPointer)
                 line = "[pointer] " + line;
 

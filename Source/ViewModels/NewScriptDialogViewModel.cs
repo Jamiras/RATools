@@ -302,7 +302,7 @@ namespace RATools.ViewModels
             foreach (var kvp in _game.Notes)
             {
                 var note = new CodeNote((uint)kvp.Key, kvp.Value);
-                var size = (note.FieldSize == FieldSize.None) ? FieldSize.Byte : note.FieldSize;
+                var size = (note.Size == FieldSize.None) ? FieldSize.Byte : note.Size;
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address });
             }
         }

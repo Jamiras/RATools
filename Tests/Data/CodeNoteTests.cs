@@ -1,4 +1,5 @@
 ﻿using NUnit.Framework;
+using System.Linq;
 
 namespace RATools.Data.Tests
 {
@@ -103,8 +104,100 @@ namespace RATools.Data.Tests
         public void TestGetSizeFromNote(string note, int expectedLength, FieldSize expectedFieldSize)
         {
             var n = new CodeNote(1, note);
-            Assert.That(n.FieldSize, Is.EqualTo(expectedFieldSize));
+            Assert.That(n.Size, Is.EqualTo(expectedFieldSize));
             Assert.That(n.Length, Is.EqualTo(expectedLength));
+        }
+
+        [Test]
+        public void TestPointerNote()
+        {
+            var n = new CodeNote(4,
+                "Bomb Timer Pointer (24-bit)\r\n" +
+                "+03 - [8-bit] Bombs Defused\r\n" +
+                "+04 - Bomb Timer");
+
+            Assert.That(n.Size, Is.EqualTo(FieldSize.TByte));
+            Assert.That(n.Length, Is.EqualTo(3));
+            Assert.That(n.Summary, Is.EqualTo("Bomb Timer Pointer"));
+            Assert.That(n.IsPointer, Is.True);
+
+            Assert.That(n.OffsetNotes.Count(), Is.EqualTo(2));
+
+            var n2 = n.OffsetNotes.ElementAt(0);
+            Assert.That(n2.Address, Is.EqualTo(3));
+            Assert.That(n2.Size, Is.EqualTo(FieldSize.Byte));
+            Assert.That(n2.Length, Is.EqualTo(1));
+            Assert.That(n2.Summary, Is.EqualTo("Bombs Defused"));
+            Assert.That(n2.IsPointer, Is.False);
+
+            var n3 = n.OffsetNotes.ElementAt(1);
+            Assert.That(n3.Address, Is.EqualTo(4));
+            Assert.That(n3.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n3.Length, Is.EqualTo(1));
+            Assert.That(n3.Summary, Is.EqualTo("Bomb Timer"));
+            Assert.That(n3.IsPointer, Is.False);
+        }
+
+        [Test]
+        public void TestPointerNoteNestedMultiline()
+        {
+            var n = new CodeNote(4,
+                "Pointer [32bit]\r\n" +
+                "+0x428 | Obj1 pointer\r\n" +
+                "++0x24C | [16-bit] State\r\n" +
+                "-- Increments\r\n" +
+                "+0x438 | Obj2 pointer\r\n" +
+                "++0x08 | Flag\r\n" +
+                "-- b0=quest1 complete\r\n" +
+                "-- b1=quest2 complete\r\n" +
+                "+0x448 | [32-bit BE] Not-nested number");
+
+            Assert.That(n.Size, Is.EqualTo(FieldSize.DWord));
+            Assert.That(n.Length, Is.EqualTo(4));
+            Assert.That(n.Summary, Is.EqualTo("Pointer"));
+            Assert.That(n.IsPointer, Is.True);
+
+            Assert.That(n.OffsetNotes.Count(), Is.EqualTo(3));
+
+            var n428 = n.OffsetNotes.ElementAt(0);
+            Assert.That(n428.Address, Is.EqualTo(0x428));
+            Assert.That(n428.Size, Is.EqualTo(FieldSize.DWord));
+            Assert.That(n428.Length, Is.EqualTo(4));
+            Assert.That(n428.Summary, Is.EqualTo("Obj1 pointer"));
+            Assert.That(n428.IsPointer, Is.True);
+
+            var n438 = n.OffsetNotes.ElementAt(1);
+            Assert.That(n438.Address, Is.EqualTo(0x438));
+            Assert.That(n438.Size, Is.EqualTo(FieldSize.DWord));
+            Assert.That(n438.Length, Is.EqualTo(4));
+            Assert.That(n438.Summary, Is.EqualTo("Obj2 pointer"));
+            Assert.That(n438.IsPointer, Is.True);
+
+            var n448 = n.OffsetNotes.ElementAt(2);
+            Assert.That(n448.Address, Is.EqualTo(0x448));
+            Assert.That(n448.Size, Is.EqualTo(FieldSize.BigEndianDWord));
+            Assert.That(n448.Length, Is.EqualTo(4));
+            Assert.That(n448.Summary, Is.EqualTo("Not-nested number"));
+            Assert.That(n448.IsPointer, Is.False);
+
+            Assert.That(n428.OffsetNotes.Count(), Is.EqualTo(1));
+            var n24c = n428.OffsetNotes.First();
+            Assert.That(n24c.Address, Is.EqualTo(0x24c));
+            Assert.That(n24c.Size, Is.EqualTo(FieldSize.Word));
+            Assert.That(n24c.Length, Is.EqualTo(2));
+            Assert.That(n24c.Summary, Is.EqualTo("State"));
+            Assert.That(n24c.Note, Is.EqualTo("[16-bit] State\r\n-- Increments"));
+            Assert.That(n24c.IsPointer, Is.False);
+
+            Assert.That(n438.OffsetNotes.Count(), Is.EqualTo(1));
+            var n8 = n438.OffsetNotes.First();
+            Assert.That(n8.Address, Is.EqualTo(8));
+            Assert.That(n8.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n8.Length, Is.EqualTo(1));
+            Assert.That(n8.Summary, Is.EqualTo("Flag"));
+            Assert.That(n8.Note, Is.EqualTo("Flag\r\n-- b0=quest1 complete\r\n-- b1=quest2 complete"));
+            Assert.That(n8.IsPointer, Is.False);
+
         }
     }
 }
