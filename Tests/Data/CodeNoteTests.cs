@@ -197,7 +197,28 @@ namespace RATools.Data.Tests
             Assert.That(n8.Summary, Is.EqualTo("Flag"));
             Assert.That(n8.Note, Is.EqualTo("Flag\r\n-- b0=quest1 complete\r\n-- b1=quest2 complete"));
             Assert.That(n8.IsPointer, Is.False);
+        }
 
+        [Test]
+        public void TestGetSubNote()
+        {
+            var n = new CodeNote(4,
+                "Item flags\r\n" +
+                "b0: found\r\n" +
+                "bit1 = collected\r\n" +
+                "B2-3=color\r\n" +
+                "b4 - b7 -> count\r\n");
+
+            Assert.That(n.GetSubNote(FieldSize.Bit0), Is.EqualTo("found"));
+            Assert.That(n.GetSubNote(FieldSize.Bit1), Is.EqualTo("collected"));
+            Assert.That(n.GetSubNote(FieldSize.Bit2), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit3), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit4), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit5), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit6), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit7), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
         }
     }
 }
