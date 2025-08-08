@@ -31,7 +31,7 @@ namespace RATools.Tests.ViewModels
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
 
             var requirement = builder.ToAchievement().CoreRequirements.First();
-            var notes = new Dictionary<uint, string>();
+            var notes = new Dictionary<uint, CodeNote>();
             var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo(expected));
@@ -50,11 +50,11 @@ namespace RATools.Tests.ViewModels
         [TestCase("0xH4567", "This note\nis multiple\nlines.")]
         public void TestNotes(string serialized, string expected)
         {
-            var notes = new Dictionary<uint, string>();
-            notes[0x1234] = "Addr1";
-            notes[0x2345] = "Addr2";
-            notes[0x3456] = "This note is long enough that it will need to be wrapped.";
-            notes[0x4567] = "This note\nis multiple\nlines.";
+            var notes = new Dictionary<uint, CodeNote>();
+            notes[0x1234] = new CodeNote(0x1234, "Addr1");
+            notes[0x2345] = new CodeNote(0x2345, "Addr2");
+            notes[0x3456] = new CodeNote(0x3456, "This note is long enough that it will need to be wrapped.");
+            notes[0x4567] = new CodeNote(0x4567, "This note\nis multiple\nlines.");
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
@@ -69,9 +69,9 @@ namespace RATools.Tests.ViewModels
         [TestCase("0xH2345=7", "Addr2")]
         public void TestNoteShortening(string serialized, string expected)
         {
-            var notes = new Dictionary<uint, string>();
-            notes[0x1234] = "Addr1";
-            notes[0x2345] = "Addr2\r\n0=True\r\n1=False";
+            var notes = new Dictionary<uint, CodeNote>();
+            notes[0x1234] = new CodeNote(0x1234, "Addr1");
+            notes[0x2345] = new CodeNote(0x2345, "Addr2\r\n0=True\r\n1=False");
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
@@ -101,7 +101,7 @@ namespace RATools.Tests.ViewModels
                 Right = FieldFactory.CreateField(3)
             };
 
-            var notes = new Dictionary<uint, string>();
+            var notes = new Dictionary<uint, CodeNote>();
             var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo("always_false()"));
@@ -128,7 +128,7 @@ namespace RATools.Tests.ViewModels
                 HitCount = 10,
             };
 
-            var notes = new Dictionary<uint, string>();
+            var notes = new Dictionary<uint, CodeNote>();
             var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo("repeated(10, always_false())"));

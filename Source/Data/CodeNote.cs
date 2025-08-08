@@ -605,7 +605,7 @@ namespace RATools.Data
             {
                 lowBit = '4';
                 highBit = '7';
-                index = 5;
+                index = 6;
             }
             else
             {

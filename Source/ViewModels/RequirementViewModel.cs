@@ -14,7 +14,7 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Requirement}")]
     public class RequirementViewModel : ViewModelBase
     {
-        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             Requirement = requirement;
 
@@ -28,31 +28,31 @@ namespace RATools.ViewModels
                     {
                         var builder = new StringBuilder();
 
-                        string note;
+                        CodeNote note;
                         if (notes.TryGetValue(requirement.Left.Value, out note))
-                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note);
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note.Summary);
 
                         if (notes.TryGetValue(requirement.Right.Value, out note))
                         {
                             if (builder.Length > 0)
                                 builder.AppendLine();
-                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note);
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note.Summary);
                         }
 
                         Notes = builder.ToString();
                     }
                     else
                     {
-                        string note;
+                        CodeNote note;
                         if (notes.TryGetValue(requirement.Left.Value, out note))
-                            Notes = note;
+                            Notes = note.Summary;
                     }
                 }
                 else if (requirement.Right.IsMemoryReference)
                 {
-                    string note;
+                    CodeNote note;
                     if (notes.TryGetValue(requirement.Right.Value, out note))
-                        Notes = note;
+                        Notes = note.Summary;
                 }
             }
 

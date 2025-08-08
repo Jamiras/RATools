@@ -299,9 +299,8 @@ namespace RATools.ViewModels
 
         private void LoadNotes()
         {
-            foreach (var kvp in _game.Notes)
+            foreach (var note in _game.Notes.Values)
             {
-                var note = new CodeNote((uint)kvp.Key, kvp.Value);
                 var size = (note.Size == FieldSize.None) ? FieldSize.Byte : note.Size;
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address });
             }
@@ -554,11 +553,11 @@ namespace RATools.ViewModels
                 index++;
             }
 
-            string notes;
-            if (!_game.Notes.TryGetValue(field.Value, out notes))
+            CodeNote note;
+            if (!_game.Notes.TryGetValue(field.Value, out note))
                 return null;
 
-            var item = new MemoryItem(field.Value, field.Size, notes.Replace("\r\n", " ").Replace('\n', ' '));
+            var item = new MemoryItem(field.Value, field.Size, note.Summary);
             _memoryItems.Insert(index, item);
             return item;
         }
@@ -876,7 +875,7 @@ namespace RATools.ViewModels
 
                 if (functionNameStyle != FunctionNameStyle.None)
                 {
-                    string note;
+                    CodeNote note;
                     if (_game.Notes.TryGetValue(memoryItem.Address, out note))
                         memoryItem.UpdateFunctionName(functionNameStyle, note);
                 }
@@ -899,7 +898,7 @@ namespace RATools.ViewModels
             {
                 var memoryItem = (MemoryItem)row.Model;
 
-                string note;
+                CodeNote note;
                 if (_game.Notes.TryGetValue(memoryItem.Address, out note))
                     memoryItem.UpdateFunctionName(functionNameStyle, note);
             }
@@ -946,7 +945,7 @@ namespace RATools.ViewModels
                 private set { SetValue(NotesProperty, value); }
             }
 
-            public void UpdateFunctionName(FunctionNameStyle style, string note)
+            public void UpdateFunctionName(FunctionNameStyle style, CodeNote note)
             {
                 if (style == FunctionNameStyle.None)
                 {
@@ -954,104 +953,22 @@ namespace RATools.ViewModels
                     return;
                 }
 
-                var index = note.IndexOf('\n');
-
-                var bitSuffix = new StringBuilder();
-                switch (Size)
-                {
-                    case FieldSize.Bit0:
-                    case FieldSize.Bit1:
-                    case FieldSize.Bit2:
-                    case FieldSize.Bit3:
-                    case FieldSize.Bit4:
-                    case FieldSize.Bit5:
-                    case FieldSize.Bit6:
-                    case FieldSize.Bit7:
-                        var bitSize = Size.ToString();
-                        var bitIndex = note.IndexOf(bitSize, StringComparison.OrdinalIgnoreCase);
-                        if (bitIndex == -1)
-                        {
-                            bitSize = "b" + bitSize[3];
-                            bitIndex = note.IndexOf(bitSize, StringComparison.OrdinalIgnoreCase);
-                        }
-                        if (bitIndex == -1)
-                            goto case FieldSize.LowNibble;
-
-                        bitIndex += bitSize.Length;
-                        if (Char.IsLetterOrDigit(note[bitIndex]))
-                            goto case FieldSize.LowNibble;
-
-                        while (bitIndex < note.Length && (Char.IsWhiteSpace(note[bitIndex]) || note[bitIndex] == '=' || note[bitIndex] == ':'))
-                            ++bitIndex;
-
-                        if (!Char.IsLetterOrDigit(note[bitIndex]))
-                            goto case FieldSize.LowNibble;
-
-                        while (bitIndex < note.Length && note[bitIndex] != '\n' && note[bitIndex] != ',' && note[bitIndex] != ';')
-                            bitSuffix.Append(note[bitIndex++]);
-
-                        if (bitSuffix.Length == 0)
-                            goto case FieldSize.LowNibble;
-
-                        if (index == -1 && 
-                            note.StartsWith("bit", StringComparison.OrdinalIgnoreCase) ||
-                            (Char.IsDigit(note[1]) && (note[0] == 'b' || note[0] == 'B')))
-                        {
-                            // found a bit suffix, but nothing to use as a prefix. discard prefix
-                            note = "";
-                            index = -1;
-                        }
-                        break;
-
-                    case FieldSize.LowNibble:
-                    case FieldSize.HighNibble:
-                        // ignore multi-line note for sizes smaller than a byte
-                        if (index != -1 || note.Contains(',') || note.Contains(';'))
-                            return;
-                        break;
-                }
-
-                if (index != -1)
-                    note = note.Substring(0, index);
-                note = note.Trim();
-
-                // remove size indicator if present
-                var startIndex = note.IndexOf('[');
-                if (startIndex != -1)
-                {
-                    var endIndex = note.IndexOf(']', startIndex + 1);
-                    if (endIndex != -1)
-                    {
-                        var size = note.Substring(startIndex + 1, endIndex - startIndex - 1);
-
-                        if (size.Contains("byte", StringComparison.OrdinalIgnoreCase) ||
-                            size.Contains("bit", StringComparison.OrdinalIgnoreCase) ||
-                            size.Contains("float", StringComparison.OrdinalIgnoreCase) ||
-                            size.Contains("MBF", StringComparison.OrdinalIgnoreCase) ||
-                            size.Contains('=') || size.Contains(','))
-                        {
-                            note = note.Substring(0, startIndex) + note.Substring(endIndex + 1);
-                        }
-                    }
-                }
+                var text = note.GetSubNote(Size) ?? note.Summary;
 
                 // remove potential value assigments
-                var equalsIndex = note.IndexOfAny(new[] { '=', ':' });
+                var equalsIndex = text.IndexOfAny(new[] { '=', ':' });
                 if (equalsIndex != -1)
                 {
-                    var left = note.Substring(0, equalsIndex).Trim();
-                    var right = note.Substring(equalsIndex + 1).Trim();
+                    var left = text.Substring(0, equalsIndex).Trim();
+                    var right = text.Substring(equalsIndex + 1).Trim();
                     if (left.Length > 0 && Char.IsDigit(left[0]))
-                        note = right;
+                        text = right;
                     else if (right.Length > 0 && Char.IsDigit(right[0]))
-                        note = left;
+                        text = left;
                 }
 
-                if (bitSuffix.Length > 0)
-                    note += " - " + bitSuffix.ToString();
-
                 // build the function name
-                var functionName = BuildVariableName(note, style);
+                var functionName = BuildVariableName(text, style);
                 if (!String.IsNullOrEmpty(functionName))
                     FunctionName = functionName.ToString();
             }
@@ -1189,10 +1106,10 @@ namespace RATools.ViewModels
                         continue;
                 }
 
-                string notes = null;
+                CodeNote note = null;
                 if (dumpNotes != NoteDump.None)
                 {
-                    if (_game.Notes.TryGetValue(memoryItem.Address, out notes))
+                    if (_game.Notes.TryGetValue(memoryItem.Address, out note))
                     {
                         if (String.IsNullOrEmpty(memoryItem.FunctionName))
                         {
@@ -1204,11 +1121,11 @@ namespace RATools.ViewModels
                         }
                     }
 
-                    if (!String.IsNullOrEmpty(notes) && memoryItem.Address != previousNoteAddress)
+                    if (note != null && memoryItem.Address != previousNoteAddress)
                     {
                         previousNoteAddress = memoryItem.Address;
 
-                        notes = notes.Trim();
+                        var notes = note.Note.Trim();
                         if (notes.Length > 0)
                         {
                             if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
@@ -1515,7 +1432,7 @@ namespace RATools.ViewModels
         private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, ScriptBuilderContext scriptBuilderContext)
         {
             int index;
-            var notes = new Dictionary<uint, string>();
+            var notes = new Dictionary<uint, CodeNote>();
 
             var indentedContext = scriptBuilderContext.Clone();
             indentedContext.Indent = 4;
