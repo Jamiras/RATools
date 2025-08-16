@@ -22,10 +22,23 @@ namespace RATools.Parser.Expressions
             Name = name;
             Parameters = new List<VariableDefinitionExpression>();
             Expressions = new List<ExpressionBase>();
-            DefaultParameters = new TinyDictionary<string, ExpressionBase>();
+            DefaultParameters = new Dictionary<string, ExpressionBase>();
 
             MakeReadOnly();
         }
+
+        protected FunctionDefinitionExpression(FunctionDefinitionExpression source)
+            : base(ExpressionType.FunctionDefinition)
+        {
+            Name = source.Name;
+            Parameters = source.Parameters;
+            Expressions = source.Expressions;
+            DefaultParameters = source.DefaultParameters;
+
+            MakeReadOnly();
+        }
+
+        protected KeywordExpression _keyword;
 
         /// <summary>
         /// Gets the name of the function.
@@ -556,8 +569,8 @@ namespace RATools.Parser.Expressions
         {
             get
             {
-                if (!Location.IsEmpty)
-                    yield return new KeywordExpression("function", Location.Start.Line, Location.Start.Column);
+                if (_keyword != null)
+                    yield return _keyword;
 
                 if (Name != null)
                     yield return Name;
@@ -612,32 +625,25 @@ namespace RATools.Parser.Expressions
         {
         }
 
-        internal static UserFunctionDefinitionExpression ParseForTest(string definition)
-        {
-            var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(definition));
-            tokenizer.Match("function");
-            return Parse(tokenizer, 0, 0) as UserFunctionDefinitionExpression;
-        }
-
         /// <summary>
         /// Parses a function definition.
         /// </summary>
         /// <remarks>
         /// Assumes the 'function' keyword has already been consumed.
         /// </remarks>
-        internal static ExpressionBase Parse(PositionalTokenizer tokenizer, int line = 0, int column = 0)
+        internal static ExpressionBase Parse(KeywordExpression keyword, PositionalTokenizer tokenizer)
         {
-            var locationStart = new TextLocation(line, column); // location of 'function' keyword
-
-            SkipWhitespace(tokenizer);
-
-            line = tokenizer.Line;
-            column = tokenizer.Column;
+            var line = tokenizer.Line;
+            var column = tokenizer.Column;
 
             var functionName = tokenizer.ReadIdentifier();
+            if (functionName.IsEmpty)
+                return null;
+
             var functionNameVariable = new VariableDefinitionExpression(functionName.ToString(), line, column);
             var function = new UserFunctionDefinitionExpression(functionNameVariable);
-            function.Location = new TextRange(locationStart.Line, locationStart.Column, 0, 0);
+            function._keyword = keyword;
+            function.Location = keyword.Location;
 
             if (functionName.IsEmpty)
                 return ParseError(tokenizer, "Invalid function name");
@@ -754,6 +760,13 @@ namespace RATools.Parser.Expressions
                     seenReturn = true;
                 else if (seenReturn)
                     ParseError(tokenizer, "Expression after return statement", expression);
+
+                if (expression.Type == ExpressionType.Keyword && ((KeywordExpression)expression).Keyword == "return")
+                {
+                    // return statement without value
+                    if (RollbackReservedWordError(tokenizer))
+                        ParseError(tokenizer, "return statement without value", expression);
+                }
 
                 Expressions.Add(expression);
 

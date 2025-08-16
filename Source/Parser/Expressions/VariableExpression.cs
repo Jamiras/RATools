@@ -191,7 +191,7 @@ namespace RATools.Parser.Expressions
         {
         }
 
-        internal VariableDefinitionExpression(VariableExpression variable)
+        internal VariableDefinitionExpression(VariableExpressionBase variable)
             : base(variable.Name)
         {
             Location = variable.Location;

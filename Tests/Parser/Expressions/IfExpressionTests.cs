@@ -24,8 +24,7 @@ namespace RATools.Parser.Tests.Expressions
         private IfExpression Parse(string input)
         {
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("if");
-            var expr = IfExpression.Parse(tokenizer);
+            var expr = ExpressionBase.Parse(tokenizer);
             Assert.That(expr, Is.InstanceOf<IfExpression>());
             return (IfExpression)expr;
         }
@@ -101,8 +100,7 @@ namespace RATools.Parser.Tests.Expressions
         {
             var input = "if (j == 0) { j = i } elseif (j == 2) { j = 10 }";
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
-            tokenizer.Match("if");
-            var expr = IfExpression.Parse(tokenizer) as IfExpression;
+            var expr = ExpressionBase.Parse(tokenizer) as IfExpression;
             Assert.That(expr, Is.Not.Null);
 
             var builder = new StringBuilder();
