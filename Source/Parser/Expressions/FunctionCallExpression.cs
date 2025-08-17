@@ -185,7 +185,7 @@ namespace RATools.Parser.Expressions
                 {
                     var sourceExpression = (ExpressionBase)_source;
                     var funcCall = sourceExpression as FunctionCallExpression;
-                    if (funcCall != null)
+                    if (funcCall != null && funcCall.FunctionName != null)
                         result = new ErrorExpression(funcCall.FunctionName.Name + " did not return a function reference", sourceExpression);
                     else
                         result = new ErrorExpression(sourceExpression.ToString() + " is not a function reference", sourceExpression);
