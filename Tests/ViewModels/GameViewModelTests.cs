@@ -116,10 +116,10 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.RACacheDirectory, Is.EqualTo("C:\\Emulator\\RACache\\Data"));
             Assert.That(vmGame.Notes, Is.Not.Null);
             Assert.That(vmGame.Notes.Count, Is.EqualTo(4));
-            Assert.That(vmGame.Notes[0x123], Is.EqualTo("Test1"));
-            Assert.That(vmGame.Notes[0x124], Is.EqualTo("Test2"));
-            Assert.That(vmGame.Notes[0x125], Is.EqualTo("Test3"));
-            Assert.That(vmGame.Notes[0x1AF], Is.EqualTo("Test4"));
+            Assert.That(vmGame.Notes[0x123].Note, Is.EqualTo("Test1"));
+            Assert.That(vmGame.Notes[0x124].Note, Is.EqualTo("Test2"));
+            Assert.That(vmGame.Notes[0x125].Note, Is.EqualTo("Test3"));
+            Assert.That(vmGame.Notes[0x1AF].Note, Is.EqualTo("Test4"));
         }
 
         [Test]
@@ -166,8 +166,8 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.RACacheDirectory, Is.EqualTo("C:\\Emulator\\RACache\\Data"));
             Assert.That(vmGame.Notes, Is.Not.Null);
             Assert.That(vmGame.Notes.Count, Is.EqualTo(2));
-            Assert.That(vmGame.Notes[0x123], Is.EqualTo("Test1"));
-            Assert.That(vmGame.Notes[0x1AF], Is.EqualTo("Test4"));
+            Assert.That(vmGame.Notes[0x123].Note, Is.EqualTo("Test1"));
+            Assert.That(vmGame.Notes[0x1AF].Note, Is.EqualTo("Test4"));
         }
 
         [Test]

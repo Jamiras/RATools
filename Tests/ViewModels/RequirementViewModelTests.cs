@@ -47,7 +47,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("0xH1111=0xH1234", "0x001234:Addr1")]
         [TestCase("0xH2222=0xH1111", "")]
         [TestCase("0xH3456", "This note is long enough that it will need to be wrapped.")]
-        [TestCase("0xH4567", "This note\nis multiple\nlines.")]
+        [TestCase("0xH4567", "This note")]
         public void TestNotes(string serialized, string expected)
         {
             var notes = new Dictionary<uint, CodeNote>();

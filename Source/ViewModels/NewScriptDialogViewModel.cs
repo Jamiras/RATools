@@ -953,7 +953,34 @@ namespace RATools.ViewModels
                     return;
                 }
 
-                var text = note.GetSubNote(Size) ?? note.Summary;
+                var text = note.Summary;
+                var subNote = note.GetSubNote(Size);
+                if (subNote != null)
+                    text += ' ' + subNote;
+
+                // remove value substrings: (1=a, 2=b) [1=a, 2=b]
+                var bracket = text.IndexOf('[');
+                if (bracket != -1)
+                {
+                    var bracket2 = text.IndexOf(']', bracket + 1);
+                    if (bracket2 != -1)
+                    {
+                        var equal = text.IndexOf('=', bracket + 1);
+                        if (equal != -1 && equal < bracket2)
+                            text = text.Remove(bracket, bracket2 - bracket);
+                    }
+                }
+                var paren = text.IndexOf('[');
+                if (paren != -1)
+                {
+                    var paren2 = text.IndexOf(']', paren + 1);
+                    if (paren2 != -1)
+                    {
+                        var equal = text.IndexOf('=', paren + 1);
+                        if (equal != -1 && equal < paren2)
+                            text = text.Remove(paren, paren2 - paren);
+                    }
+                }
 
                 // remove potential value assigments
                 var equalsIndex = text.IndexOfAny(new[] { '=', ':' });

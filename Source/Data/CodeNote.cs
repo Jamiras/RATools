@@ -26,6 +26,8 @@ namespace RATools.Data
 
         public string Summary { get; private set; }
 
+        private List<KeyValuePair<Token, Token>> _values;
+
         private class PointerData
         {
             public PointerData()
@@ -79,7 +81,12 @@ namespace RATools.Data
                 tokenizer.Advance();
 
                 if (Summary.Length == 0 && !line.IsEmpty)
+                {
                     Summary = TrimSize(line.Trim().ToString(), false);
+
+                    if (Summary.IndexOfAny(new[] { '=', ':' }) != -1)
+                        ExtractValuesFromSummary();
+                }
 
                 if (line.Length >= 4) // nBit is smallest parsable note
                 {
@@ -100,11 +107,30 @@ namespace RATools.Data
                         ProcessPointer(tokenizer, lower);
                     }
 
-                    // if we found a size, we're done.
+                    // if we found a size, stop looking for a size/pointer
                     if (Size != FieldSize.None)
                         break;
                 }
             } while (tokenizer.NextChar != '\0');
+
+            // if we didn't find a size, reset the tokenizer so we can look for values.
+            // otherwise, just look for values in the remaining part of the note.
+            if (Size == FieldSize.None)
+            {
+                // skip the first line, values would have already been extracted from the summary
+                tokenizer = Tokenizer.CreateTokenizer(Note);
+                tokenizer.ReadTo('\n');
+                tokenizer.Advance();
+            }
+
+            while (tokenizer.NextChar != '\0')
+            {
+                var line = tokenizer.ReadTo('\n').Trim();
+                tokenizer.Advance();
+
+                if (line.Length >= 4)
+                    CheckValue(line);
+            }
         }
 
         private void ProcessPointer(Tokenizer tokenizer, string line)
@@ -485,149 +511,292 @@ namespace RATools.Data
             return line;
         }
 
+        private void ExtractValuesFromSummary()
+        {
+            if (Summary.IndexOfAny(new[] { '=', ':' }) == -1)
+                return;
+
+            var commaIndex = Summary.IndexOfAny(new[] { ',', ';' });
+            if (commaIndex == -1)
+                return;
+
+            var newSummary = Summary;
+            Tokenizer tokenizer = null;
+            var separator = Summary[commaIndex];
+            var bracket = Summary.IndexOf('['); // note [1=a, 2=b]
+            if (bracket != -1)
+            {
+                var bracket2 = Summary.IndexOf(']');
+                if (bracket2 != -1)
+                    tokenizer = Tokenizer.CreateTokenizer(Summary, bracket + 1, bracket2 - bracket - 1);
+
+                newSummary = Summary.Substring(0, bracket).Trim();
+            }
+
+            if (tokenizer == null)
+            {
+                var paren = Summary.IndexOf('('); // note (1=a, 2=b)
+                if (paren != -1)
+                {
+                    var paren2 = Summary.IndexOf(')');
+                    if (paren2 != -1)
+                        tokenizer = Tokenizer.CreateTokenizer(Summary, paren + 1, paren2 - paren - 1);
+
+                    newSummary = Summary.Substring(0, paren).Trim();
+                }
+            }
+
+            if (tokenizer == null)
+            {
+                var index = commaIndex;
+                while (index > 0 && Summary[index - 1] != '=' && Summary[index - 1] != ':')
+                    index--;
+                if (index > 0)
+                {
+                    index--;
+                    while (index > 0 && (Char.IsLetterOrDigit(Summary[index - 1]) || Char.IsWhiteSpace(Summary[index - 1])))
+                        index--;
+
+                    var separatorIndex = Summary.IndexOfAny(new[] { '=', ':' }, index);
+                    if (separatorIndex != -1 && IsValue(new Token(Summary, index, separatorIndex - index).Trim()))
+                    {
+                        tokenizer = Tokenizer.CreateTokenizer(Summary, index, Summary.Length - index);
+                        tokenizer.SkipWhitespace();
+
+                        newSummary = Summary.Substring(0, index);
+                    }
+                }
+            }
+
+            if (tokenizer != null)
+            {
+                while (tokenizer.NextChar != '\0')
+                {
+                    var clause = tokenizer.ReadTo(separator);
+                    tokenizer.Advance();
+
+                    CheckValue(clause.Trim());
+                }
+            }
+
+            Summary = newSummary;
+        }
+
+        private static bool IsHexDigit(char c)
+        {
+            return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        }
+
+        private static bool IsValue(Token token)
+        {
+            if (token.Length == 0)
+                return false;
+
+            char lowBit, highBit;
+            if (GetBitRange(token, out lowBit, out highBit))
+                return true;
+
+            int index = 0;
+            if (token.StartsWith("0x"))
+                index += 2;
+
+            if (index == token.Length)
+                return false;
+
+            while (IsHexDigit(token[index]))
+            {
+                if (++index == token.Length)
+                    return true;
+            }
+
+            while (index < token.Length && Char.IsWhiteSpace(token[index]))
+                index++;
+
+            if (index < token.Length && token[index] == '-')
+            {
+                index++;
+
+                while (index < token.Length && Char.IsWhiteSpace(token[index]))
+                    index++;
+
+                if (!IsHexDigit(token[index]))
+                    return false;
+
+                do
+                {
+                    if (++index == token.Length)
+                        return true;
+                } while (IsHexDigit(token[index]));
+            }
+
+            return false;
+        }
+
+        private void CheckValue(Token clause)
+        {
+            var separatorLength = 1;
+            var separator = clause.IndexOf('=');
+
+            var colon = clause.IndexOf(':');
+            if (colon != -1 && (separator == -1 || colon < separator))
+                separator = colon;
+
+            var arrow = clause.IndexOf("->");
+            if (arrow != -1 && (separator == -1 || arrow < separator))
+            {
+                separator = arrow;
+                separatorLength = 2;
+            }
+
+            if (separator != -1)
+            {
+                var left = clause.SubToken(0, separator).Trim();
+                var right = clause.SubToken(separator + separatorLength).Trim();
+
+                if (IsValue(left))
+                    AddValue(left, right);
+                else if (IsValue(right))
+                    AddValue(right, left);
+            }
+        }
+
+        private void AddValue(Token value, Token note)
+        {
+            if (_values == null)
+                _values = new List<KeyValuePair<Token, Token>>();
+
+            _values.Add(new KeyValuePair<Token, Token>(value, note));
+        }
+
         public string GetSubNote(FieldSize size)
         {
             switch (size)
             {
-                case FieldSize.Bit0: return GetBitNote('0');
-                case FieldSize.Bit1: return GetBitNote('1');
-                case FieldSize.Bit2: return GetBitNote('2');
-                case FieldSize.Bit3: return GetBitNote('3');
-                case FieldSize.Bit4: return GetBitNote('4');
-                case FieldSize.Bit5: return GetBitNote('5');
-                case FieldSize.Bit6: return GetBitNote('6');
-                case FieldSize.Bit7: return GetBitNote('7');
-                case FieldSize.LowNibble: return GetNibbleNote('0', '3');
-                case FieldSize.HighNibble: return GetNibbleNote('4', '7');
+                case FieldSize.Bit0: return GetBitNote((low, high) => low <= '0' && high >= '0');
+                case FieldSize.Bit1: return GetBitNote((low, high) => low <= '1' && high >= '1');
+                case FieldSize.Bit2: return GetBitNote((low, high) => low <= '2' && high >= '2');
+                case FieldSize.Bit3: return GetBitNote((low, high) => low <= '3' && high >= '3');
+                case FieldSize.Bit4: return GetBitNote((low, high) => low <= '4' && high >= '4');
+                case FieldSize.Bit5: return GetBitNote((low, high) => low <= '5' && high >= '5');
+                case FieldSize.Bit6: return GetBitNote((low, high) => low <= '6' && high >= '6');
+                case FieldSize.Bit7: return GetBitNote((low, high) => low <= '7' && high >= '7');
+                case FieldSize.LowNibble: return GetBitNote((low, high) => low == '0' && high == '3');
+                case FieldSize.HighNibble: return GetBitNote((low, high) => low == '4' && high == '7');
                 default: return null;
             }
         }
 
-        private string GetBitNote(char bit)
+        private string GetBitNote(Func<char, char, bool> checkBitFunc)
         {
-            var tokenizer = Tokenizer.CreateTokenizer(Note);
-            tokenizer.ReadTo('\n');
-            tokenizer.Advance();
-            while (tokenizer.NextChar != '\0')
+            if (_values != null)
             {
-                var line = tokenizer.ReadTo('\n');
-                tokenizer.Advance();
-
-                Token note;
-                char lowBit, highBit;
-                if (GetBitRange(line, out lowBit, out highBit, out note))
+                foreach (var kvp in _values)
                 {
-                    if (bit >= lowBit && bit <= highBit)
-                        return note.ToString();
+                    char lowBit, highBit;
+                    if (GetBitRange(kvp.Key, out lowBit, out highBit) && checkBitFunc(lowBit, highBit))
+                        return kvp.Value.ToString();
                 }
             }
 
             return null;
         }
 
-        private string GetNibbleNote(char nibbleStartBit, char nibbleEndBit)
-        {
-            var tokenizer = Tokenizer.CreateTokenizer(Note);
-            tokenizer.ReadTo('\n');
-            tokenizer.Advance();
-            while (tokenizer.NextChar != '\0')
-            {
-                var line = tokenizer.ReadTo('\n');
-                tokenizer.Advance();
-
-                Token note;
-                char lowBit, highBit;
-                if (GetBitRange(line, out lowBit, out highBit, out note))
-                {
-                    if (nibbleStartBit == lowBit && nibbleEndBit == highBit)
-                        return note.ToString();
-                }
-            }
-
-            return null;
-        }
-
-        private static bool GetBitRange(Token line, out char lowBit, out char highBit, out Token note)
+        private static bool GetBitRange(Token token, out char lowBit, out char highBit)
         {
             lowBit = highBit = 'X';
-            note = new Token();
 
             var index = 0;
-            if (line[0] == 'b' || line[0] == 'B')
+            if (token[0] == 'b' || token[0] == 'B')
             {
                 index = 1;
 
-                if (line.StartsWith("bit", StringComparison.InvariantCultureIgnoreCase))
-                    index = 3;
-
-                if (index < line.Length && Char.IsDigit(line[index]))
+                if (token.StartsWith("bit", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    lowBit = highBit = line[index];
+                    index = 3;
+                    if (index < token.Length && (token[index] == 's' || token[index] == 'S'))
+                        index = 4;
+
+                    while (index < token.Length && Char.IsWhiteSpace(token[index]))
+                        index++;
+                }
+
+                if (index < token.Length && Char.IsDigit(token[index]))
+                {
+                    lowBit = highBit = token[index];
 
                     index++;
-                    while (index < line.Length && Char.IsWhiteSpace(line[index]))
+                    while (index < token.Length && Char.IsWhiteSpace(token[index]))
                         index++;
-                    if (index < line.Length && line[index] == '-')
+                    if (index < token.Length)
                     {
-                        index++;
-                        while (index < line.Length && Char.IsWhiteSpace(line[index]))
-                            index++;
-
-                        if (index < line.Length && (line[index] == 'b' || line[index] == 'B'))
+                        if (token[index] == '-')
                         {
                             index++;
-                            if (index < line.Length - 2 &&
-                                (line[index] == 'i' || line[index] == 'I') &&
-                                (line[index + 1] == 't' || line[index + 1] == 'T'))
-                            {
-                                index += 2;
-                            }
-                        }
+                            while (index < token.Length && Char.IsWhiteSpace(token[index]))
+                                index++;
 
-                        if (index < line.Length && Char.IsDigit(line[index]))
-                            highBit = line[index++];
+                            if (index < token.Length && (token[index] == 'b' || token[index] == 'B'))
+                            {
+                                index++;
+                                if (index < token.Length - 2 &&
+                                    (token[index] == 'i' || token[index] == 'I') &&
+                                    (token[index + 1] == 't' || token[index + 1] == 'T'))
+                                {
+                                    index += 2;
+                                }
+                            }
+                            if (index < token.Length && Char.IsDigit(token[index]))
+                                highBit = token[index++];
+                        }
+                        else if (Char.IsDigit(token[index]))
+                        {
+                            highBit = token[index++];
+                        }
+                        else if (token.SubToken(index).CompareTo("set", StringComparison.InvariantCultureIgnoreCase) == 0)
+                        {
+                            return true;
+                        }
                     }
                 }
+                return (index == token.Length);
             }
-            else if (line.StartsWith("low4", StringComparison.InvariantCultureIgnoreCase))
+
+            if (token.CompareTo("low4", StringComparison.InvariantCultureIgnoreCase) == 0)
             {
                 lowBit = '0';
                 highBit = '3';
-                index = 4;
+                return true;
             }
-            else if (line.StartsWith("high4", StringComparison.InvariantCultureIgnoreCase))
+
+            if (token.CompareTo("high4", StringComparison.InvariantCultureIgnoreCase) == 0)
             {
                 lowBit = '4';
                 highBit = '7';
-                index = 5;
+                return true;
             }
-            else if (line.StartsWith("upper4", StringComparison.InvariantCultureIgnoreCase))
+
+            if (token.CompareTo("upper4", StringComparison.InvariantCultureIgnoreCase) == 0)
             {
                 lowBit = '4';
                 highBit = '7';
-                index = 6;
+                return true;
             }
-            else
+
+            if (token.CompareTo("low nibble", StringComparison.InvariantCultureIgnoreCase) == 0)
             {
-                return false;
+                lowBit = '0';
+                highBit = '3';
+                return true;
             }
 
-            if (index < line.Length && Char.IsLetterOrDigit(line[index]))
-                return false;
-
-            while (index < line.Length && Char.IsWhiteSpace(line[index]))
-                index++;
-            if (index < line.Length && !Char.IsLetterOrDigit(line[index]))
+            if (token.CompareTo("high nibble", StringComparison.InvariantCultureIgnoreCase) == 0)
             {
-                index++;
-                if (index < line.Length && !Char.IsLetterOrDigit(line[index]))
-                    index++;
-                while (index < line.Length && Char.IsWhiteSpace(line[index]))
-                    index++;
+                lowBit = '4';
+                highBit = '7';
+                return true;
             }
 
-            note = line.SubToken(index).TrimRight();
-            return (lowBit != 'X');
+            return false;
         }
     }
 }

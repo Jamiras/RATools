@@ -220,5 +220,61 @@ namespace RATools.Data.Tests
             Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.EqualTo("count"));
             Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
         }
+
+        [Test]
+        public void TestGetSubNoteInlineSubClause()
+        {
+            var n = new CodeNote(4,
+                "Item flags [b0: found, bit1 = collected,B2-3=color, b4 - b7 -> count]");
+
+            Assert.That(n.GetSubNote(FieldSize.Bit0), Is.EqualTo("found"));
+            Assert.That(n.GetSubNote(FieldSize.Bit1), Is.EqualTo("collected"));
+            Assert.That(n.GetSubNote(FieldSize.Bit2), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit3), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit4), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit5), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit6), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit7), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
+        }
+
+        [Test]
+        public void TestGetSubNoteInlineTrailingClause()
+        {
+            var n = new CodeNote(4,
+                "Item flags - b0: found, bit1 = collected,B2-3=color, b4 - b7 -> count");
+
+            Assert.That(n.GetSubNote(FieldSize.Bit0), Is.EqualTo("found"));
+            Assert.That(n.GetSubNote(FieldSize.Bit1), Is.EqualTo("collected"));
+            Assert.That(n.GetSubNote(FieldSize.Bit2), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit3), Is.EqualTo("color"));
+            Assert.That(n.GetSubNote(FieldSize.Bit4), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit5), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit6), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.Bit7), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.EqualTo("count"));
+            Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
+        }
+
+        [Test]
+        public void TestGetSubNoteWithExtra()
+        {
+            var n = new CodeNote(4,
+                "US/EU discriminator\r\n" +
+                "bit4 set: US\r\n" +
+                "bit5 set: EU\r\n");
+
+            Assert.That(n.GetSubNote(FieldSize.Bit0), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.Bit1), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.Bit2), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.Bit3), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.Bit4), Is.EqualTo("US"));
+            Assert.That(n.GetSubNote(FieldSize.Bit5), Is.EqualTo("EU"));
+            Assert.That(n.GetSubNote(FieldSize.Bit6), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.Bit7), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.Null);
+            Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
+        }
     }
 }
