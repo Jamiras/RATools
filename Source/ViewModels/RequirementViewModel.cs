@@ -30,13 +30,18 @@ namespace RATools.ViewModels
 
                         CodeNote note;
                         if (notes.TryGetValue(requirement.Left.Value, out note))
-                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, note.Summary);
+                        {
+                            var subNote = note.GetSubNote(requirement.Left.Size);
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, subNote ?? note.Summary);
+                        }
 
                         if (notes.TryGetValue(requirement.Right.Value, out note))
                         {
                             if (builder.Length > 0)
                                 builder.AppendLine();
-                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, note.Summary);
+
+                            var subNote = note.GetSubNote(requirement.Right.Size);
+                            builder.AppendFormat("0x{0:x6}:{1}", requirement.Right.Value, subNote ?? note.Summary);
                         }
 
                         Notes = builder.ToString();
@@ -45,14 +50,20 @@ namespace RATools.ViewModels
                     {
                         CodeNote note;
                         if (notes.TryGetValue(requirement.Left.Value, out note))
-                            Notes = note.Summary;
+                        {
+                            var subNote = note.GetSubNote(requirement.Left.Size);
+                            Notes = subNote ?? note.Summary;
+                        }
                     }
                 }
                 else if (requirement.Right.IsMemoryReference)
                 {
                     CodeNote note;
                     if (notes.TryGetValue(requirement.Right.Value, out note))
-                        Notes = note.Summary;
+                    {
+                        var subNote = note.GetSubNote(requirement.Left.Size);
+                        Notes = subNote ?? note.Summary;
+                    }
                 }
             }
 
