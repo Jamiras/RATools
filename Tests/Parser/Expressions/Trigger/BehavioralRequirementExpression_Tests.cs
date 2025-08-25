@@ -26,6 +26,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("never(repeated(3, always_true()))", "R:1=1.3.")]
         [TestCase("never(byte(1) == 56 || byte(2) == 3)", "R:0xH000001=56_R:0xH000002=3")] // or clauses can be separated
         [TestCase("never(byte(1) == 56 && byte(2) == 3)", "N:0xH000001=56_R:0xH000002=3")] // and clauses cannot be separated
+        [TestCase("never(__ornext(byte(1) == 56 || byte(2) == 3))", "O:0xH000001=56_R:0xH000002=3")] // don't separate clauses if __ornext used
         [TestCase("never(once(byte(1) == 56))", "R:0xH000001=56")] // hitcount of 1 is redundant on a ResetIf
         [TestCase("never(once(byte(1) == 56 && never(byte(2) == 12)))",
             "N:0xH000001=56_R:0xH000002!=12")] // hittarget of 1 can never accumulate hits so ResetNextIf can be inverted and made into a normal subclause
@@ -35,6 +36,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("unless(repeated(6, byte(1) == 56))", "P:0xH000001=56.6.")]
         [TestCase("unless(byte(1) == 56 || byte(2) == 3)", "P:0xH000001=56_P:0xH000002=3")] // or clauses can be separated
         [TestCase("unless(byte(1) == 56 && byte(2) == 3)", "N:0xH000001=56_P:0xH000002=3")] // and clauses cannot be separated
+        [TestCase("unless(__ornext(byte(1) == 56 || byte(2) == 3))", "O:0xH000001=56_P:0xH000002=3")] // don't separate clauses if __ornext used
         [TestCase("trigger_when(byte(0x001234) == 3)", "T:0xH001234=3")]
         [TestCase("trigger_when(repeated(6, byte(1) == 56))", "T:0xH000001=56.6.")]
         [TestCase("trigger_when(byte(1) == 56 && byte(2) == 3)", "T:0xH000001=56_T:0xH000002=3")] // and clauses can be separated
