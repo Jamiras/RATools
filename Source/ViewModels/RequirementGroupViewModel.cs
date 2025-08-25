@@ -12,7 +12,10 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Label}")]
     public class RequirementGroupViewModel : ViewModelBase
     {
-        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public RequirementGroupViewModel(string label,
+            IEnumerable<Requirement> requirements,
+            NumberFormat numberFormat,
+            IDictionary<uint, CodeNote> notes)
         {
             Label = label;
 
@@ -190,7 +193,7 @@ namespace RATools.ViewModels
             return (bestLeft != -1);
         }
 
-        private void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        private void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             if (right == null)
             {
@@ -287,7 +290,7 @@ namespace RATools.ViewModels
             }
         }
 
-        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public RequirementGroupViewModel(string label, IEnumerable<Requirement> requirements, IEnumerable<Requirement> compareRequirements, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             Label = label;
 
@@ -447,7 +450,7 @@ namespace RATools.ViewModels
             Requirements = list;
         }
 
-        public RequirementGroupViewModel(string label, IEnumerable<string> requirements, IEnumerable<string> compareRequirements, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public RequirementGroupViewModel(string label, IEnumerable<string> requirements, IEnumerable<string> compareRequirements, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             Label = label;
 

@@ -40,7 +40,7 @@ namespace RATools.Tests.ViewModels
             "byte(0x001234) == 7|AndNext byte(0x001234) == 7\nbyte(0x001235) == 6|byte(0x001235) == 6")]
         public void TestDiff(string leftSerialized, string rightSerialized, string expected)
         {
-            var notes = new Dictionary<uint, string>();
+            var notes = new Dictionary<uint, CodeNote>();
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(leftSerialized));

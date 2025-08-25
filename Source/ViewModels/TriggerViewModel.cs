@@ -11,7 +11,7 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Label}")]
     public class TriggerViewModel : ViewModelBase
     {
-        public TriggerViewModel(string label, Trigger trigger, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public TriggerViewModel(string label, Trigger trigger, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             Label = label;
 
@@ -62,7 +62,7 @@ namespace RATools.ViewModels
 
     public class ValueViewModel : TriggerViewModel
     {
-        public ValueViewModel(string label, Value value, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public ValueViewModel(string label, Value value, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
             : base(label, WrapValue(value), numberFormat, notes)
         {
         }

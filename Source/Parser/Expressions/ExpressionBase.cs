@@ -429,7 +429,10 @@ namespace RATools.Parser.Expressions
                         break;
 
                     case '(':
-                        clause = FunctionCallExpression.Parse(clause, tokenizer);
+                        var funcCall = FunctionCallExpression.Parse(clause, tokenizer);
+                        if (funcCall == null || ReferenceEquals(funcCall, clause))
+                            return clause;
+                        clause = funcCall;
                         break;
 
                     case '[':

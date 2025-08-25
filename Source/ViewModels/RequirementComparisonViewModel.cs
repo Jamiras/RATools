@@ -7,7 +7,7 @@ namespace RATools.ViewModels
 {
     public class RequirementComparisonViewModel : RequirementViewModel
     {
-        public RequirementComparisonViewModel(Requirement requirement, Requirement compareRequirement, NumberFormat numberFormat, IDictionary<uint, string> notes)
+        public RequirementComparisonViewModel(Requirement requirement, Requirement compareRequirement, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
             : base(requirement, numberFormat, notes)
         {
             if (compareRequirement == null)

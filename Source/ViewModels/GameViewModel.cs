@@ -34,7 +34,7 @@ namespace RATools.ViewModels
             /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
             GameId = gameId;
             Title = title;
-            Notes = new Dictionary<uint, string>();
+            Notes = new Dictionary<uint, CodeNote>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _publishedAchievements = new List<Achievement>();
@@ -78,7 +78,7 @@ namespace RATools.ViewModels
 
         internal int GameId { get; private set; }
         internal string RACacheDirectory { get; private set; }
-        internal Dictionary<uint, string> Notes { get; private set; }
+        internal Dictionary<uint, CodeNote> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
 
         public string LocalFilePath { get { return _localAssets?.Filename; } }
@@ -601,7 +601,7 @@ namespace RATools.ViewModels
                 _localAssets.Title = Title;
 
             foreach (var kvp in _localAssets.Notes)
-                Notes[kvp.Key] = kvp.Value;
+                Notes[kvp.Key] = new CodeNote(kvp.Key, kvp.Value);
         }
 
         private void ReadCodeNotes()
@@ -619,7 +619,7 @@ namespace RATools.ViewModels
                             var address = UInt32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
                             var text = note.GetField("Note").StringValue;
                             if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
-                                Notes[address] = text;
+                                Notes[address] = new CodeNote(address, text);
                         }
                     }
                 }

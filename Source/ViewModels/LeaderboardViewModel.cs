@@ -52,7 +52,7 @@ namespace RATools.ViewModels
             {
                 var numberFormat = ServiceRepository.Instance.FindService<ISettings>().HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal;
 
-                var notes = _owner != null ? _owner.Notes : new Dictionary<uint, string>();
+                var notes = _owner != null ? _owner.Notes : new Dictionary<uint, CodeNote>();
 
                 triggers.Add(new TriggerViewModel("Start Conditions", leaderboard.Start, numberFormat, notes));
                 triggers.Add(new TriggerViewModel("Cancel Conditions", leaderboard.Cancel, numberFormat, notes));

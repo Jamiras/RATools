@@ -961,5 +961,10 @@ namespace RATools.Data
         /// Most significant 32-bits of an IEE-754 double number (64-bit float) in big endian mode.
         /// </summary>
         BigEndianDouble32,
+
+        /// <summary>
+        /// Virtual size indicating a value takes an arbitrary number of bytes
+        /// </summary>
+        Array,
     }
 }
