@@ -7,7 +7,6 @@ using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
 using RATools.Services;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -38,8 +37,6 @@ namespace RATools.ViewModels
             SearchCommand = new DelegateCommand(Search);
             ShowUserUnlocksCommand = new DelegateCommand<UserStats>(ShowUserUnlocks);
             ShowUnlockHistoryCommand = new DelegateCommand<UserStats>(ShowUnlockHistory);
-
-            DetailedProgressCommand = new DelegateCommand(ShowDetailedProgress);
         }
 
         private readonly IBackgroundWorkerService _backgroundWorkerService;
@@ -727,50 +724,6 @@ namespace RATools.ViewModels
 
             vm.Unlocks.Sort((l, r) => DateTime.Compare(l.UnlockTime.GetValueOrDefault(), r.UnlockTime.GetValueOrDefault()));
             vm.ShowDialog();
-        }
-
-        public DelegateCommand DetailedProgressCommand { get; private set; }
-
-        private void ShowDetailedProgress()
-        {
-            Progress.Label = "Fetching progression";
-            Progress.Reset(1);
-            Progress.IsEnabled = true;
-
-            _backgroundWorkerService.RunAsync(() =>
-            {
-                var progressionJson = RAWebCache.Instance.GetGameProgressionJson(this.GameId);
-                Progress.Current++;
-
-                var progressionStats = new List<GameProgressionViewModel.AchievementInfo>();
-                foreach (var achievement in progressionJson.GetField("Achievements").ObjectArrayValue)
-                {
-                    progressionStats.Add(new GameProgressionViewModel.AchievementInfo
-                    {
-                        Id = achievement.GetField("ID").IntegerValue.GetValueOrDefault(),
-                        Title = achievement.GetField("Title").StringValue,
-                        Distance = TimeSpan.FromSeconds(achievement.GetField("MedianTimeToUnlockHardcore").IntegerValue.GetValueOrDefault()),
-                        TotalDistanceCount = achievement.GetField("TimesUsedInHardcoreUnlockMedian").IntegerValue.GetValueOrDefault(),
-                    });
-                }
-
-                progressionStats.Sort((l, r) =>
-                {
-                    // can't just return the difference between two distances, as it's entirely
-                    // possible that a value could be a few milliseconds or several years, so
-                    // there's no easy way to convert the different into a 32-bit integer.
-                    if (l.Distance == r.Distance)
-                        return 0;
-                    return (l.Distance > r.Distance) ? 1 : -1;
-                });
-
-                Progress.Label = String.Empty;
-
-                var vm = new GameProgressionViewModel(progressionStats);
-                vm.DialogTitle += " - " + _gameName;
-
-                _backgroundWorkerService.InvokeOnUiThread(() => vm.ShowDialog());
-            });
         }
     }
 }
