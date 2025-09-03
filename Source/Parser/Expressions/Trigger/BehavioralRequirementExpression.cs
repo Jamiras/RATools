@@ -250,9 +250,9 @@ namespace RATools.Parser.Expressions.Trigger
                     goto default;
 
                 case RequirementType.ResetIf:
-                case RequirementType.ResetNextIf:
                 case RequirementType.PauseIf:
-                    if (reqClause != null && reqClause.Operation == ConditionalOperation.Or)
+                    if (reqClause != null && reqClause.Operation == ConditionalOperation.Or &&
+                        reqClause is not RequirementClauseExpression.OrNextRequirementClauseExpression)
                     {
                         // never(A || B) -> never(A) && never(B)
                         // unless(A || B) -> unless(A) && unless(B)

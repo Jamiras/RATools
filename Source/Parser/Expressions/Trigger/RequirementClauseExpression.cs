@@ -745,6 +745,23 @@ namespace RATools.Parser.Expressions.Trigger
 
                 if (resetRequirements.Count > 0)
                 {
+                    if (resetRequirements.Count > 1)
+                    {
+                        // cannot have multiple ResetNextIfs - combine into an OrNext chain into a single ReseNextIf
+                        var clause = new RequirementClauseExpression() { Operation = ConditionalOperation.Or };
+                        foreach (var behavioral in resetRequirements.OfType<BehavioralRequirementExpression>())
+                            clause.AddCondition(behavioral.Condition);
+                        clause.DeriveLocation();
+
+                        resetRequirements.Clear();
+                        resetRequirements.Add(new BehavioralRequirementExpression
+                        {
+                            Behavior = RequirementType.ResetNextIf,
+                            Condition = clause,
+                            Location = clause.Location,
+                        });
+                    }
+
                     error = BuildTrigger(achievementContext, resetRequirements, RequirementType.None);
                     if (error != null)
                         return error;

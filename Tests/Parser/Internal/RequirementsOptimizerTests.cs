@@ -514,5 +514,44 @@ namespace RATools.Parser.Tests.Internal
             Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("0xH001234=1SM:0xH002345=6.3.ST:0=1"));
         }
+
+        [Test]
+        public void TestResetNextIfMultiple()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "tally(2," +
+                "  byte(0x2345) == 2 &&" +
+                "  never(byte(0x3456) == 1) && never(byte(0x3456) == 2)" +
+                ")");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("0xH001234=1.1._O:0xH003456=1_Z:0xH003456=2_0xH002345=2.2."));
+        }
+
+        [Test]
+        public void TestResetNextIfOr()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "tally(2," +
+                "  byte(0x2345) == 2 &&" +
+                "  never(byte(0x3456) == 1 || byte(0x3456) == 2)" +
+                ")");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("0xH001234=1.1._O:0xH003456=1_Z:0xH003456=2_0xH002345=2.2."));
+        }
+
+        [Test]
+        public void TestResetNextIfOrNext()
+        {
+            var achievement = CreateAchievement("once(byte(0x1234) == 1) && " +
+                "tally(2," +
+                "  byte(0x2345) == 2 &&" +
+                "  never(__ornext(byte(0x3456) == 1 || byte(0x3456) == 2))" +
+                ")");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("0xH001234=1.1._O:0xH003456=1_Z:0xH003456=2_0xH002345=2.2."));
+        }
     }
 }
