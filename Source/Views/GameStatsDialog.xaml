@@ -71,17 +71,6 @@
             <TextBlock Text="Game ID" />
             <TextBox Text="{Binding GameId}" />
             <Button Command="{Binding SearchCommand}" Content="Search" Margin="64,4,0,4" />
-            <Button Command="{Binding DetailedProgressCommand}" Content="Progression" Margin="64,24,0,4">
-                <Button.Style>
-                    <Style TargetType="{x:Type Button}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding NumberOfPlayers}" Value="0">
-                                <Setter Property="IsEnabled" Value="False" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
         </StackPanel>
         
         <TextBlock Grid.Row="7" VerticalAlignment="Bottom" Text="Top Hardcore Users" />

@@ -31,6 +31,7 @@ namespace RATools.ViewModels
             ViewAchievementsCommand = DisabledCommand.Instance;
 
             GameStatsCommand = new DelegateCommand(GameStats);
+            GameProgressionCommand = new DelegateCommand(GameProgression);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
             ConditionsAnalyzerCommand = new DelegateCommand(ConditionsAnalyzer);
             MasteryCommand = new DelegateCommand(MasteryStats);
@@ -539,6 +540,16 @@ namespace RATools.ViewModels
                 return;
 
             var vm = new GameStatsViewModel();
+            vm.ShowDialog();
+        }
+
+        public CommandBase GameProgressionCommand { get; private set; }
+        private void GameProgression()
+        {
+            if (!ValidateForApi())
+                return;
+
+            var vm = new GameProgressionViewModel();
             vm.ShowDialog();
         }
 

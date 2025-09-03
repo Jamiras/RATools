@@ -55,6 +55,13 @@ namespace RATools.Services
                 String.Format("raGame{0}.json", gameId));
         }
 
+        public JsonObject GetGameProgressionJson(int gameId)
+        {
+            return CallJsonAPI("API_GetGameProgression",
+                String.Format("i={0}&h=1", gameId),
+                String.Format("raGameProgression{0}.json", gameId));
+        }
+
         public const int AchievementUnlocksPerPage = 500;
 
         public JsonObject GetAchievementUnlocksJson(int achievementId, int pageIndex)

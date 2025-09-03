@@ -16,7 +16,17 @@
         </ResourceDictionary>
     </UserControl.Resources>
     <Grid Margin="4">
-        <ListView ItemsSource="{Binding Achievements}" jamiras:GridViewSort.IsEnabled="True">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+            <TextBlock Text="Game ID" Margin="0,2,0,0" />
+            <TextBox Text="{Binding GameId}" Width="80" Margin="4,0,4,0" TextAlignment="Right" />
+            <Button Command="{Binding SearchCommand}" Content="Search" Padding="6,0,6,2" />
+        </StackPanel>
+
+        <ListView Grid.Row="1" ItemsSource="{Binding Achievements}" jamiras:GridViewSort.IsEnabled="True">
             <ListView.Resources>
                 <Style TargetType="ListViewItem">
                     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -54,6 +64,6 @@
             </ListView.View>
         </ListView>
 
-        <ContentPresenter Grid.RowSpan="3" Grid.ColumnSpan="4" Margin="-4" Content="{Binding Progress}" />
+        <ContentPresenter Grid.RowSpan="2" Margin="-4" Content="{Binding Progress}" />
     </Grid>
 </UserControl>

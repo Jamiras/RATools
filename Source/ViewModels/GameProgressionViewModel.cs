@@ -1,9 +1,10 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
+using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
-using RATools.Data;
+using RATools.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,15 +14,76 @@ namespace RATools.ViewModels
 {
     public class GameProgressionViewModel : DialogViewModelBase
     {
-        public GameProgressionViewModel(List<AchievementInfo> progressionStats)
+        public GameProgressionViewModel()
+            : this(ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
+        {
+
+        }
+
+        public GameProgressionViewModel(IBackgroundWorkerService backgroundWorkerService)
         { 
+            _backgroundWorkerService = backgroundWorkerService;
+
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             DialogTitle = "Game Progression";
             CanClose = true;
 
-            Achievements = progressionStats;
+            SearchCommand = new DelegateCommand(Search);
 
             ShowAchievementCommand = new DelegateCommand<AchievementInfo>(ShowAchievement);
+        }
+
+        private readonly IBackgroundWorkerService _backgroundWorkerService;
+
+        public static readonly ModelProperty GameIdProperty = ModelProperty.Register(typeof(GameStatsViewModel), "GameId", typeof(int), 0);
+
+        public int GameId
+        {
+            get { return (int)GetValue(GameIdProperty); }
+            set { SetValue(GameIdProperty, value); }
+        }
+
+        public CommandBase SearchCommand { get; private set; }
+        private void Search()
+        {
+            Progress.Label = "Fetching progression data";
+            Progress.Reset(1);
+            Progress.IsEnabled = true;
+
+            _backgroundWorkerService.RunAsync(() =>
+            {
+                var progressionJson = RAWebCache.Instance.GetGameProgressionJson(this.GameId);
+                Progress.Current++;
+
+                DialogTitle = "Game Progression - " + progressionJson.GetField("Title").StringValue;
+
+                var achievements = new List<AchievementInfo>();
+                foreach (var achievement in progressionJson.GetField("Achievements").ObjectArrayValue)
+                {
+                    achievements.Add(new AchievementInfo
+                    {
+                        Id = achievement.GetField("ID").IntegerValue.GetValueOrDefault(),
+                        Title = achievement.GetField("Title").StringValue,
+                        Distance = TimeSpan.FromSeconds(achievement.GetField("MedianTimeToUnlockHardcore").IntegerValue.GetValueOrDefault()),
+                        TotalDistanceCount = achievement.GetField("TimesUsedInHardcoreUnlockMedian").IntegerValue.GetValueOrDefault(),
+                    });
+                }
+
+                achievements.Sort((l, r) =>
+                {
+                    // can't just return the difference between two distances, as it's entirely
+                    // possible that a value could be a few milliseconds or several years, so
+                    // there's no easy way to convert the different into a 32-bit integer.
+                    if (l.Distance == r.Distance)
+                        return 0;
+                    return (l.Distance > r.Distance) ? 1 : -1;
+                });
+
+                Achievements = achievements;
+                OnPropertyChanged(() => Achievements);
+
+                Progress.Label = String.Empty;
+            });
         }
 
         public ProgressFieldViewModel Progress { get; private set; }
@@ -34,7 +96,6 @@ namespace RATools.ViewModels
 
             public TimeSpan Distance { get; set; }
 
-            public TimeSpan TotalDistance { get; set; }
             public int TotalDistanceCount { get; set; }
 
             public string FormattedDistance
