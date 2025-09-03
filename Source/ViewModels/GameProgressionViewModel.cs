@@ -3,7 +3,6 @@ using Jamiras.Components;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
-using RATools.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,7 +33,6 @@ namespace RATools.ViewModels
 
             public TimeSpan Distance { get; set; }
 
-            public TimeSpan TotalDistance { get; set; }
             public int TotalDistanceCount { get; set; }
 
             public string FormattedDistance

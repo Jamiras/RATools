@@ -46,8 +46,6 @@ namespace RATools.ViewModels
         private readonly IFileSystemService _fileSystem;
         private readonly ISettings _settings;
 
-        private List<GameProgressionViewModel.AchievementInfo> _progressionStats;
-
         public ProgressFieldViewModel Progress { get; private set; }
 
         public static readonly ModelProperty GameIdProperty = ModelProperty.Register(typeof(GameStatsViewModel), "GameId", typeof(int), 0);
@@ -135,7 +133,7 @@ namespace RATools.ViewModels
                 return String.Compare(x.User, y.User);
             }
 
-            public void UpdateGameTime(Func<int, int> getAchievementPointsFunc, List<GameProgressionViewModel.AchievementInfo> progressionStats)
+            public void UpdateGameTime(Func<int, int> getAchievementPointsFunc)
             {
                 PointsEarned = 0;
 
@@ -184,30 +182,6 @@ namespace RATools.ViewModels
                 // after gettin the last achievement of the session.
                 double perSessionAdjustment = GameTime.TotalSeconds / Achievements.Count;
                 GameTime += TimeSpan.FromSeconds(Sessions * perSessionAdjustment);
-
-                if (progressionStats != null)
-                {
-                    var sessionOffsets = new List<int>();
-                    sessionOffsets.Add((int)perSessionAdjustment);
-                    for (int i = 1; i < sessionStartIndices.Count - 1; i++)
-                    {
-                        var sessionLength = (times[sessionStartIndices[i] - 1] - times[sessionStartIndices[i - 1]]).TotalSeconds + perSessionAdjustment;
-                        sessionOffsets.Add((int)(sessionOffsets[i - 1] + sessionLength));
-                    }
-
-                    // calculate the distance for each earned achievement from the start of the user's playtime
-                    foreach (var achievement in achievementSessions)
-                    {
-                        var info = progressionStats.FirstOrDefault(a => a.Id == achievement.Key);
-                        if (info != null)
-                        {
-                            var sessionStart = times[sessionStartIndices[achievement.Value]];
-                            var elapsed = (Achievements[achievement.Key] - sessionStart).TotalSeconds + sessionOffsets[achievement.Value];
-                            info.TotalDistance += TimeSpan.FromSeconds(elapsed);
-                            info.TotalDistanceCount++;
-                        }
-                    }
-                }
             }
         }
 
@@ -592,17 +566,6 @@ namespace RATools.ViewModels
         {
             Progress.Label = "Analyzing data";
 
-            // initialize the progression stats
-            _progressionStats = new List<GameProgressionViewModel.AchievementInfo>();
-            foreach (var achievement in achievementStats)
-            {
-                _progressionStats.Add(new GameProgressionViewModel.AchievementInfo
-                {
-                    Id = achievement.Id,
-                    Title = achievement.Title,
-                });
-            }
-
             // estimate the time spent for each user
             foreach (var user in userStats)
             {
@@ -610,7 +573,7 @@ namespace RATools.ViewModels
                 {
                     var achievement = achievementStats.FirstOrDefault(a => a.Id == id);
                     return (achievement != null) ? achievement.Points : 0;
-                }, _progressionStats);
+                });
             }
 
             // sort the results by the most points earned, then the quickest
@@ -621,25 +584,6 @@ namespace RATools.ViewModels
                     diff = (int)((l.GameTime - r.GameTime).TotalSeconds);
 
                 return diff;
-            });
-
-            // finalize the progression stats
-            foreach (var info in _progressionStats)
-            {
-                if (info.TotalDistanceCount > 0)
-                    info.Distance = TimeSpan.FromSeconds(info.TotalDistance.TotalSeconds / info.TotalDistanceCount);
-                else
-                    info.Distance = TimeSpan.MaxValue;
-            }
-
-            _progressionStats.Sort((l, r) =>
-            {
-                // can't just return the difference between two distances, as it's entirely
-                // possible that a value could be a few milliseconds or several years, so
-                // there's no easy way to convert the different into a 32-bit integer.
-                if (l.Distance == r.Distance)
-                    return 0;
-                return (l.Distance > r.Distance) ? 1 : -1;
             });
 
             // determine how many players mastered the set and how many sessions/days it took them
@@ -669,15 +613,6 @@ namespace RATools.ViewModels
             int sessionCount = sessions.Count;
             if (sessionCount > 0)
             {
-                // sessionCount is only the number of reliable estimates. Find the median index of those, and use
-                // that record's time as the median time
-                var medianIndex = reliableEstimateIndices[sessionCount / 2];
-                var timeToMaster = userStats[medianIndex].Summary;
-                var space = timeToMaster.IndexOf(' ');
-                if (space > 0)
-                    timeToMaster = timeToMaster.Substring(0, space);
-                MedianTimeToMaster = timeToMaster;
-
                 sessions.Sort();
                 MedianSessionsToMaster = sessions[sessionCount / 2].ToString();
 
@@ -798,9 +733,44 @@ namespace RATools.ViewModels
 
         private void ShowDetailedProgress()
         {
-            var vm = new GameProgressionViewModel(_progressionStats);
-            vm.DialogTitle += " - " + _gameName;
-            vm.ShowDialog();
+            Progress.Label = "Fetching progression";
+            Progress.Reset(1);
+            Progress.IsEnabled = true;
+
+            _backgroundWorkerService.RunAsync(() =>
+            {
+                var progressionJson = RAWebCache.Instance.GetGameProgressionJson(this.GameId);
+                Progress.Current++;
+
+                var progressionStats = new List<GameProgressionViewModel.AchievementInfo>();
+                foreach (var achievement in progressionJson.GetField("Achievements").ObjectArrayValue)
+                {
+                    progressionStats.Add(new GameProgressionViewModel.AchievementInfo
+                    {
+                        Id = achievement.GetField("ID").IntegerValue.GetValueOrDefault(),
+                        Title = achievement.GetField("Title").StringValue,
+                        Distance = TimeSpan.FromSeconds(achievement.GetField("MedianTimeToUnlockHardcore").IntegerValue.GetValueOrDefault()),
+                        TotalDistanceCount = achievement.GetField("TimesUsedInHardcoreUnlockMedian").IntegerValue.GetValueOrDefault(),
+                    });
+                }
+
+                progressionStats.Sort((l, r) =>
+                {
+                    // can't just return the difference between two distances, as it's entirely
+                    // possible that a value could be a few milliseconds or several years, so
+                    // there's no easy way to convert the different into a 32-bit integer.
+                    if (l.Distance == r.Distance)
+                        return 0;
+                    return (l.Distance > r.Distance) ? 1 : -1;
+                });
+
+                Progress.Label = String.Empty;
+
+                var vm = new GameProgressionViewModel(progressionStats);
+                vm.DialogTitle += " - " + _gameName;
+
+                _backgroundWorkerService.InvokeOnUiThread(() => vm.ShowDialog());
+            });
         }
     }
 }
