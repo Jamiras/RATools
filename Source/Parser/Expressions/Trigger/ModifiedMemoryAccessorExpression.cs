@@ -261,6 +261,10 @@ namespace RATools.Parser.Expressions.Trigger
             if ((mask & shifted) != shifted)
                 return null;
 
+            // assume remembered value is complex and cannot be simplified by masking
+            if (MemoryAccessor is RememberRecallExpression)
+                return null;
+
             long min, max;
             MemoryAccessor.GetMinMax(out min, out max);
 
@@ -437,7 +441,8 @@ namespace RATools.Parser.Expressions.Trigger
                 if (field.IsFloat || Modifier.IsFloat || MemoryAccessor.Field.IsFloat)
                     return new ErrorExpression("Cannot perform bitwise operations on floating point values");
 
-                if (newModifyingOperator == RequirementOperator.BitwiseAnd && field.Type == FieldType.Value)
+                if (newModifyingOperator == RequirementOperator.BitwiseAnd && field.Type == FieldType.Value &&
+                    MemoryAccessor is not RememberRecallExpression)
                 {
                     long min, max;
                     MemoryAccessor.GetMinMax(out min, out max);

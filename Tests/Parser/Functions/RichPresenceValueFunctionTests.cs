@@ -34,7 +34,9 @@ namespace RATools.Parser.Tests.Functions
             var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
             scope.Context = context;
-            funcCall.Execute(scope);
+            var error = funcCall.Execute(scope);
+            if (error != null)
+                Assert.Fail(error.InnermostError.Message);
 
             return context.RichPresence;
         }
@@ -68,6 +70,7 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("byte(0x1234) % 3", "A:0xH001234%3_M:0")]
         [TestCase("dword(0x1234) / 1000000000", "0xX001234/1000000000")]
         [TestCase("float(0x1234) * ~bit(31, 0x2345)", "fF001234*~0xT002348")]
+        [TestCase("(tbyte(0x1234) - 100) & 0xFF", "B:100_K:0xW001234_A:{recall}&255_M:0")]
         public void TestValueExpression(string input, string expected)
         {
             // more expressions are validated via ValueBuilderTests.TestGetValueString
