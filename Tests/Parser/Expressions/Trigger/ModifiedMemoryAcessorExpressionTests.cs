@@ -148,8 +148,10 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.Comparison, "byte(0x001234) > 10")]
         [TestCase("byte(0x001234) * 10", ">=", "10.1",
             ExpressionType.Comparison, "byte(0x001234) > 1")]
-        [TestCase("byte(0x001234) / 10", "=", "100",
-            ExpressionType.Comparison, "byte(0x001234) == 1000")]
+        [TestCase("byte(0x001234) / 10", "=", "10",
+            ExpressionType.Comparison, "byte(0x001234) / 10 == 10")] // integer division discards remainder. don't combine for direct equality
+        [TestCase("byte(0x001234) / 10", ">", "10",
+            ExpressionType.Comparison, "byte(0x001234) > 100")] // relative comparison can transit the divisor
         [TestCase("byte(0x001234) * 10", "=", "101.0",
             ExpressionType.Error, "Result can never be true using integer math")]
         [TestCase("byte(0x001234) * 10.0", "=", "101",
@@ -182,8 +184,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.Comparison, "float(0x001234) == 4.545455")]
         [TestCase("byte(0x001234) * 10 / 2", "=", "100",
             ExpressionType.Comparison, "byte(0x001234) == 20")]
-        [TestCase("byte(0x001234) * 10 / 3", "=", "100",
-            ExpressionType.Comparison, "byte(0x001234) * 10 == 300")] // left is a mathematic, not an accessor, normalization only undoes the division
+        [TestCase("byte(0x001234) * 10 / 3", ">=", "100",
+            ExpressionType.Comparison, "byte(0x001234) * 10 >= 300")] // left is a mathematic, not an accessor, normalization only undoes the division
         [TestCase("byte(0x001234) * 100 / byte(0x002345)", ">", "75",
             ExpressionType.None, null)] // division cannot be moved; multiplication cannot be extracted
         [TestCase("byte(0x001234) / byte(0x002345) * 10", ">", "80",

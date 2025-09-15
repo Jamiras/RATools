@@ -65,7 +65,7 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         [TestCase("prev(byte(0x1234)) == 56", "d0xH001234=56")]
         [TestCase("prev(byte(0x1234) + 6) == 10", "d0xH001234=4")] // modifier is extracted and comparison is normalized
-        [TestCase("prev(byte(0x1234) - 1) / 4 == 10", "d0xH001234=41")] // modifier is extracted and comparison is normalized
+        [TestCase("prev(byte(0x1234) - 1) / 4 == 10", "B:1_K:d0xH001234_A:{recall}/4_0=10")] // 41,42,43,and 44 would all be true. cannot normalize direct equality
         [TestCase("prev((byte(0x1234) - 1) / 4) < 10", "d0xH001234<41")] // modifier is extracted and comparison is normalized
         [TestCase("prev(byte(0x1234) * 10 + 20) == 80", "d0xH001234=6")] // modifier is extracted and comparison is normalized
         [TestCase("prev(byte(0x1234) + byte(0x2345)) == 7", "A:d0xH001234=0_d0xH002345=7")] // prev is distributed

@@ -797,6 +797,15 @@ namespace RATools.Parser.Expressions.Trigger
                 var modifier = CreateModifierExpression();
                 if (modifier != null)
                 {
+                    if (mathematicOperation == MathematicOperation.Divide &&
+                        modifier is IntegerConstantExpression &&
+                        right is IntegerConstantExpression &&
+                        (operation == ComparisonOperation.Equal || operation == ComparisonOperation.NotEqual))
+                    {
+                        // integer division discards remainder. if doing a direct comparison, don't merge
+                        return null;
+                    }
+
                     var newLeft = Clone();
                     newLeft.ModifyingOperator = RequirementOperator.None;
 

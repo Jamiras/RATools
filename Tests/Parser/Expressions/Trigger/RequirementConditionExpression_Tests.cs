@@ -73,6 +73,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("word(0x1234) & 0x3FF > prev(word(0x1234)) & 0x1FFF", "A:0x 001234&1023_B:d0x 001234&8191_0>0")] // has to be converted to SubSource to prevent loss of masking
         [TestCase("(bit1(0x001234) ^ 1) + (bit1(0x001235) ^ 1) == 2", "A:0xN001234^1_A:0xN001235^1_0=2")]
         [TestCase("prev((bit1(0x001234) ^ 1) + (bit1(0x001235) ^ 1)) == 2", "A:d0xN001234^1_A:d0xN001235^1_0=2")]
+        [TestCase("byte(0x1234) / 0x40 == 3", "A:0xH001234/64_0=3")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
