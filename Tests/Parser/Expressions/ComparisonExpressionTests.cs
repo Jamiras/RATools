@@ -36,7 +36,7 @@ namespace RATools.Parser.Tests.Expressions
         [TestCase("byte(1) * 10 - 10 == 100", "byte(0x000001) == 11")] // factor out multiplication and subtraction
         [TestCase("(byte(1) - 1) * 10 == 100", "byte(0x000001) == 11")] // factor out multiplication and subtraction
         [TestCase("(byte(1) - 1) / 10 == 10", "remembered(byte(0x000001) - 1) / 10 == 10")] // integer division ignores remainder, multiple values could be result in equality
-        [TestCase("(byte(1) - 1) / 10 > 10", "byte(0x000001) > 101")] // factor out division and subtraction
+        [TestCase("(byte(1) - 1) / 10 > 10", "byte(0x000001) >= 111")] // factor out division and subtraction
         [TestCase("(byte(1) - 1) * 10 < 99", "byte(0x000001) <= 10")] // factor out multiplication and subtraction
         [TestCase("byte(1) + variable1 < byte(2) + 3", "byte(0x000001) + 95 < byte(0x000002)")] // differing modifier should be merged
         [TestCase("byte(2) + 1 == variable1", "byte(0x000002) == 97")] // differing modifier should be merged

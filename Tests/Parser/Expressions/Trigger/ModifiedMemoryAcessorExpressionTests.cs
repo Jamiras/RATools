@@ -151,7 +151,15 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) / 10", "=", "10",
             ExpressionType.Comparison, "byte(0x001234) / 10 == 10")] // integer division discards remainder. don't combine for direct equality
         [TestCase("byte(0x001234) / 10", ">", "10",
-            ExpressionType.Comparison, "byte(0x001234) > 100")] // relative comparison can transit the divisor
+            ExpressionType.Comparison, "byte(0x001234) >= 110")] // relative comparison can transit the divisor with some padding
+        [TestCase("byte(0x001234) / 10", ">=", "10",
+            ExpressionType.Comparison, "byte(0x001234) >= 100")] // relative comparison can transit the divisor
+        [TestCase("byte(0x001234) / 10", "!=", "10",
+            ExpressionType.Comparison, "byte(0x001234) / 10 != 10")] // integer division discards remainder. don't combine for direct equality
+        [TestCase("byte(0x001234) / 10", "<", "10",
+            ExpressionType.Comparison, "byte(0x001234) < 100")] // relative comparison can transit the divisor
+        [TestCase("byte(0x001234) / 10", "<=", "10",
+            ExpressionType.Comparison, "byte(0x001234) < 110")] // relative comparison can transit the divisor with some padding
         [TestCase("byte(0x001234) * 10", "=", "101.0",
             ExpressionType.Error, "Result can never be true using integer math")]
         [TestCase("byte(0x001234) * 10.0", "=", "101",
