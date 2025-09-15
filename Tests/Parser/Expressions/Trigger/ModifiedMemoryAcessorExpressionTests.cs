@@ -55,6 +55,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             "A:24691_K:0xX001234_K:{recall}/65536_I:0xH002345_0xX012345^{recall}")]
         [TestCase("dword(0x12345 + byte(0x2345)) ^ (dword(0x1234) + 0x6073) / 0x10000))",
             "A:24691_K:0xX001234_K:{recall}/65536_I:0xH002345_0xX012345^{recall}")]
+        [TestCase("bcd(byte(dword(0x001234) + 0x10)) * 10", "I:0xX001234_b0xH000010*10")]
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<ModifiedMemoryAccessorExpression>(input);

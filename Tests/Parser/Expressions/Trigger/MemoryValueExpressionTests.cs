@@ -73,6 +73,14 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                 ExpressionType.MemoryAccessor, "byte(0x001234) * 3 + 4.5")]
         [TestCase("byte(0x001234) + 3.0", "/", "4",
                 ExpressionType.MemoryAccessor, "byte(0x001234) / 4 + 0.75")]
+        [TestCase("bit1(0x0001) + bit2(0x0001)", "/", "2",
+                ExpressionType.MemoryAccessor, "remembered(bit1(0x000001) + bit2(0x000001)) / 2")] // integer division across multiple values cannot be distributed
+        [TestCase("bit1(0x0001) + bit2(0x0001)", "/", "2.0",
+                ExpressionType.MemoryAccessor, "bit1(0x000001) / 2.0 + bit2(0x000001) / 2.0")] // float division can be distributed across multiple values
+        [TestCase("bit1(0x0001) + 1", "/", "2",
+                ExpressionType.MemoryAccessor, "remembered(bit1(0x000001) + 1) / 2")] // adjustment not evenly divisible and can't have division distributed
+        [TestCase("bit1(0x0001) * 2 + bit2(0x0001) * 2", "/", "2",
+                ExpressionType.MemoryAccessor, "bit1(0x000001) + bit2(0x000001)")] // factor on each subcondition can be reduced
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertCombine(left, operation, right, expectedType, expected);
