@@ -797,6 +797,40 @@ namespace RATools.Parser.Expressions.Trigger
                 var modifier = CreateModifierExpression();
                 if (modifier != null)
                 {
+                    if (mathematicOperation == MathematicOperation.Divide &&
+                        modifier is IntegerConstantExpression &&
+                        right is IntegerConstantExpression)
+                    {
+                        // integer division discards remainder. adjust for that if possible.
+                        switch (operation)
+                        {
+                            case ComparisonOperation.Equal:
+                            case ComparisonOperation.NotEqual:
+                                // "a / 2 == 3" is true for 6 and 7 so cannot be "a == 6"
+                                return null;
+
+                            case ComparisonOperation.GreaterThan:
+                                // "a / 2 > 3" cannot be "a > 6" because 7 would qualify
+                                // but we can make it "a >= 8" by changing it to "a / 2 >= 4"
+                                operation = ComparisonOperation.GreaterThanOrEqual;
+                                right = new IntegerConstantExpression(((IntegerConstantExpression)right).Value + 1);
+                                break;
+
+                            case ComparisonOperation.LessThanOrEqual:
+                                // "a / 2 <= 3" cannot be "a <= 6" because 7 should quality
+                                // but we cane make it "a < 8" by changing it to "a / 2 < 4"
+                                operation = ComparisonOperation.LessThan;
+                                right = new IntegerConstantExpression(((IntegerConstantExpression)right).Value + 1);
+                                break;
+
+                            case ComparisonOperation.GreaterThanOrEqual:
+                            case ComparisonOperation.LessThan:
+                                // "a / 2 >= 3" can be converted to "a >= 6"
+                                // "a / 2 < 3" can be converted to "a < 6"
+                                break;
+                        }
+                    }
+
                     var newLeft = Clone();
                     newLeft.ModifyingOperator = RequirementOperator.None;
 
