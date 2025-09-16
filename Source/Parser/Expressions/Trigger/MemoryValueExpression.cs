@@ -137,8 +137,41 @@ namespace RATools.Parser.Expressions.Trigger
         {
             switch (operation)
             {
-                case MathematicOperation.Multiply:
                 case MathematicOperation.Divide:
+                    if (_memoryAccessors != null)
+                    {
+                        var simplified = ReduceToSimpleExpression(right);
+                        var field = FieldFactory.CreateField(simplified);
+
+                        if (field.Type != FieldType.Float && !field.IsFloat)
+                        {
+                            if (_memoryAccessors.Count > 1)
+                            {
+                                if (field.Type == FieldType.Value &&
+                                    _memoryAccessors.All(m => m.ModifyingOperator == RequirementOperator.Multiply &&
+                                                              m.Modifier.Type == FieldType.Value &&
+                                                              m.Modifier.Value % field.Value == 0))
+                                {
+                                    // all accessors are scaled by factors evenly divisible by the divisor
+                                    goto case MathematicOperation.Multiply;
+                                }
+
+                                // cannot distribute integer division across multiple memory accessors
+                                var remember = new RememberRecallExpression(this);
+                                return remember.Combine(right, operation);
+                            }
+                            else if (field.Type == FieldType.Value && IntegerConstant % field.Value != 0)
+                            {
+                                // adjustment is not evenly divisible. cannot distribute integer division
+                                var remember = new RememberRecallExpression(this);
+                                return remember.Combine(right, operation);
+                            }
+                        }
+                    }
+
+                    goto case MathematicOperation.Multiply;
+
+                case MathematicOperation.Multiply:
                     var clone = new MemoryValueExpression() { Location = this.Location };
                     if (_memoryAccessors != null)
                     {
