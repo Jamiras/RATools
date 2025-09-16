@@ -1,3 +1,25 @@
+v1.16.0 - 16 Sep 2025
+* support for structured data via class definitions
+* support for multiset cached data
+  - new set parameter to achievement and leaderboard functions
+* report error when multiple unique remembers are needed to build an AddSource chain
+* improve structured code note processing
+* move Progression button from Game Stats dialog to separate menu item
+  - leverages new API for better estimates
+* allow bitwise operations on AddSource chains via Remember/Recall
+* fix comparing indirect memory with static memory
+* fix distribution of prev across multiple conditions
+* fix modulus support in local achievements
+* fix nested never() being discarded when removing once() from never() clause
+* fix never(A || B) inside repeated() clause to generate OrNext instead of multiple ResetNextIfs
+* fix __ornext() not being honored inside trigger_when()
+* fix rebalancing of SubSource in the middle of a chain of indirect memory reads
+* fix unexpected distribution of divisor when performing integer division
+* fix incorrect extraction of BCD from comparison with modification
+* fix missing parentheses when dumping clause with ResetNextIf and OrNext
+* fix cursor placement for emoticons (and other characters wider than the fixed width font)
+* fix badges being lost when merging the User.txt file through rascript-cli.exe
+
 v1.15.2 - 8 May 2025
 * add link to local file in the Update Local dialog
 * fix infinite loop trying to rebalance SubSource prev comparison with multiple pointers
