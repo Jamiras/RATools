@@ -234,7 +234,8 @@ namespace RATools.Parser.Expressions.Trigger
                     return ApplyAddition(right, RequirementType.SubSource);
 
                 default:
-                    return new MathematicExpression(this, operation, right);
+                    var remember = new RememberRecallExpression(this);
+                    return remember.Combine(right, operation);
             }
         }
 
