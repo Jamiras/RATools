@@ -553,5 +553,21 @@ namespace RATools.Parser.Tests.Internal
             Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("0xH001234=1.1._O:0xH003456=1_Z:0xH003456=2_0xH002345=2.2."));
         }
+
+        [Test]
+        public void TestResetNextIfRecall()
+        {
+            // when ResetNextIf converted to ResetIf, it has to pull the Remember with it.
+            var achievement = CreateAchievement(
+                "never(byte(0x1234) == 1) && (" +
+                "  measured(repeated(3," +
+                "    byte(0x2345) == 2 && (byte(0x1111) + byte(0x2222)) % 2 == 1 &&" +
+                "    never(byte(0x2345) == 2 && (byte(0x1111) + byte(0x2222)) % 2 != 1)" +
+                "  ))" +
+                ")");
+            achievement.Optimize();
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("R:0xH001234=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_R:0!=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_M:0=1.3."));
+        }
     }
 }

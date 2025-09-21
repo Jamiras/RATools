@@ -1506,6 +1506,7 @@ namespace RATools.Parser.Internal
 
         internal static int FindResetNextIfStart(IList<Requirement> requirements, int resetNextIfIndex)
         {
+            bool hasRecall = false;
             int i = resetNextIfIndex;
             while (i > 0)
             {
@@ -1519,7 +1520,20 @@ namespace RATools.Parser.Internal
                     case RequirementType.ResetNextIf:
                         // these have higher precedence than ResetNextIf, drag them with
                         i--;
+
+                        if (requirements[i].Left.Type == FieldType.Recall ||
+                            requirements[i].Right.Type == FieldType.Recall)
+                        {
+                            hasRecall = true;
+                        }
+
                         continue;
+
+                    case RequirementType.Remember:
+                        // only capture the RememberIf if it's used.
+                        if (hasRecall)
+                            goto case RequirementType.ResetNextIf;
+                        break;
                 }
 
                 break;
