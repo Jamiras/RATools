@@ -228,6 +228,9 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("(A == 1 && B != 1) || (A != 1 && B == 1)", "(A == 1 && B != 1) || (A != 1 && B == 1)")] // mutually exclusive - ignore conflicts
         [TestCase("(A == 1 && B == 1) || (A == 2 && B == 2)", "(A == 1 && B == 1) || (A == 2 && B == 2)")] // mutually exclusive - ignore conflicts
         [TestCase("(A == 1 && B != 1) || (A == 1 && B == 1)", "A == 1")] // B is superfluous
+        [TestCase("(A > 5 && B < 3) || (A > 6 && B < 2)", "A > 5 && B < 3")] // everything in (A>6,B<2) is in (A>5,B<3)
+        [TestCase("(A > 5 && B < 2) || (A > 6 && B < 3)", "(A > 5 && B < 2) || (A > 6 && B < 3)")] // A and B clauses are individually mergable, but not together (A=6,B=2 is false)
+        [TestCase("(A > 5 && B < 2) || (A <= 5 && B < 3)", "(A > 5 && B < 2) || (A <= 5 && B < 3)")] // A and B clauses are individually mergable, but not together (B=2 is not true for A>5)
         public void TestMergeRequirementGroups(string input, string expected)
         {
             AssertLogicalMerge(input, "8", expected);

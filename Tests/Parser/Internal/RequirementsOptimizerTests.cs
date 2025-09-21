@@ -127,6 +127,8 @@ namespace RATools.Parser.Tests.Internal
                   "(byte(0x001234) == 1 && byte(0x002345) != 1) || (byte(0x001234) != 1 && byte(0x002345) == 1)")]
         [TestCase("once(byte(0x001234) == 1) && never((byte(0x002345) & 0x0000001F) == 0 && byte(0x003456) == 6)", // masking creates an AddSource followed by a constant/constant comparison that should not be eliminated
                   "once(byte(0x001234) == 1) && never(((byte(0x002345) & 0x0000001F) == 0) && byte(0x003456) == 6)")]
+        [TestCase("byte(0x001234) == 1 && ((repeated(3, always_true()) && byte(0x002345) < 10) || (repeated(2, always_true()) && byte(0x002345) >= 10))", // subclauses (A < 10 || A >= 10) should not be merged when there's additional logic
+                  "byte(0x001234) == 1 && ((repeated(3, always_true()) && byte(0x002345) < 10) || (repeated(2, always_true()) && byte(0x002345) >= 10))")]
         public void TestOptimizeNormalizeComparisons(string input, string expected)
         {
             var achievement = CreateAchievement(input);
