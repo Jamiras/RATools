@@ -301,7 +301,15 @@ namespace RATools.ViewModels
         {
             foreach (var note in _game.Notes.Values)
             {
-                var size = (note.Size == FieldSize.None) ? FieldSize.Byte : note.Size;
+                var size = note.Size;
+                switch (size)
+                {
+                    case FieldSize.None:
+                    case FieldSize.Array:
+                        // these sizes don't have accessor functions, fallback to byte()
+                        size = FieldSize.Byte;
+                        break;
+                }
                 AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address });
             }
         }
