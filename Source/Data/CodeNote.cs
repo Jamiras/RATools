@@ -154,12 +154,37 @@ namespace RATools.Data
             do
             {
                 var index = remaining.IndexOf("\n+", startIndex);
-                if (index != -1 && index < remaining.Length - 2 && !Char.IsDigit(remaining[index + 2]))
+                while (index != -1 && index < remaining.Length - 2 &&
+                    !Char.IsDigit(remaining[index + 2]))
+                {
+                    // found a plus at the start of a line, but it's not followed by an offset. skip it.
+                    // this primarily handles nested pointers "\n++", but also handles things like "\n+Why?"
                     index = remaining.IndexOf("\n+", index + 1);
+                }
 
-                var nextNoteToken = index == -1 ? remaining.SubToken(startIndex) : remaining.SubToken(startIndex, index - startIndex);
-                startIndex = index == -1 ? -1 : index + 1;
-                var nextNote = nextNoteToken.TrimRight().SubToken(1).ToString().Replace("\n+", "\n");
+                Token nextNoteToken;
+                if (index == -1)
+                {
+                    // last line. capture remaining text
+                    nextNoteToken = remaining.SubToken(startIndex).TrimRight();
+                    startIndex = -1;
+                }
+                else
+                {
+                    // found another line. capture intermediate text
+                    nextNoteToken = remaining.SubToken(startIndex, index - startIndex).TrimRight();
+                    startIndex = index + 1;
+                }
+
+                if (nextNoteToken.IsEmpty || nextNoteToken[0] != '+')
+                {
+                    // ignore non-offset data between header and body
+                    continue;
+                }
+
+                // remove the leading plus and any further plusses at the start
+                // of newlines within the note token.
+                var nextNote = nextNoteToken.SubToken(1).ToString().Replace("\n+", "\n");
 
                 uint offset;
                 bool success;
