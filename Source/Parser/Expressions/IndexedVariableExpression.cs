@@ -79,7 +79,15 @@ namespace RATools.Parser.Expressions
                 }
                 else
                 {
-                    return new ErrorExpression("Cannot index " + clause.Type.ToLowerString(), clause);
+                    var memberReference = clause as ClassMemberReferenceExpression;
+                    if (memberReference != null)
+                    {
+                        indexed = new IndexedVariableExpression(memberReference, index);
+                    }
+                    else
+                    {
+                        return new ErrorExpression("Cannot index " + clause.Type.ToLowerString(), clause);
+                    }
                 }
             }
 
