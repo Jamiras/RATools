@@ -397,5 +397,18 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(value, Is.Not.Null.And.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(11));
         }
+
+        [Test]
+        public void TestReadFromNestedIndexNonArray()
+        {
+            var scope = InitializeScopeForTriangle();
+
+            var writeX = Parse("triangle.points = 11");
+            Assert.That(writeX.Execute(scope), Is.Null);
+
+            var assign = Parse("w = triangle.width()");
+            var error = assign.Execute(scope);
+            ExpressionTests.AssertError(error, "Cannot index integer: this.points");
+        }
     }
 }
