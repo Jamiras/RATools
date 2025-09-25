@@ -200,6 +200,68 @@ namespace RATools.Data.Tests
         }
 
         [Test]
+        public void TestPointerNoteExtraWhitespace()
+        {
+            var n = new CodeNote(4,
+                "Bomb Timer Pointer (24-bit)\r\n" +
+                "\r\n" +
+                "+03 - [8-bit] Bombs Defused\r\n" +
+                "+04 - Bomb Timer");
+
+            Assert.That(n.Size, Is.EqualTo(FieldSize.TByte));
+            Assert.That(n.Length, Is.EqualTo(3));
+            Assert.That(n.Summary, Is.EqualTo("Bomb Timer Pointer"));
+            Assert.That(n.IsPointer, Is.True);
+
+            Assert.That(n.OffsetNotes.Count(), Is.EqualTo(2));
+
+            var n2 = n.OffsetNotes.ElementAt(0);
+            Assert.That(n2.Address, Is.EqualTo(3));
+            Assert.That(n2.Size, Is.EqualTo(FieldSize.Byte));
+            Assert.That(n2.Length, Is.EqualTo(1));
+            Assert.That(n2.Summary, Is.EqualTo("Bombs Defused"));
+            Assert.That(n2.IsPointer, Is.False);
+
+            var n3 = n.OffsetNotes.ElementAt(1);
+            Assert.That(n3.Address, Is.EqualTo(4));
+            Assert.That(n3.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n3.Length, Is.EqualTo(1));
+            Assert.That(n3.Summary, Is.EqualTo("Bomb Timer"));
+            Assert.That(n3.IsPointer, Is.False);
+        }
+
+        [Test]
+        public void TestPointerNoteIntermediateText()
+        {
+            var n = new CodeNote(4,
+                "Bomb Timer Pointer (24-bit)\r\n" +
+                "[Only valid in multiplayer mode]\r\n" +
+                "+03 - [8-bit] Bombs Defused\r\n" +
+                "+04 - Bomb Timer");
+
+            Assert.That(n.Size, Is.EqualTo(FieldSize.TByte));
+            Assert.That(n.Length, Is.EqualTo(3));
+            Assert.That(n.Summary, Is.EqualTo("Bomb Timer Pointer"));
+            Assert.That(n.IsPointer, Is.True);
+
+            Assert.That(n.OffsetNotes.Count(), Is.EqualTo(2));
+
+            var n2 = n.OffsetNotes.ElementAt(0);
+            Assert.That(n2.Address, Is.EqualTo(3));
+            Assert.That(n2.Size, Is.EqualTo(FieldSize.Byte));
+            Assert.That(n2.Length, Is.EqualTo(1));
+            Assert.That(n2.Summary, Is.EqualTo("Bombs Defused"));
+            Assert.That(n2.IsPointer, Is.False);
+
+            var n3 = n.OffsetNotes.ElementAt(1);
+            Assert.That(n3.Address, Is.EqualTo(4));
+            Assert.That(n3.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n3.Length, Is.EqualTo(1));
+            Assert.That(n3.Summary, Is.EqualTo("Bomb Timer"));
+            Assert.That(n3.IsPointer, Is.False);
+        }
+
+        [Test]
         public void TestGetSubNote()
         {
             var n = new CodeNote(4,
