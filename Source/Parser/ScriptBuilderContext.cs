@@ -767,7 +767,18 @@ namespace RATools.Parser
                     builder.Append('(');
 
                 AppendField(builder, requirement.Left, addAddressString);
-                AppendFieldModifier(builder, requirement);
+
+                if (requirement.Operator != RequirementOperator.None && requirement.Right.IsMemoryReference)
+                {
+                    // make sure to include the AddAddress logic on the right side too.
+                    _addAddress.Append(addAddressString);
+                    AppendFieldModifier(builder, requirement);
+                    _addAddress.Clear();
+                }
+                else
+                {
+                    AppendFieldModifier(builder, requirement);
+                }
 
                 if (!ReferenceEquals(_addAddress, builder))
                     builder.Append(')');

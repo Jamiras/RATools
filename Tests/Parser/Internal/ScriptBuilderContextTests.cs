@@ -66,6 +66,8 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000={recall}", "byte(dword(0x002345) + (byte(0x001234) * 2)) == (byte(0x001234) * 2)")]
         [TestCase("Z:0x 000001=1_N:0x 000002=2.1._O:0x 000003=3_0x 000004=4",
             "((once(word(0x000002) == 2) && word(0x000003) == 3) || word(0x000004) == 4) && never(word(0x000001) == 1)")]
+        [TestCase("I:0xX001234_A:0xH000001/0xH000001_0=1",
+            "((byte(dword(0x001234) + 0x000001) / byte(dword(0x001234) + 0x000001))) == 1")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
