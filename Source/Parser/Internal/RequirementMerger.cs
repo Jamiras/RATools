@@ -834,6 +834,11 @@ namespace RATools.Parser.Internal
                     return MoreRestrictiveRequirement.None;
             }
 
+            // if two requirements encompass the entire space, but there's a restriction
+            // somewhere else, the encompassing requirements can't be merged.
+            if (everythingCount > 0 && moreRestrictive != MoreRestrictiveRequirement.None)
+                hasConflict = true;
+
             // the smaller group can be merged into the larger group
             if (right.Requirements.Count > left.Requirements.Count)
             {
