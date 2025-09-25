@@ -11,6 +11,7 @@ namespace RATools.Parser.Tests.Expressions
     {
         private ClassDefinitionExpression _pointClass;
         private ClassDefinitionExpression _rectClass;
+        private ClassDefinitionExpression _triangleClass;
         private ClassDefinitionExpression _characterClass;
 
         [OneTimeSetUp]
@@ -41,6 +42,15 @@ namespace RATools.Parser.Tests.Expressions
                 "        result.p2 = that.p2\n" +
                 "        return result\n" +
                 "    }\n" +
+                "}\n"
+            );
+
+            _triangleClass = ExpressionTests.Parse<ClassDefinitionExpression>(
+                "class Triangle\n" +
+                "{\n" +
+                "    points = [Point(0,0), Point(1,2), Point(2,0)]\n" +
+                "" +
+                "    function width() => this.points[2].x - this.points[0].x" +
                 "}\n"
             );
 
@@ -97,6 +107,21 @@ namespace RATools.Parser.Tests.Expressions
             Assert.That(rect, Is.InstanceOf<ClassInstanceExpression>());
 
             scope.AssignVariable(new VariableExpression("rect"), rect);
+            return scope;
+        }
+
+        private InterpreterScope InitializeScopeForTriangle()
+        {
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new AchievementScriptContext();
+            _pointClass.Execute(scope);
+            _triangleClass.Execute(scope);
+
+            var constructor = new FunctionCallExpression("Triangle", new ExpressionBase[0]);
+            var rect = constructor.Evaluate(scope);
+            Assert.That(rect, Is.InstanceOf<ClassInstanceExpression>());
+
+            scope.AssignVariable(new VariableExpression("triangle"), rect);
             return scope;
         }
 
@@ -341,6 +366,49 @@ namespace RATools.Parser.Tests.Expressions
             var value = pt.GetFieldValue("x");
             Assert.That(value, Is.Not.Null.And.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(77));
+        }
+
+        [Test]
+        public void TestReadFromNestedArray()
+        {
+            var scope = InitializeScopeForTriangle();
+
+            var assign = Parse("w = triangle.width()");
+            Assert.That(assign.Execute(scope), Is.Null);
+            var value = scope.GetVariable("w");
+            Assert.That(value, Is.Not.Null.And.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestWriteToNestedArray()
+        {
+            var scope = InitializeScopeForTriangle();
+
+            var writeX = Parse("triangle.points[1].x = 11");
+            Assert.That(writeX.Execute(scope), Is.Null);
+
+            var rect = (ClassInstanceExpression)scope.GetVariable("triangle");
+            var array = rect.GetFieldValue("points");
+            Assert.That(array, Is.Not.Null.And.InstanceOf<ArrayExpression>());
+            var p1 = ((ArrayExpression)array).Entries[1];
+            Assert.That(p1, Is.Not.Null.And.InstanceOf<ClassInstanceExpression>());
+            var value = ((ClassInstanceExpression)p1).GetFieldValue("x");
+            Assert.That(value, Is.Not.Null.And.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)value).Value, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void TestReadFromNestedIndexNonArray()
+        {
+            var scope = InitializeScopeForTriangle();
+
+            var writeX = Parse("triangle.points = 11");
+            Assert.That(writeX.Execute(scope), Is.Null);
+
+            var assign = Parse("w = triangle.width()");
+            var error = assign.Execute(scope);
+            ExpressionTests.AssertError(error, "Cannot index integer: this.points");
         }
     }
 }

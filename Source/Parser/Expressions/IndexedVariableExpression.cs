@@ -79,7 +79,15 @@ namespace RATools.Parser.Expressions
                 }
                 else
                 {
-                    return new ErrorExpression("Cannot index " + clause.Type.ToLowerString(), clause);
+                    var memberReference = clause as ClassMemberReferenceExpression;
+                    if (memberReference != null)
+                    {
+                        indexed = new IndexedVariableExpression(memberReference, index);
+                    }
+                    else
+                    {
+                        return new ErrorExpression("Cannot index " + clause.Type.ToLowerString(), clause);
+                    }
                 }
             }
 
@@ -123,8 +131,9 @@ namespace RATools.Parser.Expressions
                     builder.Append("Cannot index ");
                     builder.Append(container.Type.ToLowerString());
                     builder.Append(": ");
-                    Variable.AppendString(builder);
-                    return new ErrorExpression(builder.ToString(), Variable);
+                    var variable = Variable ?? (ExpressionBase)_source;
+                    variable.AppendString(builder);
+                    return new ErrorExpression(builder.ToString(), variable);
             }
 
             if (isReference && VariableReferenceExpression.CanReference(result.Type))
