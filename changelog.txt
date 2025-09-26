@@ -1,3 +1,12 @@
+v1.16.1 - 26 Sep 2025
+* fix indexing of class fields
+* fix exception loading pointer memory notes containing blank lines
+* fix exception pressing left while typing at end of line
+* fix non-overlapping alts being merged if subclauses cover all values for an address
+* fix Remember being separated from Recall when promoting ResetNextIf to ResetIf
+* fix dumping comparison of indirect address to another indirect address using the same pointer
+* fix Array() being output when dumping unused array note
+
 v1.16.0 - 16 Sep 2025
 * support for structured data via class definitions
 * support for multiset cached data
