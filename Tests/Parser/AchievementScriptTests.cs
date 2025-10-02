@@ -56,6 +56,7 @@ namespace RATools.Parser.Tests
         public static InterpreterScope Evaluate(string script, string expectedError = null)
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new AchievementScriptContext();
             return Evaluate(script, scope, expectedError);
         }
 

@@ -372,12 +372,13 @@ namespace RATools.Parser.Tests.Functions
 
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var parser = new AchievementScriptInterpreter();
-            parser.Initialize(new[]
+            var groups = parser.Parse(tokenizer);
+            AchievementScriptInterpreter.InitializeScope(groups, new[]
             {
                 new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
             });
 
-            Assert.That(parser.Run(tokenizer), Is.False);
+            Assert.That(parser.Run(groups), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo("2:1 leaderboard call failed\r\n- 2:98 Unknown set id: 9999"));
         }
 
@@ -391,13 +392,14 @@ namespace RATools.Parser.Tests.Functions
 
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(input));
             var parser = new AchievementScriptInterpreter();
-            parser.Initialize(new[]
+            var groups = parser.Parse(tokenizer);
+            AchievementScriptInterpreter.InitializeScope(groups, new[]
             {
                 new AchievementSet { Id = 2345, OwnerSetId = 2345, OwnerGameId = 2222, Title = "Game Name", Type = AchievementSetType.Core },
                 new AchievementSet { Id = 9999, OwnerSetId = 9999, OwnerGameId = 3333, Title = "Bonus", Type = AchievementSetType.Bonus },
             });
 
-            Assert.That(parser.Run(tokenizer), Is.True);
+            Assert.That(parser.Run(groups), Is.True);
 
             var leaderboard = parser.Leaderboards.FirstOrDefault();
 

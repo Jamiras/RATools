@@ -24,7 +24,6 @@ namespace RATools.Parser
             _achievements = new Dictionary<Achievement, int>();
             _leaderboards = new Dictionary<Leaderboard, int>();
             _richPresence = new RichPresenceBuilder();
-            _sets = new List<AchievementSet>();
 
             _minimumVersion = RATools.Data.Version.MinimumVersion;
         }
@@ -60,13 +59,6 @@ namespace RATools.Parser
         /// Gets the game identifier from the script.
         /// </summary>
         public int GameId { get; private set; }
-
-        public IEnumerable<AchievementSet> Sets
-        {
-            get { return _sets; }
-        }
-        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        private readonly List<AchievementSet> _sets;
 
         private SoftwareVersion _minimumVersion;
 
@@ -108,16 +100,11 @@ namespace RATools.Parser
         /// </summary>
         public SerializationContext SerializationContext { get; internal set; }
 
-        public static ExpressionGroupCollection CreateExpressionGroupCollection()
+        public static ExpressionGroupCollection CreateExpressionGroupCollection(IEnumerable<AchievementSet> publishedSets)
         {
-            return new AssetExpressionGroupCollection() { Scope = CreateScope() };
-        }
-
-        public static InterpreterScope CreateScope()
-        {
-            var scope = new InterpreterScope(GetGlobalScope());
-            scope.Context = new AchievementScriptContext();
-            return scope;
+            var groups = new AssetExpressionGroupCollection();
+            InitializeScope(groups, publishedSets);
+            return groups;
         }
 
         internal static InterpreterScope GetGlobalScope()
@@ -272,23 +259,17 @@ namespace RATools.Parser
                 }
             }
 
+            InitializeScope(expressionGroups, null);
+
             return Run(expressionGroups, null);
         }
 
-        public bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback)
+        public bool Run(ExpressionGroupCollection expressionGroups, IScriptInterpreterCallback callback = null)
         {
-            AchievementScriptContext scriptContext = null;
-            InterpreterScope scope = expressionGroups.Scope;
-
-            if (scope != null)
-                scriptContext = scope.GetContext<AchievementScriptContext>();
-
-            if (scriptContext == null)
-            {
-                scriptContext = new AchievementScriptContext();
-                scriptContext.Sets = _sets;
-                scope = new InterpreterScope(expressionGroups.Scope ?? GetGlobalScope()) { Context = scriptContext };
-            }
+            var scope = expressionGroups.Scope;
+            Debug.Assert(scope != null);
+            var scriptContext = scope.GetContext<AchievementScriptContext>();
+            Debug.Assert(scriptContext != null);
 
             expressionGroups.ResetErrors();
 
@@ -519,9 +500,13 @@ namespace RATools.Parser
             return null;
         }
 
-        public void Initialize(IEnumerable<AchievementSet> publishedSets)
+        public static void InitializeScope(ExpressionGroupCollection expressionGroups, IEnumerable<AchievementSet> publishedSets)
         {
-            _sets.AddRange(publishedSets);
+            var context = new AchievementScriptContext();
+            if (publishedSets != null)
+                context.Sets.AddRange(publishedSets);
+
+            expressionGroups.Scope = new InterpreterScope(GetGlobalScope()) { Context = context };
         }
     }
 }
