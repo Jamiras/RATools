@@ -40,8 +40,6 @@ namespace RATools.Parser.Tests.Functions
             public AchievementSetFunctionHarness()
             {
                 Context = new AchievementScriptContext();
-                Context.Sets = new System.Collections.Generic.List<AchievementSet>();
-
                 Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
                 Scope.Context = Context;
             }

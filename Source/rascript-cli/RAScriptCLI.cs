@@ -232,7 +232,7 @@ namespace RATools
                     publishedAssets.Achievements.Count(), publishedAssets.Leaderboards.Count(), interpreter.GameId);
             }
 
-            interpreter.Initialize(publishedAssets.Sets);
+            AchievementScriptInterpreter.InitializeScope(groups, publishedAssets.Sets);
 
             // ===== run the script =====
             interpreter.Run(groups, null);

@@ -9,10 +9,11 @@ namespace RATools.Parser
         public AchievementScriptContext()
         {
             SerializationContext = new SerializationContext();
+            Sets = new List<AchievementSet>();
         }
 
         public int GameId { get; set; }
-        public List<AchievementSet> Sets { get; set; }
+        public List<AchievementSet> Sets { get; private set; }
         public Dictionary<Achievement, int> Achievements { get; set; }
         public Dictionary<Leaderboard, int> Leaderboards { get; set; }
         public RichPresenceBuilder RichPresence { get; set; }
