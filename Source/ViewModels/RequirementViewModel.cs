@@ -51,8 +51,13 @@ namespace RATools.ViewModels
                         CodeNote note;
                         if (notes.TryGetValue(requirement.Left.Value, out note))
                         {
+                            Notes = note.Note;
                             var subNote = note.GetSubNote(requirement.Left.Size);
-                            Notes = subNote ?? note.Summary;
+                            if (subNote != null)
+                            {
+                                NotesShort = subNote;
+                                IsNoteShortened = true;
+                            }
                         }
                     }
                 }
@@ -61,8 +66,13 @@ namespace RATools.ViewModels
                     CodeNote note;
                     if (notes.TryGetValue(requirement.Right.Value, out note))
                     {
+                        Notes = note.Note;
                         var subNote = note.GetSubNote(requirement.Left.Size);
-                        Notes = subNote ?? note.Summary;
+                        if (subNote != null)
+                        {
+                            NotesShort = subNote;
+                            IsNoteShortened = true;
+                        }
                     }
                 }
             }

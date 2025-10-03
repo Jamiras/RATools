@@ -38,30 +38,45 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        [TestCase("0xH1111=7", "")]
-        [TestCase("0xH1234=7", "Addr1")]
-        [TestCase("7=0xH1234", "Addr1")]
-        [TestCase("0xH1234=d0xH1234", "Addr1")]
-        [TestCase("0xH1234=0xH2345", "0x001234:Addr1\r\n0x002345:Addr2")]
-        [TestCase("0xH1234=0xH1111", "0x001234:Addr1")]
-        [TestCase("0xH1111=0xH1234", "0x001234:Addr1")]
-        [TestCase("0xH2222=0xH1111", "")]
-        [TestCase("0xH3456", "This note is long enough that it will need to be wrapped.")]
-        [TestCase("0xH4567", "This note")]
-        public void TestNotes(string serialized, string expected)
+        [TestCase("0xH1111=7", "", null)]
+        [TestCase("0xH1234=7", "Addr1", null)]
+        [TestCase("7=0xH1234", "Addr1", null)]
+        [TestCase("0xH1234=d0xH1234", "Addr1", null)]
+        [TestCase("0xH1234=0xH2345", "0x001234:Addr1\r\n0x002345:Addr2", "0x001234:Addr1")]
+        [TestCase("0xH1234=0xH1111", "0x001234:Addr1", null)]
+        [TestCase("0xH1111=0xH1234", "0x001234:Addr1", null)]
+        [TestCase("0xH2222=0xH1111", "", null)]
+        [TestCase("0xH3456", "This note is long enough that it will need to be wrapped.", null)]
+        [TestCase("0xH4567", "This note\nis multiple\nlines.", "This note")]
+        [TestCase("0xM5678", "[Bitflags] Quests\nb0=Quest1\nb1=Quest2\nb2=Quest3", "Quest1")] // specific bit extracted
+        [TestCase("0xO5678", "[Bitflags] Quests\nb0=Quest1\nb1=Quest2\nb2=Quest3", "Quest3")] // specific bit extracted
+        [TestCase("0xK5678", "[Bitflags] Quests\nb0=Quest1\nb1=Quest2\nb2=Quest3", "[Bitflags] Quests")] // bitcount shows summary
+        public void TestNotes(string serialized, string expectedNote, string expectedShortNote)
         {
             var notes = new Dictionary<uint, CodeNote>();
             notes[0x1234] = new CodeNote(0x1234, "Addr1");
             notes[0x2345] = new CodeNote(0x2345, "Addr2");
             notes[0x3456] = new CodeNote(0x3456, "This note is long enough that it will need to be wrapped.");
             notes[0x4567] = new CodeNote(0x4567, "This note\nis multiple\nlines.");
+            notes[0x5678] = new CodeNote(0x5678, "[Bitflags] Quests\nb0=Quest1\nb1=Quest2\nb2=Quest3");
 
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
             var requirement = builder.ToAchievement().CoreRequirements.First();
             var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
 
-            Assert.That(vmRequirement.Notes, Is.EqualTo(expected));
+            Assert.That(vmRequirement.Notes, Is.EqualTo(expectedNote));
+
+            if (expectedShortNote != null)
+            {
+                Assert.That(vmRequirement.NotesShort, Is.EqualTo(expectedShortNote));
+                Assert.That(vmRequirement.IsNoteShortened, Is.True);
+            }
+            else
+            {
+                Assert.That(vmRequirement.NotesShort, Is.EqualTo(expectedNote));
+                Assert.That(vmRequirement.IsNoteShortened, Is.False);
+            }
         }
 
         [TestCase("0xH1111=7", "")]
