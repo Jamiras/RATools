@@ -19,6 +19,8 @@ namespace RATools.Parser.Tests.Functions
 
             public InterpreterScope Scope { get; private set; }
 
+            public ErrorExpression Error { get; private set; }
+
             public RichPresenceBuilder Evaluate(string input)
             {
                 input = "rich_presence_display(\"{0}\", " + input + ")";
@@ -28,7 +30,7 @@ namespace RATools.Parser.Tests.Functions
 
                 var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
                 Scope.Context = context;
-                funcCall.Execute(Scope);
+                Error = funcCall.Execute(Scope);
 
                 return context.RichPresence;
             }
@@ -129,6 +131,24 @@ namespace RATools.Parser.Tests.Functions
 
             var builder = rp.Evaluate("rich_presence_lookup(\"Name\", 2, lookup, \"Fallback\")");
             Assert.That(builder.ToString(), Is.EqualTo("Display:\r\nFallback\r\n"));
+        }
+
+        [Test]
+        public void TestValueComparison()
+        {
+            var rp = new RichPresenceLookupFunctionHarness();
+            var builder = rp.Evaluate("rich_presence_lookup(\"Name\", byte(0x1234) == 1, {})");
+
+            ExpressionTests.AssertError(rp.Error, "Cannot create value from condition");
+        }
+
+        [Test]
+        public void TestValueUnboundedTally()
+        {
+            var rp = new RichPresenceLookupFunctionHarness();
+
+            var builder = rp.Evaluate("rich_presence_lookup(\"Name\", tally(0, byte(0x1234) == 1), {})");
+            Assert.That(builder.ToString(), Is.EqualTo("Lookup:Name\r\n\r\nDisplay:\r\n@Name(M:0xH001234=1)\r\n"));
         }
     }
 }

@@ -4,6 +4,7 @@ using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Parser.Tests.Expressions.Trigger;
 using System.Text;
 
 namespace RATools.Parser.Tests.Expressions
@@ -424,6 +425,16 @@ namespace RATools.Parser.Tests.Expressions
             var builder = new StringBuilder();
             result.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void TestXorChain()
+        {
+            var input = "byte(dword(4) + 2) ^ byte(dword(4) + 4) ^ byte(dword(4) + 6) == 3";
+            var expected = "remembered(remembered(byte(dword(0x000004) + 0x000002)) ^ byte(dword(0x000004) + 0x000004)) ^ byte(dword(0x000004) + 0x000006)";
+
+            var expr = TriggerExpressionTests.Parse<ComparisonExpression>(input);
+            //TriggerExpressionTests.AssertSerialize(expr, expected);
         }
 
         [Test]

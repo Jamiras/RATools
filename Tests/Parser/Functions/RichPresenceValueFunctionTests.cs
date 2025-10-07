@@ -117,6 +117,29 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
+        public void TestValueComparison()
+        {
+            var input = "rich_presence_display(\"{0}\", rich_presence_value(\"Name\", byte(0x1234) == 1))";
+            var expression = ExpressionBase.Parse(new PositionalTokenizer(Tokenizer.CreateTokenizer(input)));
+            Assert.That(expression, Is.InstanceOf<FunctionCallExpression>());
+            var funcCall = (FunctionCallExpression)expression;
+
+            var context = new AchievementScriptContext { RichPresence = new RichPresenceBuilder() };
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = context;
+            var error = funcCall.Execute(scope);
+
+            ExpressionTests.AssertError(error, "Cannot create value from condition");
+        }
+
+        [Test]
+        public void TestValueUnboundedTally()
+        {
+            var rp = Evaluate("rich_presence_value(\"Name\", tally(0, byte(0x1234) == 1))");
+            Assert.That(rp.ToString(), Is.EqualTo("Format:Name\r\nFormatType=VALUE\r\n\r\nDisplay:\r\n@Name(M:0xH001234=1)\r\n"));
+        }
+
+        [Test]
         [TestCase("VALUE", "VALUE")]
         [TestCase("SECS", "SECS")]
         [TestCase("TIMESECS", "SECS")]

@@ -30,11 +30,17 @@ namespace RATools.Parser
 
         internal static bool IsConvertible(ExpressionBase expression)
         {
-            return (expression is ITriggerExpression || expression is IntegerConstantExpression);
+            if (expression is ITriggerExpression)
+                return expression is not RequirementConditionExpression;
+
+            return expression is IntegerConstantExpression;
         }
 
         internal static ErrorExpression InconvertibleError(ExpressionBase expression)
         {
+            if (expression is RequirementConditionExpression)
+                return new ErrorExpression("Cannot create value from condition", expression);
+
             return new ErrorExpression("Cannot create value from " + expression.Type.ToLowerString(), expression);
         }
 
