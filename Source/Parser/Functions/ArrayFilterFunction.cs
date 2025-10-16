@@ -21,6 +21,14 @@ namespace RATools.Parser.Functions
                 array = new ArrayExpression();
 
             var boolResult = predicateResult as BooleanConstantExpression;
+            if (boolResult == null)
+            {
+                if (AchievementScriptInterpreter.ContainsRuntimeLogic(predicateResult))
+                    return new ErrorExpression("Cannot filter on runtime logic", predicateResult);
+
+                return new ConversionErrorExpression(predicateResult, ExpressionType.BooleanConstant);
+            }
+
             if (boolResult.Value)
                 array.Entries.Add(predicateInput);
 

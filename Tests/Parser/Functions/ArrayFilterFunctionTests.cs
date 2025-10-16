@@ -142,5 +142,19 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(Evaluate("array_filter([1, 2, 3], (a) { return b })"),
                 Is.EqualTo("Unknown variable: b"));
         }
+
+        [Test]
+        public void TestIntegerFilter()
+        {
+            Assert.That(Evaluate("array_filter([1, 2, 3], a => a)"),
+                Is.EqualTo("Cannot convert integer to boolean"));
+        }
+
+        [Test]
+        public void TestRuntimeLogicFilter()
+        {
+            Assert.That(Evaluate("array_filter([1, 2, 3], a => byte(a) > 1)"),
+                Is.EqualTo("Cannot filter on runtime logic"));
+        }
     }
 }
