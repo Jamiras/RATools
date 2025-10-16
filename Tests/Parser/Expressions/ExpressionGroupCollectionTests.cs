@@ -227,7 +227,7 @@ namespace RATools.Parser.Tests.Expressions
                         "leaderboard(\"t\", \"d\", byte(0x1234) == a, byte(0x1234) == a + 1, byte(0x1234) == a + 2, byte(0x2345))\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var group = new AssetExpressionGroupCollection();
-            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
+            AchievementScriptInterpreter.InitializeScope(group, null);
             group.Parse(tokenizer);
 
             var interpreter = new AchievementScriptInterpreter();
@@ -270,7 +270,7 @@ namespace RATools.Parser.Tests.Expressions
                         ")\n";
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var group = new ExpressionGroupCollection();
-            group.Scope = AchievementScriptInterpreter.GetGlobalScope();
+            AchievementScriptInterpreter.InitializeScope(group, null);
             group.Parse(tokenizer);
 
             var interpreter = new AchievementScriptInterpreter();

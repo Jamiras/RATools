@@ -134,7 +134,7 @@ namespace RATools.ViewModels
             var tokenizer = Tokenizer.CreateTokenizer(e.Content);
             if (_parsedContent == null || e.Type == ContentChangeType.Refresh)
             {
-                _parsedContent = AchievementScriptInterpreter.CreateExpressionGroupCollection();
+                _parsedContent = AchievementScriptInterpreter.CreateExpressionGroupCollection(_owner.PublishedSets);
 
                 lock (_parsedContent)
                 {
@@ -169,7 +169,6 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
-                        interpreter.Initialize(_owner.PublishedSets);
 
                         bool hadErrors, hasErrors;
                         lock (_parsedContent)
