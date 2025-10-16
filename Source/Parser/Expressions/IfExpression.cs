@@ -210,7 +210,7 @@ namespace RATools.Parser.Expressions
                 result = value.IsTrue(scope, out error);
                 if (result == null)
                 {
-                    if (ContainsRuntimeLogic(value))
+                    if (AchievementScriptInterpreter.ContainsRuntimeLogic(value))
                         return new ErrorExpression("Comparison contains runtime logic.", Condition);
 
                     return new ErrorExpression("Condition did not evaluate to a boolean.", Condition) { InnerError = error };
@@ -219,28 +219,5 @@ namespace RATools.Parser.Expressions
 
             return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
         }
-
-        private static bool ContainsRuntimeLogic(ExpressionBase expression)
-        {
-            switch (expression.Type)
-            {
-                case ExpressionType.MemoryAccessor:
-                case ExpressionType.Requirement:
-                    return true;
-
-                default:
-                    var nested = expression as INestedExpressions;
-                    if (nested != null)
-                    {
-                        foreach (var nestedExpression in nested.NestedExpressions)
-                        {
-                            if (ContainsRuntimeLogic(nestedExpression))
-                                return true;
-                        }
-                    }
-                    return false;
-            }
-        }
-
     }
 }

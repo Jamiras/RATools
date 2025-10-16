@@ -508,5 +508,27 @@ namespace RATools.Parser
 
             expressionGroups.Scope = new InterpreterScope(GetGlobalScope()) { Context = context };
         }
+
+        public static bool ContainsRuntimeLogic(ExpressionBase expression)
+        {
+            switch (expression.Type)
+            {
+                case ExpressionType.MemoryAccessor:
+                case ExpressionType.Requirement:
+                    return true;
+
+                default:
+                    var nested = expression as INestedExpressions;
+                    if (nested != null)
+                    {
+                        foreach (var nestedExpression in nested.NestedExpressions)
+                        {
+                            if (ContainsRuntimeLogic(nestedExpression))
+                                return true;
+                        }
+                    }
+                    return false;
+            }
+        }
     }
 }
