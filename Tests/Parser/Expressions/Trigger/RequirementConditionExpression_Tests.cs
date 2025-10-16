@@ -269,5 +269,23 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             expression.BuildTrigger(context);
             TriggerExpressionTests.AssertSerialize(expression, "I:0xX001234_A:0xH000001*10_I:0xX001234_A:0xH000002*100_I:0xX001234_B:d0xH000001*10_I:0xX001234_B:d0xH000002*100_0=200");
         }
+
+        [Test]
+        public void TestXorChain()
+        {
+            var input = "dword(ptr + 4) ^ dword(ptr + 8) ^ dword(ptr + 12) ^ dword(ptr + 16) == 6";
+            input = input.Replace("ptr", "dword(0x1234)");
+
+            var expression = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
+
+            var requirements = new List<Requirement>();
+            var context = new TriggerBuilderContext { Trigger = requirements };
+            expression.BuildTrigger(context);
+            TriggerExpressionTests.AssertSerialize(expression,
+                "I:0xX001234_K:0xX000004^0xX000008_" + // remember(dword(ptr + 4)  ^ dword(ptr + 8))
+                "I:0xX001234_K:0xX00000c^{recall}_" +  // remember(dword(ptr + 12) ^ {recall}      )
+                "I:0xX001234_A:0xX000010^{recall}_" +  // capture: dword(ptr + 16) ^ {recall}
+                "0=6");                                // compare to 6
+        }
     }
 }

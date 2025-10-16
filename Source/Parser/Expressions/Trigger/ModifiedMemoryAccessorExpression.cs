@@ -384,6 +384,28 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     field = FieldFactory.CreateField(right);
                 }
+                else if (MemoryAccessor is RememberRecallExpression)
+                {
+                    // if the remembered value is modified, it has to be wrapped in
+                    // another layer of remember()
+                    if (ModifyingOperator != RequirementOperator.None)
+                        return new RememberRecallExpression(this).Combine(right, operation);
+
+                    if (rightAccessor.HasPointerChain)
+                    {
+                        // prefer putting the {recall} on the right so the pointer's offset
+                        // is more closely associated to the pointer.
+                        if (operation.IsCommutative())
+                            return rightAccessor.Combine(MemoryAccessor, operation);
+
+                        // virtualize the pointer chain into the remember expression
+                        var remember = (RememberRecallExpression)MemoryAccessor;
+                        foreach (var requirement in rightAccessor.PointerChain)
+                            remember.AddPointer(requirement);
+                    }
+
+                    field = FieldFactory.CreateField(right, true);
+                }
                 else if (!MemoryAccessor.PointerChainMatches(rightAccessor))
                 {
                     // FieldFactory won't process a MemoryAccessor with a Pointer chain. We want
@@ -405,6 +427,13 @@ namespace RATools.Parser.Expressions.Trigger
 
                     right = new RememberRecallExpression(rightModifiedAccessor);
                     field = FieldFactory.CreateField(right);
+                }
+                else if (ModifyingOperator != RequirementOperator.None && MemoryAccessor.HasPointerChain)
+                {
+                    // pointer chains match, but there's already a modifier.
+                    // remember the current value, so we can use the pointer to find
+                    // the next value before merging them.
+                    return new RememberRecallExpression(this).Combine(right, operation);
                 }
                 else
                 {
