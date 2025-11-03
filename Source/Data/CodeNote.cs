@@ -86,9 +86,14 @@ namespace RATools.Data
 
                     if (Summary.IndexOfAny(new[] { '=', ':' }) != -1)
                         ExtractValuesFromSummary();
+
+                    // if we found a size, stop looking for a size/pointer
+                    if (Size != FieldSize.None)
+                        break;
                 }
 
-                if (line.Length >= 4) // nBit is smallest parsable note
+                if (line.Length >= 4 && // nBit is smallest parsable note
+                    Size == FieldSize.None)
                 {
                     var lower = line.ToString().ToLower();
                     if (!lower.Contains("pointer"))
@@ -108,7 +113,7 @@ namespace RATools.Data
                     }
 
                     // if we found a size, stop looking for a size/pointer
-                    if (Size != FieldSize.None)
+                    if (Size != FieldSize.None && !String.IsNullOrEmpty(Summary))
                         break;
                 }
             } while (tokenizer.NextChar != '\0');
@@ -659,6 +664,12 @@ namespace RATools.Data
 
         private void CheckValue(Token clause)
         {
+            int prefixIndex = 0;
+            while (prefixIndex < clause.Length && !Char.IsLetterOrDigit(clause[prefixIndex]) && clause[prefixIndex] != '[')
+                prefixIndex++;
+            if (prefixIndex > 0)
+                clause = clause.SubToken(prefixIndex);
+
             var separatorLength = 1;
             var separator = clause.IndexOf('=');
 
@@ -671,6 +682,27 @@ namespace RATools.Data
             {
                 separator = arrow;
                 separatorLength = 2;
+            }
+
+            if (separator == -1)
+            {
+                // only match dash if no other separators were found. it could be definine a range
+                var dash = clause.IndexOf(" - ");
+                if (dash != -1)
+                {
+                    separator = dash;
+                    separatorLength = 3;
+                }
+            }
+
+            if (separator == -1 && clause.Length > 4 && clause[0] == '[')
+            {
+                var endMeta = clause.IndexOf(']');
+                if (endMeta != -1)
+                {
+                    clause = clause.SubToken(1);
+                    separator = endMeta - 1;
+                }
             }
 
             if (separator != -1)

@@ -213,25 +213,8 @@ namespace RATools.ViewModels
             {
                 foreach (var group in trigger.Groups)
                 {
-                    foreach (var requirement in group.Requirements)
-                    {
-                        if (requirement.Requirement == null)
-                            continue;
-
-                        if (requirement.Requirement.Left.IsMemoryReference)
-                        {
-                            var memoryItem = AddMemoryAddress(requirement.Requirement.Left);
-                            if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
-                                dumpAsset.MemoryAddresses.Add(memoryItem);
-                        }
-
-                        if (requirement.Requirement.Right.IsMemoryReference)
-                        {
-                            var memoryItem = AddMemoryAddress(requirement.Requirement.Right);
-                            if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
-                                dumpAsset.MemoryAddresses.Add(memoryItem);
-                        }
-                    }
+                    AddMemoryReferences(dumpAsset,
+                        group.Requirements.Where(r => r.Requirement != null).Select(r => r.Requirement));
                 }
             }
         }
@@ -310,7 +293,8 @@ namespace RATools.ViewModels
                         size = FieldSize.Byte;
                         break;
                 }
-                AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address });
+
+                AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address }, null);
             }
         }
 
@@ -416,12 +400,10 @@ namespace RATools.ViewModels
                             var achievement = new AchievementBuilder();
                             achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
 
-                            foreach (var requirement in achievement.CoreRequirements)
-                                AddMemoryReferences(dumpRichPresence, requirement);
+                            AddMemoryReferences(dumpRichPresence, achievement.CoreRequirements);
 
                             foreach (var alt in achievement.AlternateRequirements)
-                                foreach (var requirement in alt)
-                                    AddMemoryReferences(dumpRichPresence, requirement);
+                                AddMemoryReferences(dumpRichPresence, alt);
                         }
 
                         AddMacroMemoryReferences(dumpRichPresence, line.Substring(index + 1));
@@ -468,12 +450,10 @@ namespace RATools.ViewModels
                     var achievement = new AchievementBuilder();
                     achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
 
-                    foreach (var requirement in achievement.CoreRequirements)
-                        AddMemoryReferences(macro, requirement);
+                    AddMemoryReferences(macro, achievement.CoreRequirements);
 
                     foreach (var alt in achievement.AlternateRequirements)
-                        foreach (var requirement in alt)
-                            AddMemoryReferences(macro, requirement);
+                        AddMemoryReferences(macro, alt);
                 }
                 else
                 {
@@ -484,7 +464,7 @@ namespace RATools.ViewModels
                             var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
                             if (field.IsMemoryReference)
                             {
-                                var memoryItem = AddMemoryAddress(field);
+                                var memoryItem = AddMemoryAddress(field, null);
                                 if (memoryItem != null && !macro.MemoryAddresses.Contains(memoryItem))
                                     macro.MemoryAddresses.Add(memoryItem);
                             }
@@ -526,47 +506,96 @@ namespace RATools.ViewModels
             }
         }
 
-        private void AddMemoryReferences(DumpAsset dumpAsset, Requirement requirement)
+        private void AddMemoryReferences(DumpAsset dumpAsset, IEnumerable<Requirement> requirements)
         {
-            if (requirement.Left.IsMemoryReference)
+            MemoryItem parent = null;
+            foreach (var requirement in requirements)
             {
-                var memoryItem = AddMemoryAddress(requirement.Left);
-                if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
-                    dumpAsset.MemoryAddresses.Add(memoryItem);
-            }
+                MemoryItem leftMemoryItem = null;
+                if (requirement.Left.IsMemoryReference)
+                    leftMemoryItem = AddMemoryAddress(requirement.Left, parent);
 
-            if (requirement.Right.IsMemoryReference)
-            {
-                var memoryItem = AddMemoryAddress(requirement.Right);
-                if (memoryItem != null && !dumpAsset.MemoryAddresses.Contains(memoryItem))
-                    dumpAsset.MemoryAddresses.Add(memoryItem);
+                MemoryItem rightMemoryItem = null;
+                if (requirement.Right.IsMemoryReference)
+                    rightMemoryItem = AddMemoryAddress(requirement.Right, parent);
+
+                if (leftMemoryItem == null && rightMemoryItem == null)
+                {
+                    if (parent != null && (requirement.Left.IsMemoryReference || requirement.Right.IsMemoryReference))
+                    {
+                        // offset not found in parent, capture the parent
+                        if (!dumpAsset.MemoryAddresses.Contains(parent))
+                            dumpAsset.MemoryAddresses.Add(parent);
+                    }
+
+                    if (requirement.Type == RequirementType.AddAddress)
+                    {
+                        // provide a dummy parent for the next condition
+                        parent = new MemoryItem(uint.MaxValue, FieldSize.None, null);
+                        continue;
+                    }
+                }
+
+                if (requirement.Type == RequirementType.AddAddress)
+                {
+                    // only want to capture the leaves
+                    parent = leftMemoryItem ?? rightMemoryItem;
+                }
+                else
+                {
+                    parent = null;
+                }
+
+                if (leftMemoryItem != null)
+                {
+                    leftMemoryItem.IsReferenced = true;
+                    if (!dumpAsset.MemoryAddresses.Contains(leftMemoryItem))
+                        dumpAsset.MemoryAddresses.Add(leftMemoryItem);
+                }
+
+                if (rightMemoryItem != null)
+                {
+                    rightMemoryItem.IsReferenced = true;
+                    if (!dumpAsset.MemoryAddresses.Contains(rightMemoryItem))
+                        dumpAsset.MemoryAddresses.Add(rightMemoryItem);
+                }
             }
         }
 
-        private MemoryItem AddMemoryAddress(Field field)
+        private MemoryItem AddMemoryAddress(Field field, MemoryItem parent)
         {
+            var items = parent?.ChainedItems ?? _memoryItems;
+
             int index = 0;
-            while (index < _memoryItems.Count)
+            while (index < items.Count)
             {
-                if (_memoryItems[index].Address > field.Value)
+                if (items[index].Address > field.Value)
                     break;
-                if (_memoryItems[index].Address == field.Value)
+                if (items[index].Address == field.Value)
                 {
-                    if (_memoryItems[index].Size > field.Size)
+                    if (items[index].Size > field.Size)
                         break;
-                    if (_memoryItems[index].Size == field.Size)
-                        return _memoryItems[index];
+                    if (items[index].Size == field.Size)
+                        return items[index];
                 }
 
                 index++;
             }
 
             CodeNote note;
-            if (!_game.Notes.TryGetValue(field.Value, out note))
+            if (parent != null)
+            {
+                note = parent.Note?.OffsetNotes.FirstOrDefault(n => n.Address == field.Value);
+                if (note == null)
+                    return null;
+            }
+            else if (!_game.Notes.TryGetValue(field.Value, out note))
+            {
                 return null;
+            }
 
-            var item = new MemoryItem(field.Value, field.Size, note.Summary);
-            _memoryItems.Insert(index, item);
+            var item = new MemoryItem(field.Value, field.Size, note) { Parent = parent };
+            items.Insert(index, item);
             return item;
         }
 
@@ -882,11 +911,7 @@ namespace RATools.ViewModels
                 }
 
                 if (functionNameStyle != FunctionNameStyle.None)
-                {
-                    CodeNote note;
-                    if (_game.Notes.TryGetValue(memoryItem.Address, out note))
-                        memoryItem.UpdateFunctionName(functionNameStyle, note);
-                }
+                    memoryItem.UpdateFunctionName(functionNameStyle);
 
                 if (rowItem == null || rowItem.Address != memoryItem.Address || rowItem.Size != memoryItem.Size)
                     MemoryAddresses.InsertRow(memIndex, memoryItem);
@@ -905,22 +930,21 @@ namespace RATools.ViewModels
             foreach (var row in MemoryAddresses.Rows)
             {
                 var memoryItem = (MemoryItem)row.Model;
-
-                CodeNote note;
-                if (_game.Notes.TryGetValue(memoryItem.Address, out note))
-                    memoryItem.UpdateFunctionName(functionNameStyle, note);
+                memoryItem.UpdateFunctionName(functionNameStyle);
             }
         }
 
         [DebuggerDisplay("{Size} {Address}")]
         public class MemoryItem : ViewModelBase
         {
-            public MemoryItem(uint address, FieldSize size, string notes)
+            public MemoryItem(uint address, FieldSize size, CodeNote note)
             {
                 Address = address;
                 Size = size;
-                Notes = notes;
+                Note = note;
             }
+
+            private CodeNote _note;
 
             public static readonly ModelProperty AddressProperty = ModelProperty.Register(typeof(MemoryItem), "Address", typeof(uint), (uint)0);
 
@@ -947,22 +971,53 @@ namespace RATools.ViewModels
 
             public static readonly ModelProperty NotesProperty = ModelProperty.Register(typeof(MemoryItem), "Notes", typeof(string), String.Empty);
 
+            public CodeNote Note
+            {
+                get { return _note; }
+                private set
+                {
+                    _note = value;
+                    Notes = value?.Summary ?? string.Empty;
+                }
+            }
+
             public string Notes
             {
                 get { return (string)GetValue(NotesProperty); }
                 private set { SetValue(NotesProperty, value); }
             }
 
-            public void UpdateFunctionName(FunctionNameStyle style, CodeNote note)
+            public bool HasChainedItems
             {
-                if (style == FunctionNameStyle.None)
+                get { return _chainedItems != null; }
+            }
+
+            public List<MemoryItem> ChainedItems
+            {
+                get
+                {
+                    if (_chainedItems == null)
+                        _chainedItems = new List<MemoryItem>();
+
+                    return _chainedItems;
+                }
+            }
+            [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+            private List<MemoryItem> _chainedItems;
+
+            public MemoryItem Parent { get; set; }
+            public bool IsReferenced { get; set; }
+
+            public void UpdateFunctionName(FunctionNameStyle style)
+            {
+                if (style == FunctionNameStyle.None || _note == null)
                 {
                     FunctionName = String.Empty;
                     return;
                 }
 
-                var text = note.Summary;
-                var subNote = note.GetSubNote(Size);
+                var text = _note.Summary;
+                var subNote = _note.GetSubNote(Size);
                 if (subNote != null)
                     text += ' ' + subNote;
 
@@ -1005,7 +1060,14 @@ namespace RATools.ViewModels
                 // build the function name
                 var functionName = BuildVariableName(text, style);
                 if (!String.IsNullOrEmpty(functionName))
+                {
+                    functionName = functionName.Replace("'s ", "s ");
+
+                    if (AchievementScriptInterpreter.IsReservedFunctionName(functionName))
+                        functionName += '_';
+
                     FunctionName = functionName.ToString();
+                }
             }
         }
 
@@ -1035,6 +1097,67 @@ namespace RATools.ViewModels
             return input.Replace("\"", "\\\"");
         }
 
+        private uint GetMask()
+        {
+            var mask = 0xFFFFFFFF;
+
+            switch (_game.ConsoleId)
+            {
+                case 40: // Dreamcast
+                case 78: // DSi
+                case 2:  // N64
+                case 12: // PlayStation
+                    mask = 0x00FFFFFF;
+                    break;
+
+                case 16: // GameCube
+                    // GameCube docs suggest masking with 0x1FFFFFFF (extra F).
+                    // both work. check to see which the game is using.
+                    mask = 0x01FFFFFF;
+                    foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
+                    {
+                        foreach (var trigger in achievement.Published.TriggerList)
+                        {
+                            foreach (var group in trigger.Groups)
+                            {
+                                foreach (var requirement in group.Requirements)
+                                {
+                                    if (requirement.Requirement.Type == RequirementType.AddAddress &&
+                                        requirement.Requirement.Operator == RequirementOperator.BitwiseAnd &&
+                                        requirement.Requirement.Right.Type == FieldType.Value)
+                                    {
+                                        if (requirement.Requirement.Right.Value >= mask)
+                                            return requirement.Requirement.Right.Value;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    break;
+
+                case 21: // PlayStation2
+                case 41: // PSP
+                    mask = 0x01FFFFFF;
+                    break;
+
+                case 19: // WII
+                    mask = 0x1FFFFFFF;
+                    break;
+
+                case 5:  // GBA
+                    // This is technically wrong as there's two distinct maps required.
+                    //  $03000000 -> $00000000 (via just doing a 24-bit read)
+                    //  $02000000 -> $00008000 (via an offset)
+                    // However, most developers who have implemented sets just do a 24-bit
+                    // read _and_ use a +0x8000 offset when necessary. As these offsets are
+                    // encoded in the code notes, we shouldn't provide an explicit offset here.
+                    mask = 0x00FFFFFF;
+                    break;
+            }
+
+            return mask;
+        }
+
         internal void Dump(Stream outStream)
         {
             MemoryAddresses.Commit();
@@ -1046,12 +1169,11 @@ namespace RATools.ViewModels
                 NumberFormat = _settings.HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal,
             };
 
-            foreach (var memoryItem in _memoryItems.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
-            {
-                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                var functionCall = memoryItem.FunctionName + "()";
-                scriptBuilderContext.AddAlias(memoryReference, functionCall);
-            }
+            var mask = GetMask();
+
+            AddAliases(scriptBuilderContext, _memoryItems, mask);
+            foreach (var asset in _assets)
+                AddAliases(scriptBuilderContext, asset.MemoryAddresses, mask);
 
             using (var stream = new StreamWriter(outStream))
             {
@@ -1065,7 +1187,7 @@ namespace RATools.ViewModels
 
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
-                DumpMemoryAccessors(stream, lookupsToDump);
+                DumpMemoryAccessors(stream, lookupsToDump, scriptBuilderContext);
 
                 foreach (var dumpLookup in lookupsToDump)
                     DumpLookup(stream, dumpLookup);
@@ -1079,6 +1201,122 @@ namespace RATools.ViewModels
                     DumpRichPresence(stream, displayMacro, dumpRichPresence, scriptBuilderContext);
                 }
             }
+        }
+
+        private void AddAliases(ScriptBuilderContext scriptBuilderContext, IEnumerable<MemoryItem> items, uint mask)
+        {
+            foreach (var memoryItem in items.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
+            {
+                var functionCall = memoryItem.FunctionName + "()";
+                string memoryReference;
+
+                if (memoryItem.Parent == null)
+                {
+                    memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                }
+                else
+                {
+                    var context = scriptBuilderContext.Clone();
+                    var requirements = new List<Requirement>();
+                    for (var parent = memoryItem.Parent; parent != null; parent = parent.Parent)
+                    {
+                        var requirement = new Requirement
+                        {
+                            Type = RequirementType.AddAddress,
+                            Left = new Field { Type = FieldType.MemoryAddress, Size = parent.Size, Value = parent.Address },
+                        };
+
+                        if (mask != 0xFFFFFFFF)
+                        {
+                            if (mask == 0x00FFFFFF)
+                            {
+                                if (Field.GetByteSize(requirement.Left.Size) > 3)
+                                    requirement.Left = requirement.Left.ChangeSize(FieldSize.TByte);
+                            }
+                            else
+                            {
+                                requirement.Operator = RequirementOperator.BitwiseAnd;
+                                requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.None, Value = mask };
+                            }
+                        }
+
+                        requirements.Add(requirement);
+                    }
+
+                    requirements.Reverse();
+
+                    requirements.Add(new Requirement
+                    {
+                        Left = new Field { Type = FieldType.MemoryAddress, Size = memoryItem.Size, Value = memoryItem.Address }
+                    });
+
+                    var builder = new StringBuilder();
+                    context.AppendRequirements(builder, requirements);
+                    memoryReference = builder.ToString();
+                }
+
+                if (memoryReference != functionCall)
+                {
+                    var existing = scriptBuilderContext.GetAliasDefinition(functionCall);
+                    if (existing != null && existing != memoryReference)
+                    {
+                        var updateItem = memoryItem;
+
+                        string suffixedFunctionName = memoryItem.FunctionName + "_";
+                        if (memoryItem.Size == memoryItem.Note.Size)
+                        {
+                            // this size matches the note size, get it the unsuffixed alias
+                            scriptBuilderContext.AddAlias(memoryReference, functionCall);
+
+                            memoryReference = existing;
+                            suffixedFunctionName += existing.Substring(0, existing.IndexOf('('));
+
+                            updateItem = FindAlternateMemoryItemByFunctionName(_memoryItems, memoryItem);
+                        }
+                        else
+                        {
+                            suffixedFunctionName += Field.GetSizeFunction(memoryItem.Size);
+                        }
+
+                        var count = 1;
+
+                        do
+                        {
+                            updateItem.FunctionName = (count == 1) ? suffixedFunctionName : (suffixedFunctionName + count);
+                            functionCall = updateItem.FunctionName + "()";
+
+                            existing = scriptBuilderContext.GetAliasDefinition(functionCall);
+                            if (existing == null || existing == memoryReference)
+                                break;
+
+                            count++;
+                        } while (true);
+                    }
+
+                    scriptBuilderContext.AddAlias(memoryReference, functionCall);
+                }
+            }
+        }
+
+        private static MemoryItem FindAlternateMemoryItemByFunctionName(List<MemoryItem> memoryItems, MemoryItem memoryItem)
+        {
+            foreach (var scan in memoryItems)
+            {
+                if (scan.FunctionName == memoryItem.FunctionName && !ReferenceEquals(scan, memoryItem))
+                    return scan;
+            }
+
+            foreach (var scan in memoryItems)
+            {
+                if (scan.HasChainedItems)
+                {
+                    var child = FindAlternateMemoryItemByFunctionName(scan.ChainedItems, memoryItem);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
         }
 
         private readonly Dictionary<int, string> _achievementSetVariables;
@@ -1121,7 +1359,7 @@ namespace RATools.ViewModels
             }
         }
 
-        private void DumpMemoryAccessors(StreamWriter stream, List<DumpAsset> lookupsToDump)
+        private void DumpMemoryAccessors(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext)
         {
             string addressFormat = "{0:X4}";
             if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
@@ -1135,16 +1373,9 @@ namespace RATools.ViewModels
             uint previousNoteAddress = UInt32.MaxValue;
             foreach (var memoryItem in _memoryItems)
             {
-                if (filter == CodeNoteFilter.ForSelectedAssets)
-                {
-                    if (MemoryAddresses.GetRow(memoryItem) == null)
-                        continue;
-                }
-
-                CodeNote note = null;
                 if (dumpNotes != NoteDump.None)
                 {
-                    if (_game.Notes.TryGetValue(memoryItem.Address, out note))
+                    if (memoryItem.Note != null)
                     {
                         if (String.IsNullOrEmpty(memoryItem.FunctionName))
                         {
@@ -1156,11 +1387,11 @@ namespace RATools.ViewModels
                         }
                     }
 
-                    if (note != null && memoryItem.Address != previousNoteAddress)
+                    if (memoryItem.Note != null && memoryItem.Address != previousNoteAddress)
                     {
                         previousNoteAddress = memoryItem.Address;
 
-                        var notes = note.Note.Trim();
+                        var notes = memoryItem.Note.Note.Trim();
                         if (notes.Length > 0)
                         {
                             if (needLine || hadFunction || !String.IsNullOrEmpty(memoryItem.FunctionName))
@@ -1188,37 +1419,82 @@ namespace RATools.ViewModels
                     }
                 }
 
+                if (filter == CodeNoteFilter.ForSelectedAssets)
+                {
+                    if (MemoryAddresses.GetRow(memoryItem) == null)
+                        continue;
+                }
+
                 if (!String.IsNullOrEmpty(memoryItem.FunctionName))
                 {
-                    if (needLine)
-                    {
-                        needLine = false;
-                        stream.WriteLine();
-                    }
+                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
                     hadFunction = true;
-
-                    if (memoryItem.FunctionName.EndsWith("()"))
-                        memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
-
-                    stream.Write("function ");
-                    stream.Write(memoryItem.FunctionName);
-                    stream.Write("() => ");
-                    var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                    stream.WriteLine(memoryReference);
-
-                    foreach (var dumpLookup in lookupsToDump)
-                    {
-                        if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
-                        {
-                            DumpLookup(stream, dumpLookup);
-                            lookupsToDump.Remove(dumpLookup);
-                            break;
-                        }
-                    }
                 }
                 else
                 {
                     hadFunction = false;
+                }
+
+                if (memoryItem.HasChainedItems)
+                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+            }
+        }
+
+        private bool DumpNestedMemoryFunctions(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryItem parent, ref bool needLine)
+        {
+            bool hadFunction = false;
+
+            foreach (var memoryItem in parent.ChainedItems)
+            {
+                if (memoryItem.IsReferenced && !String.IsNullOrEmpty(memoryItem.FunctionName))
+                {
+                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+                    hadFunction = true;
+                }
+
+                if (memoryItem.HasChainedItems)
+                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+            }
+
+            return hadFunction;
+        }
+
+        private void DumpMemoryFunction(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryItem memoryItem, ref bool needLine)
+        {
+            string memoryReference;
+
+            if (memoryItem.Parent == null)
+            {
+                memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+            }
+            else
+            {
+                memoryReference = scriptBuilderContext.GetAliasDefinition(memoryItem.FunctionName + "()");
+                if (memoryReference == null)
+                    return;
+            }
+
+            if (needLine)
+            {
+                needLine = false;
+                stream.WriteLine();
+            }
+
+            if (memoryItem.FunctionName.EndsWith("()"))
+                memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
+
+            stream.Write("function ");
+            stream.Write(memoryItem.FunctionName);
+            stream.Write("() => ");
+            stream.WriteLine(memoryReference);
+
+            foreach (var dumpLookup in lookupsToDump)
+            {
+                if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
+                {
+                    DumpLookup(stream, dumpLookup);
+                    lookupsToDump.Remove(dumpLookup);
+                    break;
                 }
             }
         }
@@ -1785,13 +2061,6 @@ namespace RATools.ViewModels
             var context = scriptBuilderContext.Clone();
             context.IsValue = isValue;
             context.AppendRequirements(definition, requirementGroupViewModel.Requirements.Select(r => r.Requirement));
-
-            foreach (var memoryItem in dumpAsset.MemoryAddresses.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
-            {
-                var memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
-                var functionCall = memoryItem.FunctionName + "()";
-                definition.Replace(memoryReference, functionCall);
-            }
 
             stream.Write(definition.ToString());
         }

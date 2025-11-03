@@ -77,6 +77,7 @@ namespace RATools.ViewModels
         private bool _disableNavigationCapture = false;
 
         internal int GameId { get; private set; }
+        internal int ConsoleId { get; private set; }
         internal string RACacheDirectory { get; private set; }
         internal Dictionary<uint, CodeNote> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
@@ -666,6 +667,7 @@ namespace RATools.ViewModels
             _publishedSets.AddRange(publishedAssets.Sets);
             _publishedRichPresence = publishedAssets.RichPresence;
             Title = publishedAssets.Title;
+            ConsoleId = publishedAssets.ConsoleId;
 
             _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
             _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
