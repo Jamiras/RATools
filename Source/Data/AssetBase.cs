@@ -25,16 +25,6 @@ namespace RATools.Data
         public string Description { get; set; }
 
         /// <summary>
-        /// Gets the number of points the asset is worth.
-        /// </summary>
-        public int Points { get; set; }
-
-        /// <summary>
-        /// Gets the name of the badge for the asset.
-        /// </summary>
-        public string BadgeName { get; set; }
-
-        /// <summary>
         /// Gets the date/time the asset was first published.
         /// </summary>
         public DateTime Published { get; set; }

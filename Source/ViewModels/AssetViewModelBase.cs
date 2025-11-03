@@ -343,9 +343,6 @@ namespace RATools.ViewModels
             if (asset.Id == 0)
                 asset.Id = Id;
 
-            if (String.IsNullOrEmpty(asset.BadgeName) || asset.BadgeName == "0")
-                asset.BadgeName = BadgeName;
-
             UpdateLocal(asset, Local.Asset, warning, validateAll);
 
             Local = new AssetSourceViewModel(this, "Local");

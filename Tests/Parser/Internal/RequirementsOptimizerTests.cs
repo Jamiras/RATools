@@ -169,6 +169,8 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("unless(byte(0x001234) < 5)", "byte(0x001234) >= 5")]
         [TestCase("unless(byte(0x001234) != 1 && byte(0x002345) == 2)", "byte(0x001234) == 1 || byte(0x002345) != 2")] // AndNext becomes OrNext, both operators inverted
         [TestCase("unless(byte(0x001234) == 5) && byte(0x002345) == 1", "byte(0x001234) != 5 && byte(0x002345) == 1")] // unless without HitCount should be inverted to a requirement
+        [TestCase("unless(byte(0x001234) == 5) && measured(byte(0x002345) == 99)", // unless protecting non-hitcount Measured should not be inverted
+                  "unless(byte(0x001234) == 5) && measured(byte(0x002345) == 99)")]
         [TestCase("unless(byte(0x001234) != 1) && unless(once(byte(0x002345) == 1))", // PauseLock is affected by Pause, so other Pause won't be inverted
                   "unless(byte(0x001234) != 1) && disable_when(byte(0x002345) == 1)")]
         [TestCase("byte(0x001234) == 5 && never(byte(0x001234) != 5)", "byte(0x001234) == 5")] // common pattern in older achievements to fix HitCount at 0, the ResetIf is functionally redundant

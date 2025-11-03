@@ -17,6 +17,16 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets the number of points the achievement is worth.
+        /// </summary>
+        public int Points { get; set; }
+
+        /// <summary>
+        /// Gets the name of the badge for the achievement.
+        /// </summary>
+        public string BadgeName { get; set; }
+
+        /// <summary>
         /// Gets the trigger for the achievement.
         /// </summary>
         public Trigger Trigger { get; internal set; }

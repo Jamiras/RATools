@@ -37,17 +37,26 @@ namespace RATools.ViewModels
                     Id = value.Id;
                     Title.Text = value.Title;
                     Description.Text = value.Description;
-                    Points.Value = value.Points;
-                    BadgeName = value.BadgeName;
                 }
                 else
                 {
                     Id = 0;
                     Title.Text = "";
                     Description.Text = "";
+                }
+
+                var achievement = value as Achievement;
+                if (achievement != null)
+                {
+                    Points.Value = achievement.Points;
+                    BadgeName = achievement.BadgeName;
+                }
+                else
+                {
                     Points.Value = 0;
                     BadgeName = (string)BadgeNameProperty.DefaultValue;
                 }
+
 
                 if (_triggerList != null)
                 {
