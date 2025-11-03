@@ -516,7 +516,7 @@ namespace RATools.Parser
                     // if there's no HitTarget and we're in a Value clause, wrap it in a "tally(0, ...)"
                     // note: if we're already in an AddHits chain, there will be an implicity tally
                     if (requirement.HitCount == 0 && IsValue && NullOrEmpty(_addHits) &&
-                        requirement.Operator != RequirementOperator.None)
+                        requirement.Operator.IsComparison())
                     {
                         var measuredClause = new StringBuilder();
                         AppendRepeatedCondition(measuredClause, requirement);
