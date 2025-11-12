@@ -42,6 +42,8 @@ namespace RATools.Parser
 
         public int GameId { get; private set; }
 
+        public int ConsoleId { get; private set; }
+
         /// <summary>
         /// Gets the title of the associated game.
         /// </summary>
@@ -96,6 +98,7 @@ namespace RATools.Parser
 
                 var publishedData = new JsonObject(stream);
                 Title = publishedData.GetField("Title").StringValue;
+                ConsoleId = publishedData.GetField("ConsoleID").IntegerValue ?? 0;
 
                 var sets = publishedData.GetField("Sets");
                 if (sets.Type == JsonFieldType.ObjectArray)

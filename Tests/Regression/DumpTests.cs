@@ -83,7 +83,7 @@ namespace RATools.Tests.Regression
 
             vmNewScript.SelectedCodeNotesFilter = CodeNoteFilter.ForSelectedAssets;
             vmNewScript.SelectedFunctionNameStyle = FunctionNameStyle.SnakeCase;
-            vmNewScript.SelectedNoteDump = NoteDump.All;
+            vmNewScript.SelectedNoteDump = NoteDump.OnlyForDefinedMethods;
             vmNewScript.CheckAllCommand.Execute();
 
             var expectedFileName = Path.Combine(baseDir, vmNewScript.GameId.Value + ".rascript");

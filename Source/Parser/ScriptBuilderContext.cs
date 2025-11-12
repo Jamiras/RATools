@@ -13,7 +13,7 @@ namespace RATools.Parser
             NumberFormat = NumberFormat.Decimal;
             WrapWidth = Int32.MaxValue;
             Indent = 0;
-            _aliases = new Dictionary<string, string>();
+            _aliases = new List<KeyValuePair<string, string>>();
         }
 
         public NumberFormat NumberFormat { get; set; }
@@ -47,11 +47,31 @@ namespace RATools.Parser
         private Requirement _lastAndNext;
         private int _remainingWidth;
 
-        private Dictionary<string, string> _aliases;
+        private List<KeyValuePair<string, string>> _aliases;
 
         public void AddAlias(string memoryReference, string alias)
         {
-            _aliases[memoryReference] = alias;
+            for (int i = 0; i < _aliases.Count; i++)
+            {
+                if (_aliases[i].Key == memoryReference)
+                {
+                    _aliases[i] = new KeyValuePair<string, string>(memoryReference, alias);
+                    return;
+                }
+            }
+
+            _aliases.Add(new KeyValuePair<string, string>(memoryReference, alias));
+        }
+
+        public string GetAliasDefinition(string alias)
+        {
+            foreach (var kvp in _aliases)
+            {
+                if (kvp.Value == alias)
+                    return kvp.Key;
+            }
+
+            return null;
         }
 
         public override string ToString()
