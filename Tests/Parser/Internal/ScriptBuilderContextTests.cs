@@ -65,9 +65,9 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000=3", "byte(dword(0x002345) + (byte(0x001234) * 2)) == 3")]
         [TestCase("K:0xH001234*2_I:0xX002345+{recall}_0xH000000={recall}", "byte(dword(0x002345) + (byte(0x001234) * 2)) == (byte(0x001234) * 2)")]
         [TestCase("Z:0x 000001=1_N:0x 000002=2.1._O:0x 000003=3_0x 000004=4",
-            "((once(word(0x000002) == 2) && word(0x000003) == 3) || word(0x000004) == 4) && never(word(0x000001) == 1)")]
+                  "((once(word(0x000002) == 2) && word(0x000003) == 3) || word(0x000004) == 4) && never(word(0x000001) == 1)")]
         [TestCase("I:0xX001234_A:0xH000001/0xH000001_0=1",
-            "((byte(dword(0x001234) + 0x000001) / byte(dword(0x001234) + 0x000001))) == 1")]
+                  "((byte(dword(0x001234) + 0x000001) / byte(dword(0x001234) + 0x000001))) == 1")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
@@ -118,10 +118,13 @@ namespace RATools.Parser.Tests.Internal
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
+        [TestCase("M:0xH001234", "measured(byte(0x001234))")]
+        [TestCase("M:0xH001234*2", "measured(byte(0x001234) * 2)")]
+        [TestCase("A:0xH001234_M:0xH001235", "measured((byte(0x001234) + byte(0x001235)))")]
         [TestCase("N:0xH001234=1_M:0xH002345=2",
-          "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
+                  "measured(tally(0, byte(0x001234) == 1 && byte(0x002345) == 2))")]
         [TestCase("O:0xH001234=1_M:0xH002345=2",
-          "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
+                  "measured(tally(0, byte(0x001234) == 1 || byte(0x002345) == 2))")]
         public void TestAppendRequirementsValue(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
