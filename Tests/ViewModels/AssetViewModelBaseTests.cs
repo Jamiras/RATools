@@ -55,28 +55,13 @@ namespace RATools.Tests.ViewModels
             }
         }
 
-        private class TestAsset : AssetBase
+        private class TestAchievement : Achievement
         {
-            public TestAsset(int id, string title, string description)
+            public TestAchievement(int id, string title, string description)
             {
                 Id = id;
                 Title = title;
                 Description = description;
-            }
-        }
-
-        private class TestAssetUnofficial : AssetBase
-        {
-            public TestAssetUnofficial(int id, string title, string description)
-            {
-                Id = id;
-                Title = title;
-                Description = description;
-            }
-
-            public override bool IsUnofficial
-            {
-                get { return true; }
             }
         }
 
@@ -131,7 +116,7 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshCoreNotGenerated()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -159,8 +144,9 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshUnofficialNotGenerated()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
+                Category = 5,
                 BadgeName = "Badge"
             };
 
@@ -187,7 +173,7 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshLocalNotGenerated()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -215,15 +201,15 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsCore()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
             {
                 BadgeName = "BadgeG"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "TitleL", "DescriptionL")
+            vmAsset.Local.Asset = new TestAchievement(1234, "TitleL", "DescriptionL")
             {
                 BadgeName = "BadgeL"
             };
-            vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
+            vmAsset.Generated.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
             {
                 BadgeName = "BadgeG"
             };
@@ -251,15 +237,16 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsUnofficial()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1235, "TitleG", "DescriptionG")
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
             {
+                Category = 5,
                 BadgeName = "BadgeG"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "TitleL", "DescriptionL")
+            vmAsset.Local.Asset = new TestAchievement(1234, "TitleL", "DescriptionL")
             {
                 BadgeName = "BadgeL"
             };
-            vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
+            vmAsset.Generated.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
             {
                 BadgeName = "BadgeG"
             };
@@ -287,11 +274,11 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedDiffersFromLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Local.Asset = new TestAsset(1234, "TitleL", "DescriptionL")
+            vmAsset.Local.Asset = new TestAchievement(1234, "TitleL", "DescriptionL")
             {
                 BadgeName = "BadgeL"
             };
-            vmAsset.Generated.Asset = new TestAsset(1235, "TitleG", "DescriptionG")
+            vmAsset.Generated.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
             {
                 BadgeName = "BadgeG"
             };
@@ -319,15 +306,15 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsLocalButNotCore()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1235, "TitleP", "DescriptionP")
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
             {
                 BadgeName = "BadgeP"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -355,15 +342,16 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsLocalButNotUnofficial()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1235, "TitleP", "DescriptionP")
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
             {
+                Category = 5,
                 BadgeName = "BadgeP"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -391,11 +379,12 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedNotInLocalDiffersFromCore()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1235, "TitleP", "DescriptionP")
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
             {
+                Category = 5,
                 BadgeName = "BadgeP"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -423,7 +412,7 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedNotInLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -451,11 +440,11 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsCoreNotInLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -483,11 +472,12 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsUnofficialNotInLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
+                Category = 5,
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -515,11 +505,11 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -547,15 +537,15 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsCoreAndLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
@@ -583,15 +573,15 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsCoreAndLocalExceptBadge()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "00000"
             };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "0"
             };
@@ -619,15 +609,16 @@ namespace RATools.Tests.ViewModels
         public void TestRefreshGeneratedSameAsUnofficialAndLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
-            vmAsset.Published.Asset = new TestAssetUnofficial(1234, "Title", "Description")
+            vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
+            {
+                Category = 5,
+                BadgeName = "Badge"
+            };
+            vmAsset.Local.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };
-            vmAsset.Local.Asset = new TestAsset(1234, "Title", "Description")
-            {
-                BadgeName = "Badge"
-            };
-            vmAsset.Generated.Asset = new TestAsset(1234, "Title", "Description")
+            vmAsset.Generated.Asset = new TestAchievement(1234, "Title", "Description")
             {
                 BadgeName = "Badge"
             };

@@ -109,7 +109,13 @@ namespace RATools.ViewModels
 
         protected override void UpdateLocal(AssetBase asset, AssetBase localAsset, StringBuilder warning, bool validateAll)
         {
-            _owner.UpdateLocal((Achievement)asset, (Achievement)localAsset, warning, validateAll);
+            var localAchievement = (Achievement)localAsset;
+            var achievement = (Achievement)asset;
+
+            if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
+                achievement.BadgeName = BadgeName;
+
+            _owner.UpdateLocal(achievement, localAchievement, warning, validateAll);
         }
 
         public DelegateCommand CopyDefinitionToClipboardCommand { get; private set; }
