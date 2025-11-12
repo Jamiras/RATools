@@ -105,6 +105,7 @@ namespace RATools.Parser
                         Version = version;
 
                     Title = reader.ReadLine();
+                    _extraLines.Clear();
 
                     while (!reader.EndOfStream)
                     {
@@ -122,7 +123,7 @@ namespace RATools.Parser
                         }
                         else if (tokenizer.NextChar == 'N')
                         {
-                            tokenizer.Advance(3); // 'N0:'
+                            tokenizer.Advance(3); // always 'N0:'
                             ReadNote(tokenizer);
                         }
                         else
