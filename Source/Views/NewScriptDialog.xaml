@@ -148,7 +148,7 @@
             </StackPanel>
             <StackPanel Orientation="Horizontal" Grid.Column="2" Margin="4,0,4,0" ToolTip="Specifies how to format generated function names">
                 <TextBlock Text="Function Names:" FontSize="11" VerticalAlignment="Center" Margin="0,1,4,0"  />
-                <ComboBox Width="90" Height="21" SelectedValue="{Binding SelectedFunctionNameStyle}" ItemsSource="{Binding FunctionNameStyles}" SelectedValuePath="Id">
+                <ComboBox Width="90" Height="21" SelectedValue="{Binding SelectedNameStyle}" ItemsSource="{Binding NameStyles}" SelectedValuePath="Id">
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Label}" FontSize="12" Margin="0,-1,0,0" />

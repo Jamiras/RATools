@@ -5,6 +5,7 @@ using RATools.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Parser
 {
@@ -31,6 +32,7 @@ namespace RATools.Parser
             _achievements = new List<Achievement>();
             _leaderboards = new List<Leaderboard>();
             RichPresence = null;
+            Notes = new Dictionary<uint, CodeNote>();
 
             _filename = filename;
 
@@ -40,8 +42,14 @@ namespace RATools.Parser
         private readonly IFileSystemService _fileSystemService;
         private readonly string _filename;
 
+        /// <summary>
+        /// Gets the unique identifier of the game.
+        /// </summary>
         public int GameId { get; private set; }
 
+        /// <summary>
+        /// Gets the unique identifier of the console associated to the game.
+        /// </summary>
         public int ConsoleId { get; private set; }
 
         /// <summary>
@@ -49,6 +57,9 @@ namespace RATools.Parser
         /// </summary>
         public string Title { get; set; }
 
+        /// <summary>
+        /// Gets the full path to the JSON file for the game's asset data.
+        /// </summary>
         public string Filename { get { return _filename; } }
 
         /// <summary>
@@ -81,6 +92,9 @@ namespace RATools.Parser
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<Leaderboard> _leaderboards;
 
+        /// <summary>
+        /// Gets the Rich Presence read from the file.
+        /// </summary>
         public RichPresence RichPresence { get; private set; }
 
         private readonly DateTime _unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -128,7 +142,7 @@ namespace RATools.Parser
 
                 var publishedRichPresence = publishedData.GetField("RichPresencePatch");
                 if (publishedRichPresence.Type == JsonFieldType.String)
-                { 
+                {
                     RichPresence = new RichPresence
                     {
                         Script = publishedRichPresence.StringValue,
@@ -250,6 +264,57 @@ namespace RATools.Parser
 
                 _leaderboards.Add(leaderboard);
             }
+        }
+
+        public Dictionary<uint, CodeNote> Notes { get; private set; }
+
+        public void LoadNotes()
+        {
+            Notes.Clear();
+
+            var filename = _filename.Replace(".json", "-Notes.json");
+            using (var notesStream = _fileSystemService.OpenFile(filename, OpenFileMode.Read))
+            {
+                if (notesStream != null)
+                {
+                    var notes = new JsonObject(notesStream).GetField("items");
+                    if (notes.Type == JsonFieldType.ObjectArray)
+                    {
+                        foreach (var note in notes.ObjectArrayValue)
+                        {
+                            var address = UInt32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
+                            var text = note.GetField("Note").StringValue;
+                            if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
+                                Notes[address] = new CodeNote(address, text);
+                        }
+                    }
+                }
+            }
+        }
+
+        private List<MemoryAccessorAlias> _memoryAccessors;
+
+        public List<MemoryAccessorAlias> GetMemoryAccessors()
+        {
+            if (_memoryAccessors != null)
+                return _memoryAccessors;
+
+            if (Notes.Count == 0)
+                LoadNotes();
+
+            var memoryAccessors = new List<MemoryAccessorAlias>();
+
+            foreach (var achievement in Achievements)
+                MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, achievement, Notes);
+
+            foreach (var leaderboard in Leaderboards)
+                MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, leaderboard, Notes);
+
+            if (RichPresence != null)
+                MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, RichPresence, Notes);
+
+            _memoryAccessors = memoryAccessors;
+            return memoryAccessors;
         }
     }
 }
