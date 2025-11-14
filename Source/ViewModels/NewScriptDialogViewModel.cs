@@ -26,18 +26,16 @@ namespace RATools.ViewModels
         public NewScriptDialogViewModel()
             : this(ServiceRepository.Instance.FindService<ISettings>(),
                    ServiceRepository.Instance.FindService<IDialogService>(),
-                   ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools"),
                    ServiceRepository.Instance.FindService<IFileSystemService>())
         {
 
         }
 
         internal NewScriptDialogViewModel(ISettings settings, IDialogService dialogService,
-            ILogger logger, IFileSystemService fileSystemService)
+            IFileSystemService fileSystemService)
             : base(dialogService)
         {
             _settings = settings;
-            _logger = logger;
             _fileSystemService = fileSystemService;
 
             DialogTitle = "New Script";
@@ -55,7 +53,6 @@ namespace RATools.ViewModels
             _assets = new ObservableCollection<DumpAsset>();
             _memoryItems = new List<MemoryItem>();
             _ticketNotes = new Dictionary<int, string>();
-            _macros = new List<RichPresenceMacro>();
             _achievementSetVariables = new Dictionary<int, string>();
 
             CodeNoteFilters = new[]
@@ -71,12 +68,12 @@ namespace RATools.ViewModels
                 new NoteDumpLookupItem(NoteDump.OnlyForDefinedMethods, "Only for Functions"),
             };
 
-            FunctionNameStyles = new[]
+            NameStyles = new[]
             {
-                new FunctionNameStyleLookupItem(FunctionNameStyle.None, "None"),
-                new FunctionNameStyleLookupItem(FunctionNameStyle.SnakeCase, "snake_case"),
-                new FunctionNameStyleLookupItem(FunctionNameStyle.CamelCase, "camelCase"),
-                new FunctionNameStyleLookupItem(FunctionNameStyle.PascalCase, "PascalCase"),
+                new NameStyleLookupItem(NameStyle.None, "None"),
+                new NameStyleLookupItem(NameStyle.SnakeCase, "snake_case"),
+                new NameStyleLookupItem(NameStyle.CamelCase, "camelCase"),
+                new NameStyleLookupItem(NameStyle.PascalCase, "PascalCase"),
             };
 
             MemoryAddresses = new GridViewModel();
@@ -88,7 +85,6 @@ namespace RATools.ViewModels
 
         private readonly ISettings _settings;
         private readonly IFileSystemService _fileSystemService;
-        private readonly ILogger _logger;
 
         public IntegerFieldViewModel GameId { get; private set; }
 
@@ -115,13 +111,8 @@ namespace RATools.ViewModels
                 {
                     LoadGame(gameId, dataDirectory);
 
-                    var richPresenceFile = Path.Combine(dataDirectory, gameId + "-Rich.txt");
-                    if (File.Exists(richPresenceFile))
-                        LoadRichPresence(richPresenceFile);
-
-                    var userFile = Path.Combine(dataDirectory, gameId + "-User.txt");
-                    if (File.Exists(userFile))
-                        LoadUserFile(userFile);
+                    LoadMemoryItems();
+                    UpdateMemoryGrid();
 
                     return;
                 }
@@ -134,24 +125,27 @@ namespace RATools.ViewModels
 
         private void LoadGame(int gameId, string raCacheDirectory)
         {
-            _game = new GameViewModel(gameId, "", _logger, _fileSystemService);
-            _game.AssociateRACacheDirectory(raCacheDirectory);
-            _game.PopulateEditorList(null);
-            DialogTitle = "New Script - " + _game.Title;
+            var filename = Path.Combine(raCacheDirectory, gameId + ".json");
+            _publishedAssets = new PublishedAssets(filename, _fileSystemService);
+            DialogTitle = "New Script - " + _publishedAssets.Title;
 
             _assets.Clear();
             _ticketNotes.Clear();
             _memoryItems.Clear();
             MemoryAddresses.Rows.Clear();
 
+            _memoryAccessors = _publishedAssets.GetMemoryAccessors();
+
+            var userFile = Path.Combine(raCacheDirectory, gameId + "-User.txt");
+            _localAssets = new LocalAssets(userFile, _fileSystemService);
+
             LoadAchievements();
             LoadLeaderboards();
+            LoadRichPresence();
             LoadNotes();
 
             if (_assets.Count == 0)
                 SelectedCodeNotesFilter = CodeNoteFilter.All;
-
-            UpdateMemoryGrid();
 
             IsGameLoaded = true;
             GameId.IsEnabled = false;
@@ -160,79 +154,16 @@ namespace RATools.ViewModels
                 ServiceRepository.Instance.FindService<IBackgroundWorkerService>().RunAsync(MergeOpenTickets);
         }
 
-        private void LoadUserFile(string userFile)
-        {
-            var assets = new LocalAssets(userFile, _fileSystemService);
-
-            if (assets.Achievements.Any())
-            {
-                var achievementViewModel = new AchievementViewModel(null);
-                foreach (var achievement in assets.Achievements)
-                {
-                    var dumpAchievement = new DumpAsset(achievement.Id, achievement.Title)
-                    {
-                        Type = DumpAssetType.Achievement,
-                        ViewerImage = achievementViewModel.ViewerImage,
-                        ViewerType = "Local Achievement",
-                        IsUnofficial = true
-                    };
-
-                    achievementViewModel.Local.Asset = achievement;
-                    AddMemoryReferences(achievementViewModel.Local, dumpAchievement);
-
-                    dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
-                    _assets.Add(dumpAchievement);
-                }
-            }
-
-            if (assets.Leaderboards.Any())
-            {
-                var leaderboardViewModel = new LeaderboardViewModel(null);
-                foreach (var leaderboard in assets.Leaderboards)
-                {
-                    var dumpLeaderboard = new DumpAsset(leaderboard.Id, leaderboard.Title)
-                    {
-                        Type = DumpAssetType.Leaderboard,
-                        ViewerImage = leaderboardViewModel.ViewerImage,
-                        ViewerType = "Local Leaderboard",
-                        IsUnofficial = true
-                    };
-
-                    leaderboardViewModel.Local.Asset = leaderboard;
-                    AddMemoryReferences(leaderboardViewModel.Local, dumpLeaderboard);
-
-                    dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
-                    _assets.Add(dumpLeaderboard);
-                }
-            }
-        }
-
-        private void AddMemoryReferences(AssetSourceViewModel asset, DumpAsset dumpAsset)
-        {
-            foreach (var trigger in asset.TriggerList)
-            {
-                foreach (var group in trigger.Groups)
-                {
-                    AddMemoryReferences(dumpAsset,
-                        group.Requirements.Where(r => r.Requirement != null).Select(r => r.Requirement));
-                }
-            }
-        }
-
         private void LoadAchievements()
         {
             var unofficialAchievements = new List<DumpAsset>();
-            foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
+            foreach (var publishedAchievement in _publishedAssets.Achievements)
             {
-                var publishedAchievement = achievement.Published.Asset as Achievement;
-                if (publishedAchievement == null)
-                    continue;
-
-                var dumpAchievement = new DumpAsset(achievement.Id, publishedAchievement.Title)
+                var dumpAchievement = new DumpAsset(publishedAchievement.Id, publishedAchievement.Title)
                 {
                     Type = DumpAssetType.Achievement,
-                    ViewerImage = achievement.ViewerImage,
-                    ViewerType = achievement.ViewerType
+                    ViewerImage = "/RATools;component/Resources/achievement.png",
+                    ViewerType = "Achievement",
                 };
 
                 if (publishedAchievement.IsUnofficial)
@@ -246,44 +177,90 @@ namespace RATools.ViewModels
                     _assets.Add(dumpAchievement);
                 }
 
-                AddMemoryReferences(achievement.Published, dumpAchievement);
-
                 dumpAchievement.IsSelected = true;
                 dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
             }
 
             foreach (var unofficialAchievement in unofficialAchievements)
                 _assets.Add(unofficialAchievement);
+
+            foreach (var localAchievement in _localAssets.Achievements)
+            {
+                var dumpAchievement = _assets.FirstOrDefault(a => a.Id == localAchievement.Id && a.Type == DumpAssetType.Achievement);
+                if (dumpAchievement != null)
+                {
+                    dumpAchievement.IsUnofficial = true;
+                    dumpAchievement.ViewerType = "Local Achievement";
+                }
+                else
+                {
+                    dumpAchievement = new DumpAsset(localAchievement.Id, localAchievement.Title)
+                    {
+                        Type = DumpAssetType.Achievement,
+                        ViewerImage = "/RATools;component/Resources/achievement.png",
+                        ViewerType = "Local Achievement",
+                        IsUnofficial = true
+                    };
+
+                    dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
+                    _assets.Add(dumpAchievement);
+                }
+            }
         }
 
         private void LoadLeaderboards()
         {
-            foreach (var leaderboard in _game.Editors.OfType<LeaderboardViewModel>())
+            foreach (var publishedLeaderboard in _publishedAssets.Leaderboards)
             {
-                var publishedLeaderboard = leaderboard.Published.Asset as Leaderboard;
-                if (publishedLeaderboard == null)
-                    continue;
-
-                var dumpLeaderboard = new DumpAsset(leaderboard.Id, publishedLeaderboard.Title)
+                var dumpLeaderboard = new DumpAsset(publishedLeaderboard.Id, publishedLeaderboard.Title)
                 {
                     Type = DumpAssetType.Leaderboard,
-                    ViewerImage = leaderboard.ViewerImage,
-                    ViewerType = leaderboard.ViewerType
+                    ViewerImage = "/RATools;component/Resources/leaderboard.png",
+                    ViewerType = "Leaderboard",
                 };
 
                 _assets.Add(dumpLeaderboard);
 
-                AddMemoryReferences(leaderboard.Published, dumpLeaderboard);
-
                 dumpLeaderboard.IsSelected = true;
                 dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
+            }
+
+            foreach (var localLeaderboard in _localAssets.Leaderboards)
+            {
+                var dumpLeaderboard = _assets.FirstOrDefault(a => a.Id == localLeaderboard.Id && a.Type == DumpAssetType.Leaderboard);
+                if (dumpLeaderboard != null)
+                {
+                    dumpLeaderboard.IsUnofficial = true;
+                    dumpLeaderboard.ViewerType = "Local Leaderboard";
+                }
+                else
+                {
+                    dumpLeaderboard = new DumpAsset(localLeaderboard.Id, localLeaderboard.Title)
+                    {
+                        Type = DumpAssetType.Achievement,
+                        ViewerImage = "/RATools;component/Resources/leaderboard.png",
+                        ViewerType = "Local Leaderboard",
+                        IsUnofficial = true
+                    };
+
+                    dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
+                    _assets.Add(dumpLeaderboard);
+                }
             }
         }
 
         private void LoadNotes()
         {
-            foreach (var note in _game.Notes.Values)
+            _publishedAssets.LoadNotes();
+
+            foreach (var note in _publishedAssets.Notes.Values)
             {
+                var memoryAccessor = new MemoryAccessorAlias(note.Address, note);
+                var index = _memoryAccessors.BinarySearch(memoryAccessor, memoryAccessor);
+
+                if (index >= 0)
+                    continue;
+
                 var size = note.Size;
                 switch (size)
                 {
@@ -294,77 +271,138 @@ namespace RATools.ViewModels
                         break;
                 }
 
-                AddMemoryAddress(new Field { Size = size, Type = FieldType.MemoryAddress, Value = note.Address }, null);
+                memoryAccessor.ReferenceSize(size);
+                _memoryAccessors.Insert(~index, memoryAccessor);
             }
         }
 
-
-        private class RichPresenceMacro
+        private static int CompareMemoryItems(MemoryItem left, MemoryItem right)
         {
-            public string Name;
-            public ValueFormat FormatType;
-            public Dictionary<string, string> LookupEntries;
-            public List<string> DisplayLines;
-        }
-        private List<RichPresenceMacro> _macros;
-
-        private void LoadRichPresence(string richPresenceFile)
-        {
-            RichPresenceMacro currentMacro = null;
-            RichPresenceMacro displayMacro = null;
-
-            using (var file = File.OpenText(richPresenceFile))
+            var diff = (int)(left.Address - right.Address);
+            if (diff == 0)
             {
-                do
+                if (left.IsPrimarySize)
+                    return right.IsPrimarySize ? 0 : -1;
+                else if (right.IsPrimarySize)
+                    return 1;
+
+                if (diff == 0)
+                    diff = (int)left.Size - (int)right.Size;
+            }
+            return diff;
+        }
+
+        private void LoadMemoryItems()
+        {
+            LoadMemoryItems(_memoryItems, _memoryAccessors, SelectedNameStyle);
+
+            if (SelectedNameStyle != NameStyle.None)
+                MemoryAccessorAlias.ResolveConflictingAliases(_memoryAccessors);
+
+            foreach (var asset in _assets)
+            {
+                var memoryAccessors = new List<MemoryAccessorAlias>();
+
+                switch (asset.Type)
                 {
-                    var line = file.ReadLine();
-                    if (line == null)
+                    case DumpAssetType.Achievement:
+                        var achievement = _localAssets?.Achievements.FirstOrDefault(a => a.Id == asset.Id);
+                        if (achievement == null)
+                            achievement = _publishedAssets.Achievements.FirstOrDefault(a => a.Id == asset.Id);
+
+                        if (achievement != null)
+                            MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, achievement, _publishedAssets.Notes);
                         break;
 
-                    var index = line.IndexOf("//");
-                    if (index != -1)
-                        line = line.Substring(0, index).TrimEnd();
+                    case DumpAssetType.Leaderboard:
+                        var leaderboard = _localAssets?.Leaderboards.FirstOrDefault(l => l.Id == asset.Id);
+                        if (leaderboard == null)
+                            leaderboard = _publishedAssets.Leaderboards.FirstOrDefault(l => l.Id == asset.Id);
 
-                    if (line.Length == 0)
-                        continue;
+                        if (leaderboard != null)
+                            MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, leaderboard, _publishedAssets.Notes);
+                        break;
 
-                    if (line.StartsWith("Format:"))
-                    {
-                        currentMacro = new RichPresenceMacro { Name = line.Substring(7) };
-                        _macros.Add(currentMacro);
-                    }
-                    else if (line.StartsWith("FormatType="))
-                    {
-                        currentMacro.FormatType = Leaderboard.ParseFormat(line.Substring(11));
-                    }
-                    else if (line.StartsWith("Lookup:"))
-                    {
-                        currentMacro = new RichPresenceMacro { Name = line.Substring(7), LookupEntries = new Dictionary<string, string>() };
-                        _macros.Add(currentMacro);
-                    }
-                    else if (line.StartsWith("Display:"))
-                    {
-                        currentMacro = displayMacro = new RichPresenceMacro { Name = "Display", DisplayLines = new List<string>() };
-                        _macros.Add(currentMacro);
-                    }
-                    else if (currentMacro != null)
-                    {
-                        if (currentMacro.DisplayLines != null)
+                    case DumpAssetType.RichPresence:
+                        var richPresence = _localAssets?.RichPresence ?? _publishedAssets.RichPresence;
+                        if (richPresence != null)
+                            MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, richPresence, _publishedAssets.Notes);
+                        break;
+
+                    case DumpAssetType.Lookup:
+                        var richPresence2 = _localAssets?.RichPresence ?? _publishedAssets.RichPresence;
+                        if (richPresence2 != null)
                         {
-                            currentMacro.DisplayLines.Add(line);
+                            foreach (var displayString in richPresence2.DisplayStrings)
+                            {
+                                foreach (var macro in displayString.Macros.Where(m => m.Name == asset.Label))
+                                    MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, macro.Value, _publishedAssets.Notes);
+                            }
                         }
-                        else if (currentMacro.LookupEntries != null)
+                        break;
+
+                }
+
+                foreach (var memoryAccessor in memoryAccessors)
+                {
+                    foreach (var size in memoryAccessor.ReferencedSizes)
+                    {
+                        var memoryItem = _memoryItems.FirstOrDefault(m => m.Address == memoryAccessor.Address && m.Size == size);
+                        if (memoryItem != null)
+                            asset.MemoryAddresses.Add(memoryItem);
+                    }
+                }
+            }
+        }
+
+        private static void LoadMemoryItems(List<MemoryItem> memoryItems,
+            IEnumerable<MemoryAccessorAlias> memoryAccessors,
+            NameStyle nameStyle)
+        {
+            foreach (var memoryAccessor in memoryAccessors)
+            {
+                memoryAccessor.UpdateAliasFromNote(nameStyle);
+
+                var primarySize = memoryAccessor.PrimarySize;
+                var memoryItem = new MemoryItem(memoryAccessor, primarySize);
+                if (nameStyle != NameStyle.None)
+                    memoryItem.UpdateFunctionName();
+
+                memoryItems.Add(memoryItem);
+
+                if (!memoryAccessor.IsOnlyReferencedSize(primarySize))
+                {
+                    foreach (var size in memoryAccessor.ReferencedSizes)
+                    {
+                        if (size != primarySize)
                         {
-                            index = line.IndexOf('=');
-                            if (index > 0)
-                                currentMacro.LookupEntries[line.Substring(0, index)] = line.Substring(index + 1);
+                            memoryItem = new MemoryItem(memoryAccessor, size);
+                            if (nameStyle != NameStyle.None)
+                                memoryItem.UpdateFunctionName();
+
+                            memoryItems.Add(memoryItem);
                         }
                     }
+                }
 
-                } while (true);
+                if (memoryAccessor.Children.Any())
+                {
+                    LoadMemoryItems(memoryItem.ChainedItems, memoryAccessor.Children, nameStyle);
+                    foreach (var child in memoryItem.ChainedItems)
+                        child.Parent = memoryItem;
+                }
             }
 
-            foreach (var macro in _macros)
+            memoryItems.Sort(CompareMemoryItems);
+        }
+
+        private void LoadRichPresence()
+        {
+            var richPresence = _localAssets?.RichPresence ?? _publishedAssets.RichPresence;
+            if (richPresence == null)
+                return;
+
+            foreach (var macro in richPresence.Macros)
             {
                 if (macro.LookupEntries != null)
                 {
@@ -379,7 +417,7 @@ namespace RATools.ViewModels
                 }
             }
 
-            if (displayMacro != null)
+            if (richPresence.DisplayStrings.Any())
             {
                 var dumpRichPresence = new DumpAsset(0, "Rich Presence Script")
                 {
@@ -388,106 +426,14 @@ namespace RATools.ViewModels
                     ViewerType = "Rich Presence"
                 };
 
-                for (int i = 0; i < displayMacro.DisplayLines.Count; ++i)
-                {
-                    var line = displayMacro.DisplayLines[i];
-                    if (line[0] == '?')
-                    {
-                        var index = line.IndexOf('?', 1);
-                        if (index != -1)
-                        {
-                            var trigger = line.Substring(1, index - 1);
-                            var achievement = new AchievementBuilder();
-                            achievement.ParseRequirements(Tokenizer.CreateTokenizer(trigger));
-
-                            AddMemoryReferences(dumpRichPresence, achievement.CoreRequirements);
-
-                            foreach (var alt in achievement.AlternateRequirements)
-                                AddMemoryReferences(dumpRichPresence, alt);
-                        }
-
-                        AddMacroMemoryReferences(dumpRichPresence, line.Substring(index + 1));
-                    }
-                    else
-                    {
-                        AddMacroMemoryReferences(dumpRichPresence, line);
-
-                        if (i < displayMacro.DisplayLines.Count)
-                            displayMacro.DisplayLines.RemoveRange(i + 1, displayMacro.DisplayLines.Count - i - 1);
-                        break;
-                    }
-                }
-
                 dumpRichPresence.PropertyChanged += DumpAsset_PropertyChanged;
                 _assets.Add(dumpRichPresence);
             }
         }
 
-        private void AddMacroMemoryReferences(DumpAsset displayRichPresence, string displayString)
-        {
-            var index = 0;
-            do
-            {
-                index = displayString.IndexOf('@', index);
-                if (index == -1)
-                    return;
-                var index2 = displayString.IndexOf('(', index);
-                if (index2 == -1)
-                    return;
-                var index3 = displayString.IndexOf(')', index2);
-                if (index3 == -1)
-                    return;
-
-                var name = displayString.Substring(index + 1, index2 - index - 1);
-                var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
-
-                var macro = _assets.FirstOrDefault(a => a.Type == DumpAssetType.Lookup && a.Label == name);
-                if (macro == null)
-                    macro = displayRichPresence;
-
-                if (parameter.Length > 2 && parameter[1] == ':')
-                {
-                    var achievement = new AchievementBuilder();
-                    achievement.ParseRequirements(Tokenizer.CreateTokenizer(parameter));
-
-                    AddMemoryReferences(macro, achievement.CoreRequirements);
-
-                    foreach (var alt in achievement.AlternateRequirements)
-                        AddMemoryReferences(macro, alt);
-                }
-                else
-                {
-                    foreach (var part in parameter.Split('_'))
-                    {
-                        foreach (var operand in part.Split('*'))
-                        {
-                            var field = Field.Deserialize(Tokenizer.CreateTokenizer(operand));
-                            if (field.IsMemoryReference)
-                            {
-                                var memoryItem = AddMemoryAddress(field, null);
-                                if (memoryItem != null && !macro.MemoryAddresses.Contains(memoryItem))
-                                    macro.MemoryAddresses.Add(memoryItem);
-                            }
-                        }
-                    }
-                }
-
-                if (macro.Type == DumpAssetType.Lookup)
-                {
-                    foreach (var address in macro.MemoryAddresses)
-                    {
-                        if (!displayRichPresence.MemoryAddresses.Contains(address))
-                            displayRichPresence.MemoryAddresses.Add(address);
-                    }
-                }
-
-                index = index2 + 1;
-            } while (true);
-        }
-
         private void MergeOpenTickets()
         {
-            var ticketsJson = RAWebCache.Instance.GetOpenTicketsForGame(_game.GameId);
+            var ticketsJson = RAWebCache.Instance.GetOpenTicketsForGame(_publishedAssets.GameId);
             if (ticketsJson == null)
                 return;
 
@@ -506,100 +452,9 @@ namespace RATools.ViewModels
             }
         }
 
-        private void AddMemoryReferences(DumpAsset dumpAsset, IEnumerable<Requirement> requirements)
-        {
-            MemoryItem parent = null;
-            foreach (var requirement in requirements)
-            {
-                MemoryItem leftMemoryItem = null;
-                if (requirement.Left.IsMemoryReference)
-                    leftMemoryItem = AddMemoryAddress(requirement.Left, parent);
-
-                MemoryItem rightMemoryItem = null;
-                if (requirement.Right.IsMemoryReference)
-                    rightMemoryItem = AddMemoryAddress(requirement.Right, parent);
-
-                if (leftMemoryItem == null && rightMemoryItem == null)
-                {
-                    if (parent != null && (requirement.Left.IsMemoryReference || requirement.Right.IsMemoryReference))
-                    {
-                        // offset not found in parent, capture the parent
-                        if (!dumpAsset.MemoryAddresses.Contains(parent))
-                            dumpAsset.MemoryAddresses.Add(parent);
-                    }
-
-                    if (requirement.Type == RequirementType.AddAddress)
-                    {
-                        // provide a dummy parent for the next condition
-                        parent = new MemoryItem(uint.MaxValue, FieldSize.None, null);
-                        continue;
-                    }
-                }
-
-                if (requirement.Type == RequirementType.AddAddress)
-                {
-                    // only want to capture the leaves
-                    parent = leftMemoryItem ?? rightMemoryItem;
-                }
-                else
-                {
-                    parent = null;
-                }
-
-                if (leftMemoryItem != null)
-                {
-                    leftMemoryItem.IsReferenced = true;
-                    if (!dumpAsset.MemoryAddresses.Contains(leftMemoryItem))
-                        dumpAsset.MemoryAddresses.Add(leftMemoryItem);
-                }
-
-                if (rightMemoryItem != null)
-                {
-                    rightMemoryItem.IsReferenced = true;
-                    if (!dumpAsset.MemoryAddresses.Contains(rightMemoryItem))
-                        dumpAsset.MemoryAddresses.Add(rightMemoryItem);
-                }
-            }
-        }
-
-        private MemoryItem AddMemoryAddress(Field field, MemoryItem parent)
-        {
-            var items = parent?.ChainedItems ?? _memoryItems;
-
-            int index = 0;
-            while (index < items.Count)
-            {
-                if (items[index].Address > field.Value)
-                    break;
-                if (items[index].Address == field.Value)
-                {
-                    if (items[index].Size > field.Size)
-                        break;
-                    if (items[index].Size == field.Size)
-                        return items[index];
-                }
-
-                index++;
-            }
-
-            CodeNote note;
-            if (parent != null)
-            {
-                note = parent.Note?.OffsetNotes.FirstOrDefault(n => n.Address == field.Value);
-                if (note == null)
-                    return null;
-            }
-            else if (!_game.Notes.TryGetValue(field.Value, out note))
-            {
-                return null;
-            }
-
-            var item = new MemoryItem(field.Value, field.Size, note) { Parent = parent };
-            items.Insert(index, item);
-            return item;
-        }
-
-        private GameViewModel _game;
+        private PublishedAssets _publishedAssets;
+        private LocalAssets _localAssets;
+        private List<MemoryAccessorAlias> _memoryAccessors;
         private readonly Dictionary<int, string> _ticketNotes;
         
         public enum DumpAssetType
@@ -713,63 +568,6 @@ namespace RATools.ViewModels
             OnlyForDefinedMethods,
         }
 
-        public enum FunctionNameStyle
-        {
-            None = 0,
-            SnakeCase,  // lower_with_underscore
-            PascalCase, // UpperEachFirst
-            CamelCase,  // upperInMiddle
-        }
-
-        private static string BuildVariableName(string fromText, FunctionNameStyle style)
-        {
-            bool valid = false;
-            var functionName = new StringBuilder();
-
-            var newWord = true;
-            foreach (var c in fromText)
-            {
-                if (Char.IsLetter(c) || (valid && Char.IsDigit(c)))
-                {
-                    valid = true;
-
-                    if (newWord)
-                    {
-                        newWord = false;
-
-                        switch (style)
-                        {
-                            case FunctionNameStyle.PascalCase:
-                                functionName.Append(Char.ToUpper(c));
-                                continue;
-
-                            case FunctionNameStyle.CamelCase:
-                                if (functionName.Length != 0)
-                                {
-                                    functionName.Append(Char.ToUpper(c));
-                                    continue;
-                                }
-                                break;
-
-                            case FunctionNameStyle.SnakeCase:
-                                if (functionName.Length != 0)
-                                    functionName.Append('_');
-                                break;
-                        }
-                    }
-
-                    functionName.Append(Char.ToLower(c));
-                }
-                else if (valid)
-                {
-                    newWord = true;
-                }
-            }
-
-            return valid ? functionName.ToString() : string.Empty;
-        }
-
-
         public class CodeNoteFilterLookupItem
         {
             public CodeNoteFilterLookupItem(CodeNoteFilter id, string label)
@@ -794,17 +592,17 @@ namespace RATools.ViewModels
         }
         public IEnumerable<NoteDumpLookupItem> NoteDumps { get; private set; }
 
-        public class FunctionNameStyleLookupItem
+        public class NameStyleLookupItem
         {
-            public FunctionNameStyleLookupItem(FunctionNameStyle id, string label)
+            public NameStyleLookupItem(NameStyle id, string label)
             {
                 Id = id;
                 Label = label;
             }
-            public FunctionNameStyle Id { get; private set; }
+            public NameStyle Id { get; private set; }
             public string Label { get; private set; }
         }
-        public IEnumerable<FunctionNameStyleLookupItem> FunctionNameStyles { get; private set; }
+        public IEnumerable<NameStyleLookupItem> NameStyles { get; private set; }
 
         public static readonly ModelProperty SelectedCodeNotesFilterProperty = 
             ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedCodeNotesFilter", typeof(CodeNoteFilter), CodeNoteFilter.ForSelectedAssets, OnSelectedCodeNotesFilterChanged);
@@ -826,14 +624,14 @@ namespace RATools.ViewModels
             set { SetValue(SelectedNoteDumpProperty, value); }
         }
 
-        public static readonly ModelProperty SelectedFunctionNameStyleProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedFunctionNameStyle", typeof(FunctionNameStyle), FunctionNameStyle.None, OnSelectedFunctionNameStyleChanged);
-        public FunctionNameStyle SelectedFunctionNameStyle
+        public static readonly ModelProperty SelectedNameStyleProperty = ModelProperty.Register(typeof(NewScriptDialogViewModel), "SelectedNameStyle", typeof(NameStyle), NameStyle.None, OnSelectedNameStyleChanged);
+        public NameStyle SelectedNameStyle
         {
-            get { return (FunctionNameStyle)GetValue(SelectedFunctionNameStyleProperty); }
-            set { SetValue(SelectedFunctionNameStyleProperty, value); }
+            get { return (NameStyle)GetValue(SelectedNameStyleProperty); }
+            set { SetValue(SelectedNameStyleProperty, value); }
         }
 
-        private static void OnSelectedFunctionNameStyleChanged(object sender, ModelPropertyChangedEventArgs e)
+        private static void OnSelectedNameStyleChanged(object sender, ModelPropertyChangedEventArgs e)
         {
             ((NewScriptDialogViewModel)sender).UpdateFunctionNames();
         }
@@ -870,12 +668,12 @@ namespace RATools.ViewModels
                     // will merge in all references from selected achievements
                 }
 
-                foreach (var achievement in _assets)
+                foreach (var asset in _assets)
                 {
-                    if (!achievement.IsSelected)
+                    if (!asset.IsSelected)
                         continue;
 
-                    foreach (var address in achievement.MemoryAddresses)
+                    foreach (var address in asset.MemoryAddresses)
                     {
                         if (!visibleAddresses.Contains(address))
                             visibleAddresses.Add(address);
@@ -884,15 +682,8 @@ namespace RATools.ViewModels
             }
 
             // update the grid
-            visibleAddresses.Sort((l,r) =>
-            {
-                int diff = (int)l.Address - (int)r.Address;
-                if (diff == 0)
-                    diff = (int)l.Size - (int)r.Size;
-                return diff;
-            });
+            visibleAddresses.Sort(CompareMemoryItems);
 
-            var functionNameStyle = SelectedFunctionNameStyle;
             var memIndex = 0;
             for (int addrIndex = 0; addrIndex < visibleAddresses.Count; addrIndex++)
             {
@@ -910,9 +701,6 @@ namespace RATools.ViewModels
                     break;
                 }
 
-                if (functionNameStyle != FunctionNameStyle.None)
-                    memoryItem.UpdateFunctionName(functionNameStyle);
-
                 if (rowItem == null || rowItem.Address != memoryItem.Address || rowItem.Size != memoryItem.Size)
                     MemoryAddresses.InsertRow(memIndex, memoryItem);
 
@@ -925,26 +713,38 @@ namespace RATools.ViewModels
 
         private void UpdateFunctionNames()
         {
-            var functionNameStyle = SelectedFunctionNameStyle;
+            var nameStyle = SelectedNameStyle;
+            foreach (var memoryAccessor in _memoryAccessors)
+                memoryAccessor.UpdateAliasFromNote(nameStyle);
+
+            if (nameStyle != NameStyle.None)
+                MemoryAccessorAlias.ResolveConflictingAliases(_memoryAccessors);
 
             foreach (var row in MemoryAddresses.Rows)
             {
                 var memoryItem = (MemoryItem)row.Model;
-                memoryItem.UpdateFunctionName(functionNameStyle);
+                memoryItem.UpdateFunctionName();
             }
         }
 
-        [DebuggerDisplay("{Size} {Address}")]
+        [DebuggerDisplay("{Size} {Address,h}")]
         public class MemoryItem : ViewModelBase
         {
-            public MemoryItem(uint address, FieldSize size, CodeNote note)
+            public MemoryItem(MemoryAccessorAlias memoryAccessor, FieldSize size)
             {
-                Address = address;
+                _memoryAccessor = memoryAccessor;
+
+                Address = memoryAccessor.Address;
                 Size = size;
-                Note = note;
+                Notes = memoryAccessor.Note?.Note ?? String.Empty;
             }
 
-            private CodeNote _note;
+            private readonly MemoryAccessorAlias _memoryAccessor;
+
+            public bool IsPrimarySize
+            {
+                get { return _memoryAccessor.PrimarySize == Size; }
+            }
 
             public static readonly ModelProperty AddressProperty = ModelProperty.Register(typeof(MemoryItem), "Address", typeof(uint), (uint)0);
 
@@ -971,20 +771,15 @@ namespace RATools.ViewModels
 
             public static readonly ModelProperty NotesProperty = ModelProperty.Register(typeof(MemoryItem), "Notes", typeof(string), String.Empty);
 
-            public CodeNote Note
-            {
-                get { return _note; }
-                private set
-                {
-                    _note = value;
-                    Notes = value?.Summary ?? string.Empty;
-                }
-            }
-
             public string Notes
             {
                 get { return (string)GetValue(NotesProperty); }
                 private set { SetValue(NotesProperty, value); }
+            }
+
+            public CodeNote Note
+            {
+                get { return _memoryAccessor.Note; }
             }
 
             public bool HasChainedItems
@@ -1008,65 +803,14 @@ namespace RATools.ViewModels
             public MemoryItem Parent { get; set; }
             public bool IsReferenced { get; set; }
 
-            public void UpdateFunctionName(FunctionNameStyle style)
+            public void UpdateFunctionName()
             {
-                if (style == FunctionNameStyle.None || _note == null)
+                FunctionName = _memoryAccessor.GetAlias(Size);
+
+                if (_chainedItems != null)
                 {
-                    FunctionName = String.Empty;
-                    return;
-                }
-
-                var text = _note.Summary;
-                var subNote = _note.GetSubNote(Size);
-                if (subNote != null)
-                    text += ' ' + subNote;
-
-                // remove value substrings: (1=a, 2=b) [1=a, 2=b]
-                var bracket = text.IndexOf('[');
-                if (bracket != -1)
-                {
-                    var bracket2 = text.IndexOf(']', bracket + 1);
-                    if (bracket2 != -1)
-                    {
-                        var equal = text.IndexOf('=', bracket + 1);
-                        if (equal != -1 && equal < bracket2)
-                            text = text.Remove(bracket, bracket2 - bracket);
-                    }
-                }
-                var paren = text.IndexOf('[');
-                if (paren != -1)
-                {
-                    var paren2 = text.IndexOf(']', paren + 1);
-                    if (paren2 != -1)
-                    {
-                        var equal = text.IndexOf('=', paren + 1);
-                        if (equal != -1 && equal < paren2)
-                            text = text.Remove(paren, paren2 - paren);
-                    }
-                }
-
-                // remove potential value assigments
-                var equalsIndex = text.IndexOfAny(new[] { '=', ':' });
-                if (equalsIndex != -1)
-                {
-                    var left = text.Substring(0, equalsIndex).Trim();
-                    var right = text.Substring(equalsIndex + 1).Trim();
-                    if (left.Length > 0 && Char.IsDigit(left[0]))
-                        text = right;
-                    else if (right.Length > 0 && Char.IsDigit(right[0]))
-                        text = left;
-                }
-
-                // build the function name
-                var functionName = BuildVariableName(text, style);
-                if (!String.IsNullOrEmpty(functionName))
-                {
-                    functionName = functionName.Replace("'s ", "s ");
-
-                    if (AchievementScriptInterpreter.IsReservedFunctionName(functionName))
-                        functionName += '_';
-
-                    FunctionName = functionName.ToString();
+                    foreach (var child in _chainedItems)
+                        child.UpdateFunctionName();
                 }
             }
         }
@@ -1075,21 +819,23 @@ namespace RATools.ViewModels
 
         public GameViewModel Finalize()
         {
-            _game.InitializeForUI();
+            var gameViewModel = new GameViewModel(_publishedAssets.GameId, _publishedAssets.Title);
+            gameViewModel.AssociateRACacheDirectory(Path.GetDirectoryName(_publishedAssets.Filename));
+            gameViewModel.InitializeForUI();
 
-            var cleansed = _game.Title ?? "Untitled";
+            var cleansed = _publishedAssets.Title ?? "Untitled";
             foreach (var c in Path.GetInvalidFileNameChars())
                 cleansed = cleansed.Replace(c.ToString(), "");
             if (String.IsNullOrEmpty(cleansed))
-                cleansed = _game.GameId.ToString();
-            _game.Script.Filename = cleansed + ".rascript";
+                cleansed = _publishedAssets.GameId.ToString();
+            gameViewModel.Script.Filename = cleansed + ".rascript";
 
             var memoryStream = new MemoryStream();
             Dump(memoryStream);
-            _game.Script.SetContent(Encoding.UTF8.GetString(memoryStream.ToArray()));
-            _game.Script.SetModified();
+            gameViewModel.Script.SetContent(Encoding.UTF8.GetString(memoryStream.ToArray()));
+            gameViewModel.Script.SetModified();
 
-            return _game;
+            return gameViewModel;
         }
 
         private static string EscapeString(string input)
@@ -1101,7 +847,7 @@ namespace RATools.ViewModels
         {
             var mask = 0xFFFFFFFF;
 
-            switch (_game.ConsoleId)
+            switch (_publishedAssets.ConsoleId)
             {
                 case 40: // Dreamcast
                 case 78: // DSi
@@ -1114,21 +860,18 @@ namespace RATools.ViewModels
                     // GameCube docs suggest masking with 0x1FFFFFFF (extra F).
                     // both work. check to see which the game is using.
                     mask = 0x01FFFFFF;
-                    foreach (var achievement in _game.Editors.OfType<AchievementViewModel>())
+                    foreach (var achievement in _publishedAssets.Achievements)
                     {
-                        foreach (var trigger in achievement.Published.TriggerList)
+                        foreach (var group in achievement.Trigger.Groups)
                         {
-                            foreach (var group in trigger.Groups)
+                            foreach (var requirement in group.Requirements)
                             {
-                                foreach (var requirement in group.Requirements)
+                                if (requirement.Type == RequirementType.AddAddress &&
+                                    requirement.Operator == RequirementOperator.BitwiseAnd &&
+                                    requirement.Right.Type == FieldType.Value)
                                 {
-                                    if (requirement.Requirement.Type == RequirementType.AddAddress &&
-                                        requirement.Requirement.Operator == RequirementOperator.BitwiseAnd &&
-                                        requirement.Requirement.Right.Type == FieldType.Value)
-                                    {
-                                        if (requirement.Requirement.Right.Value >= mask)
-                                            return requirement.Requirement.Right.Value;
-                                    }
+                                    if (requirement.Right.Value >= mask)
+                                        return requirement.Right.Value;
                                 }
                             }
                         }
@@ -1178,12 +921,12 @@ namespace RATools.ViewModels
             using (var stream = new StreamWriter(outStream))
             {
                 stream.Write("// ");
-                stream.WriteLine(_game.Title);
+                stream.WriteLine(_publishedAssets.Title);
                 stream.Write("// #ID = ");
-                stream.WriteLine(String.Format("{0}", _game.GameId));
+                stream.WriteLine(String.Format("{0}", _publishedAssets.GameId));
 
-                if (_game.PublishedSets.Count() > 1)
-                    DumpSets(stream, _game.PublishedSets);
+                if (_publishedAssets.Sets.Count() > 1)
+                    DumpSets(stream, _publishedAssets.Sets);
 
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
@@ -1194,12 +937,7 @@ namespace RATools.ViewModels
 
                 DumpAchievements(stream, scriptBuilderContext);
                 DumpLeaderboards(stream, scriptBuilderContext);
-
-                foreach (var dumpRichPresence in _assets.Where(a => a.Type == DumpAssetType.RichPresence && a.IsSelected))
-                {
-                    var displayMacro = _macros.FirstOrDefault(m => m.DisplayLines != null);
-                    DumpRichPresence(stream, displayMacro, dumpRichPresence, scriptBuilderContext);
-                }
+                DumpRichPresence(stream, scriptBuilderContext);
             }
         }
 
@@ -1261,11 +999,12 @@ namespace RATools.ViewModels
                     if (existing != null && existing != memoryReference)
                     {
                         var updateItem = memoryItem;
+                        var count = 1;
 
                         string suffixedFunctionName = memoryItem.FunctionName + "_";
-                        if (memoryItem.Size == memoryItem.Note.Size)
+                        if (memoryItem.Note != null && memoryItem.Note.Size == memoryItem.Size)
                         {
-                            // this size matches the note size, get it the unsuffixed alias
+                            // this size matches the note size, give it the unsuffixed alias
                             scriptBuilderContext.AddAlias(memoryReference, functionCall);
 
                             memoryReference = existing;
@@ -1275,10 +1014,18 @@ namespace RATools.ViewModels
                         }
                         else
                         {
-                            suffixedFunctionName += Field.GetSizeFunction(memoryItem.Size);
+                            var suffix = Field.GetSizeFunction(memoryItem.Size);
+                            if (!memoryItem.FunctionName.EndsWith(suffix))
+                            {
+                                suffixedFunctionName += suffix;
+                            }
+                            else
+                            {
+                                if (!Char.IsDigit(memoryItem.FunctionName.Last()))
+                                    suffixedFunctionName = memoryItem.FunctionName;
+                                count = 2;
+                            }
                         }
-
-                        var count = 1;
 
                         do
                         {
@@ -1295,6 +1042,9 @@ namespace RATools.ViewModels
 
                     scriptBuilderContext.AddAlias(memoryReference, functionCall);
                 }
+
+                if (memoryItem.HasChainedItems)
+                    AddAliases(scriptBuilderContext, memoryItem.ChainedItems, mask);
             }
         }
 
@@ -1327,10 +1077,10 @@ namespace RATools.ViewModels
 
             foreach (var set in publishedSets)
             {
-                if (set.OwnerGameId != _game.GameId)
+                if (set.OwnerGameId != _publishedAssets.GameId)
                 {
                     var name = "achievement set " + set.Title;
-                    var variableName = BuildVariableName(name, SelectedFunctionNameStyle);
+                    var variableName = SelectedNameStyle.BuildName(name);
                     _achievementSetVariables[set.Id] = variableName;
 
                     stream.Write(variableName);
@@ -1446,7 +1196,7 @@ namespace RATools.ViewModels
 
             foreach (var memoryItem in parent.ChainedItems)
             {
-                if (memoryItem.IsReferenced && !String.IsNullOrEmpty(memoryItem.FunctionName))
+                if (!String.IsNullOrEmpty(memoryItem.FunctionName))
                 {
                     DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
                     hadFunction = true;
@@ -1564,9 +1314,13 @@ namespace RATools.ViewModels
 
             foreach (var dumpAchievement in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Achievement))
             {
-                var achievementViewModel = _game.Editors.OfType<AchievementViewModel>().FirstOrDefault(a => a.Id == dumpAchievement.Id);
-                if (achievementViewModel == null)
-                    continue;
+                var achievement = _localAssets?.Achievements.FirstOrDefault(a => a.Id == dumpAchievement.Id);
+                if (achievement == null)
+                {
+                    achievement = _publishedAssets.Achievements.FirstOrDefault(a => a.Id == dumpAchievement.Id);
+                    if (achievement == null)
+                        continue;
+                }
 
                 stream.WriteLine();
 
@@ -1574,27 +1328,24 @@ namespace RATools.ViewModels
 
                 stream.WriteLine("achievement(");
 
-                var assetSource = (achievementViewModel.Published.Asset != null) ? achievementViewModel.Published : achievementViewModel.Local;
-                var achievementData = assetSource.Asset as Achievement;
-
                 stream.Write("    title = \"");
-                stream.Write(EscapeString(achievementData.Title));
+                stream.Write(EscapeString(achievement.Title));
                 stream.Write("\", points = ");
-                stream.Write(achievementData.Points);
-                if (achievementData.Type != AchievementType.Standard)
+                stream.Write(achievement.Points);
+                if (achievement.Type != AchievementType.Standard)
                 {
                     stream.Write(", type=\"");
-                    stream.Write(Achievement.GetTypeString(achievementData.Type));
+                    stream.Write(Achievement.GetTypeString(achievement.Type));
                     stream.Write("\"");
                 }
                 stream.WriteLine(",");
 
                 stream.Write("    description = \"");
-                stream.Write(EscapeString(achievementData.Description));
+                stream.Write(EscapeString(achievement.Description));
                 stream.WriteLine("\",");
 
                 string setVariable;
-                if (_achievementSetVariables.TryGetValue(achievementData.OwnerSetId, out setVariable))
+                if (_achievementSetVariables.TryGetValue(achievement.OwnerSetId, out setVariable))
                 {
                     stream.Write("    set = ");
                     stream.Write(setVariable);
@@ -1604,18 +1355,18 @@ namespace RATools.ViewModels
                 if (dumpAchievement.ViewerType != "Local Achievement")
                 {
                     stream.Write("    id = ");
-                    stream.Write(achievementData.Id);
+                    stream.Write(achievement.Id);
                     stream.Write(", badge = \"");
-                    stream.Write(achievementData.BadgeName);
+                    stream.Write(achievement.BadgeName);
                     stream.Write("\", published = \"");
-                    stream.Write(achievementData.Published);
+                    stream.Write(achievement.Published);
                     stream.Write("\", modified = \"");
-                    stream.Write(achievementData.LastModified);
+                    stream.Write(achievement.LastModified);
                     stream.WriteLine("\",");
                 }
 
                 stream.Write("    trigger = ");
-                DumpTrigger(stream, indentedContext, dumpAchievement, assetSource.TriggerList.First());
+                DumpTrigger(stream, indentedContext, dumpAchievement, achievement.Trigger);
                 stream.WriteLine();
 
                 stream.WriteLine(")");
@@ -1629,9 +1380,13 @@ namespace RATools.ViewModels
 
             foreach (var dumpLeaderboard in _assets.Where(a => a.IsSelected && a.Type == DumpAssetType.Leaderboard))
             {
-                var leaderboardViewModel = _game.Editors.OfType<LeaderboardViewModel>().FirstOrDefault(a => a.Id == dumpLeaderboard.Id);
-                if (leaderboardViewModel == null)
-                    continue;
+                var leaderboard = _localAssets?.Leaderboards.FirstOrDefault(l => l.Id == dumpLeaderboard.Id);
+                if (leaderboard == null)
+                {
+                    leaderboard = _publishedAssets.Leaderboards.FirstOrDefault(l => l.Id == dumpLeaderboard.Id);
+                    if (leaderboard == null)
+                        continue;
+                }
 
                 stream.WriteLine();
 
@@ -1639,20 +1394,17 @@ namespace RATools.ViewModels
 
                 stream.WriteLine("leaderboard(");
 
-                var assetSource = (leaderboardViewModel.Published.Asset != null) ? leaderboardViewModel.Published : leaderboardViewModel.Local;
-                var leaderboardData = assetSource.Asset as Leaderboard;
-
                 stream.Write("    id = ");
-                stream.Write(leaderboardData.Id);
+                stream.Write(leaderboard.Id);
                 stream.Write(", title = \"");
-                stream.Write(EscapeString(leaderboardData.Title));
+                stream.Write(EscapeString(leaderboard.Title));
                 stream.WriteLine("\",");
                 stream.Write("    description = \"");
-                stream.Write(EscapeString(leaderboardData.Description));
+                stream.Write(EscapeString(leaderboard.Description));
                 stream.WriteLine("\",");
 
                 string setVariable;
-                if (_achievementSetVariables.TryGetValue(leaderboardData.OwnerSetId, out setVariable))
+                if (_achievementSetVariables.TryGetValue(leaderboard.OwnerSetId, out setVariable))
                 {
                     stream.Write("    set = ");
                     stream.Write(setVariable);
@@ -1660,35 +1412,35 @@ namespace RATools.ViewModels
                 }
 
                 stream.Write("    start  = ");
-                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.First());
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, leaderboard.Start);
                 stream.WriteLine(",");
 
                 stream.Write("    cancel = ");
-                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(1));
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, leaderboard.Cancel);
                 stream.WriteLine(",");
 
                 stream.Write("    submit = ");
-                DumpTrigger(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(2));
+                DumpTrigger(stream, indentedContext, dumpLeaderboard, leaderboard.Submit);
                 stream.WriteLine(",");
 
                 stream.Write("    value  = ");
-                var valueTrigger = assetSource.TriggerList.ElementAt(3);
-                if (valueTrigger.Groups.Count() > 1 ||
-                    valueTrigger.Groups.First().Requirements.Any(r => r.Requirement.IsMeasured))
+                var valueTrigger = leaderboard.Value;
+                if (valueTrigger.Values.Count() > 1 ||
+                    valueTrigger.Values.First().Requirements.Any(r => r.IsMeasured))
                 {
-                    DumpValue(stream, indentedContext, dumpLeaderboard, assetSource.TriggerList.ElementAt(3));
+                    DumpValue(stream, indentedContext, dumpLeaderboard, valueTrigger);
                 }
                 else
                 {
-                    DumpLegacyExpression(stream, leaderboardData.Value, dumpLeaderboard, indentedContext);
+                    DumpLegacyExpression(stream, valueTrigger, dumpLeaderboard, indentedContext);
                 }
                 stream.WriteLine(",");
 
                 stream.Write("    format = \"");
-                stream.Write(Leaderboard.GetFormatString(leaderboardData.Format));
+                stream.Write(Leaderboard.GetFormatString(leaderboard.Format));
                 stream.Write("\"");
 
-                if (leaderboardData.LowerIsBetter)
+                if (leaderboard.LowerIsBetter)
                     stream.Write(", lower_is_better = true");
 
                 stream.WriteLine();
@@ -1698,7 +1450,8 @@ namespace RATools.ViewModels
 
         private void DumpLookup(StreamWriter stream, DumpAsset dumpLookup)
         {
-            var macro = _macros.FirstOrDefault(m => m.Name == dumpLookup.Label);
+            var richPresence = _localAssets?.RichPresence ?? _publishedAssets?.RichPresence;
+            var macro = richPresence?.Macros.FirstOrDefault(m => m.Name == dumpLookup.Label);
             if (macro == null)
                 return;
 
@@ -1740,85 +1493,75 @@ namespace RATools.ViewModels
             stream.WriteLine("}");
         }
 
-        private void DumpRichPresence(StreamWriter stream, RichPresenceMacro displayMacro, DumpAsset dumpRichPresence, ScriptBuilderContext scriptBuilderContext)
+        private void DumpRichPresence(StreamWriter stream, ScriptBuilderContext scriptBuilderContext)
         {
-            int index;
+            var dumpRichPresence = _assets.FirstOrDefault(a => a.Type == DumpAssetType.RichPresence);
+            if (dumpRichPresence == null || !dumpRichPresence.IsSelected)
+                return;
+
+            var richPresence = _localAssets?.RichPresence ?? _publishedAssets.RichPresence;
+            if (richPresence == null)
+                return;
+
             var notes = new Dictionary<uint, CodeNote>();
 
             var indentedContext = scriptBuilderContext.Clone();
             indentedContext.Indent = 4;
 
-            foreach (var line in displayMacro.DisplayLines)
+            foreach (var displayString in richPresence.DisplayStrings)
             {
-                string displayString = line;
                 stream.WriteLine();
 
-                if (line[0] == '?')
+                if (displayString.Condition != null)
                 {
-                    index = line.IndexOf('?', 1);
-                    if (index != -1)
-                    {
-                        var trigger = Trigger.Deserialize(line.Substring(1, index - 1));
-                        var vmTrigger = new TriggerViewModel("RichPresence", trigger, scriptBuilderContext.NumberFormat, notes);
-
-                        stream.Write("rich_presence_conditional_display(");
-                        indentedContext.Indent = 4;
-                        DumpTrigger(stream, indentedContext, dumpRichPresence, vmTrigger);
-                        stream.Write(", \"");
-                    }
-
-                    ++index;
+                    stream.Write("rich_presence_conditional_display(");
+                    indentedContext.Indent = 4;
+                    DumpTrigger(stream, indentedContext, dumpRichPresence, displayString.Condition);
+                    stream.Write(", \"");
                 }
                 else
                 {
                     stream.Write("rich_presence_display(\"");
-                    index = 0;
                 }
 
-                var macros = new List<KeyValuePair<string, string>>();
+                int index = 0;
+                int macroCount = 0;
                 do
                 {
-                    var index1 = displayString.IndexOf('@', index);
+                    var index1 = displayString.Text.IndexOf('@', index);
                     if (index1 == -1)
                     {
-                        stream.Write(displayString.Substring(index));
+                        stream.Write(displayString.Text.Substring(index));
                         break;
                     }
 
                     if (index1 > index)
-                        stream.Write(displayString.Substring(index, index1 - index));
+                        stream.Write(displayString.Text.Substring(index, index1 - index));
 
                     stream.Write('{');
-                    stream.Write(macros.Count());
+                    stream.Write(macroCount++);
                     stream.Write('}');
 
-                    var index2 = displayString.IndexOf('(', index1);
-                    var index3 = displayString.IndexOf(')', index2);
-
-                    var name = displayString.Substring(index1 + 1, index2 - index1 - 1);
-                    var parameter = displayString.Substring(index2 + 1, index3 - index2 - 1);
-
-                    macros.Add(new KeyValuePair<string, string>(name, parameter));
-
-                    index = index3 + 1;
+                    var rightParenIndex = displayString.Text.IndexOf(')', index1);
+                    index = rightParenIndex + 1;
                 } while (true);
 
                 stream.Write('"');
 
-                foreach (var kvp in macros)
+                foreach (var macro in displayString.Macros)
                 {
                     stream.WriteLine(",");
                     stream.Write("    ");
 
-                    var macro = _macros.FirstOrDefault(m => m.Name == kvp.Key);
-                    if (macro == null)
+                    var macroDefinition = richPresence.Macros.FirstOrDefault(m => m.Name == macro.Name);
+                    if (macroDefinition == null)
                     {
                         stream.Write("rich_presence_value(\"");
-                        stream.Write(kvp.Key);
+                        stream.Write(macro.Name);
                         stream.Write("\", ");
                         indentedContext.Indent = 24; // "    rich_presence_value(".length
                     }
-                    else if (macro.LookupEntries != null)
+                    else if (macroDefinition.LookupEntries != null)
                     {
                         stream.Write("rich_presence_lookup(\"");
                         stream.Write(macro.Name);
@@ -1833,18 +1576,17 @@ namespace RATools.ViewModels
                         indentedContext.Indent = 24; // "    rich_presence_value(".length
                     }
 
-                    var value = Value.Deserialize(kvp.Value);
-                    if (value.Values.Any())
+                    if (macro.Value.Values.Any())
                     {
-                        var measured = value.Values.First().Requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
+                        var measured = macro.Value.Values.First().Requirements.FirstOrDefault(r => r.Type == RequirementType.Measured);
                         if (measured != null)
                             measured.Type = RequirementType.None; // measured() is implicit
                     }
-                    DumpLegacyExpression(stream, value, dumpRichPresence, indentedContext);
+                    DumpLegacyExpression(stream, macro.Value, dumpRichPresence, indentedContext);
 
-                    if (macro == null)
+                    if (macroDefinition == null)
                     {
-                        var macroFormat = RichPresenceBuilder.GetValueFormat(kvp.Key);
+                        var macroFormat = RichPresenceBuilder.GetValueFormat(macro.Name);
                         if (macroFormat != ValueFormat.None && macroFormat != ValueFormat.Value)
                         {
                             stream.Write(", format=\"");
@@ -1854,14 +1596,14 @@ namespace RATools.ViewModels
 
                         stream.Write(')');
                     }
-                    else if (macro.LookupEntries != null)
+                    else if (macroDefinition.LookupEntries != null)
                     { 
                         stream.Write(", ");
                         stream.Write(macro.Name);
                         stream.Write("Lookup");
 
                         string defaultEntry;
-                        if (macro.LookupEntries.TryGetValue("*", out defaultEntry))
+                        if (macroDefinition.LookupEntries.TryGetValue("*", out defaultEntry))
                         {
                             stream.Write(", fallback=\"");
                             stream.Write(EscapeString(defaultEntry));
@@ -1872,10 +1614,10 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        if (macro.FormatType != ValueFormat.Value)
+                        if (macroDefinition.FormatType != ValueFormat.Value)
                         {
                             stream.Write(", format=\"");
-                            stream.Write(Leaderboard.GetFormatString(macro.FormatType));
+                            stream.Write(Leaderboard.GetFormatString(macroDefinition.FormatType));
                             stream.Write('"');
                         }
 
@@ -1883,7 +1625,7 @@ namespace RATools.ViewModels
                     }
                 }
 
-                if (macros.Count() > 0)
+                if (displayString.Macros.Any())
                     stream.WriteLine();
 
                 stream.WriteLine(')');
@@ -1905,13 +1647,14 @@ namespace RATools.ViewModels
             stream.Write(script);
         }
 
-        private static void DumpTrigger(StreamWriter stream, ScriptBuilderContext scriptBuilderContext, DumpAsset dumpAsset, TriggerViewModel triggerViewModel)
+        private static void DumpTrigger(StreamWriter stream, ScriptBuilderContext scriptBuilderContext, DumpAsset dumpAsset, Trigger trigger)
         {
-            var triggerWhenMeasuredGroups = new List<RequirementGroupViewModel>();
-            if (triggerViewModel.Groups.Count() > 2)
-                IdentifyTriggerWhenMeasured(triggerViewModel, triggerWhenMeasuredGroups);
+            var triggerWhenMeasuredGroups = new List<RequirementGroup>();
+            var triggerGroupCount = trigger.Groups.Count();
+            if (triggerGroupCount > 2)
+                IdentifyTriggerWhenMeasured(trigger, triggerWhenMeasuredGroups);
 
-            var groupEnumerator = triggerViewModel.Groups.GetEnumerator();
+            var groupEnumerator = trigger.Groups.GetEnumerator();
             groupEnumerator.MoveNext();
 
             bool isCoreEmpty = !groupEnumerator.Current.Requirements.Any();
@@ -1935,7 +1678,7 @@ namespace RATools.ViewModels
                     stream.Write('(');
                     first = false;
 
-                    if (triggerViewModel.Groups.Count() == 2)
+                    if (triggerGroupCount == 2)
                     {
                         // only core and one alt, inject an always_false clause to prevent the compiler from joining them
                         stream.Write("always_false() || ");
@@ -1969,15 +1712,15 @@ namespace RATools.ViewModels
                 stream.Write(')');
         }
 
-        private static void IdentifyTriggerWhenMeasured(TriggerViewModel triggerViewModel, List<RequirementGroupViewModel> triggerWhenMeasuredGroups)
+        private static void IdentifyTriggerWhenMeasured(Trigger trigger, List<RequirementGroup> triggerWhenMeasuredGroups)
         {
             RequirementEx triggerAlt = null;
-            foreach (var group in triggerViewModel.Groups.Skip(1))
+            foreach (var group in trigger.Alts)
             {
-                if (!group.Requirements.Any(r => r.Requirement.Type == RequirementType.Trigger))
+                if (!group.Requirements.Any(r => r.Type == RequirementType.Trigger))
                     continue;
 
-                var groupEx = RequirementEx.Combine(group.Requirements.Select(r => r.Requirement));
+                var groupEx = RequirementEx.Combine(group.Requirements);
                 if (groupEx.Count == 1)
                 {
                     triggerWhenMeasuredGroups.Add(group);
@@ -1989,12 +1732,12 @@ namespace RATools.ViewModels
             if (triggerAlt == null)
                 return;
 
-            foreach (var group in triggerViewModel.Groups.Skip(1))
+            foreach (var group in trigger.Alts)
             {
-                if (!group.Requirements.Any(r => r.Requirement.Type == RequirementType.Measured || r.Requirement.Type == RequirementType.MeasuredPercent))
+                if (!group.Requirements.Any(r => r.IsMeasured))
                     continue;
 
-                var groupEx = RequirementEx.Combine(group.Requirements.Select(r => r.Requirement));
+                var groupEx = RequirementEx.Combine(group.Requirements);
                 if (groupEx.Count != 1)
                     continue;
 
@@ -2024,15 +1767,15 @@ namespace RATools.ViewModels
                 triggerWhenMeasuredGroups.Clear();
         }
 
-        private static void DumpValue(StreamWriter stream, ScriptBuilderContext context, DumpAsset dumpAsset, TriggerViewModel triggerViewModel)
+        private static void DumpValue(StreamWriter stream, ScriptBuilderContext context, DumpAsset dumpAsset, Value value)
         {
-            if (triggerViewModel.Groups.Count() > 1)
+            if (value.Values.Count() > 1)
             {
                 stream.WriteLine("max_of(");
                 context.Indent += 4;
 
                 bool first = true;
-                foreach (var value in triggerViewModel.Groups)
+                foreach (var scan in value.Values)
                 {
                     if (!first)
                         stream.WriteLine(",");
@@ -2040,7 +1783,7 @@ namespace RATools.ViewModels
                     stream.Write(new string(' ', context.Indent));
                     first = false;
 
-                    DumpPublishedRequirements(stream, dumpAsset, value, context, true);
+                    DumpPublishedRequirements(stream, dumpAsset, scan, context, true);
                 }
 
                 context.Indent -= 4;
@@ -2050,17 +1793,17 @@ namespace RATools.ViewModels
             }
             else
             {
-                DumpPublishedRequirements(stream, dumpAsset, triggerViewModel.Groups.First(), context, true);
+                DumpPublishedRequirements(stream, dumpAsset, value.Values.First(), context, true);
             }
         }
 
         private static void DumpPublishedRequirements(StreamWriter stream, DumpAsset dumpAsset,
-            RequirementGroupViewModel requirementGroupViewModel, ScriptBuilderContext scriptBuilderContext, bool isValue = false)
+            RequirementGroup requirementGroup, ScriptBuilderContext scriptBuilderContext, bool isValue = false)
         {
             var definition = new StringBuilder();
             var context = scriptBuilderContext.Clone();
             context.IsValue = isValue;
-            context.AppendRequirements(definition, requirementGroupViewModel.Requirements.Select(r => r.Requirement));
+            context.AppendRequirements(definition, requirementGroup.Requirements);
 
             stream.Write(definition.ToString());
         }

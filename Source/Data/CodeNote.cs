@@ -26,6 +26,11 @@ namespace RATools.Data
 
         public string Summary { get; private set; }
 
+        public IEnumerable<KeyValuePair<Token, Token>> Values
+        {
+            get { return _values ?? Enumerable.Empty<KeyValuePair<Token, Token>>(); }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         private List<KeyValuePair<Token, Token>> _values;
 
         private class PointerData
@@ -499,46 +504,68 @@ namespace RATools.Data
         private static string TrimSize(string line, bool keepPointer)
         {
             int endIndex = -1;
-            var startIndex = line.IndexOf('[');
-            if (startIndex != -1)
+            do
             {
-                endIndex = line.IndexOf(']', startIndex);
-            }
-            else
-            {
-                startIndex = line.IndexOf('(');
+                var startIndex = line.IndexOf('[', endIndex + 1);
                 if (startIndex != -1)
-                    endIndex = line.IndexOf(')');
-            }
-
-            if (endIndex == -1)
-                return line;
-
-            var tokenizer = Tokenizer.CreateTokenizer(line.ToLower(), startIndex, endIndex - startIndex);
-            Token token;
-            bool isPointer = false;
-            while (tokenizer.NextChar != '\0')
-            {
-                var tokenType = NextToken(tokenizer, out token);
-                if (tokenType == TokenType.Other)
                 {
-                    if (token.CompareTo("pointer", StringComparison.InvariantCultureIgnoreCase) == 0)
-                        isPointer = true;
-                    else
-                        return line;
+                    endIndex = line.IndexOf(']', startIndex);
                 }
-            };
+                else
+                {
+                    startIndex = line.IndexOf('(', endIndex + 1);
+                    if (startIndex != -1)
+                        endIndex = line.IndexOf(')', startIndex);
+                    else
+                        endIndex = -1;
+                }
 
-            while (startIndex > 0 && Char.IsWhiteSpace(line[startIndex - 1]))
-                --startIndex;
-            while (endIndex < line.Length - 1 && Char.IsWhiteSpace(line[endIndex + 1]))
-                ++endIndex;
+                if (endIndex == -1)
+                    return line;
 
-            line = line.Remove(startIndex, endIndex - startIndex + 1);
-            if (isPointer && keepPointer)
-                line = "[pointer] " + line;
+                var tokenizer = Tokenizer.CreateTokenizer(line.ToLower(), startIndex, endIndex - startIndex);
+                Token token;
+                bool isPointer = false;
+                bool foundSize = false;
+                while (tokenizer.NextChar != '\0')
+                {
+                    var tokenType = NextToken(tokenizer, out token);
+                    if (tokenType == TokenType.Other)
+                    {
+                        if (token.CompareTo("pointer", StringComparison.InvariantCultureIgnoreCase) == 0)
+                        {
+                            isPointer = true;
+                        }
+                        else
+                        {
+                            foundSize = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        foundSize = true;
+                    }
+                }
 
-            return line;
+                if (foundSize)
+                {
+                    while (startIndex > 0 && Char.IsWhiteSpace(line[startIndex - 1]))
+                        --startIndex;
+                    while (endIndex < line.Length - 1 && Char.IsWhiteSpace(line[endIndex + 1]))
+                        ++endIndex;
+
+                    var removeCount = endIndex - startIndex + 1;
+                    line = line.Remove(startIndex, removeCount);
+                    if (isPointer && keepPointer)
+                    {
+                        line = "[pointer] " + line;
+                        removeCount -= 10;
+                    }
+
+                    endIndex -= removeCount;
+                }
+            } while (true);
         }
 
         private void ExtractValuesFromSummary()
@@ -548,7 +575,11 @@ namespace RATools.Data
 
             var commaIndex = Summary.IndexOfAny(new[] { ',', ';' });
             if (commaIndex == -1)
+            {
+                if (CheckValue(new Token(Summary, 0, Summary.Length)))
+                    Summary = "Unlabelled";
                 return;
+            }
 
             var newSummary = Summary;
             Tokenizer tokenizer = null;
@@ -609,7 +640,7 @@ namespace RATools.Data
                 }
             }
 
-            Summary = newSummary;
+            Summary = String.IsNullOrEmpty(newSummary) ? "Unlabelled" : newSummary;
         }
 
         private static bool IsHexDigit(char c)
@@ -662,7 +693,7 @@ namespace RATools.Data
             return false;
         }
 
-        private void CheckValue(Token clause)
+        private bool CheckValue(Token clause)
         {
             int prefixIndex = 0;
             while (prefixIndex < clause.Length && !Char.IsLetterOrDigit(clause[prefixIndex]) && clause[prefixIndex] != '[')
@@ -711,10 +742,18 @@ namespace RATools.Data
                 var right = clause.SubToken(separator + separatorLength).Trim();
 
                 if (IsValue(left))
+                {
                     AddValue(left, right);
+                    return true;
+                }
                 else if (IsValue(right))
+                {
                     AddValue(right, left);
+                    return true;
+                }
             }
+
+            return false;
         }
 
         private void AddValue(Token value, Token note)
