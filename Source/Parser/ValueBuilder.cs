@@ -93,6 +93,12 @@ namespace RATools.Parser
             // ensure there's a Measured condition
             MeasuredRequirementExpression.EnsureHasMeasuredRequirement(requirements);
 
+            if (!requirements.Any(r => r.IsMeasured))
+            {
+                error = InconvertibleError(expression);
+                return null;
+            }
+
             return new Value(new[] { requirements });
         }
 

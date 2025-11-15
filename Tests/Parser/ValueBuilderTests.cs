@@ -175,5 +175,17 @@ namespace RATools.Parser.Tests
             var serialized = value.Serialize(new SerializationContext { MinimumVersion = Version._1_0 });
             Assert.That(serialized, Is.EqualTo("M:0xK000001"));
         }
+
+        [Test]
+        public void TestPauseWithoutMeasured()
+        {
+            string input = "disable_when(byte(0x1234) == 1)";
+            var clause = TriggerExpressionTests.Parse(input);
+
+            ErrorExpression error;
+            var value = ValueBuilder.BuildValue(clause, out error);
+            Assert.That(value, Is.Null);
+            ExpressionTests.AssertError(error, "Cannot create value from requirement");
+        }
     }
 }
