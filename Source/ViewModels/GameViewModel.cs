@@ -592,7 +592,6 @@ namespace RATools.ViewModels
         {
             RACacheDirectory = raCacheDirectory;
 
-            ReadCodeNotes();
             ReadPublished();
 
             var fileName = Path.Combine(RACacheDirectory, GameId + "-User.txt");
@@ -603,30 +602,6 @@ namespace RATools.ViewModels
 
             foreach (var kvp in _localAssets.Notes)
                 Notes[kvp.Key] = new CodeNote(kvp.Key, kvp.Value);
-        }
-
-        private void ReadCodeNotes()
-        {
-            var filename = Path.Combine(RACacheDirectory, GameId + "-Notes.json");
-            using (var notesStream = _fileSystemService.OpenFile(filename, OpenFileMode.Read))
-            {
-                if (notesStream != null)
-                {
-                    var notes = new JsonObject(notesStream).GetField("items");
-                    if (notes.Type == JsonFieldType.ObjectArray)
-                    {
-                        foreach (var note in notes.ObjectArrayValue)
-                        {
-                            var address = UInt32.Parse(note.GetField("Address").StringValue.Substring(2), System.Globalization.NumberStyles.HexNumber);
-                            var text = note.GetField("Note").StringValue;
-                            if (text.Length > 0 && text != "''") // a long time ago notes were "deleted" by setting their text to ''
-                                Notes[address] = new CodeNote(address, text);
-                        }
-                    }
-                }
-            }
-
-            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
         }
 
         private void ReadPublished()
@@ -671,6 +646,10 @@ namespace RATools.ViewModels
 
             _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
             _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
+
+            publishedAssets.LoadNotes();
+            Notes = publishedAssets.Notes;
+            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
         }
 
         private void MergeAchievements(List<ViewerViewModelBase> editors, IEnumerable<AssetBase> assets,

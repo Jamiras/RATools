@@ -48,6 +48,19 @@ namespace RATools.Data
         /// </summary>
         public IEnumerable<RequirementGroup> Alts { get; private set; }
 
+
+        public IEnumerable<RequirementGroup> Groups
+        {
+            get
+            {
+                if (Core != null)
+                    yield return Core;
+
+                foreach (var group in Alts)
+                    yield return group;
+            }
+        }
+
         public override bool Equals(object obj)
         {
             var that = obj as Trigger;

@@ -45,6 +45,7 @@ namespace RATools.Data.Tests
         [TestCase("[16-bit-BE] Test", 2, FieldSize.BigEndianWord)]
         [TestCase("[8-bit BE] Test", 1, FieldSize.Byte)]
         [TestCase("[4-bit BE] Test", 1, FieldSize.Byte)]
+        [TestCase("[US] Test [32-bit BE]", 4, FieldSize.BigEndianDWord)]
 
         [TestCase("8 BYTE Test", 8, FieldSize.Array)]
         [TestCase("Test 8 BYTE", 8, FieldSize.Array)]
@@ -337,6 +338,38 @@ namespace RATools.Data.Tests
             Assert.That(n.GetSubNote(FieldSize.Bit7), Is.Null);
             Assert.That(n.GetSubNote(FieldSize.HighNibble), Is.Null);
             Assert.That(n.GetSubNote(FieldSize.LowNibble), Is.Null);
+        }
+
+        [Test]
+        public void TestUnlabelledEnum()
+        {
+            var n = new CodeNote(4,
+                "01=easy\r\n" +
+                "02=normal");
+
+            Assert.That(n.Summary, Is.EqualTo("Unlabelled"));
+            Assert.That(n.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n.Values.Count(), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestUnlabelledEnumCSV()
+        {
+            var n = new CodeNote(4,"01=easy,02=normal");
+
+            Assert.That(n.Summary, Is.EqualTo("Unlabelled"));
+            Assert.That(n.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n.Values.Count(), Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestPossibleButNotEnum()
+        {
+            var n = new CodeNote(4, "Tuesday: timer");
+
+            Assert.That(n.Summary, Is.EqualTo("Tuesday: timer"));
+            Assert.That(n.Size, Is.EqualTo(FieldSize.None));
+            Assert.That(n.Values.Count(), Is.EqualTo(0));
         }
     }
 }

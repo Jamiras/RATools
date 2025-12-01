@@ -2,6 +2,7 @@
 using Jamiras.Services;
 using Moq;
 using NUnit.Framework;
+using RATools.Parser;
 using RATools.Services;
 using RATools.ViewModels;
 using System.Collections.Generic;
@@ -69,22 +70,21 @@ namespace RATools.Tests.Regression
 
             var mockDialogService = new Mock<IDialogService>();
 
-            var mockLogger = new Mock<ILogger>();
-
             var mockFileSystem = new Mock<IFileSystemService>();
             mockFileSystem.Setup(s => s.FileExists(It.IsAny<string>())).Returns((string p) => File.Exists(p));
             mockFileSystem.Setup(s => s.OpenFile(It.IsAny<string>(), OpenFileMode.Read)).
                 Returns((string p, OpenFileMode m) => File.Open(p, FileMode.Open, FileAccess.Read, FileShare.Read));
 
             var vmNewScript = new NewScriptDialogViewModel(mockSettings.Object, 
-                mockDialogService.Object, mockLogger.Object, mockFileSystem.Object);
+                mockDialogService.Object, mockFileSystem.Object);
             vmNewScript.GameId.Value = int.Parse(patchDataFileName);
             vmNewScript.SearchCommand.Execute();
 
             vmNewScript.SelectedCodeNotesFilter = CodeNoteFilter.ForSelectedAssets;
-            vmNewScript.SelectedFunctionNameStyle = FunctionNameStyle.SnakeCase;
             vmNewScript.SelectedNoteDump = NoteDump.OnlyForDefinedMethods;
+
             vmNewScript.CheckAllCommand.Execute();
+            vmNewScript.SelectedNameStyle = NameStyle.SnakeCase; // name style must be changed after selecting all
 
             var expectedFileName = Path.Combine(baseDir, vmNewScript.GameId.Value + ".rascript");
             var outputFileName = Path.ChangeExtension(expectedFileName, ".updated.rascript");
