@@ -207,7 +207,8 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            last.Type = RequirementType.Measured;
+            if (last != null)
+                last.Type = RequirementType.Measured;
         }
     }
 }
