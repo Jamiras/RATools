@@ -912,11 +912,14 @@ namespace RATools.ViewModels
                 NumberFormat = _settings.HexValues ? NumberFormat.Hexadecimal : NumberFormat.Decimal,
             };
 
+            if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address <= 0xFFFF)
+                scriptBuilderContext.AddressWidth = 4;
+
             var mask = GetMask();
 
-            AddAliases(scriptBuilderContext, _memoryItems, mask);
-            foreach (var asset in _assets)
-                AddAliases(scriptBuilderContext, asset.MemoryAddresses, mask);
+            ApplyCustomNames();
+            MakeAliasesUnique();
+            scriptBuilderContext.AddAliases(_memoryAccessors);
 
             using (var stream = new StreamWriter(outStream))
             {
@@ -930,7 +933,7 @@ namespace RATools.ViewModels
 
                 var lookupsToDump = _assets.Where(a => a.Type == DumpAssetType.Lookup && a.IsSelected).ToList();
 
-                DumpMemoryAccessors(stream, lookupsToDump, scriptBuilderContext);
+                DumpMemoryAccessors(stream, lookupsToDump, scriptBuilderContext, mask);
 
                 foreach (var dumpLookup in lookupsToDump)
                     DumpLookup(stream, dumpLookup);
@@ -941,110 +944,80 @@ namespace RATools.ViewModels
             }
         }
 
-        private void AddAliases(ScriptBuilderContext scriptBuilderContext, IEnumerable<MemoryItem> items, uint mask)
+        private void ApplyCustomNames()
         {
-            foreach (var memoryItem in items.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
+            foreach (var memoryItem in _memoryItems.Where(m => !String.IsNullOrEmpty(m.FunctionName)))
             {
-                var functionCall = memoryItem.FunctionName + "()";
-                string memoryReference;
-
-                if (memoryItem.Parent == null)
+                var memoryAccessor = _memoryAccessors.FirstOrDefault(m => m.Address == memoryItem.Address);
+                if (memoryAccessor != null)
                 {
-                    memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                    if (memoryAccessor.PrimarySize == memoryItem.Size)
+                        memoryAccessor.Alias = memoryItem.FunctionName;
+                    else
+                        memoryAccessor.SetAlias(memoryItem.Size, memoryItem.FunctionName);
                 }
-                else
+            }
+        }
+
+        private void MakeAliasesUnique()
+        {
+            var hashSet = new HashSet<string>();
+            MakeAliasesUnique(_memoryAccessors, hashSet, SelectedNameStyle);
+        }
+
+        private static void MakeAliasesUnique(IEnumerable<MemoryAccessorAlias> memoryAccessors, HashSet<string> hashSet, NameStyle nameStyle)
+        {
+            foreach (var memoryAccessor in memoryAccessors)
+            {
+                var alias = memoryAccessor.Alias;
+                if (!String.IsNullOrEmpty(alias))
                 {
-                    var context = scriptBuilderContext.Clone();
-                    var requirements = new List<Requirement>();
-                    for (var parent = memoryItem.Parent; parent != null; parent = parent.Parent)
+                    var index = 2;
+                    while (hashSet.Contains(alias))
                     {
-                        var requirement = new Requirement
-                        {
-                            Type = RequirementType.AddAddress,
-                            Left = new Field { Type = FieldType.MemoryAddress, Size = parent.Size, Value = parent.Address },
-                        };
-
-                        if (mask != 0xFFFFFFFF)
-                        {
-                            if (mask == 0x00FFFFFF)
-                            {
-                                if (Field.GetByteSize(requirement.Left.Size) > 3)
-                                    requirement.Left = requirement.Left.ChangeSize(FieldSize.TByte);
-                            }
-                            else
-                            {
-                                requirement.Operator = RequirementOperator.BitwiseAnd;
-                                requirement.Right = new Field { Type = FieldType.Value, Size = FieldSize.None, Value = mask };
-                            }
-                        }
-
-                        requirements.Add(requirement);
+                        alias = memoryAccessor.Alias + index;
+                        index++;
                     }
-
-                    requirements.Reverse();
-
-                    requirements.Add(new Requirement
-                    {
-                        Left = new Field { Type = FieldType.MemoryAddress, Size = memoryItem.Size, Value = memoryItem.Address }
-                    });
-
-                    var builder = new StringBuilder();
-                    context.AppendRequirements(builder, requirements);
-                    memoryReference = builder.ToString();
+                    hashSet.Add(alias);
                 }
 
-                if (memoryReference != functionCall)
+                if (memoryAccessor.HasMultipleReferencedSizes)
                 {
-                    var existing = scriptBuilderContext.GetAliasDefinition(functionCall);
-                    if (existing != null && existing != memoryReference)
+                    foreach (var size in memoryAccessor.ReferencedSizes)
                     {
-                        var updateItem = memoryItem;
-                        var count = 1;
+                        if (size == memoryAccessor.PrimarySize)
+                            continue;
 
-                        string suffixedFunctionName = memoryItem.FunctionName + "_";
-                        if (memoryItem.Note != null && memoryItem.Note.Size == memoryItem.Size)
+                        var subAlias = memoryAccessor.GetAlias(size);
+                        if (subAlias != null)
                         {
-                            // this size matches the note size, give it the unsuffixed alias
-                            scriptBuilderContext.AddAlias(memoryReference, functionCall);
-
-                            memoryReference = existing;
-                            suffixedFunctionName += existing.Substring(0, existing.IndexOf('('));
-
-                            updateItem = FindAlternateMemoryItemByFunctionName(_memoryItems, memoryItem);
-                        }
-                        else
-                        {
-                            var suffix = Field.GetSizeFunction(memoryItem.Size);
-                            if (!memoryItem.FunctionName.EndsWith(suffix))
+                            if (hashSet.Contains(subAlias))
                             {
-                                suffixedFunctionName += suffix;
+                                var sizeSuffix = nameStyle.BuildName("x " + Field.GetSizeFunction(size)).Substring(1);
+                                if (!subAlias.EndsWith(sizeSuffix))
+                                    subAlias += sizeSuffix;
+
+                                alias = subAlias;
+                                var index = 2;
+                                while (hashSet.Contains(subAlias))
+                                {
+                                    subAlias = alias + '_' + index;
+                                    index++;
+                                }
+
+                                memoryAccessor.SetAlias(size, subAlias);
                             }
-                            else
-                            {
-                                if (!Char.IsDigit(memoryItem.FunctionName.Last()))
-                                    suffixedFunctionName = memoryItem.FunctionName;
-                                count = 2;
-                            }
+
+                            hashSet.Add(subAlias);
                         }
-
-                        do
-                        {
-                            updateItem.FunctionName = (count == 1) ? suffixedFunctionName : (suffixedFunctionName + count);
-                            functionCall = updateItem.FunctionName + "()";
-
-                            existing = scriptBuilderContext.GetAliasDefinition(functionCall);
-                            if (existing == null || existing == memoryReference)
-                                break;
-
-                            count++;
-                        } while (true);
                     }
-
-                    scriptBuilderContext.AddAlias(memoryReference, functionCall);
                 }
+            }
 
-                if (memoryItem.HasChainedItems)
-                    AddAliases(scriptBuilderContext, memoryItem.ChainedItems, mask);
+            foreach (var memoryAccessor in memoryAccessors)
+            {
+                if (memoryAccessor.Children.Any())
+                    MakeAliasesUnique(memoryAccessor.Children, hashSet, nameStyle);
             }
         }
 
@@ -1109,20 +1082,20 @@ namespace RATools.ViewModels
             }
         }
 
-        private void DumpMemoryAccessors(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext)
+        private void DumpMemoryAccessors(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, UInt32 mask)
         {
-            string addressFormat = "{0:X4}";
-            if (_memoryItems.Count > 0 && _memoryItems[_memoryItems.Count - 1].Address > 0xFFFF)
-                addressFormat = "{0:X6}"; // TODO: addressFormat is only used in note comments - also apply to generated code
-
             bool needLine = true;
             bool hadFunction = false;
 
             var dumpNotes = SelectedNoteDump;
             var filter = SelectedCodeNotesFilter;
+            uint previousAddress = UInt32.MaxValue;
             uint previousNoteAddress = UInt32.MaxValue;
             foreach (var memoryItem in _memoryItems)
             {
+                if (memoryItem.Address == previousAddress)
+                    continue;
+
                 if (dumpNotes != NoteDump.None)
                 {
                     if (memoryItem.Note != null)
@@ -1153,7 +1126,7 @@ namespace RATools.ViewModels
                             var lines = notes.Split('\n');
                             stream.Write("// $");
 
-                            var address = String.Format(addressFormat, memoryItem.Address);
+                            var address = scriptBuilderContext.FormatAddress(memoryItem.Address);
                             stream.Write(address);
                             stream.Write(": ");
                             stream.WriteLine(lines[0].Trim());
@@ -1175,9 +1148,10 @@ namespace RATools.ViewModels
                         continue;
                 }
 
-                if (!String.IsNullOrEmpty(memoryItem.FunctionName))
+                var memoryAccessor = _memoryAccessors.FirstOrDefault(m => m.Address == memoryItem.Address);
+                if (memoryAccessor != null)
                 {
-                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryAccessor, "", ref needLine);
                     hadFunction = true;
                 }
                 else
@@ -1186,61 +1160,110 @@ namespace RATools.ViewModels
                 }
 
                 if (memoryItem.HasChainedItems)
-                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, memoryAccessor, "", mask, ref needLine);
+
+                previousAddress = memoryItem.Address;
             }
         }
 
-        private bool DumpNestedMemoryFunctions(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryItem parent, ref bool needLine)
+        private bool DumpNestedMemoryFunctions(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryItem parent, MemoryAccessorAlias parentAccessor, string parentChain, UInt32 mask, ref bool needLine)
         {
             bool hadFunction = false;
 
+            string parentFunctionCall;
+            if (!String.IsNullOrEmpty(parentAccessor.Alias))
+            {
+                parentFunctionCall = String.Format("{0}()", parentAccessor.Alias);
+                if (Field.GetMaxValue(parentAccessor.PrimarySize) > mask)
+                    parentFunctionCall = String.Format("({0} & 0x{1:X2})", parentFunctionCall, mask);
+                parentChain += parentFunctionCall + " + ";
+            }
+            else
+            {
+                parentFunctionCall = String.Format("{0}({1}0x{2})", Field.GetSizeFunction(parentAccessor.PrimarySize), parentChain, scriptBuilderContext.FormatAddress(parentAccessor.Address));
+                if (Field.GetMaxValue(parentAccessor.PrimarySize) > mask)
+                    parentFunctionCall = String.Format("({0} & 0x{1:X2})", parentFunctionCall, mask);
+                parentChain = parentFunctionCall + " + ";
+            }
+
+            UInt32 lastOffset = UInt32.MaxValue;
             foreach (var memoryItem in parent.ChainedItems)
             {
-                if (!String.IsNullOrEmpty(memoryItem.FunctionName))
+                if (memoryItem.Address == lastOffset)
+                    continue;
+                lastOffset = memoryItem.Address;
+
+                var memoryAccessor = parentAccessor.Children.FirstOrDefault(m => m.Address == memoryItem.Address);
+                if (memoryAccessor != null)
                 {
-                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+                    DumpMemoryFunction(stream, lookupsToDump, scriptBuilderContext, memoryAccessor, parentChain, ref needLine);
                     hadFunction = true;
                 }
 
                 if (memoryItem.HasChainedItems)
-                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, ref needLine);
+                    hadFunction |= DumpNestedMemoryFunctions(stream, lookupsToDump, scriptBuilderContext, memoryItem, memoryAccessor, parentChain, mask, ref needLine);
             }
 
             return hadFunction;
         }
 
-        private void DumpMemoryFunction(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryItem memoryItem, ref bool needLine)
+        private void DumpMemoryFunction(StreamWriter stream, List<DumpAsset> lookupsToDump, ScriptBuilderContext scriptBuilderContext, MemoryAccessorAlias memoryAccessor, string parentChain, ref bool needLine)
         {
-            string memoryReference;
-
-            if (memoryItem.Parent == null)
+            string address;
+            if (memoryAccessor.Address == 0 && !String.IsNullOrEmpty(parentChain))
             {
-                memoryReference = Field.GetMemoryReference(memoryItem.Address, memoryItem.Size);
+                address = parentChain.Substring(0, parentChain.Length - 3); // remove " + "
+                if (address[0] != '(')
+                    address = '(' + address + ')';
             }
             else
             {
-                memoryReference = scriptBuilderContext.GetAliasDefinition(memoryItem.FunctionName + "()");
-                if (memoryReference == null)
-                    return;
+                address = String.Format("({0}0x{1})", parentChain, scriptBuilderContext.FormatAddress(memoryAccessor.Address));
             }
 
-            if (needLine)
+            if (!String.IsNullOrEmpty(memoryAccessor.Alias) && memoryAccessor.HasReferencedSize(memoryAccessor.PrimarySize))
             {
-                needLine = false;
-                stream.WriteLine();
+                if (needLine)
+                {
+                    needLine = false;
+                    stream.WriteLine();
+                }
+
+                stream.Write("function ");
+                stream.Write(memoryAccessor.Alias);
+                stream.Write("() => ");
+                stream.Write(Field.GetSizeFunction(memoryAccessor.PrimarySize));
+                stream.WriteLine(address);
             }
 
-            if (memoryItem.FunctionName.EndsWith("()"))
-                memoryItem.FunctionName = memoryItem.FunctionName.Substring(0, memoryItem.FunctionName.Length - 2);
+            if (memoryAccessor.HasMultipleReferencedSizes)
+            {
+                foreach (var size in memoryAccessor.ReferencedSizes)
+                {
+                    if (size == memoryAccessor.PrimarySize)
+                        continue;
 
-            stream.Write("function ");
-            stream.Write(memoryItem.FunctionName);
-            stream.Write("() => ");
-            stream.WriteLine(memoryReference);
+                    var alias = memoryAccessor.GetAlias(size);
+                    if (!String.IsNullOrEmpty(alias))
+                    {
+                        if (needLine)
+                        {
+                            needLine = false;
+                            stream.WriteLine();
+                        }
+
+                        stream.Write("function ");
+                        stream.Write(alias);
+                        stream.Write("() => ");
+                        stream.Write(Field.GetSizeFunction(size));
+                        stream.WriteLine(address);
+                    }
+                }
+            }
 
             foreach (var dumpLookup in lookupsToDump)
             {
-                if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryItem.Address && dumpLookup.MemoryAddresses[0].Size == memoryItem.Size)
+                if (dumpLookup.MemoryAddresses.Count == 1 && dumpLookup.MemoryAddresses[0].Address == memoryAccessor.Address)
                 {
                     DumpLookup(stream, dumpLookup);
                     lookupsToDump.Remove(dumpLookup);
