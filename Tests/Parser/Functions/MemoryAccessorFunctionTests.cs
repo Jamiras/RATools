@@ -5,6 +5,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Parser.Tests.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -199,17 +200,15 @@ namespace RATools.Parser.Tests.Functions
 
         [Test]
         [TestCase("byte(word(0x1234) + word(0x2345))", "byte(word(0x001234) + word(0x002345))")]
-        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
-        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
         public void TestRememberRecall(string input, string expected)
         {
-            var requirements = Evaluate(input);
+            var expr = ExpressionTests.Parse<MemoryAccessorExpression>(input);
 
             var builder = new StringBuilder();
-            var context = new ScriptBuilderContext { NumberFormat = NumberFormat.Hexadecimal };
-            context.AppendRequirements(builder, requirements);
-
+            expr.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 
