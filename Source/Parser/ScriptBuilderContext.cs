@@ -112,6 +112,7 @@ namespace RATools.Parser
             context._resetNextIf = _resetNextIf;
             context._measuredIf = _measuredIf;
             context._aliases = _aliases;
+            context._remember = _remember;
             return context;
         }
 
@@ -244,7 +245,17 @@ namespace RATools.Parser
                 switch (requirement.Type)
                 {
                     case RequirementType.AddAddress:
-                        if (requirement.Left.IsMemoryReference)
+                        if (requirement.Left.Type == FieldType.Recall)
+                        {
+                            _addAddress = new MemoryAccessorAliasChain()
+                            {
+                                Alias = new MemoryAccessorAlias(0),
+                                Next = null,
+                                Requirement = requirement,
+                            };
+                            continue;
+                        }
+                        else if (requirement.Left.IsMemoryReference)
                         {
                             var currentAliases = (_addAddress != null) ? _addAddress.Alias.Children : _aliases;
                             var memoryAccessor = currentAliases.FirstOrDefault(a => a.Address == requirement.Left.Value);
@@ -831,6 +842,9 @@ namespace RATools.Parser
                 case FieldType.Invert:
                     builder.Append('~');
                     break;
+                case FieldType.Recall:
+                    builder.Append(_remember);
+                    return;
             }
 
             var functionName = alias?.GetAlias(field.Size);
