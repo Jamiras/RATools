@@ -5,6 +5,7 @@ using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using RATools.Parser.Tests.Expressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -164,28 +165,28 @@ namespace RATools.Parser.Tests.Functions
 
         [Test]
         [TestCase("byte(word(0x1234))", "byte(word(0x001234))")] // direct pointer
-        [TestCase("byte(word(0x1234) + 10)", "byte(word(0x001234) + 0x00000A)")] // indirect pointer
-        [TestCase("byte(10 + word(0x1234))", "byte(word(0x001234) + 0x00000A)")] // indirect pointer
-        [TestCase("byte(0x1234 + word(0x2345))", "byte(word(0x002345) + 0x001234)")] // array index
+        [TestCase("byte(word(0x1234) + 10)", "byte(word(0x001234) + 0x0A)")] // indirect pointer
+        [TestCase("byte(10 + word(0x1234))", "byte(word(0x001234) + 0x0A)")] // indirect pointer
+        [TestCase("byte(0x1234 + word(0x2345))", "byte(word(0x002345) + 0x1234)")] // array index
         [TestCase("byte(word(word(0x1234)))", "byte(word(word(0x001234)))")] // double direct pointer
-        [TestCase("byte(0x1234 + word(word(0x2345) + 10))", "byte(word(word(0x002345) + 0x00000A) + 0x001234)")] // double indirect pointer
+        [TestCase("byte(0x1234 + word(word(0x2345) + 10))", "byte(word(word(0x002345) + 0x0A) + 0x1234)")] // double indirect pointer
         [TestCase("byte(prev(word(0x1234)))", "byte(prev(word(0x001234)))")] // direct pointer using prev data
-        [TestCase("byte(word(0x1234) * 2)", "byte(word(0x001234) * 0x00000002)")] // scaled direct pointer [unexpected]
-        [TestCase("byte(word(0x2345) * 2 + 0x1234)", "byte(word(0x002345) * 0x00000002 + 0x001234)")] // scaled array index
-        [TestCase("byte(0x1234 + word(0x2345) * 2)", "byte(word(0x002345) * 0x00000002 + 0x001234)")] // scaled array index
+        [TestCase("byte(word(0x1234) * 2)", "byte(word(0x001234) * 2)")] // scaled direct pointer [unexpected]
+        [TestCase("byte(word(0x2345) * 2 + 0x1234)", "byte(word(0x002345) * 2 + 0x1234)")] // scaled array index
+        [TestCase("byte(0x1234 + word(0x2345) * 2)", "byte(word(0x002345) * 2 + 0x1234)")] // scaled array index
         [TestCase("byte(word(word(0x2345) * 2 + 0x1234) * 4 + 0x3456)",
-                  "byte(word(word(0x002345) * 0x00000002 + 0x001234) * 0x00000004 + 0x003456)")] // double scaled array index
+                  "byte(word(word(0x002345) * 2 + 0x1234) * 4 + 0x3456)")] // double scaled array index
         [TestCase("bit(3, word(0x1234))", "bit3(word(0x001234))")] // direct pointer
-        [TestCase("bit(18, word(0x1234))", "bit2(word(0x001234) + 0x000002)")] // direct pointer
-        [TestCase("bit(3, word(0x1234) + 10)", "bit3(word(0x001234) + 0x00000A)")] // indirect pointer
-        [TestCase("bit(18, word(0x1234) + 10)", "bit2(word(0x001234) + 0x00000C)")] // indirect pointer
-        [TestCase("bit(18, 10 + word(0x1234))", "bit2(word(0x001234) + 0x00000C)")] // indirect pointer
-        [TestCase("bit(18, prev(word(0x1234)))", "bit2(prev(word(0x001234)) + 0x000002)")] // direct pointer using prev data
-        [TestCase("bit(18, 0x1234 + word(0x2345) * 2)", "bit2(word(0x002345) * 0x00000002 + 0x001236)")] // scaled array index
+        [TestCase("bit(18, word(0x1234))", "bit2(word(0x001234) + 0x02)")] // direct pointer
+        [TestCase("bit(3, word(0x1234) + 10)", "bit3(word(0x001234) + 0x0A)")] // indirect pointer
+        [TestCase("bit(18, word(0x1234) + 10)", "bit2(word(0x001234) + 0x0C)")] // indirect pointer
+        [TestCase("bit(18, 10 + word(0x1234))", "bit2(word(0x001234) + 0x0C)")] // indirect pointer
+        [TestCase("bit(18, prev(word(0x1234)))", "bit2(prev(word(0x001234)) + 0x02)")] // direct pointer using prev data
+        [TestCase("bit(18, 0x1234 + word(0x2345) * 2)", "bit2(word(0x002345) * 2 + 0x1236)")] // scaled array index
         [TestCase("byte(word(0x1234) - 10)", "byte(word(0x001234) + 0xFFFFFFF6)")]
-        [TestCase("byte(word(0x1234) / 2)", "byte(word(0x001234) / 0x00000002)")]
+        [TestCase("byte(word(0x1234) / 2)", "byte(word(0x001234) / 2)")]
         [TestCase("byte(word(0x1234) & 0x1FF)", "byte(word(0x001234) & 0x000001FF)")]
-        [TestCase("byte((word(0x1234) & 0x1FF) + 99)", "byte((word(0x001234) & 0x000001FF) + 0x000063)")]
+        [TestCase("byte((word(0x1234) & 0x1FF) + 99)", "byte(word(0x001234) & 0x000001FF + 0x63)")]
         public void TestAddAddress(string input, string expected)
         {
             var requirements = Evaluate(input);
@@ -199,17 +200,15 @@ namespace RATools.Parser.Tests.Functions
 
         [Test]
         [TestCase("byte(word(0x1234) + word(0x2345))", "byte(word(0x001234) + word(0x002345))")]
-        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
-        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
-        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "byte(0x00005555 + word(0x001234) + word(0x002345))")]
+        [TestCase("byte(0x5555 + word(0x1234) + word(0x2345))", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
+        [TestCase("byte(word(0x1234) + 0x5555 + word(0x2345))", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
+        [TestCase("byte(word(0x1234) + word(0x2345) + 0x5555)", "byte(remembered(word(0x001234) + word(0x002345)) + 0x5555)")]
         public void TestRememberRecall(string input, string expected)
         {
-            var requirements = Evaluate(input);
+            var expr = ExpressionTests.Parse<MemoryAccessorExpression>(input);
 
             var builder = new StringBuilder();
-            var context = new ScriptBuilderContext { NumberFormat = NumberFormat.Hexadecimal };
-            context.AppendRequirements(builder, requirements);
-
+            expr.AppendString(builder);
             Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
 

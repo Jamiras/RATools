@@ -150,8 +150,8 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.None, null)] // no change necessary
         [TestCase("0 + byte(0x001234) - 9", "=", "0",
             ExpressionType.Comparison, "byte(0x001234) == 9")]
-        [TestCase("byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - 7", ">=", "byte(tbyte(0x001234) + 3)",
-            ExpressionType.Comparison, "byte(tbyte(0x001234) + 1) + byte(tbyte(0x001234) + 2) - byte(tbyte(0x001234) + 3) + 255 >= 262")] // undeflow applied
+        [TestCase("byte(tbyte(0x001234) + 0x01) + byte(tbyte(0x001234) + 0x02) - 7", ">=", "byte(tbyte(0x001234) + 0x03)",
+            ExpressionType.Comparison, "byte(tbyte(0x001234) + 0x01) + byte(tbyte(0x001234) + 0x02) - byte(tbyte(0x001234) + 0x03) + 255 >= 262")] // undeflow applied
         [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234))) - prev(dword(dword(0x001236)))", "==", "0",
             ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) == prev(dword(dword(0x001236)))")] // SubSource prev moved to right side, AddSource moved to line up with right side
         [TestCase("dword(dword(0x001234)) + dword(dword(0x001236)) - prev(dword(dword(0x001234))) - prev(dword(dword(0x001236)))", ">", "0",
@@ -160,9 +160,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.Comparison, "dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236)) > prev(dword(dword(0x001236)))")] // AddSource moved to line up with right side
         [TestCase("dword(dword(0x001234)) - prev(dword(dword(0x001234))) + dword(dword(0x001236))", ">", "prev(dword(dword(0x001236)))",
             ExpressionType.None, null)] // no change necessary
-        [TestCase("dword(dword(0x001234) + 5) - dword(dword(0x001234) + 6) + dword(dword(0x001234) + 7)", "==", "500",
-            ExpressionType.Comparison, "dword(dword(0x001234) + 5) + dword(dword(0x001234) + 7) - 500 == dword(dword(0x001234) + 6)")]
-        [TestCase("dword(dword(0x001234) + 5) - dword(dword(0x001234) + 6) + dword(dword(0x001234) + 7)", ">", "500",
+        [TestCase("dword(dword(0x001234) + 0x05) - dword(dword(0x001234) + 0x06) + dword(dword(0x001234) + 0x07)", "==", "500",
+            ExpressionType.Comparison, "dword(dword(0x001234) + 0x05) + dword(dword(0x001234) + 0x07) - 500 == dword(dword(0x001234) + 0x06)")]
+        [TestCase("dword(dword(0x001234) + 0x05) - dword(dword(0x001234) + 0x06) + dword(dword(0x001234) + 0x07)", ">", "500",
             ExpressionType.None, null)] // non-equality comparison may underflow if the "500" is changed to "-500" and moved to the left. don't change it.
         public void TestNormalizeComparison(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
@@ -322,28 +322,28 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         // invalid syntax (indirect memory references are not allowed on the right side), so go
         // one step farther to see the final optimized logic.
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > 100",
-                  "byte(byte(0x000002) + 2) + 100 < byte(byte(0x000002) + 1)", // A - B > 100  ~>  B + 100 < A
+                  "byte(byte(0x000002) + 0x02) + 100 < byte(byte(0x000002) + 0x01)", // A - B > 100  ~>  B + 100 < A
                   "A:100_I:0xH000002_0xH000002<0xH000001")]      // both A and B have the same base pointer
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000002) + 2) > -100",
-                  "byte(byte(0x000002) + 1) + 100 > byte(byte(0x000002) + 2)", // A - B > -100  ~>  A + 100 > B
+                  "byte(byte(0x000002) + 0x01) + 100 > byte(byte(0x000002) + 0x02)", // A - B > -100  ~>  A + 100 > B
                   "A:100_I:0xH000002_0xH000001>0xH000002")]      // both A and B have the same base pointer
         [TestCase("byte(byte(0x000002) + 1) - byte(byte(0x000003) + 2) > 100",
-                  "byte(byte(0x000002) + 1) - byte(byte(0x000003) + 2) + 255 > 355",  // different base pointer causes secondary AddSource
+                  "byte(byte(0x000002) + 0x01) - byte(byte(0x000003) + 0x02) + 255 > 355",  // different base pointer causes secondary AddSource
                   "A:255_I:0xH000003_B:0xH000002_I:0xH000002_0xH000001>355")]
         [TestCase("byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
-                  "byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
+                  "byte(byte(0x000002) + 0x01) - 1 == prev(byte(byte(0x000002) + 0x01))",
                   "B:1_I:0xH000002_0xH000001=d0xH000001")]      // both A and B have the same base pointer
         [TestCase("prev(byte(byte(0x000002) + 1)) == byte(byte(0x000002) + 1) - 1",
-                  "prev(byte(byte(0x000002) + 1)) + 1 == byte(byte(0x000002) + 1)",
+                  "prev(byte(byte(0x000002) + 0x01)) + 1 == byte(byte(0x000002) + 0x01)",
                   "A:1_I:0xH000002_d0xH000001=0xH000001")]      // constant will be moved
         [TestCase("byte(byte(0x000002) + 1) - prev(byte(byte(0x000002) + 1)) == 1",
-                  "byte(byte(0x000002) + 1) - 1 == prev(byte(byte(0x000002) + 1))",
+                  "byte(byte(0x000002) + 0x01) - 1 == prev(byte(byte(0x000002) + 0x01))",
                   "B:1_I:0xH000002_0xH000001=d0xH000001")]      // prev(A) and -1 will be swapped to share pointer
         [TestCase("word(54) - word(word(43102) + 54) > 37",
-                  "word(word(0x00A85E) + 54) + 37 < word(0x000036)", // A - B > 37  ~>  B + 37 < A
+                  "word(word(0x00A85E) + 0x36) + 37 < word(0x000036)", // A - B > 37  ~>  B + 37 < A
                   "I:0x 00a85e_A:0x 000036_37<0x 000036")] // underflow with combination of direct/indirect, word size
         [TestCase("word(0x000036) + 37 >= word(word(0x00A85E) + 54)",
-                  "word(word(0x00A85E) + 54) - word(0x000036) + 65535 <= 65572", // move A to right side, reverse and adjust for underflow
+                  "word(word(0x00A85E) + 0x36) - word(0x000036) + 65535 <= 65572", // move A to right side, reverse and adjust for underflow
                   "A:65535_B:0x 000036_I:0x 00a85e_0x 000036<=65572")] // combination of direct/indirect, word size
         [TestCase("word(0x000001) - word(0x000002) + word(0x000003) < 100",
                   "word(0x000001) - word(0x000002) + word(0x000003) + 65535 < 65635", // possible underflow of 65535
@@ -497,7 +497,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                             wrapped = false;
                             break;
                         case 'I':
-                            builder.Append("(dword(0x005555) + 4106)"); // 4106 = 0x00100A
+                            builder.Append("(dword(0x005555) + 0x100A)");
                             if (wrapped)
                             {
                                 builder.Append(')');
@@ -505,7 +505,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                             }
                             break;
                         case 'J':
-                            builder.Append("(dword(0x006666) + 4106)"); // 4106 = 0x00100A
+                            builder.Append("(dword(0x006666) + 0x100A)");
                             if (wrapped)
                             {
                                 builder.Append(')');

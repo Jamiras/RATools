@@ -26,7 +26,7 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("tally(8, byte(0x001234) == 56, byte(0x001234) == 67, byte(0x001234) == 78, byte(0x001234) == 89)")]
         [TestCase("tally(10, once(byte(0x001234) == 56), byte(0x001234) == 67)")]
         [TestCase("tally(13, byte(0x001234) == 56 && byte(0x002345) == 67, byte(0x001234) == 56 && byte(0x002345) == 45)")]
-        [TestCase("tally(15, byte(dword(0x002345) + 48) == 56, byte(dword(0x002345) + 32) == 34)")]
+        [TestCase("tally(15, byte(dword(0x002345) + 0x30) == 56, byte(dword(0x002345) + 0x20) == 34)")]
         [TestCase("tally(16, byte(0x001234) + byte(0x002345) == 56, byte(0x001234) - byte(0x002345) == 34)")]
         [TestCase("tally(18, byte(0x001234) == 56, deduct(byte(0x002345) == 99))")]
         [TestCase("tally(19, byte(0x001234) == 56, deduct(byte(0x002345) == 99), byte(0x005555) == 0, deduct(byte(0x005555) == 1))")]

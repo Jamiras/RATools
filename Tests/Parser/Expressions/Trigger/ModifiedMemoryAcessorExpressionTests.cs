@@ -21,7 +21,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) * byte(0x001234)")]
         [TestCase("low4(word(0x001234)) * 20")]
         [TestCase("prev(high4(0x001234)) * 16")]
-        [TestCase("low4(word(0x001234)) * high4(word(0x001234) + 10)")]
+        [TestCase("low4(word(0x001234)) * high4(word(0x001234) + 0x10)")]
         [TestCase("byte(0x001234) * -1")]
         public void TestAppendString(string input)
         {
@@ -110,15 +110,15 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) & 10", "^", "6",
             ExpressionType.MemoryAccessor, "remembered(byte(0x001234) & 0x0000000A) ^ 0x00000006")] // cannot merge
         [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) * remembered(byte(dword(0x002345) + 20))")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 0x10) * remembered(byte(dword(0x002345) + 0x14))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) / remembered(byte(dword(0x002345) + 20))")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 0x10) / remembered(byte(dword(0x002345) + 0x14))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "*", "byte(0x10)",
-            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) * remembered(byte(0x000010))")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 0x10) * remembered(byte(0x000010))")]
         [TestCase("byte(dword(0x001234) + 0x10)", "/", "byte(0x10)",
-            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 16) / remembered(byte(0x000010))")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x001234) + 0x10) / remembered(byte(0x000010))")]
         [TestCase("byte(0x10) * 10", "*", "byte(dword(0x002345) + 0x14)",
-            ExpressionType.MemoryAccessor, "byte(dword(0x002345) + 20) * remembered(byte(0x000010) * 10)")]
+            ExpressionType.MemoryAccessor, "byte(dword(0x002345) + 0x14) * remembered(byte(0x000010) * 10)")]
         [TestCase("byte(0x10) * 10", "/", "byte(dword(0x002345) + 0x14)",
             ExpressionType.Error, "Cannot divide two complex expressions")]
         [TestCase("byte(0x001234) * 10", "&", "2.5",

@@ -69,7 +69,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) == 3 && trigger_when(__ornext(byte(word(0x002345) + 8) == 4 || (byte(word(0x002345) + 8) >= 7 && byte(word(0x002345) + 8) <= 10)))",
                   "0xH001234=3_I:0x 002345_N:0xH000008>=7_I:0x 002345_O:0xH000008<=10_I:0x 002345_T:0xH000008=4")]
         [TestCase("dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4)) == 6 && prev(dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4))) == 0",
-                  "K:0x 002345&1023_A:{recall}*8_A:4_K:0xX001234_I:{recall}_0xX000000=6_K:0x 002345&1023_A:{recall}*8_A:4_K:0xX001234_I:{recall}_d0xX000000=0")] // remember chain will be duplicated here, it'll get optimized out later
+                  "K:0x 002345&1023_A:{recall}*8_K:0xX001234_I:{recall}_0xX000004=6_K:0x 002345&1023_A:{recall}*8_K:0xX001234_I:{recall}_d0xX000004=0")] // remember chain will be duplicated here, it'll get optimized out later
         public void TestBuildAchievement(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

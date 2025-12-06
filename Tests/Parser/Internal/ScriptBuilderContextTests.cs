@@ -1,5 +1,6 @@
 ﻿using NUnit.Framework;
 using RATools.Data;
+using System.Collections.Generic;
 using System.Text;
 
 namespace RATools.Parser.Tests.Internal
@@ -17,8 +18,8 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("A:0xH001234=0_0xH002345=2", "(byte(0x001234) + byte(0x002345)) == 2")]
         [TestCase("B:0xH001234=0_0xH002345=2", "(byte(0x002345) - byte(0x001234)) == 2")]
         [TestCase("A:0xH001234=0_R:0xH002345=2", "never((byte(0x001234) + byte(0x002345)) == 2)")]
-        [TestCase("I:0x 001234_0xH002345=2", "byte(word(0x001234) + 0x002345) == 2")]
-        [TestCase("I:0x 001234_I:0x 002222_0xH002345=2", "byte(word(word(0x001234) + 0x002222) + 0x002345) == 2")]
+        [TestCase("I:0x 001234_0xH002345=2", "byte(word(0x001234) + 0x2345) == 2")]
+        [TestCase("I:0x 001234_I:0x 002222_0xH002345=2", "byte(word(word(0x001234) + 0x2222) + 0x2345) == 2")]
         [TestCase("O:0xH001234=1_0xH002345=2", "(byte(0x001234) == 1 || byte(0x002345) == 2)")]
         [TestCase("O:0xH001234=1_0=1", "byte(0x001234) == 1")]
         [TestCase("O:0=1_0xH002345=2", "byte(0x002345) == 2")]
@@ -67,7 +68,7 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("Z:0x 000001=1_N:0x 000002=2.1._O:0x 000003=3_0x 000004=4",
                   "((once(word(0x000002) == 2) && word(0x000003) == 3) || word(0x000004) == 4) && never(word(0x000001) == 1)")]
         [TestCase("I:0xX001234_A:0xH000001/0xH000001_0=1",
-                  "((byte(dword(0x001234) + 0x000001) / byte(dword(0x001234) + 0x000001))) == 1")]
+                  "(byte(dword(0x001234) + 0x01) / byte(dword(0x001234) + 0x01)) == 1")]
         public void TestAppendRequirements(string input, string expected)
         {
             var trigger = Trigger.Deserialize(input);
@@ -144,6 +145,47 @@ namespace RATools.Parser.Tests.Internal
 
             // make sure we didn't modify the source requirements
             Assert.That(trigger.Serialize(new SerializationContext()), Is.EqualTo(input));
+        }
+
+        [TestCase("0xH1234=6", "lives() == 6")]
+        [TestCase("0xH1236=6", "byte(0x001236) == 6")]
+        [TestCase("0xH1234>d0xH1234", "lives() > prev(lives())")]
+        [TestCase("I:0xX2345_0xX0004<0xX0008", "stage_1_coins() < stage_2_coins()")]
+        [TestCase("I:0xX2345_0xX0008>99", "stage_2_coins() > 99")]
+        [TestCase("I:0xX2345_0xX000C!=0", "dword(pointer() + 0x0C) != 0")]
+        [TestCase("I:0xX2345&65535_0xX000C!=0", "dword(pointer() & 0xFFFF + 0x0C) != 0")]
+        [TestCase("I:0xX9999_0xX000C!=0", "dword(dword(0x009999) + 0x0C) != 0")]
+        [TestCase("I:0xX0100_I:0xX0004_0xX0008=5", "current_level() == 5")]
+        [TestCase("I:0xX2345_0xX0004>d0xX0004.1._0xH3333=6", "once(stage_1_coins() > prev(stage_1_coins())) && byte(0x003333) == 6")]
+        public void TestAppendRequirementAliased(string input, string expected)
+        {
+            var trigger = Trigger.Deserialize(input);
+            var context = new ScriptBuilderContext();
+
+            var notes = new CodeNote[]
+            {
+                new CodeNote(0x1234, "[8-bit] Lives"),
+                new CodeNote(0x2345, "[32-bit] Pointer\r\n+0x04=[32-bit] Stage 1 Coins\r\n+0x08=[32-bit] Stage 2 Coins\r\n"),
+                new CodeNote(0x0100, "[32-bit] Pointer\r\n+0x04=[32-bit] Nested Pointer\r\n++0x08=[32-bit] Current Level\r\n"),
+            };
+
+            var notesDict = new Dictionary<uint, CodeNote>();
+            foreach (var note in notes)
+                notesDict[note.Address] = note;
+
+            var memoryAccessors = new List<MemoryAccessorAlias>();
+            MemoryAccessorAlias.AddMemoryAccessors(memoryAccessors, trigger, notesDict);
+
+            foreach (var memoryAccessor in memoryAccessors)
+            {
+                memoryAccessor.UpdateAliasFromNote(NameStyle.SnakeCase);
+                context.AddAlias(memoryAccessor);
+            }
+
+            var builder = new StringBuilder();
+            context.AppendRequirements(builder, trigger.Core.Requirements);
+
+            Assert.That(builder.ToString(), Is.EqualTo(expected));
         }
     }
 }

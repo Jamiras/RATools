@@ -12,7 +12,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [Test]
         [TestCase("byte(0x001234) == 3")]
         [TestCase("low4(word(0x001234)) < 5")]
-        [TestCase("word(dword(0x002345) + 4660) >= 500")]
+        [TestCase("word(dword(0x002345) + 0x1234) >= 500")]
         [TestCase("byte(0x001234) > prev(byte(0x001234))")]
         public void TestAppendString(string input)
         {
@@ -211,19 +211,19 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
         [Test]
         [TestCase("byte(WA) > prev(byte(WA))", "byte(WA) > prev(byte(WA))")] // simple compare to prev of same address
-        [TestCase("byte(WA + 10) > prev(byte(WA + 10))", "byte(WA + 10) > prev(byte(WA + 10))")] // simple compare to prev of same address with offset
-        [TestCase("byte(WA + 10) > byte(WA + 11)", "byte(WA + 10) > byte(WA + 11)")] // same base, different offsets
-        [TestCase("byte(WA + 10) > byte(WB + 10)", "byte(WA + 10) - byte(WB + 10) + 255 > 255")] // different bases, same offset
+        [TestCase("byte(WA + 0x0A) > prev(byte(WA + 0x0A))", "byte(WA + 0x0A) > prev(byte(WA + 0x0A))")] // simple compare to prev of same address with offset
+        [TestCase("byte(WA + 0x0A) > byte(WA + 0x0B)", "byte(WA + 0x0A) > byte(WA + 0x0B)")] // same base, different offsets
+        [TestCase("byte(WA + 0x0A) > byte(WB + 0x0A)", "byte(WA + 0x0A) - byte(WB + 0x0A) + 255 > 255")] // different bases, same offset
         [TestCase("byte(WA) == byte(WB)", "byte(WA) - byte(WB) == 0")] // becomes B-A==0
         [TestCase("byte(WA) != byte(WB)", "byte(WA) - byte(WB) != 0")] // becomes B-A!=0
         [TestCase("byte(WA) > byte(WB)", "byte(WA) - byte(WB) + 255 > 255")] // becomes B-A>M
         [TestCase("byte(WA) >= byte(WB)", "byte(WA) - byte(WB) + 255 >= 255")] // becomes B-A-1>=M
         [TestCase("byte(WA) < byte(WB)", "byte(WA) - byte(WB) + 255 < 255")] // becomes B-A+M>M
         [TestCase("byte(WA) <= byte(WB)", "byte(WA) - byte(WB) + 255 <= 255")] // becomes B-A+M>=M
-        [TestCase("byte(WA + 10) + 20 > byte(WB)", "byte(word(0x002345)) - byte(word(0x001234) + 10) + 255 < 275")]
-        [TestCase("byte(WA + 10) > byte(WB) - 20", "byte(word(0x002345)) - byte(word(0x001234) + 10) + 255 < 275")]
-        [TestCase("byte(WA + 10) - 20 > byte(WB)", "byte(word(0x001234) + 10) - byte(word(0x002345)) + 255 > 275")]
-        [TestCase("byte(WA + 10) > byte(WB) + 20", "byte(word(0x001234) + 10) - byte(word(0x002345)) + 255 > 275")]
+        [TestCase("byte(WA + 0x0A) + 20 > byte(WB)", "byte(word(0x002345)) - byte(word(0x001234) + 0x0A) + 255 < 275")]
+        [TestCase("byte(WA + 0x0A) > byte(WB) - 20", "byte(word(0x002345)) - byte(word(0x001234) + 0x0A) + 255 < 275")]
+        [TestCase("byte(WA + 0x0A) - 20 > byte(WB)", "byte(word(0x001234) + 0x0A) - byte(word(0x002345)) + 255 > 275")]
+        [TestCase("byte(WA + 0x0A) > byte(WB) + 20", "byte(word(0x001234) + 0x0A) - byte(word(0x002345)) + 255 > 275")]
         [TestCase("word(WA) > word(WB)", "word(WA) - word(WB) + 65535 > 65535")] // different addresses (16-bit)
         [TestCase("byte(WA) > word(WB)", "byte(WA) - word(WB) + 65535 > 65535")] // different sizes and addresses
         [TestCase("word(WA) > byte(WB)", "word(WA) - byte(WB) + 255 > 255")] // different sizes and addresses
@@ -231,9 +231,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(WA) > tbyte(WB)", "byte(WA) - tbyte(WB) + 16777215 > 16777215")] // different sizes and addresses
         [TestCase("tbyte(WA) > word(WB)", "tbyte(WA) - word(WB) + 65535 > 65535")] // different sizes and addresses
         [TestCase("byte(WA) > dword(WB)", "byte(WA) - dword(WB) > 0")] // no underflow adjustment for 32-bit reads
-        [TestCase("byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2)", // simple compare to prev of same address (double indirect)
-            "byte(word(WA + 10) + 2) > prev(byte(word(WA + 10) + 2))")]
-        [TestCase("bit(18, WA + 10) > prev(bit(18, WA + 10))", "bit2(WA + 12) > prev(bit2(WA + 12))")] // simple compare to prev of same address with offset
+        [TestCase("byte(word(WA + 0x0A) + 2) > prev(byte(word(WA + 0x0A) + 2)", // simple compare to prev of same address (double indirect)
+            "byte(word(WA + 0x0A) + 0x02) > prev(byte(word(WA + 0x0A) + 0x02))")]
+        [TestCase("bit(18, WA + 0x0A) > prev(bit(18, WA + 0x0A))", "bit2(WA + 0x0C) > prev(bit2(WA + 0x0C))")] // simple compare to prev of same address with offset
         public void TestAddAddressAcrossCondition(string input, string expected)
         {
             input = input.Replace("WA", "word(0x1234)");

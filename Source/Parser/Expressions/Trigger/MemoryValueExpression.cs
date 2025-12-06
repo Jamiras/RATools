@@ -1327,8 +1327,6 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ExpressionBase ClearConstant()
         {
-            Debug.Assert(!IsReadOnly);
-
             if (_memoryAccessors == null)
                 return new IntegerConstantExpression(0);
 

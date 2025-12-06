@@ -212,6 +212,15 @@ namespace RATools.Parser
             return alias;
         }
 
+        public void SetAlias(FieldSize size, string alias)
+        {
+            if (size != PrimarySize && HasReferencedSize(size))
+            {
+                _aliases ??= new Dictionary<FieldSize, string>();
+                _aliases[size] = alias;
+            }
+        }
+
         public void UpdateAliasFromNote(NameStyle style)
         {
             _aliases = null;
@@ -513,10 +522,10 @@ namespace RATools.Parser
             if (index < 0)
             {
                 CodeNote note = null;
-                if (parentNote == null)
-                    codeNotes.TryGetValue(field.Value, out note);
-                else
+                if (parentNote != null)
                     note = parentNote.OffsetNotes.FirstOrDefault(n => n.Address == field.Value);
+                else if (parentMemoryAccessor.Address == 0 && parentMemoryAccessor.PrimarySize == FieldSize.None)
+                    codeNotes.TryGetValue(field.Value, out note);
 
                 if (note != null)
                     memoryAccessor.SetNote(note);
