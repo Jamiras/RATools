@@ -111,8 +111,10 @@ namespace RATools.Parser.Functions
 
             if (needRemember)
             {
-                memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, size, 0U);
-                memoryAccessor.RememberPointer = new RememberRecallExpression(memoryValue);
+                memoryAccessor = new MemoryAccessorExpression(FieldType.MemoryAddress, size, (uint) memoryValue.IntegerConstant);
+                memoryAccessor.RememberPointer = memoryValue.HasConstant ?
+                    new RememberRecallExpression((MemoryValueExpression)memoryValue.ClearConstant()) :
+                    new RememberRecallExpression(memoryValue);
             }
             else
             {

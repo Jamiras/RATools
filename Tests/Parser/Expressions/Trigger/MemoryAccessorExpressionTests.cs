@@ -10,11 +10,11 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [Test]
         [TestCase("byte(0x001234)")]
         [TestCase("low4(word(0x001234))")]
-        [TestCase("word(dword(0x002345) + 4660)")]
+        [TestCase("word(dword(0x002345) + 0x1234)")]
         [TestCase("word(dword(0x002345) + dword(0x003456))")]
-        [TestCase("bit6(word(0x002345) * 106 + 4660)")]
-        [TestCase("byte(word(dword(0x002345) + 10) + 4660)")]
-        [TestCase("word((dword(0x002345) & 0x1FFFFFF) + 4660)")]
+        [TestCase("bit6(word(0x002345) * 106 + 0x1234)")]
+        [TestCase("byte(word(dword(0x002345) + 0x0A) + 0x1234)")]
+        [TestCase("word((dword(0x002345) & 0x1FFFFFF) + 0x1234)")]
         [TestCase("prev(high4(0x001234))")]
         [TestCase("prior(bit0(0x001234))")]
         public void TestAppendString(string input)
@@ -42,7 +42,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("prev(high4(0x001234))", "d0xU001234")]
         [TestCase("prior(bit0(0x001234))", "p0xM001234")]
         [TestCase("dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4))",
-            "K:0x 002345&1023_A:{recall}*8_A:4_K:0xX001234_I:{recall}_0xX000000")]
+            "K:0x 002345&1023_A:{recall}*8_K:0xX001234_I:{recall}_0xX000004")]
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<MemoryAccessorExpression>(input);

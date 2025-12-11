@@ -22,7 +22,7 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("byte(0x1234) / byte(0x2345) < 0.8", "A:0xH001234/0xH002345_0<f0.8")]
         [TestCase("byte(0x1234) * 100 / byte(0x2345) < 80", "K:0xH001234*100_A:{recall}/0xH002345_0<80")]
         [TestCase("dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4)) == 6 && prev(dword(dword(0x1234) + ((word(0x2345) & 0x3FF) * 8 + 4))) == 0",
-                  "K:0x 002345&1023_A:{recall}*8_A:4_K:0xX001234_I:{recall}_0xX000000=6_I:{recall}_d0xX000000=0")]
+                  "K:0x 002345&1023_A:{recall}*8_K:0xX001234_I:{recall}_0xX000004=6_I:{recall}_d0xX000004=0")]
         public void TestGetConditionString(string input, string expected)
         {
             ExpressionBase error;

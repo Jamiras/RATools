@@ -193,7 +193,7 @@ namespace RATools.Parser.Tests
                   "measured(byte(0x001234) >= 100, when=word(0x002345) == 7)")]
         [TestCase("Q:0x 002345=7", "measured_if(word(0x002345) == 7)")] // this is an error - measured_if without measured cannot be converted to a when clause
         [TestCase("C:0xH464a70>d0xH464a70.1._M:0=1.8._I:0xW5b9624_Q:0xM000612=0",
-                  "measured(tally(8, once(byte(0x464A70) > prev(byte(0x464A70)))), when=bit0(tbyte(0x5B9624) + 0x000612) == 0)")]
+                  "measured(tally(8, once(byte(0x464A70) > prev(byte(0x464A70)))), when=bit0(tbyte(0x5B9624) + 0x612) == 0)")]
         public void TestParseRequirements(string input, string expected)
         {
             var builder = new AchievementBuilder();

@@ -237,6 +237,12 @@ namespace RATools.Parser.Expressions.Trigger
             if (_rememberPointer != null)
             {
                 _rememberPointer.AppendString(builder);
+
+                if (Field.Value != 0)
+                {
+                    builder.Append(" + ");
+                    builder.AppendFormat("0x{0:X2}", Field.Value);
+                }
             }
             else if (_pointerChain != null)
             {
@@ -253,7 +259,7 @@ namespace RATools.Parser.Expressions.Trigger
                     if (i == 0)
                         builder.AppendFormat("0x{0:X6}", _pointerChain[i].Left.Value);
                     else if (_pointerChain[i].Left.Value != 0)
-                        builder.Append(_pointerChain[i].Left.Value);
+                        builder.AppendFormat("0x{0:X2}", _pointerChain[i].Left.Value);
                     else
                         builder.Length -= 3;
 
@@ -292,7 +298,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
 
                 if (Field.Value != 0)
-                    builder.Append(Field.Value);
+                    builder.AppendFormat("0x{0:X2}", Field.Value);
                 else
                     builder.Length -= 3;
             }

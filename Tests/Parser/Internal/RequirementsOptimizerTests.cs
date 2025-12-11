@@ -334,7 +334,7 @@ namespace RATools.Parser.Tests.Internal
         }
 
         [TestCase("word(word(0x001234) + 138) + 1 >= word(0x2345)",             // AddAddress compared to a non-AddAddress will generate an extra condition
-                  "((word(word(0x001234) + 0x00008A)) + 1) >= word(0x002345)")] // to prevent the AddAddress from affecting the non-AddAddress. merge the +1 into that
+                  "(word(word(0x001234) + 0x8A) + 1) >= word(0x002345)")] // to prevent the AddAddress from affecting the non-AddAddress. merge the +1 into that
         [TestCase("never(once(prev(byte(1)) - 1 == byte(1)) && repeated(10, always_true())",
                   "never(repeated(10, (once((prev(byte(0x000001)) - 1) == byte(0x000001))) && always_true()))")] // don't merge the -1 in the prev clause with the 1 in the always_true clause
         public void TestOptimizeMergeAddSourceConstants(string input, string expected)

@@ -11,12 +11,18 @@ namespace RATools.Parser
         public ScriptBuilderContext() 
         {
             NumberFormat = NumberFormat.Decimal;
+            AddressWidth = 6;
             WrapWidth = Int32.MaxValue;
             Indent = 0;
-            _aliases = new List<KeyValuePair<string, string>>();
+            _aliases = new List<MemoryAccessorAlias>();
         }
 
         public NumberFormat NumberFormat { get; set; }
+
+        /// <summary>
+        /// Gets or sets the number of characters to use for addresses.
+        /// </summary>
+        public int AddressWidth { get; set; }
 
         public int WrapWidth { get; set; }
 
@@ -40,38 +46,30 @@ namespace RATools.Parser
         private StringBuilder _subSources;
         private StringBuilder _addHits;
         private StringBuilder _andNext;
-        private StringBuilder _addAddress;
         private StringBuilder _resetNextIf;
         private StringBuilder _measuredIf;
         private StringBuilder _remember;
         private Requirement _lastAndNext;
         private int _remainingWidth;
 
-        private List<KeyValuePair<string, string>> _aliases;
-
-        public void AddAlias(string memoryReference, string alias)
+        class MemoryAccessorAliasChain
         {
-            for (int i = 0; i < _aliases.Count; i++)
-            {
-                if (_aliases[i].Key == memoryReference)
-                {
-                    _aliases[i] = new KeyValuePair<string, string>(memoryReference, alias);
-                    return;
-                }
-            }
+            public MemoryAccessorAlias Alias { get; set; }
+            public MemoryAccessorAliasChain Next { get; set; }
+            public Requirement Requirement { get; set; }
+        };
+        private MemoryAccessorAliasChain _addAddress;
 
-            _aliases.Add(new KeyValuePair<string, string>(memoryReference, alias));
+        private List<MemoryAccessorAlias> _aliases;
+
+        public void AddAlias(MemoryAccessorAlias alias)
+        {
+            _aliases.Add(alias);
         }
 
-        public string GetAliasDefinition(string alias)
+        public void AddAliases(IEnumerable<MemoryAccessorAlias> aliases)
         {
-            foreach (var kvp in _aliases)
-            {
-                if (kvp.Value == alias)
-                    return kvp.Key;
-            }
-
-            return null;
+            _aliases.AddRange(aliases);
         }
 
         public override string ToString()
@@ -102,7 +100,7 @@ namespace RATools.Parser
             _remainingWidth = WrapWidth - Indent;
         }
 
-        private ScriptBuilderContext CreatedNestedContext()
+        private ScriptBuilderContext CreateNestedContext()
         {
             var context = new ScriptBuilderContext();
             context.NumberFormat = NumberFormat;
@@ -113,6 +111,8 @@ namespace RATools.Parser
             context._addAddress = _addAddress;
             context._resetNextIf = _resetNextIf;
             context._measuredIf = _measuredIf;
+            context._aliases = _aliases;
+            context._remember = _remember;
             return context;
         }
 
@@ -221,7 +221,8 @@ namespace RATools.Parser
             if (requirementEx.Requirements.Last().HitCount > 0 &&
                 requirementEx.Requirements.Any(r => r.Type == RequirementType.AddHits))
             {
-                var nestedContext = CreatedNestedContext();
+                var nestedContext = CreateNestedContext();
+                nestedContext._addAddress = null;
                 nestedContext.WrapWidth = Int32.MaxValue;
                 var tallyBuilder = new StringBuilder();
                 nestedContext.AppendTally(tallyBuilder, requirementEx.Requirements);
@@ -244,10 +245,30 @@ namespace RATools.Parser
                 switch (requirement.Type)
                 {
                     case RequirementType.AddAddress:
-                        if (_addAddress == null)
-                            _addAddress = new StringBuilder();
-                        AppendFields(_addAddress, requirement);
-                        _addAddress.Append(" + ");
+                        if (requirement.Left.Type == FieldType.Recall)
+                        {
+                            _addAddress = new MemoryAccessorAliasChain()
+                            {
+                                Alias = new MemoryAccessorAlias(0),
+                                Next = null,
+                                Requirement = requirement,
+                            };
+                            continue;
+                        }
+                        else if (requirement.Left.IsMemoryReference)
+                        {
+                            var currentAliases = (_addAddress != null) ? _addAddress.Alias.Children : _aliases;
+                            var memoryAccessor = currentAliases.FirstOrDefault(a => a.Address == requirement.Left.Value);
+                            if (memoryAccessor == null)
+                                memoryAccessor = new MemoryAccessorAlias(requirement.Left.Value);
+                            _addAddress = new MemoryAccessorAliasChain()
+                            {
+                                Alias = memoryAccessor,
+                                Next = _addAddress,
+                                Requirement = requirement,
+                            };
+                            continue;
+                        }
                         break;
 
                     case RequirementType.AddSource:
@@ -317,9 +338,6 @@ namespace RATools.Parser
 
         private void Append(StringBuilder builder, StringBuilder source)
         {
-            foreach (var alias in _aliases)
-                source.Replace(alias.Key, alias.Value);
-
             if (source.Length <= _remainingWidth)
             {
                 // full string fits on current line
@@ -497,7 +515,7 @@ namespace RATools.Parser
                 case RequirementType.PauseIf:
                     if (_resetNextIf != null || requirement.HitCount != 0)
                     {
-                        var nestedContext = CreatedNestedContext();
+                        var nestedContext = CreateNestedContext();
                         nestedContext._resetNextIf = null;
 
                         var comparison = new StringBuilder();
@@ -520,6 +538,7 @@ namespace RATools.Parser
                         }
 
                         builder.Append(')');
+                        _addAddress = null;
                     }
                     else
                     {
@@ -698,7 +717,7 @@ namespace RATools.Parser
 
                 default:
                     if (requirement.Operator != RequirementOperator.None &&
-                        NullOrEmpty(_subSources) && NullOrEmpty(_addSources))
+                        NullOrEmpty(_subSources) && NullOrEmpty(_addSources) && _addAddress == null)
                     {
                         var result = requirement.Evaluate();
                         if (result == null && requirement.HitCount > 0)
@@ -727,7 +746,7 @@ namespace RATools.Parser
                         }
                     }
 
-                    AppendField(builder, requirement.Left, _addAddress?.ToString());
+                    AppendField(builder, requirement.Left);
                     break;
             }
 
@@ -767,50 +786,23 @@ namespace RATools.Parser
                 builder.Append(requirement.Operator.ToOperatorString());
                 builder.Append(' ');
 
-                AppendField(builder, requirement.Right, _addAddress?.ToString());
+                AppendField(builder, requirement.Right);
             }
 
             if (suffix != null)
                 builder.Append(suffix);
 
-            _addAddress?.Clear();
+            _addAddress = null;
         }
 
         private void AppendFields(StringBuilder builder, Requirement requirement)
         {
-            if (!NullOrEmpty(_addAddress))
-            {
-                var addAddressString = _addAddress.ToString();
-                _addAddress.Clear();
-
-                if (!ReferenceEquals(_addAddress, builder))
-                    builder.Append('(');
-
-                AppendField(builder, requirement.Left, addAddressString);
-
-                if (requirement.Operator != RequirementOperator.None && requirement.Right.IsMemoryReference)
-                {
-                    // make sure to include the AddAddress logic on the right side too.
-                    _addAddress.Append(addAddressString);
-                    AppendFieldModifier(builder, requirement);
-                    _addAddress.Clear();
-                }
-                else
-                {
-                    AppendFieldModifier(builder, requirement);
-                }
-
-                if (!ReferenceEquals(_addAddress, builder))
-                    builder.Append(')');
-            }
-            else
-            {
-                AppendField(builder, requirement.Left);
-                AppendFieldModifier(builder, requirement);
-            }
+            AppendField(builder, requirement.Left);
+            AppendFieldModifier(builder, requirement);
+            _addAddress = null;
         }
 
-        private void AppendField(StringBuilder builder, Field field, string addAddressString = null)
+        private void AppendField(StringBuilder builder, Field field)
         {
             if (field.Type == FieldType.Recall && _remember != null && _remember.Length > 0)
             {
@@ -818,8 +810,88 @@ namespace RATools.Parser
                 builder.Append(_remember);
                 builder.Append(')');
             }
+            else if (field.IsMemoryReference)
+            {
+                var currentAliases = (_addAddress != null) ? _addAddress.Alias.Children : _aliases;
+                var memoryAccessor = currentAliases.FirstOrDefault(a => a.Address == field.Value);
+                AppendFieldAlias(builder, field, memoryAccessor, _addAddress, null);
+            }
             else
-                field.AppendString(builder, NumberFormat, addAddressString);
+            {
+                field.AppendString(builder, NumberFormat);
+            }
+        }
+
+        private void AppendFieldAlias(StringBuilder builder, Field field, MemoryAccessorAlias alias, MemoryAccessorAliasChain parent, Requirement parentRequirement)
+        {
+            bool needClosingParenthesis = false;
+            switch (field.Type)
+            {
+                case FieldType.PreviousValue:
+                    builder.Append("prev(");
+                    needClosingParenthesis = true;
+                    break;
+                case FieldType.PriorValue:
+                    builder.Append("prior(");
+                    needClosingParenthesis = true;
+                    break;
+                case FieldType.BinaryCodedDecimal:
+                    builder.Append("bcd(");
+                    needClosingParenthesis = true;
+                    break;
+                case FieldType.Invert:
+                    builder.Append('~');
+                    break;
+                case FieldType.Recall:
+                    builder.Append(_remember);
+                    return;
+            }
+
+            var functionName = alias?.GetAlias(field.Size);
+            if (!String.IsNullOrEmpty(functionName))
+            {
+                builder.Append(functionName);
+                builder.Append("()");
+            }
+            else
+            {
+                builder.Append(Field.GetSizeFunction(field.Size));
+                builder.Append('(');
+
+                if (parent != null)
+                {
+                    AppendFieldAlias(builder, parent.Requirement.Left, parent.Alias, parent.Next, parent.Requirement);
+                    if (field.Value != 0)
+                        builder.AppendFormat(" + 0x{0:X2}", field.Value);
+                    builder.Append(')');
+                }
+                else
+                {
+                    builder.Append("0x");
+                    builder.Append(FormatAddress(field.Value));
+                    builder.Append(')');
+                }
+            }
+
+            if (parentRequirement != null)
+                AppendFieldModifier(builder, parentRequirement);
+
+            if (needClosingParenthesis)
+                builder.Append(')');
+        }
+
+        public string FormatAddress(UInt32 address)
+        {
+            switch (AddressWidth)
+            {
+                case 2:
+                    return String.Format("{0:X2}", address);
+                case 4:
+                    return String.Format("{0:X4}", address);
+                default:
+                    return String.Format("{0:X6}", address);
+            }
+
         }
 
         private void AppendFieldModifier(StringBuilder builder, Requirement requirement)
@@ -830,28 +902,34 @@ namespace RATools.Parser
                 builder.Append(requirement.Operator.ToOperatorString());
                 builder.Append(' ');
 
-                switch (requirement.Operator)
+                if (requirement.Right.Type == FieldType.Value)
                 {
-                    case RequirementOperator.BitwiseAnd:
-                    case RequirementOperator.BitwiseXor:
-                        // force right side to be hexadecimal for bitwise operators
-                        var context = Clone();
-                        context.NumberFormat = NumberFormat.Hexadecimal;
-                        context.AppendField(builder, requirement.Right,
-                            ReferenceEquals(builder, _addAddress) ? null : _addAddress?.ToString());
-                        break;
+                    switch (requirement.Operator)
+                    {
+                        case RequirementOperator.BitwiseAnd:
+                        case RequirementOperator.BitwiseXor:
+                            // force right side to be hexadecimal for bitwise operators
+                            requirement.Right.AppendString(builder, NumberFormat.Hexadecimal);
+                            return;
 
-                    default:
-                        AppendField(builder, requirement.Right,
-                            ReferenceEquals(builder, _addAddress) ? null : _addAddress?.ToString());
-                        break;
+                        default:
+                            // force right side to decimal for single-digit decimal values
+                            if (requirement.Right.Type == FieldType.Value && requirement.Right.Value < 10)
+                            {
+                                requirement.Right.AppendString(builder, NumberFormat.Decimal);
+                                return;
+                            }
+                            break;
+                    }
                 }
+
+                AppendField(builder, requirement.Right);
             }
         }
 
         private void AppendAndOrNext(Requirement requirement)
         {
-            var nestedContext = CreatedNestedContext();
+            var nestedContext = CreateNestedContext();
             nestedContext._addHits = null;
             nestedContext._measuredIf = null;
             nestedContext._resetNextIf = null;
@@ -859,11 +937,12 @@ namespace RATools.Parser
             _andNext = new StringBuilder();
 
             if (!NullOrEmpty(_addSources) || !NullOrEmpty(_subSources) ||
-                !NullOrEmpty(_addAddress))
+                _addAddress != null)
             {
                 _andNext.Append('(');
                 nestedContext.AppendRequirement(_andNext, requirement);
                 _andNext.Append(')');
+                _addAddress = null;
             }
             else
             {
@@ -893,7 +972,7 @@ namespace RATools.Parser
 
         private void AppendModifyHits(StringBuilder builder, Requirement requirement)
         {
-            var nestedContext = CreatedNestedContext();
+            var nestedContext = CreateNestedContext();
             nestedContext._addHits = null;
             nestedContext._measuredIf = null;
             nestedContext._resetNextIf = null;
@@ -919,7 +998,7 @@ namespace RATools.Parser
             }
 
             // the final clause will get generated as a "repeated" because we've ignored the AddHits subclauses
-            var nestedContext = CreatedNestedContext();
+            var nestedContext = CreateNestedContext();
             nestedContext.Reset();
             nestedContext._measuredIf = _measuredIf;
             nestedContext.Indent += 4;
