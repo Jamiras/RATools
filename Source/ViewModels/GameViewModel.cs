@@ -1,12 +1,12 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
-using Jamiras.IO.Serialization;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Parser;
 using RATools.Services;
+using RATools.ViewModels.Navigation;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -37,13 +37,9 @@ namespace RATools.ViewModels
             Notes = new Dictionary<uint, CodeNote>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
-            _publishedAchievements = new List<Achievement>();
-            _publishedLeaderboards = new List<Leaderboard>();
-            _publishedSets = new List<AchievementSet>();
-            _publishedRichPresence = null;
-
             _logger = logger;
             _fileSystemService = fileSystemService;
+            _editors = new List<ViewerViewModelBase>();
 
             _backNavigationStack = new FixedSizeStack<NavigationItem>(128);
             _forwardNavigationStack = new Stack<NavigationItem>(32);
@@ -51,10 +47,7 @@ namespace RATools.ViewModels
 
         private readonly ILogger _logger;
         protected readonly IFileSystemService _fileSystemService;
-        protected readonly List<Achievement> _publishedAchievements;
-        protected readonly List<Leaderboard> _publishedLeaderboards;
-        protected readonly List<AchievementSet> _publishedSets;
-        protected RichPresence _publishedRichPresence;
+        protected PublishedAssets _publishedAssets;
         protected LocalAssets _localAssets;
 
         public void InitializeForUI()
@@ -79,6 +72,10 @@ namespace RATools.ViewModels
         internal int GameId { get; private set; }
         internal int ConsoleId { get; private set; }
         internal string RACacheDirectory { get; private set; }
+        protected void SetRACacheDirectory(string value)
+        {
+            RACacheDirectory = value;
+        }
         internal Dictionary<uint, CodeNote> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
 
@@ -215,84 +212,32 @@ namespace RATools.ViewModels
         }
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
-        { 
-            var editors = new List<ViewerViewModelBase>();
-            if (Script != null)
-                editors.Add(Script);
-
-            var selectedEditor = (SelectedEditor != null) ? SelectedEditor.Title : null;
-
+        {
             if (interpreter != null)
             {
                 SerializationContext = interpreter.SerializationContext;
 
                 GeneratedAchievementCount = interpreter.Achievements.Count();
-                editors.Capacity += GeneratedAchievementCount;
-
-                if (!String.IsNullOrEmpty(interpreter.RichPresence))
-                {
-                    var richPresenceViewModel = new RichPresenceViewModel(this);
-                    richPresenceViewModel.Generated.Asset = new RichPresence
-                    {
-                        Script = interpreter.RichPresence
-                    };
-                    richPresenceViewModel.SourceLine = interpreter.RichPresenceLine;
-                    editors.Add(richPresenceViewModel);
-                }
-
-                foreach (var achievement in interpreter.Achievements)
-                {
-                    var achievementViewModel = new AchievementViewModel(this);
-                    achievementViewModel.Generated.Asset = achievement;
-                    achievementViewModel.SourceLine = interpreter.GetSourceLine(achievement);
-                    editors.Add(achievementViewModel);
-                }
-
-                foreach (var leaderboard in interpreter.Leaderboards)
-                {
-                    var leaderboardViewModel = new LeaderboardViewModel(this);
-                    leaderboardViewModel.Generated.Asset = leaderboard;
-                    leaderboardViewModel.SourceLine = interpreter.GetSourceLine(leaderboard);
-                    editors.Add(leaderboardViewModel);
-                }
             }
             else
             {
                 GeneratedAchievementCount = 0;
             }
 
-            if (_publishedAchievements.Count > 0 || _publishedLeaderboards.Count > 0 || _publishedRichPresence != null)
-                MergePublished(editors);
-
-            if (_localAssets != null)
-                MergeLocal(editors);
-
-            UpdateTemporaryIds(editors);
-
-            SelectedEditor = editors.FirstOrDefault(e => e.Title == selectedEditor);
-            Editors = editors;
-        }
-
-        private void UpdateTemporaryIds(List<ViewerViewModelBase> editors)
-        {
-            // find the maximum temporary id already assigned
-            int nextLocalId = AssetBase.FirstLocalId;
-            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
+            if (NavigationNodes == null || !NavigationNodes.Any())
             {
-                var id = assetViewModel.Local.Id;
-                if (id == 0)
-                    id = assetViewModel.Generated.Id;
-                if (id >= nextLocalId)
-                    nextLocalId = id + 1;
+                var navigationNodes = new List<NavigationViewModelBase>();
+                navigationNodes.Add(new FolderNavigationViewModel("Script"));
+                navigationNodes.Add(new RichPresenceNavigationViewModel(null));
+                navigationNodes.Add(new FolderNavigationViewModel("Achievements"));
+                navigationNodes.Add(new FolderNavigationViewModel("Leaderboards"));
+                NavigationNodes = navigationNodes;
             }
 
-            foreach (var assetViewModel in editors.OfType<AssetViewModelBase>())
-            {
-                if (assetViewModel.AllocateLocalId(nextLocalId))
-                    nextLocalId++;
+            var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
+            navigation.Merge(interpreter);
 
-                assetViewModel.Refresh();
-            }
+            SelectedNavigationNode = FindEditorNavigationNode(NavigationNodes, SelectedEditor);
         }
 
         public int CompileProgress { get; internal set; }
@@ -313,12 +258,33 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty EditorsProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<ViewerViewModelBase>), new ViewerViewModelBase[0]);
+        public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
+        public IEnumerable<NavigationViewModelBase> NavigationNodes
+        {
+            get { return (IEnumerable<NavigationViewModelBase>)GetValue(NavigationNodesProperty); }
+            private set { SetValue(NavigationNodesProperty, value); }
+        }
+
+        public static readonly ModelProperty SelectedNavigationNodeProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedNavigationNode", typeof(NavigationViewModelBase), null, OnSelectedNavigationNodeChanged);
+        public NavigationViewModelBase SelectedNavigationNode
+        {
+            get { return (NavigationViewModelBase)GetValue(SelectedNavigationNodeProperty); }
+            set { SetValue(SelectedNavigationNodeProperty, value); }
+        }
+
+        private static void OnSelectedNavigationNodeChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            var editorNavigationViewModel = e.NewValue as EditorNavigationViewModelBase;
+            if (editorNavigationViewModel != null)
+                ((GameViewModel)sender).SelectedEditor = editorNavigationViewModel.Editor;
+        }
+
         public IEnumerable<ViewerViewModelBase> Editors
         {
-            get { return (IEnumerable<ViewerViewModelBase>)GetValue(EditorsProperty); }
-            private set { SetValue(EditorsProperty, value); }
+            get { return _editors; }
         }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private readonly List<ViewerViewModelBase> _editors;
 
         public static readonly ModelProperty SelectedEditorProperty = ModelProperty.Register(typeof(GameViewModel), "SelectedEditor", typeof(ViewerViewModelBase), null, OnSelectedEditorChanged);
         public ViewerViewModelBase SelectedEditor
@@ -329,9 +295,10 @@ namespace RATools.ViewModels
 
         private static void OnSelectedEditorChanged(object sender, ModelPropertyChangedEventArgs e)
         {
+            var gameViewModel = ((GameViewModel)sender);
+
             if (e.OldValue != null)
             {
-                var gameViewModel = ((GameViewModel)sender);
                 if (!gameViewModel._disableNavigationCapture)
                 {
                     var item = CaptureNavigationItem((ViewerViewModelBase)e.OldValue);
@@ -339,6 +306,34 @@ namespace RATools.ViewModels
                     gameViewModel._forwardNavigationStack.Clear();
                 }
             }
+
+            var selectedNavigationNode = gameViewModel.SelectedNavigationNode as EditorNavigationViewModelBase;
+            if (selectedNavigationNode == null || selectedNavigationNode.Editor != e.NewValue)
+            {
+                var editor = e.NewValue as ViewerViewModelBase;
+                gameViewModel.SelectedNavigationNode = FindEditorNavigationNode(gameViewModel.NavigationNodes, editor);
+            }
+        }
+
+        private static NavigationViewModelBase FindEditorNavigationNode(IEnumerable<NavigationViewModelBase> nodes, ViewerViewModelBase editor)
+        {
+            foreach (var node in nodes.OfType<EditorNavigationViewModelBase>())
+            {
+                if (ReferenceEquals(node.Editor, editor))
+                    return node;
+            }
+
+            foreach (var node in nodes)
+            {
+                if (node.Children != null && node.Children.Count > 0)
+                {
+                    var child = FindEditorNavigationNode(node.Children, editor);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
         }
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)
@@ -426,6 +421,7 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
         }
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
@@ -483,12 +479,10 @@ namespace RATools.ViewModels
 
         private void HandleLocalAssetChange(AssetBase asset, LocalAssets.LocalAssetChange change)
         {
-            var editors = (List<ViewerViewModelBase>)Editors;
-
             var richPresence = asset as RichPresence;
             if (richPresence != null)
             {
-                var richPresenceViewModel = editors.OfType<RichPresenceViewModel>().FirstOrDefault();
+                var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();
                 if (richPresenceViewModel != null)
                     richPresenceViewModel.Local.Asset = richPresence;
 
@@ -499,7 +493,8 @@ namespace RATools.ViewModels
             {
                 case LocalAssets.LocalAssetChange.Added:
                 case LocalAssets.LocalAssetChange.Modified:
-                    MergeAchievements(editors, new[] { asset }, (vm, a) =>
+                    var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
+                    navigation.MergeAssets(new[] { asset }, (vm, a) =>
                     {
                         vm.Local.Asset = a;
                         vm.Refresh();
@@ -511,16 +506,16 @@ namespace RATools.ViewModels
 
                     var achievement = asset as Achievement;
                     if (achievement != null)
-                        editor = editors.OfType<AchievementViewModel>().FirstOrDefault(e => e.Id == achievement.Id);
+                        editor = _editors.OfType<AchievementViewModel>().FirstOrDefault(e => e.Id == achievement.Id);
 
                     var leaderboard = asset as Leaderboard;
                     if (leaderboard != null)
-                        editor = editors.OfType<LeaderboardViewModel>().FirstOrDefault(e => e.Id == leaderboard.Id);
+                        editor = _editors.OfType<LeaderboardViewModel>().FirstOrDefault(e => e.Id == leaderboard.Id);
 
                     if (editor != null)
                     {
                         if (editor.Published.Asset == null && !editor.IsGenerated)
-                            editors.Remove(editor);
+                            _editors.Remove(editor);
                         else
                             editor.Local.Asset = null;
 
@@ -537,7 +532,7 @@ namespace RATools.ViewModels
             private set { SetValue(TitleProperty, value); }
         }
 
-        public IEnumerable<AchievementSet> PublishedSets { get { return _publishedSets; } }
+        public IEnumerable<AchievementSet> PublishedSets { get { return _publishedAssets?.Sets ?? new AchievementSet[0]; } }
 
         public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
         public int GeneratedAchievementCount
@@ -602,15 +597,14 @@ namespace RATools.ViewModels
 
             foreach (var kvp in _localAssets.Notes)
                 Notes[kvp.Key] = new CodeNote(kvp.Key, kvp.Value);
+
+            LocalAchievementCount = _localAssets.Achievements.Count();
+            LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+            _logger.WriteVerbose(String.Format("Read {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
         }
 
         private void ReadPublished()
         {
-            _publishedAchievements.Clear();
-            _publishedLeaderboards.Clear();
-            _publishedSets.Clear();
-            _publishedRichPresence = null;
-
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
             var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
 
@@ -637,10 +631,6 @@ namespace RATools.ViewModels
             UnofficialAchievementCount = unofficialCount;
             UnofficialAchievementPoints = unofficialPoints;
 
-            _publishedAchievements.AddRange(publishedAssets.Achievements);
-            _publishedLeaderboards.AddRange(publishedAssets.Leaderboards);
-            _publishedSets.AddRange(publishedAssets.Sets);
-            _publishedRichPresence = publishedAssets.RichPresence;
             Title = publishedAssets.Title;
             ConsoleId = publishedAssets.ConsoleId;
 
@@ -650,154 +640,8 @@ namespace RATools.ViewModels
             publishedAssets.LoadNotes();
             Notes = publishedAssets.Notes;
             _logger.WriteVerbose("Read " + Notes.Count + " code notes");
-        }
 
-        private void MergeAchievements(List<ViewerViewModelBase> editors, IEnumerable<AssetBase> assets,
-            Action<AssetViewModelBase, AssetBase> assign)
-        {
-            var mergeAssets = new List<AssetBase>(assets);
-            if (mergeAssets.Count == 0)
-                return;
-
-            var assetEditors = new List<AssetViewModelBase>();
-
-            if (assets.First() is Achievement)
-                assetEditors.AddRange(editors.OfType<AchievementViewModel>());
-            else
-                assetEditors.AddRange(editors.OfType<LeaderboardViewModel>());
-
-            var achievements = new List<Achievement>();
-            var leaderboards = new List<Leaderboard>();
-            foreach (var editor in assetEditors)
-            {
-                if (editor is AchievementViewModel)
-                {
-                    var achievement = editor.Published.Asset as Achievement;
-                    if (achievement != null)
-                        achievements.Add(achievement);
-                    achievement = editor.Generated.Asset as Achievement;
-                    if (achievement != null)
-                        achievements.Add(achievement);
-                }
-                else if (editor is LeaderboardViewModel)
-                {
-                    var leaderboard = editor.Published.Asset as Leaderboard;
-                    if (leaderboard != null)
-                        leaderboards.Add(leaderboard);
-                    leaderboard = editor.Generated.Asset as Leaderboard;
-                    if (leaderboard != null)
-                        leaderboards.Add(leaderboard);
-                }
-            }
-
-            int j = 0;
-            while (j < mergeAssets.Count && assetEditors.Count > 0)
-            {
-                var mergeAsset = mergeAssets[j];
-
-                AssetBase match = null;
-                var achievement = mergeAsset as Achievement;
-                if (achievement != null)
-                    match = Achievement.FindMergeAchievement(achievements, achievement);
-
-                var leaderboard = mergeAsset as Leaderboard;
-                if (leaderboard != null)
-                    match = Leaderboard.FindMergeLeaderboard(leaderboards, leaderboard);
-
-                if (match == null)
-                {
-                    j++;
-                    continue;
-                }
-
-                for (int i = assetEditors.Count - 1; i >= 0; i--)
-                {
-                    var assetEditor = assetEditors[i];
-                    if (ReferenceEquals(assetEditor.Published.Asset, match))
-                    {
-                        achievement = assetEditor.Published.Asset as Achievement;
-                        leaderboard = assetEditor.Published.Asset as Leaderboard;
-                    }
-                    else if (ReferenceEquals(assetEditor.Generated.Asset, match))
-                    {
-                        achievement = assetEditor.Generated.Asset as Achievement;
-                        leaderboard = assetEditor.Generated.Asset as Leaderboard;
-                    }
-                    else
-                    {
-                        continue;
-                    }
-
-                    assign(assetEditor, mergeAsset);
-
-                    if (achievement != null)
-                        achievements.Remove(achievement);
-                    else if (leaderboard != null)
-                        leaderboards.Remove(leaderboard);
-
-                    mergeAssets.Remove(mergeAsset);
-                    assetEditors.RemoveAt(i);
-                    break;
-                }
-            }
-
-            // create new entries for each remaining unmerged achievement
-            foreach (var mergeAsset in mergeAssets)
-            {
-                AssetViewModelBase assetEditor;
-
-                if (mergeAsset is Achievement)
-                    assetEditor = new AchievementViewModel(this);
-                else
-                    assetEditor = new LeaderboardViewModel(this);
-
-                assign(assetEditor, mergeAsset);
-                editors.Add(assetEditor);
-            }
-        }
-
-        private void MergePublished(List<ViewerViewModelBase> assets)
-        {
-            MergeAchievements(assets, _publishedAchievements, (vm, a) => vm.Published.Asset = a);
-            MergeAchievements(assets, _publishedLeaderboards, (vm, a) => vm.Published.Asset = a);
-
-            if (_publishedRichPresence != null)
-            {
-                var richPresenceViewModel = assets.OfType<RichPresenceViewModel>().FirstOrDefault();
-                if (richPresenceViewModel == null)
-                {
-                    richPresenceViewModel = new RichPresenceViewModel(this);
-                    assets.Add(richPresenceViewModel);
-                }
-
-                richPresenceViewModel.Published.Asset = _publishedRichPresence;
-            }
-        }
-
-        private void MergeLocal(List<ViewerViewModelBase> assets)
-        {
-            MergeAchievements(assets, _localAssets.Achievements, (vm, a) => vm.Local.Asset = a);
-            MergeAchievements(assets, _localAssets.Leaderboards, (vm, a) => vm.Local.Asset = a);
-
-            if (_localAssets.RichPresence != null)
-            {
-                var richPresenceViewModel = assets.OfType<RichPresenceViewModel>().FirstOrDefault();
-                if (richPresenceViewModel == null)
-                {
-                    richPresenceViewModel = new RichPresenceViewModel(this);
-                    if (Script == null) // New Script
-                        assets.Add(richPresenceViewModel);
-                    else
-                        assets.Insert(1, richPresenceViewModel);
-                }
-
-                richPresenceViewModel.Local.Asset = _localAssets.RichPresence;
-            }
-
-            LocalAchievementCount = _localAssets.Achievements.Count();
-            LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
-
-            _logger.WriteVerbose(String.Format("Merged {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
+            _publishedAssets = publishedAssets;
         }
 
         public class ResourceContainer : PropertyChangedObject

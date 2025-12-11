@@ -166,7 +166,6 @@ namespace RATools.ViewModels
 
             if (!IsGenerated)
             {
-                ModificationMessage = null;
                 CanUpdate = false;
 
                 Other = null;
@@ -174,6 +173,7 @@ namespace RATools.ViewModels
                 IsDescriptionModified = false;
                 IsPointsModified = false;
                 CompareState = GeneratedCompareState.None;
+                ModificationMessage = "Not generated";
 
                 if (coreAsset != null)
                 {
@@ -238,14 +238,22 @@ namespace RATools.ViewModels
                 if (Local.Asset == null && IsGenerated)
                 {
                     if (coreAsset == null)
+                    {
                         TriggerSource = "Generated (Not in Local)";
-                    else if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unofficial, not in Local)";
+                        ModificationMessage = "Local " + ViewerType + " does not exist";
+                        CompareState = GeneratedCompareState.GeneratedOnly;
+                    }
                     else
-                        TriggerSource = "Generated (Same as Core, not in Local)";
+                    {
+                        if (coreAsset.IsUnofficial)
+                            TriggerSource = "Generated (Same as Unofficial, not in Local)";
+                        else
+                            TriggerSource = "Generated (Same as Core, not in Local)";
 
-                    ModificationMessage = "Local " + ViewerType + " does not exist";
-                    CompareState = GeneratedCompareState.PublishedMatchesNotLocal;
+                        ModificationMessage = null;
+                        CompareState = GeneratedCompareState.Same;
+                    }
+
                     CanUpdate = true;
                     Other = null;
                 }

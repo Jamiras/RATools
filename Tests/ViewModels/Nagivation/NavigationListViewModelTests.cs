@@ -1,0 +1,542 @@
+﻿using Jamiras.Components;
+using Jamiras.Services;
+using Moq;
+using NUnit.Framework;
+using RATools.Data;
+using RATools.Parser;
+using RATools.Services;
+using RATools.ViewModels;
+using RATools.ViewModels.Navigation;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace RATools.Tests.ViewModels.Nagivation
+{
+    [TestFixture]
+    class NavigationListViewModelTests
+    {
+        private class NavigationListViewModelHarness
+        {
+            public NavigationListViewModelHarness()
+            {
+                _fileSystemService = new Mock<IFileSystemService>();
+
+                _backgroundWorkerService = new Mock<IBackgroundWorkerService>();
+                _backgroundWorkerService.Setup(b => b.InvokeOnUiThread(It.IsAny<Action>())).Callback((Action a) => a());
+
+                _editors = new List<ViewerViewModelBase>();
+
+                var navigationNodes = new List<NavigationViewModelBase>();
+                navigationNodes.Add(new FolderNavigationViewModel("Script"));
+                navigationNodes.Add(new RichPresenceNavigationViewModel(null));
+                navigationNodes.Add(new FolderNavigationViewModel("Achievements"));
+                navigationNodes.Add(new FolderNavigationViewModel("Leaderboards"));
+                NavigationNodes = navigationNodes;
+
+                ServiceRepository.Reset();
+                ServiceRepository.Instance.RegisterInstance(new Mock<ISettings>().Object);
+            }
+
+            public void Initialize()
+            {
+                if (Game == null)
+                {
+                    Game = new MockGameViewModel(_fileSystemService.Object);
+                    Game.SetValue(GameViewModel.NavigationNodesProperty, NavigationNodes);
+
+                    _publishedAssets = new PublishedAssets("1234.json", _fileSystemService.Object);
+                    _localAssets = new LocalAssets("1234-User.txt", _fileSystemService.Object);
+                }
+            }
+
+            public void Merge(AchievementScriptInterpreter interpreter)
+            {
+                Initialize();
+
+                var viewModel = new NavigationListViewModel(Game, _publishedAssets, _localAssets, _editors, _backgroundWorkerService.Object);
+                viewModel.Merge(interpreter);
+            }
+
+            public Achievement CreateAchievement(string title, int points = 5, AchievementType type = AchievementType.None)
+            {
+                var achievement = new Achievement();
+                achievement.Title = title;
+                achievement.Points = points;
+                achievement.Type = type;
+                return achievement;
+            }
+
+            public Achievement AddLocalAchievement(string title, int points = 5, AchievementType type = AchievementType.None)
+            {
+                Initialize();
+
+                var achievement = CreateAchievement(title, points, type);
+                ((List<Achievement>)_localAssets.Achievements).Add(achievement);
+                return achievement;
+            }
+
+            public Achievement AddPublishedAchievement(string title, int points = 5, AchievementType type = AchievementType.None)
+            {
+                Initialize();
+
+                var achievement = CreateAchievement(title, points, type);
+                ((List<Achievement>)_publishedAssets.Achievements).Add(achievement);
+                return achievement;
+            }
+
+            private readonly Mock<IFileSystemService> _fileSystemService;
+            private readonly Mock<IBackgroundWorkerService> _backgroundWorkerService;
+            public MockGameViewModel Game { get; private set; }
+            private PublishedAssets _publishedAssets;
+            private LocalAssets _localAssets;
+            private readonly List<ViewerViewModelBase> _editors;
+
+            public List<NavigationViewModelBase> NavigationNodes { get; private set; }
+        }
+
+        class MockScriptViewModel : ScriptViewModel
+        {
+            public MockScriptViewModel()
+                : base()
+            { 
+            }
+        }
+        
+        class MockGameViewModel : GameViewModel
+        {
+            public MockGameViewModel(IFileSystemService fileSystemService)
+                : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService)
+            {
+                SetRACacheDirectory("C:\\RACache\\");
+            }
+
+            public void InitScript(string filename)
+            {
+                Script = new MockScriptViewModel();
+                Script.Filename = filename;
+            }
+        }
+
+        [Test]
+        public void TestEmpty()
+        {
+            var harness = new NavigationListViewModelHarness();
+            harness.Merge(null);
+
+            Assert.AreEqual(4, harness.NavigationNodes.Count);
+            Assert.AreEqual("Script", harness.NavigationNodes[0].Label);
+            Assert.AreEqual("Rich Presence", harness.NavigationNodes[1].Label);
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual("Leaderboards", harness.NavigationNodes[3].Label);
+            Assert.AreEqual(0, harness.NavigationNodes[0].Children?.Count ?? 0);
+            Assert.AreEqual(0, harness.NavigationNodes[1].Children?.Count ?? 0);
+            Assert.AreEqual(0, harness.NavigationNodes[2].Children?.Count ?? 0);
+            Assert.AreEqual(0, harness.NavigationNodes[3].Children?.Count ?? 0);
+        }
+
+        [Test]
+        public void TestMergeScript()
+        {
+            var harness = new NavigationListViewModelHarness();
+            harness.Initialize();
+            harness.Game.InitScript("test.rascript");
+            harness.Merge(null);
+
+            Assert.AreEqual("Script", harness.NavigationNodes[0].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[0].Children?.Count ?? 0);
+            
+            var scriptNode = harness.NavigationNodes[0].Children[0] as ScriptNavigationViewModel;
+            Assert.IsNotNull(scriptNode);
+            Assert.AreEqual("test.rascript", scriptNode.Label);
+            Assert.AreSame(harness.Game.Script, scriptNode.Editor);
+            Assert.AreEqual(GeneratedCompareState.None, scriptNode.CompareState);
+            Assert.IsNull(scriptNode.ModificationMessage);
+            Assert.IsNull(scriptNode.ContextMenu);
+        }
+
+        [Test]
+        public void TestMergeLocalAchievement()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var achievement = harness.AddLocalAchievement("Test Achievement");
+            harness.Merge(null);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergePublishedAchievement()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var achievement = harness.AddPublishedAchievement("Test Achievement");
+            harness.Merge(null);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndPublishedAchievementIdentical()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement");
+            publishedAchievement.Id = 12345;
+            var localAchievement = harness.AddLocalAchievement("Test Achievement");
+            localAchievement.Id = 12345;
+            harness.Merge(null);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndPublishedAchievementSameId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement 1");
+            publishedAchievement.Id = 12345;
+            var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
+            localAchievement.Id = 12345;
+            harness.Merge(null);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label); // should use published label over local
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndPublishedAchievementDifferentId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement 1");
+            publishedAchievement.Id = 12345;
+            var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
+            localAchievement.Id = 12346;
+            harness.Merge(null);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(2, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            // local should be first
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 2", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            achievementNode = harness.NavigationNodes[2].Children[1] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual(achievementNode.ModificationMessage, "Not generated");
+        }
+
+        [Test]
+        public void TestMergeGeneratedAchievement()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var achievement = harness.CreateAchievement("Test Achievement");
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(achievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
+            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndGeneratedAchievementIdentical()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement");
+            var localAchievement = harness.AddLocalAchievement("Test Achievement");
+            localAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.Same, achievementNode.CompareState);
+            Assert.IsNull(achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndGeneratedAchievementSameId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement 1");
+            generatedAchievement.Id = 12345;
+            var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
+            localAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label); // generated title should be used over local title
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.LocalDiffers, achievementNode.CompareState);
+            Assert.AreEqual("Local differs from generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergeLocalAndGeneratedAchievementDifferentId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement 1");
+            generatedAchievement.Id = 12346;
+            var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
+            localAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(2, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            // generated achievement should be first
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
+            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
+
+            achievementNode = harness.NavigationNodes[2].Children[1] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 2", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergePublishedAndGeneratedAchievementIdentical()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement");
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement");
+            publishedAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreEqual(GeneratedCompareState.Same, achievementNode.CompareState);
+            Assert.IsNull(achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergePublishedAndGeneratedAchievementSameId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement 1");
+            generatedAchievement.Id = 12345;
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement 2");
+            publishedAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label); // generated title should be used over local title
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreEqual(GeneratedCompareState.PublishedDiffers, achievementNode.CompareState);
+            Assert.AreEqual("Core differs from generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
+        }
+
+        [Test]
+        public void TestMergePublishedAndGeneratedAchievementDifferentId()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var generatedAchievement = harness.CreateAchievement("Test Achievement 1");
+            generatedAchievement.Id = 12346;
+            var publishedAchievement = harness.AddPublishedAchievement("Test Achievement 2");
+            publishedAchievement.Id = 12345;
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(generatedAchievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(2, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            // generated achievement should be first
+            var achievementNode = harness.NavigationNodes[2].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 1", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
+            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
+
+            achievementNode = harness.NavigationNodes[2].Children[1] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement 2", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
+            Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
+            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+    }
+}
