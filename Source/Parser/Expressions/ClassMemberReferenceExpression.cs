@@ -224,12 +224,9 @@ namespace RATools.Parser.Expressions
             if (nested != null)
                 nested.GetDependencies(dependencies);
 
-            if (Variable != null && Variable.Name != "this")
-            {
-                nested = Variable as INestedExpressions;
-                if (nested != null)
-                    nested.GetDependencies(dependencies);
-            }
+            nested = Variable as INestedExpressions;
+            if (nested != null)
+                nested.GetDependencies(dependencies);
 
             // we can't know the type of the source object, so just
             // declare dependance on all fields matching the provided name
