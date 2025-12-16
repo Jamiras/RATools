@@ -149,6 +149,10 @@ namespace RATools.Parser.Expressions
                 modifies.Add("." + classMember.Member.Name);
             else
                 modifies.Add(variable.Name);
+
+            var nested = Value as INestedExpressions;
+            if (nested != null)
+                nested.GetModifications(modifies);
         }
     }
 }

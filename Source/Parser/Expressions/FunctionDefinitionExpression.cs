@@ -850,6 +850,82 @@ namespace RATools.Parser.Expressions
             result = null;
             return true;
         }
+
+        private bool _referenceParametersUpdated = false;
+
+        internal void UpdateReferenceParameters(InterpreterScope scope)
+        {
+            if (_referenceParametersUpdated)
+                return;
+
+            // set first to prevent infinite recursion if function calls itself
+            _referenceParametersUpdated = true;
+
+            foreach (var expression in Expressions)
+                DetermineReferenceParameters(scope, expression);
+        }
+
+        private void DetermineReferenceParameters(InterpreterScope scope, ExpressionBase expression)
+        {
+            var nestedExpressions = expression as INestedExpressions;
+            if (nestedExpressions == null)
+                return;
+
+            var assignmentExpression = expression as AssignmentExpression;
+            if (assignmentExpression != null)
+            {
+                var indexingExpression = assignmentExpression.Variable as IndexedVariableExpression;
+                if (indexingExpression != null)
+                {
+                    var parameter = Parameters.FirstOrDefault(p => p.Name == indexingExpression.Variable.Name);
+                    if (parameter != null)
+                        parameter.IsMutableReference = true;
+                }
+
+                return;
+            }
+
+            var functionCall = expression as FunctionCallExpression;
+            if (functionCall == null || functionCall.FunctionName == null)
+            {
+                foreach (var nestedExpression in nestedExpressions.NestedExpressions)
+                    DetermineReferenceParameters(scope, nestedExpression);
+
+                return;
+            }
+
+            var functionDefinition = scope.GetFunction(functionCall.FunctionName.Name);
+            if (functionDefinition == null)
+                return;
+
+            var userFunctionDefinition = functionDefinition as UserFunctionDefinitionExpression;
+            if (userFunctionDefinition != null)
+                userFunctionDefinition.UpdateReferenceParameters(scope);
+
+            if (functionDefinition.Parameters.Any(p => p.IsMutableReference))
+            {
+                var extraScope = new InterpreterScope(scope);
+                var dummyValue = new IntegerConstantExpression(0);
+                foreach (var parameter in Parameters)
+                    extraScope.DefineVariable(parameter, new VariableReferenceExpression(parameter, dummyValue));
+
+                ExpressionBase result;
+                var functionParametersScope = functionCall.GetParameters(functionDefinition, extraScope, out result);
+                if (functionParametersScope != null)
+                {
+                    foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutableReference))
+                    {
+                        var value = functionParametersScope.GetVariable(mutableParameter.Name) as VariableReferenceExpression;
+                        if (value != null)
+                        {
+                            var parameter = Parameters.FirstOrDefault(p => p.Name == value.Variable.Name);
+                            if (parameter != null)
+                                parameter.IsMutableReference = true;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     internal class AnonymousUserFunctionDefinitionExpression : UserFunctionDefinitionExpression
