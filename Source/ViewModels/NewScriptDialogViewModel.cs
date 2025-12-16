@@ -439,6 +439,10 @@ namespace RATools.ViewModels
 
             foreach (var ticket in ticketsJson.GetField("Tickets").ObjectArrayValue)
             {
+                var state = ticket.GetField("ReportState").IntegerValue.GetValueOrDefault();
+                if (state != 1 && state != 3) // 1=open 3=request
+                    continue;
+
                 var ticketId = ticket.GetField("ID").IntegerValue.GetValueOrDefault();
                 _ticketNotes[ticketId] = ticket.GetField("ReportNotes").StringValue;
 
