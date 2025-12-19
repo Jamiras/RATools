@@ -200,13 +200,10 @@ namespace RATools.Data
                     return match;
             }
 
-            // ignore leaderboards with non-local IDs. they're only eligible for matching by ID.
-            var localLeaderboards = leaderboards.Where(a => a.Id == 0 || a.Id >= FirstLocalId);
-
             // second pass - look for title match
             if (!String.IsNullOrEmpty(leaderboard.Title))
             {
-                match = localLeaderboards.FirstOrDefault(l => String.Compare(l.Title, leaderboard.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
+                match = leaderboards.FirstOrDefault(l => String.Compare(l.Title, leaderboard.Title, StringComparison.InvariantCultureIgnoreCase) == 0);
                 if (match != null)
                     return match;
             }
@@ -214,7 +211,7 @@ namespace RATools.Data
             // third pass - look for description match
             if (!String.IsNullOrEmpty(leaderboard.Description))
             {
-                match = localLeaderboards.FirstOrDefault(l => String.Compare(l.Description, leaderboard.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
+                match = leaderboards.FirstOrDefault(l => String.Compare(l.Description, leaderboard.Description, StringComparison.InvariantCultureIgnoreCase) == 0);
                 if (match != null)
                     return match;
             }
