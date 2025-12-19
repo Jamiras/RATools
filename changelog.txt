@@ -1,3 +1,17 @@
+v1.16.2 - 19 Dec 2025
+* improved New Script functionality to create helper functions for pointed-at data
+* add [...] to filtered note in logic viewer to see the whole note
+* passing a comparison to rich_presence_value() will now generate an error. if counting was
+  intended, it needs to be wrapped in tally().
+* restore name matching for published assets
+* fix this pointer not being captured for lambda expressions
+* fix duplicate items appearing in array when code generating data for array_push changes
+* fix closed tickets showing up in New Script achievement list
+* fix combining modified pointed-at values by using Remember/Recall
+* fix exception if array_filter predicate returns a non-boolean expression
+* fix exception if complex value expression does not contain a measured clause
+* fix unexpected tally() when dumping scaled Measured values
+
 v1.16.1 - 26 Sep 2025
 * fix indexing of class fields
 * fix exception loading pointer memory notes containing blank lines
