@@ -410,5 +410,33 @@ namespace RATools.Parser.Tests.Expressions
             var error = assign.Execute(scope);
             ExpressionTests.AssertError(error, "Cannot index integer: this.points");
         }
+
+        [Test]
+        public void TestLambdaReference()
+        {
+            var entityClass = ExpressionTests.Parse<ClassDefinitionExpression>(
+                "class Entity {\n" +
+                "  addr = 2\n" +
+                "  function multiplyBy6() => sum_of(range(0, 5), (i) => this.addr)\n" +
+                "}");
+
+            var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
+            scope.Context = new AchievementScriptContext();
+            entityClass.Execute(scope);
+
+            var constructor = new FunctionCallExpression("Entity", new ExpressionBase[] { new IntegerConstantExpression(4) });
+            var entity = constructor.Evaluate(scope);
+            Assert.That(entity, Is.InstanceOf<ClassInstanceExpression>());
+
+            scope.AssignVariable(new VariableExpression("e"), entity);
+
+            var assign = Parse("n = e.multiplyBy6()");
+            var error = assign.Execute(scope);
+            Assert.That(error, Is.Null);
+
+            var n = scope.GetVariable("n");
+            Assert.That(n, Is.InstanceOf<IntegerConstantExpression>());
+            Assert.That(((IntegerConstantExpression)n).Value, Is.EqualTo(24)); // 4+4+4+4+4+4
+        }
     }
 }

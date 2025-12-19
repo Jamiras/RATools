@@ -79,6 +79,18 @@ namespace RATools.Parser.Tests.Expressions
         }
 
         [Test]
+        public void TestParseLambdaReference()
+        {
+            var expr = Parse(
+                "class Entity {\n" +
+                "  addr = 4\n" +
+                "  function hp() => sum_of(range(0, 5), (i) => i < this.addr)\n" +
+                "}");
+            Assert.That(expr.Name.Name, Is.EqualTo("Entity"));
+            Assert.That(expr.ToString(), Is.EqualTo("class Entity(1 field, 1 function)"));
+        }
+
+        [Test]
         public void TestParseErrorInsideField()
         {
             Parse(
@@ -263,8 +275,9 @@ namespace RATools.Parser.Tests.Expressions
             var dependencies = new HashSet<string>();
             ((INestedExpressions)expr).GetDependencies(dependencies);
 
-            Assert.That(dependencies.Count, Is.EqualTo(3));
+            Assert.That(dependencies.Count, Is.EqualTo(4));
             Assert.That(dependencies.Contains("word"));
+            Assert.That(dependencies.Contains("this"));
             Assert.That(dependencies.Contains(".addr"));
             Assert.That(dependencies.Contains("global_var"));
         }
@@ -281,8 +294,9 @@ namespace RATools.Parser.Tests.Expressions
             var dependencies = new HashSet<string>();
             ((INestedExpressions)expr).GetDependencies(dependencies);
 
-            Assert.That(dependencies.Count, Is.EqualTo(5));
+            Assert.That(dependencies.Count, Is.EqualTo(6));
             Assert.That(dependencies.Contains("word"));
+            Assert.That(dependencies.Contains("this"));
             Assert.That(dependencies.Contains(".addr"));
             Assert.That(dependencies.Contains(".x"));
             Assert.That(dependencies.Contains("global"));
