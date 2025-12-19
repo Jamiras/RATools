@@ -254,6 +254,54 @@ namespace RATools.Parser.Tests
         }
 
         [Test]
+        public void TestGetAliasBits()
+        {
+            var codeNote = new CodeNote(0x1234, "[16-bit]\r\nb1=Seen\r\nb2=Collected");
+            var alias = new MemoryAccessorAlias(0x1234, codeNote);
+            alias.ReferenceSize(FieldSize.Bit1);
+            alias.ReferenceSize(FieldSize.Bit2);
+            alias.UpdateAliasFromNote(NameStyle.SnakeCase);
+
+            Assert.That(alias.PrimarySize, Is.EqualTo(FieldSize.Word));
+            Assert.That(alias.Alias, Is.EqualTo(""));
+            Assert.That(alias.GetAlias(FieldSize.Word), Is.Null);
+            Assert.That(alias.GetAlias(FieldSize.Bit1), Is.EqualTo("seen"));
+            Assert.That(alias.GetAlias(FieldSize.Bit2), Is.EqualTo("collected"));
+        }
+
+        [Test]
+        public void TestGetAliasHeaderedBits()
+        {
+            var codeNote = new CodeNote(0x1234, "[16-bit] Header\r\nb1=Seen\r\nb2=Collected");
+            var alias = new MemoryAccessorAlias(0x1234, codeNote);
+            alias.ReferenceSize(FieldSize.Bit1);
+            alias.ReferenceSize(FieldSize.Bit2);
+            alias.UpdateAliasFromNote(NameStyle.SnakeCase);
+
+            Assert.That(alias.PrimarySize, Is.EqualTo(FieldSize.Word));
+            Assert.That(alias.Alias, Is.EqualTo("header"));
+            Assert.That(alias.GetAlias(FieldSize.Word), Is.Null); // not referenced
+            Assert.That(alias.GetAlias(FieldSize.Bit1), Is.EqualTo("header_seen"));
+            Assert.That(alias.GetAlias(FieldSize.Bit2), Is.EqualTo("header_collected"));
+        }
+
+        [Test]
+        public void TestGetAliasHeaderedBitsStyleNone()
+        {
+            var codeNote = new CodeNote(0x1234, "[16-bit] Header\r\nb1=Seen\r\nb2=Collected");
+            var alias = new MemoryAccessorAlias(0x1234, codeNote);
+            alias.ReferenceSize(FieldSize.Bit1);
+            alias.ReferenceSize(FieldSize.Bit2);
+            alias.UpdateAliasFromNote(NameStyle.None);
+
+            Assert.That(alias.PrimarySize, Is.EqualTo(FieldSize.Word));
+            Assert.That(alias.Alias, Is.EqualTo("")); // not generated
+            Assert.That(alias.GetAlias(FieldSize.Word), Is.Null); // not referenced
+            Assert.That(alias.GetAlias(FieldSize.Bit1), Is.Null); // not generated
+            Assert.That(alias.GetAlias(FieldSize.Bit2), Is.Null); // not generated
+        }
+
+        [Test]
         public void TestResolveConflictingAliases()
         {
             var list = new List<MemoryAccessorAlias>();

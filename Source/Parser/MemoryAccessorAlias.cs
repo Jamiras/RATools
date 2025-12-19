@@ -153,6 +153,9 @@ namespace RATools.Parser
 
         public string GetAlias(FieldSize size)
         {
+            if (_aliasStyle == NameStyle.None)
+                return null;
+
             if (!HasReferencedSize(size))
                 return null;
 
