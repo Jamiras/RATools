@@ -112,8 +112,11 @@ namespace RATools.ViewModels
             var localAchievement = (Achievement)localAsset;
             var achievement = (Achievement)asset;
 
-            if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
-                achievement.BadgeName = BadgeName;
+            if (achievement != null)
+            {
+                if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
+                    achievement.BadgeName = BadgeName;
+            }
 
             _owner.UpdateLocal(achievement, localAchievement, warning, validateAll);
         }
