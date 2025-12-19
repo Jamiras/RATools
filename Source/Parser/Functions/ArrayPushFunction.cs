@@ -7,7 +7,7 @@ namespace RATools.Parser.Functions
         public ArrayPushFunction()
             : base("array_push")
         {
-            Parameters.Add(new VariableDefinitionExpression("array"));
+            Parameters.Add(new VariableDefinitionExpression("array") { IsMutableReference = true });
             Parameters.Add(new VariableDefinitionExpression("value"));
         }
 

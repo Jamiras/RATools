@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -16,6 +17,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Name.Name, Is.EqualTo("array_pop"));
             Assert.That(def.Parameters.Count, Is.EqualTo(1));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("array"));
+            Assert.That(def.Parameters.ElementAt(0).IsMutableReference, Is.True);
         }
 
         private static ExpressionBase Evaluate(string input, InterpreterScope scope)
@@ -153,6 +155,58 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(((FunctionCallExpression)comparison.Left).FunctionName.Name, Is.EqualTo("happy"));
             Assert.That(comparison.Right, Is.InstanceOf<IntegerConstantExpression>());
             Assert.That(((IntegerConstantExpression)comparison.Right).Value, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void TestGetModifications()
+        {
+            var input =
+                "arr = [1,2,3,4]\r\n" +
+                "b = array_pop(arr)";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var parser = new AchievementScriptInterpreter();
+            var groups = parser.Parse(tokenizer);
+
+            // before execution, we don't know if a parameter will be a reference
+            var expr = groups.Groups.ElementAt(1).Expressions.ElementAt(0);
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+            Assert.That(modifications.Count, Is.EqualTo(1));
+            Assert.That(modifications.Contains("b"));
+
+            AchievementScriptInterpreter.InitializeScope(groups, null);
+            parser.Run(groups);
+
+            // after execution, we do
+            ((INestedExpressions)expr).GetModifications(modifications);
+            Assert.That(modifications.Count, Is.EqualTo(2));
+            Assert.That(modifications.Contains("b"));
+            Assert.That(modifications.Contains("arr"));
+        }
+
+        [Test]
+        public void TestGetModificationsNested()
+        {
+            var input =
+                "function f(a) { array_pop(a) }\r\n" +
+                "arr = [1,2,3,4]\r\n" +
+                "f(arr)";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var parser = new AchievementScriptInterpreter();
+            var groups = parser.Parse(tokenizer);
+
+            // before execution, we don't know if a parameter will be a reference
+            var expr = groups.Groups.ElementAt(2).Expressions.ElementAt(0);
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            AchievementScriptInterpreter.InitializeScope(groups, null);
+            parser.Run(groups);
+
+            // after execution, we do
+            ((INestedExpressions)expr).GetModifications(modifications);
+            Assert.That(modifications.Count, Is.EqualTo(1));
+            Assert.That(modifications.Contains("arr"));
         }
     }
 }

@@ -35,6 +35,7 @@ namespace RATools.Parser.Expressions
         }
 
         private readonly IValueExpression _source;
+        private IEnumerable<string> _referenceParameters;
 
         /// <summary>
         /// Gets the name of the function to call.
@@ -193,6 +194,10 @@ namespace RATools.Parser.Expressions
                 }
             }
 
+            var userFunctionDefinition = functionDefinition as UserFunctionDefinitionExpression;
+            if (userFunctionDefinition != null)
+                userFunctionDefinition.UpdateReferenceParameters(scope);
+
             var functionParametersScope = GetParameters(functionDefinition, scope, out result);
             if (functionParametersScope == null || result is ErrorExpression)
                 return false;
@@ -201,6 +206,21 @@ namespace RATools.Parser.Expressions
             {
                 result = new ErrorExpression("Maximum recursion depth exceeded", this);
                 return false;
+            }
+
+            _referenceParameters = null;
+            if (functionDefinition.Parameters.Any(p => p.IsMutableReference))
+            {
+                var referenceParameters = new HashSet<string>();
+                foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutableReference))
+                {
+                    var value = functionParametersScope.GetVariable(mutableParameter.Name) as VariableReferenceExpression;
+                    if (value != null)
+                        referenceParameters.Add(value.Variable.Name);
+                }
+
+                if (referenceParameters.Count > 0)
+                    _referenceParameters = referenceParameters.ToArray();
             }
 
             functionParametersScope.Context = this;
@@ -661,6 +681,11 @@ namespace RATools.Parser.Expressions
 
         void INestedExpressions.GetModifications(HashSet<string> modifies)
         {
+            if (_referenceParameters != null)
+            {
+                foreach (var parameter in _referenceParameters)
+                    modifies.Add(parameter);
+            }
         }
 
         public override bool? IsTrue(InterpreterScope scope, out ErrorExpression error)

@@ -197,6 +197,8 @@ namespace RATools.Parser.Expressions
             Location = variable.Location;
         }
 
+        public bool IsMutableReference { get; set;}
+
         IEnumerable<ExpressionBase> INestedExpressions.NestedExpressions
         {
             get

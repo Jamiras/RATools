@@ -392,5 +392,54 @@ namespace RATools.Parser.Tests.Expressions
 
                 "3:5 Index 5 not in range 0-1");
         }
+
+        [Test]
+        public void TestGetModificationsNestedAssignment()
+        {
+            var input =
+                "function f(a) { a[0] = 3 }\r\n" +
+                "arr = [1,2,3,4]\r\n" +
+                "f(arr)";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var parser = new AchievementScriptInterpreter();
+            var groups = parser.Parse(tokenizer);
+
+            // before execution, we don't know if a parameter will be a reference
+            var expr = groups.Groups.ElementAt(2).Expressions.ElementAt(0);
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            AchievementScriptInterpreter.InitializeScope(groups, null);
+            parser.Run(groups);
+
+            // after execution, we do
+            ((INestedExpressions)expr).GetModifications(modifications);
+            Assert.That(modifications.Count, Is.EqualTo(1));
+            Assert.That(modifications.Contains("arr"));
+        }
+
+        [Test]
+        public void TestGetModificationsNestedRead()
+        {
+            var input =
+                "function f(a) { b = a[0] }\r\n" +
+                "arr = [1,2,3,4]\r\n" +
+                "f(arr)";
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var parser = new AchievementScriptInterpreter();
+            var groups = parser.Parse(tokenizer);
+
+            // before execution, we don't know if a parameter will be a reference
+            var expr = groups.Groups.ElementAt(2).Expressions.ElementAt(0);
+            var modifications = new HashSet<string>();
+            ((INestedExpressions)expr).GetModifications(modifications);
+
+            AchievementScriptInterpreter.InitializeScope(groups, null);
+            parser.Run(groups);
+
+            // after execution, we do, but read shouldn't mark the parameter as modified
+            ((INestedExpressions)expr).GetModifications(modifications);
+            Assert.That(modifications.Count, Is.EqualTo(0));
+        }
     }
 }
