@@ -1,11 +1,11 @@
 ﻿using Jamiras.Components;
+using Moq;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser;
+using RATools.Services;
 using RATools.ViewModels;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace RATools.Tests.ViewModels
@@ -62,6 +62,38 @@ namespace RATools.Tests.ViewModels
                 strBuilder.Append('\n');
             }
             strBuilder.Length--;
+
+            Assert.That(strBuilder.ToString(), Is.EqualTo(expected));
+        }
+
+        [TestCase("A:0xH1234/4_M:0=100", "byte(0x001234) / 4 + |\nmeasured(0 == 100)|")]
+        public void TestDisplay(string serialized, string expected)
+        {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
+            var notes = new Dictionary<uint, CodeNote>();
+
+            var builder = new AchievementBuilder();
+            builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
+            var leftRequirements = builder.ToAchievement().CoreRequirements;
+
+            var vmRequirementGroup = new RequirementGroupViewModel("Group", leftRequirements, new Requirement[0], NumberFormat.Decimal, notes);
+
+            var strBuilder = new StringBuilder();
+            foreach (var vmRequirement in vmRequirementGroup.Requirements)
+            {
+                var vmComparison = vmRequirement as RequirementComparisonViewModel;
+                strBuilder.Append(vmComparison.Definition);
+                strBuilder.Append('|');
+                strBuilder.Append(vmComparison.OtherDefinition);
+                strBuilder.Append('\n');
+            }
+            strBuilder.Length--;
+
+            ServiceRepository.Reset();
 
             Assert.That(strBuilder.ToString(), Is.EqualTo(expected));
         }

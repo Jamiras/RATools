@@ -19,29 +19,11 @@ namespace RATools.ViewModels
         {
             Label = label;
 
-            bool isValueDependentOnPreviousRequirement = false;
             var list = new List<RequirementViewModel>();
             foreach (var requirement in requirements)
-            {
-                var requirementViewModel = new RequirementViewModel(requirement, numberFormat, notes);
-                requirementViewModel.IsValueDependentOnPreviousRequirement = isValueDependentOnPreviousRequirement;
+                list.Add(new RequirementViewModel(requirement, numberFormat, notes));
 
-                list.Add(requirementViewModel);
-
-                switch (requirement.Type)
-                {
-                    case RequirementType.AddAddress:
-                    case RequirementType.AddSource:
-                    case RequirementType.SubSource:
-                        isValueDependentOnPreviousRequirement = true;
-                        break;
-
-                    default:
-                        isValueDependentOnPreviousRequirement = false;
-                        break;
-                }
-            }
-
+            UpdateDependencies(list);
             Requirements = list;
         }
 
@@ -191,6 +173,34 @@ namespace RATools.ViewModels
             leftIndex = bestLeft;
             rightIndex = bestRight;
             return (bestLeft != -1);
+        }
+
+        private static void UpdateDependencies(List<RequirementViewModel> list)
+        {
+            bool isValueDependentOnPreviousRequirement = false;
+            foreach (var requirement in list)
+            {
+                requirement.IsValueDependentOnPreviousRequirement = isValueDependentOnPreviousRequirement;
+
+                if (requirement.Requirement == null)
+                {
+                    isValueDependentOnPreviousRequirement = false;
+                    continue;
+                }
+
+                switch (requirement.Requirement.Type)
+                {
+                    case RequirementType.AddAddress:
+                    case RequirementType.AddSource:
+                    case RequirementType.SubSource:
+                        isValueDependentOnPreviousRequirement = true;
+                        break;
+
+                    default:
+                        isValueDependentOnPreviousRequirement = false;
+                        break;
+                }
+            }
         }
 
         private void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
@@ -446,6 +456,8 @@ namespace RATools.ViewModels
                     ((RequirementComparisonViewModel)list[rightIndex]).CompareRequirement, numberFormat, notes);
                 list.RemoveAt(rightIndex);
             }
+
+            UpdateDependencies(list);
 
             Requirements = list;
         }
