@@ -602,7 +602,10 @@ namespace RATools.Parser.Expressions.Trigger
 
                     case RequirementOperator.Multiply:   // a * 0  =>  0
                     case RequirementOperator.BitwiseAnd: // a & 0  =>  0
-                        return new IntegerConstantExpression(0);
+                        if (MemoryAccessor.Field.IsFloat)
+                            return new FloatConstantExpression(0.0f);
+                        else
+                            return new IntegerConstantExpression(0);
 
                     case RequirementOperator.BitwiseXor: // a ^ 0  =>  a
                         ModifyingOperator = RequirementOperator.None;
@@ -620,7 +623,11 @@ namespace RATools.Parser.Expressions.Trigger
                         break;
 
                     case RequirementOperator.Modulus:  // a % 1 => 0
-                        return new IntegerConstantExpression(0);
+                        if (!MemoryAccessor.Field.IsFloat)
+                            return new IntegerConstantExpression(0);
+
+                        // float % 1 returns the fractional part
+                        break;
                 }
             }
 
