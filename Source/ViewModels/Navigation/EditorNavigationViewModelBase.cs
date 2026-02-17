@@ -16,6 +16,15 @@ namespace RATools.ViewModels.Navigation
             ContextMenu = menu;
         }
 
+        ~EditorNavigationViewModelBase()
+        {
+            if (_editor != null)
+            {
+                _editor.PropertyChanged -= editor_PropertyChanged;
+                _editor = null;
+            }
+        }
+
         public ViewerViewModelBase Editor
         {
             get { return _editor; }
@@ -23,6 +32,9 @@ namespace RATools.ViewModels.Navigation
             {
                 if (_editor != value)
                 {
+                    if (_editor != null)
+                        _editor.PropertyChanged -= editor_PropertyChanged;
+
                     _editor = value;
 
                     if (_editor != null)
@@ -54,7 +66,6 @@ namespace RATools.ViewModels.Navigation
         private void OnEditorCompareStateChanged()
         {
             CompareState = _editor?.CompareState ?? GeneratedCompareState.None;
-            ModificationMessage = _editor?.ModificationMessage;
 
             var updateLocalMenuItem = ContextMenu?.FirstOrDefault(m => m.Label == "Update Local");
             if (updateLocalMenuItem != null)
@@ -70,6 +81,7 @@ namespace RATools.ViewModels.Navigation
             {
                 case GeneratedCompareState.None:
                 case GeneratedCompareState.Same:
+                case GeneratedCompareState.NotGenerated:
                     return false;
 
                 default:

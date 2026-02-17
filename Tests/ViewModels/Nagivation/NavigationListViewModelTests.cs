@@ -150,7 +150,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(scriptNode);
             Assert.AreEqual("test.rascript", scriptNode.Label);
             Assert.AreSame(harness.Game.Script, scriptNode.Editor);
-            Assert.AreEqual(GeneratedCompareState.None, scriptNode.CompareState);
+            Assert.AreEqual(GeneratedCompareState.Same, scriptNode.CompareState);
             Assert.IsNull(scriptNode.ModificationMessage);
             Assert.IsNull(scriptNode.ContextMenu);
         }

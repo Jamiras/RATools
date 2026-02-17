@@ -421,7 +421,6 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
         }
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
