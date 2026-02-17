@@ -389,7 +389,8 @@ namespace RATools.ViewModels
             if (_localAchievementCommitSuspendCount == 0)
             {
                 _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning,
-                    SerializationContext, validateAll ? null : new List<AssetBase>() { achievement });
+                    SerializationContext, validateAll ? null : new List<AssetBase>() { achievement },
+                    PublishedSets);
                 LocalAchievementCount = _localAssets.Achievements.Count();
                 LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
             }
@@ -425,7 +426,10 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { leaderboard });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
+                    warning, SerializationContext, 
+                    validateAll ? null : new List<AssetBase>() { leaderboard },
+                    PublishedSets);
         }
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
@@ -458,7 +462,10 @@ namespace RATools.ViewModels
             }
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence });
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
+                    warning, SerializationContext, 
+                    validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence },
+                    PublishedSets);
         }
 
         private int _localAchievementCommitSuspendCount = 0;
@@ -474,7 +481,8 @@ namespace RATools.ViewModels
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning, SerializationContext, assetsToValidate);
+                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
+                    warning, SerializationContext, assetsToValidate, PublishedSets);
 
                 LocalAchievementCount = _localAssets.Achievements.Count();
                 LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
