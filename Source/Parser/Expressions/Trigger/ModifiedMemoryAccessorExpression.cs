@@ -446,6 +446,17 @@ namespace RATools.Parser.Expressions.Trigger
                 field = FieldFactory.CreateField(right);
                 if (field.Type == FieldType.None)
                 {
+                    // cannot simplify to a single field.
+                    // going to need to use remember/recall to generate the value.
+                    if (ModifyingOperator != RequirementOperator.None)
+                    {
+                        // if the "this" object is modified, it also needs to be remember/recalled
+                        // which only works if both sides match. that will be determined later.
+                        // for now, just remember/recall both sides.
+                        MemoryAccessor = RememberRecallExpression.WrapInRemember(this.Clone());
+                        ModifyingOperator = RequirementOperator.None;
+                    }
+
                     _rememberModifier = RememberRecallExpression.WrapInRemember(right);
                     if (_rememberModifier != null)
                     {
@@ -912,8 +923,6 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 if (_rememberModifier.RememberedValue != context.RememberedValue)
                 {
-                    context.RememberedValue = _rememberModifier.RememberedValue;
-
                     var error = _rememberModifier.BuildTrigger(context);
                     if (error != null)
                         return error;
@@ -922,6 +931,10 @@ namespace RATools.Parser.Expressions.Trigger
                     // into the next expression. remove it. we'll add it back soon.
                     context.Trigger.Remove(context.LastRequirement);
                 }
+
+                var rememberExpression = MemoryAccessor as RememberRecallExpression;
+                if (rememberExpression != null && rememberExpression.RememberedValue != _rememberModifier.RememberedValue)
+                    return new ErrorExpression("Cannot combine multiple expressions with unique Remembered requirements", this);
             }    
 
             MemoryAccessor.BuildTrigger(context);
