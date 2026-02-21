@@ -446,11 +446,17 @@ namespace RATools.ViewModels
                 coreAsset.IsUnofficial ? "Published (Unofficial)" : "Published (Core)";
 
             if (generatedAsset != null)
+            {
                 BindViewModel(Generated);
-            else if (coreAsset != null)
-                LoadViewModel(Published);
-            else if (localAsset != null)
-                LoadViewModel(Local);
+            }
+            else
+            {
+                ClearBindings();
+                if (coreAsset != null)
+                    LoadViewModel(Published);
+                else if (localAsset != null)
+                    LoadViewModel(Local);
+            }
 
             if (Generated.Id != 0)
                 Id = Generated.Id;
@@ -480,6 +486,13 @@ namespace RATools.ViewModels
             SetBinding(TitleProperty, new ModelBinding(viewModel.Title, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
             SetBinding(DescriptionProperty, new ModelBinding(viewModel.Description, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
             SetBinding(PointsProperty, new ModelBinding(viewModel.Points, IntegerFieldViewModel.ValueProperty, ModelBindingMode.OneWay));
+        }
+
+        internal void ClearBindings()
+        {
+            SetBinding(TitleProperty, null);
+            SetBinding(DescriptionProperty, null);
+            SetBinding(PointsProperty, null);
         }
 
         private void LoadViewModel(AssetSourceViewModel viewModel)
