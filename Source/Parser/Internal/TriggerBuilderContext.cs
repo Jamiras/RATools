@@ -565,6 +565,8 @@ namespace RATools.Parser.Internal
         {
             Trigger = new List<Requirement>();
             Achievement.AlternateRequirements.Add(Trigger);
+
+            RememberedValue = null;
         }
     }
 

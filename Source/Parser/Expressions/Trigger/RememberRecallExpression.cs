@@ -100,7 +100,22 @@ namespace RATools.Parser.Expressions.Trigger
 
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
+            // if the RememberedValue is already being Remembered, just output the {recall}
+            if (context.RememberedValue != RememberedValue)
+            {
+                var error = AppendRemember(context);
+                if (error != null)
+                    return error;
+            }
+
+            // this outputs the {recall}
+            return base.BuildTrigger(context);
+        }
+
+        private ErrorExpression AppendRemember(TriggerBuilderContext context)
+        {
             RememberedValue.BuildTrigger(context);
+            context.RememberedValue = RememberedValue;
 
             // if the RememberedValue only contains ModifiedMemoryReferences, BuildTrigger
             // will append an extra condition so the result can be compared to.
@@ -121,9 +136,9 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (lastRequirement.Type != RequirementType.None)
                 return new ErrorExpression("Cannot remember requirement", RememberedValue);
-            lastRequirement.Type = RequirementType.Remember;
 
-            return base.BuildTrigger(context);
+            lastRequirement.Type = RequirementType.Remember;
+            return null;
         }
     }
 }
