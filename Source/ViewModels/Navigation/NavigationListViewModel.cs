@@ -196,7 +196,20 @@ namespace RATools.ViewModels.Navigation
                 if (achievement != null)
                 {
                     var match = Achievement.FindMergeAchievement(achievements, achievement);
-                    editor = (match != null) ? assetEditors.FirstOrDefault(e => ReferenceEquals(e.Published.Asset, match) || ReferenceEquals(e.Generated.Asset, match) || ReferenceEquals(e.Local.Asset, match)) : null;
+                    if (match != null)
+                    {
+                        editor = assetEditors.FirstOrDefault(e => ReferenceEquals(e.Published.Asset, match)
+                                                               || ReferenceEquals(e.Generated.Asset, match)
+                                                               || ReferenceEquals(e.Local.Asset, match));
+                    }
+                    else
+                    {
+                        editor = assetEditors.FirstOrDefault(e => e.Published.Asset == null 
+                                                               && e.Generated.Asset == null
+                                                               && e.Local.Asset == null 
+                                                               && e.Title == achievement.Title);
+                    }
+
                     if (editor == null)
                     {
                         j++;
@@ -219,7 +232,20 @@ namespace RATools.ViewModels.Navigation
                     if (leaderboard != null)
                     {
                         var match = Leaderboard.FindMergeLeaderboard(leaderboards, leaderboard);
-                        editor = (match != null) ? assetEditors.FirstOrDefault(e => ReferenceEquals(e.Published.Asset, match) || ReferenceEquals(e.Generated.Asset, match) || ReferenceEquals(e.Local.Asset, match)) : null;
+                        if (match != null)
+                        {
+                            editor = assetEditors.FirstOrDefault(e => ReferenceEquals(e.Published.Asset, match)
+                                                                   || ReferenceEquals(e.Generated.Asset, match)
+                                                                   || ReferenceEquals(e.Local.Asset, match));
+                        }
+                        else
+                        {
+                            editor = assetEditors.FirstOrDefault(e => e.Published.Asset == null
+                                                                   && e.Generated.Asset == null
+                                                                   && e.Local.Asset == null
+                                                                   && e.Title == achievement.Title);
+                        }
+
                         if (editor == null)
                         {
                             j++;
@@ -340,6 +366,12 @@ namespace RATools.ViewModels.Navigation
             var achievementNodes = achievementsFolder.Children.OfType<AchievementNavigationViewModel>().ToList();
             foreach (var achievement in _editors.OfType<AchievementViewModel>())
             {
+                if (achievement.Generated.Asset == null && achievement.Local.Asset == null && achievement.Published.Asset == null)
+                {
+                    // nothing keeping this node around, let it get discarded
+                    continue;
+                }
+
                 var node = achievementNodes.FirstOrDefault(n => n.IsNodeFor(achievement));
                 if (node != null)
                 {
@@ -361,6 +393,12 @@ namespace RATools.ViewModels.Navigation
             var leaderboardNodes = leaderboardsFolder.Children.OfType<LeaderboardNavigationViewModel>().ToList();
             foreach (var leaderboard in _editors.OfType<LeaderboardViewModel>())
             {
+                if (leaderboard.Generated.Asset == null && leaderboard.Local.Asset == null && leaderboard.Published.Asset == null)
+                {
+                    // nothing keeping this node around, let it get discarded
+                    continue;
+                }
+
                 var node = leaderboardNodes.FirstOrDefault(n => n.IsNodeFor(leaderboard));
                 if (node != null)
                 {
