@@ -114,6 +114,46 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionType.MemoryAccessor, "byte(0x001234) & 0x000000F7")]
         [TestCase("byte(0x001234)", "&", "0x0000007F",
             ExpressionType.MemoryAccessor, "byte(0x001234) & 0x0000007F")]
+        [TestCase("byte(0x001234)", "*", "1",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "*", "0",
+            ExpressionType.IntegerConstant, "0")]
+        [TestCase("byte(0x001234)", "*", "1.0",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "*", "0.0",
+            ExpressionType.IntegerConstant, "0")]
+        [TestCase("byte(0x001234)", "/", "1",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("byte(0x001234)", "/", "0",
+            ExpressionType.Error, "Division by zero")]
+        [TestCase("byte(0x001234)", "%", "1",
+            ExpressionType.IntegerConstant, "0")]
+        [TestCase("byte(0x001234)", "%", "0",
+            ExpressionType.Error, "Division by zero")]
+        [TestCase("byte(0x001234)", "%", "1.0",
+            ExpressionType.IntegerConstant, "0")]
+        [TestCase("byte(0x001234)", "&", "0",
+            ExpressionType.IntegerConstant, "0")]
+        [TestCase("byte(0x001234)", "^", "0",
+            ExpressionType.MemoryAccessor, "byte(0x001234)")]
+        [TestCase("float(0x001234)", "*", "1.0",
+            ExpressionType.MemoryAccessor, "float(0x001234)")]
+        [TestCase("float(0x001234)", "*", "0.0",
+            ExpressionType.FloatConstant, "0.0")]
+        [TestCase("float(0x001234)", "*", "1",
+            ExpressionType.MemoryAccessor, "float(0x001234)")]
+        [TestCase("float(0x001234)", "*", "0",
+            ExpressionType.FloatConstant, "0.0")]
+        [TestCase("float(0x001234)", "/", "1.0",
+            ExpressionType.MemoryAccessor, "float(0x001234)")]
+        [TestCase("float(0x001234)", "/", "0.0",
+            ExpressionType.Error, "Division by zero")]
+        [TestCase("float(0x001234)", "%", "1.0",
+            ExpressionType.MemoryAccessor, "float(0x001234) % 1.0")]
+        [TestCase("float(0x001234)", "%", "0.0",
+            ExpressionType.Error, "Division by zero")]
+        [TestCase("float(0x001234)", "%", "1",
+            ExpressionType.MemoryAccessor, "float(0x001234) % 1")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             // MemoryAccessorExpression.Combine just converts to a ModifiedMemoryAccessor and
