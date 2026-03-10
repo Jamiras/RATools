@@ -55,7 +55,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.That(harness.ImageResourcePath, Is.EqualTo("/RATools;component/Resources/test.png"));
             Assert.That(harness.ImageTooltip, Is.Null);
 
-            Assert.That(changedProperties, 
+            Assert.That(changedProperties,
                 Has.Member("ImageName").And.Member("ImageResourcePath").And.Count.EqualTo(2));
         }
 

@@ -1,14 +1,11 @@
 ﻿using Jamiras.Components;
-using Jamiras.Database;
 using Jamiras.Services;
 using RATools.Data;
 using RATools.Parser;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
-using System.Windows.Media.Media3D;
 
 namespace RATools.ViewModels.Navigation
 {
@@ -16,8 +13,9 @@ namespace RATools.ViewModels.Navigation
     {
         public NavigationListViewModel(GameViewModel gameViewModel, PublishedAssets publishedAssets, LocalAssets localAssets, List<ViewerViewModelBase> editors)
             : this(gameViewModel, publishedAssets, localAssets, editors, ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
-        { 
+        {
         }
+
         public NavigationListViewModel(GameViewModel gameViewModel, PublishedAssets publishedAssets, LocalAssets localAssets, List<ViewerViewModelBase> editors, IBackgroundWorkerService backgroundWorkerService)
         {
             _gameViewModel = gameViewModel;
@@ -154,7 +152,7 @@ namespace RATools.ViewModels.Navigation
                 {
                     assign(editor, mergeAsset);
                     assetEditors.RemoveAt(j);
-                    
+
                     mergeAssets.Remove(mergeAsset);
                     if (!mergeAssets.Any())
                         break;
@@ -293,7 +291,7 @@ namespace RATools.ViewModels.Navigation
             where T : AssetViewModelBase
         {
             MergeAssets(assets, assign);
-            
+
             // clear out any items not in the new list
             for (int i = _editors.Count - 1; i >= 0; i--)
             {
@@ -306,7 +304,7 @@ namespace RATools.ViewModels.Navigation
                 }
             }
 
-            // update the sort orders 
+            // update the sort orders
             foreach (var asset in assets)
             {
                 var editor = _editors.OfType<T>().FirstOrDefault(e => ReferenceEquals(getAsset(e), asset));

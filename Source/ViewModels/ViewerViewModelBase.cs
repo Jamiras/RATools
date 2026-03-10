@@ -107,7 +107,7 @@ namespace RATools.ViewModels
         NotGenerated,
 
         /// <summary>
-        /// ○ generated but not stored (no core or no local). hollow circle icon 
+        /// ○ generated but not stored (no core or no local). hollow circle icon
         /// </summary>
         GeneratedOnly,
 

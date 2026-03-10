@@ -37,7 +37,7 @@ namespace RATools.Tests.ViewModels.Nagivation
 
             public void SetTitle(string title)
             {
-                Title = title; 
+                Title = title;
             }
 
             public void SetCompareState(GeneratedCompareState state)
@@ -78,7 +78,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.That(harness.Label, Is.EqualTo(editor.Title));
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.NotGenerated));
 
-            Assert.That(changedProperties, 
+            Assert.That(changedProperties,
                 Has.Member("Editor").
                 And.Member("Label").
                 And.Member("CompareState").

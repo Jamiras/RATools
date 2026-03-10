@@ -250,7 +250,7 @@ namespace RATools.Tests.ViewModels
             vmGame.AddLocalAchievement(111000004, "Test2b").Points = 8;
             vmGame.AddLocalAchievement(111000005, "A Test4").Points = 16;
             vmGame.AddLocalAchievement(0, "Test5").Points = 32;
-           
+
             vmGame.PopulateEditorList(interpreter);
 
             Assert.That(vmGame.Editors.Count(), Is.EqualTo(6));

@@ -14,7 +14,7 @@ namespace RATools.ViewModels.Navigation
             get { return string.Format("/RATools;component/Resources/{0}.png", ImageName); }
         }
 
-        public string ImageName 
+        public string ImageName
         {
             get { return _imageName; }
             set

@@ -99,10 +99,10 @@ namespace RATools.Tests.ViewModels.Nagivation
         {
             public MockScriptViewModel()
                 : base()
-            { 
+            {
             }
         }
-        
+
         class MockGameViewModel : GameViewModel
         {
             public MockGameViewModel(IFileSystemService fileSystemService)
@@ -145,7 +145,7 @@ namespace RATools.Tests.ViewModels.Nagivation
 
             Assert.AreEqual("Script", harness.NavigationNodes[0].Label);
             Assert.AreEqual(1, harness.NavigationNodes[0].Children?.Count ?? 0);
-            
+
             var scriptNode = harness.NavigationNodes[0].Children[0] as ScriptNavigationViewModel;
             Assert.IsNotNull(scriptNode);
             Assert.AreEqual("test.rascript", scriptNode.Label);
