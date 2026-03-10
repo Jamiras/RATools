@@ -1548,22 +1548,36 @@ namespace RATools.Parser.Expressions.Trigger
             for (int i = 0; i < memoryAccessors.Count; i++)
             {
                 var memoryAccessor = memoryAccessors[i];
-                var memoryAccessorRememberedExpression = memoryAccessor.RememberedValue;
-                if (memoryAccessorRememberedExpression != null)
+                for (int j = 0; j < 2; j++)
                 {
-                    if (rememberedExpression == null)
+                    MemoryValueExpression memoryAccessorRememberedExpression = null;
+                    if (j == 0)
                     {
-                        rememberedExpression = memoryAccessorRememberedExpression;
-
-                        if (i != 0)
-                        {
-                            memoryAccessors.RemoveAt(i);
-                            memoryAccessors.Insert(0, memoryAccessor);
-                        }
+                        memoryAccessorRememberedExpression = memoryAccessor.RememberedValue;
                     }
-                    else if (rememberedExpression != memoryAccessorRememberedExpression)
+                    else
                     {
-                        return new ErrorExpression("Cannot combine multiple expressions with unique Remembered requirements", memoryAccessor);
+                        var rememberExpression = memoryAccessor.MemoryAccessor as RememberRecallExpression;
+                        if (rememberExpression != null)
+                            memoryAccessorRememberedExpression = rememberExpression.RememberedValue;
+                    }
+
+                    if (memoryAccessorRememberedExpression != null)
+                    {
+                        if (rememberedExpression == null)
+                        {
+                            rememberedExpression = memoryAccessorRememberedExpression;
+
+                            if (i != 0)
+                            {
+                                memoryAccessors.RemoveAt(i);
+                                memoryAccessors.Insert(0, memoryAccessor);
+                            }
+                        }
+                        else if (rememberedExpression != memoryAccessorRememberedExpression)
+                        {
+                            return new ErrorExpression("Cannot combine multiple expressions with unique Remembered requirements", memoryAccessor);
+                        }
                     }
                 }
             }
