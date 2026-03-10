@@ -171,7 +171,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -196,7 +196,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -225,7 +225,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -254,7 +254,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -284,7 +284,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             achievementNode = harness.NavigationNodes[2].Children[1] as AchievementNavigationViewModel;
             Assert.IsNotNull(achievementNode);
@@ -293,7 +293,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual(achievementNode.ModificationMessage, "Not generated");
+            Assert.IsNull(achievementNode.ModificationMessage);
         }
 
         [Test]
@@ -314,7 +314,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -375,7 +375,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.LocalDiffers, achievementNode.CompareState);
-            Assert.AreEqual("Local differs from generated", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated assets not exported", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -407,7 +407,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -422,7 +422,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -483,7 +483,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreEqual(GeneratedCompareState.PublishedDiffers, achievementNode.CompareState);
-            Assert.AreEqual("Core differs from generated", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated assets differ from published", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -515,7 +515,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Local Achievement does not exist", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -530,7 +530,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.AreEqual("Not generated", achievementNode.ModificationMessage);
+            Assert.IsNull(achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());

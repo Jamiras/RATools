@@ -89,7 +89,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             Assert.That(vmAsset.BadgeName, Is.Null);
             Assert.That(vmAsset.CanUpdate, Is.False);
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Same));
             Assert.That(vmAsset.DeleteLocalCommand, Is.InstanceOf<DisabledCommand>());
             Assert.That(vmAsset.Description, Is.EqualTo(""));
             Assert.That(vmAsset.Generated, Is.Not.Null);
