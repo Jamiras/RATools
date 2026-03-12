@@ -38,7 +38,7 @@ namespace RATools.ViewModels.Navigation
                 if (!_editors.Contains(_gameViewModel.Script))
                     _editors.Add(_gameViewModel.Script);
 
-                var scriptFolder = _gameViewModel.NavigationNodes.OfType<FolderNavigationViewModel>().First(n => n.Label == "Script");
+                var scriptFolder = _gameViewModel.NavigationNodes.OfType<ScriptFolderNavigationViewModel>().First();
                 var scriptNode = scriptFolder.Children.OfType<ScriptNavigationViewModel>().FirstOrDefault();
                 if (scriptNode == null)
                 {
@@ -360,7 +360,7 @@ namespace RATools.ViewModels.Navigation
                 richPresenceNode.Editor = richPresence;
             }
 
-            var achievementsFolder = _gameViewModel.NavigationNodes.OfType<FolderNavigationViewModel>().First(n => n.Label == "Achievements");
+            var achievementsFolder = _gameViewModel.NavigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
             var achievementNodes = achievementsFolder.Children.OfType<AchievementNavigationViewModel>().ToList();
             foreach (var achievement in _editors.OfType<AchievementViewModel>())
             {
@@ -387,7 +387,7 @@ namespace RATools.ViewModels.Navigation
             foreach (var achievementNode in achievementNodes)
                 achievementsFolder.Children.Remove(achievementNode);
 
-            var leaderboardsFolder = _gameViewModel.NavigationNodes.OfType<FolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
+            var leaderboardsFolder = _gameViewModel.NavigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
             var leaderboardNodes = leaderboardsFolder.Children.OfType<LeaderboardNavigationViewModel>().ToList();
             foreach (var leaderboard in _editors.OfType<LeaderboardViewModel>())
             {

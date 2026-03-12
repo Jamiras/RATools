@@ -227,10 +227,10 @@ namespace RATools.ViewModels
             if (NavigationNodes == null || !NavigationNodes.Any())
             {
                 var navigationNodes = new List<NavigationViewModelBase>();
-                navigationNodes.Add(new FolderNavigationViewModel("Script"));
+                navigationNodes.Add(new ScriptFolderNavigationViewModel());
                 navigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                navigationNodes.Add(new FolderNavigationViewModel("Achievements"));
-                navigationNodes.Add(new FolderNavigationViewModel("Leaderboards"));
+                navigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
+                navigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
                 NavigationNodes = navigationNodes;
             }
 

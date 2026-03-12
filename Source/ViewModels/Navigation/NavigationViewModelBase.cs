@@ -62,26 +62,25 @@ namespace RATools.ViewModels.Navigation
         private static void HandleCompareStateChanged(object sender, ModelPropertyChangedEventArgs e)
         {
             var viewModel = (NavigationViewModelBase)sender;
-            switch ((GeneratedCompareState)e.NewValue)
-            {
-                default:
-                    viewModel.ModificationMessage = null;
-                    break;
-                case GeneratedCompareState.NotGenerated:
-                    viewModel.ModificationMessage = "Published asset is not generated";
-                    break;
-                case GeneratedCompareState.GeneratedOnly:
-                    viewModel.ModificationMessage = "Generated assets match published";
-                    break;
-                case GeneratedCompareState.PublishedDiffers:
-                    viewModel.ModificationMessage = "Generated assets differ from published";
-                    break;
-                case GeneratedCompareState.LocalDiffers:
-                    viewModel.ModificationMessage = "Generated assets not exported";
-                    break;
-            }
-
+            viewModel.ModificationMessage = viewModel.GetModificationMessage((GeneratedCompareState)e.NewValue);
             viewModel._parent?.UpdateCompareState();
+        }
+
+        protected virtual string GetModificationMessage(GeneratedCompareState state)
+        {
+            switch (state)
+            {
+                case GeneratedCompareState.GeneratedOnly: // ○
+                    return "Generated only";
+                case GeneratedCompareState.LocalDiffers: // ●
+                    return "Generated asset differs from unpublished";
+                case GeneratedCompareState.PublishedDiffers: // ◐
+                    return "Generated asset differs from published";
+                case GeneratedCompareState.NotGenerated: // ◖
+                    return "Published asset is not generated";
+                default:
+                    return null;
+            }
         }
 
         internal void UpdateCompareState()

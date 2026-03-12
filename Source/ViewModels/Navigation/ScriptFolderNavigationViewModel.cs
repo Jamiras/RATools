@@ -1,14 +1,14 @@
 ﻿namespace RATools.ViewModels.Navigation
 {
-    internal class ScriptNavigationViewModel : EditorNavigationViewModelBase
+    internal class ScriptFolderNavigationViewModel : NavigationViewModelBase
     {
-        public ScriptNavigationViewModel(ScriptViewModel script)
+        public ScriptFolderNavigationViewModel()
         {
-            ImageName = "script";
-            ImageTooltip = "Script";
-            Editor = script;
+            ImageName = "folder";
+            ImageTooltip = "Folder";
+            Label = "Script";
 
-            ContextMenu = null;
+            InitChildren();
         }
 
         protected override string GetModificationMessage(GeneratedCompareState state)

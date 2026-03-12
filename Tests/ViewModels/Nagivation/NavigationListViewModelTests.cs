@@ -28,10 +28,10 @@ namespace RATools.Tests.ViewModels.Nagivation
                 _editors = new List<ViewerViewModelBase>();
 
                 var navigationNodes = new List<NavigationViewModelBase>();
-                navigationNodes.Add(new FolderNavigationViewModel("Script"));
+                navigationNodes.Add(new ScriptFolderNavigationViewModel());
                 navigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                navigationNodes.Add(new FolderNavigationViewModel("Achievements"));
-                navigationNodes.Add(new FolderNavigationViewModel("Leaderboards"));
+                navigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
+                navigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
                 NavigationNodes = navigationNodes;
 
                 ServiceRepository.Reset();
@@ -314,7 +314,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated only", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -375,7 +375,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.LocalDiffers, achievementNode.CompareState);
-            Assert.AreEqual("Generated assets not exported", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated asset differs from unpublished", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -407,7 +407,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated only", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -483,7 +483,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreEqual(GeneratedCompareState.PublishedDiffers, achievementNode.CompareState);
-            Assert.AreEqual("Generated assets differ from published", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated asset differs from published", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -515,7 +515,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
-            Assert.AreEqual("Generated assets match published", achievementNode.ModificationMessage);
+            Assert.AreEqual("Generated only", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());

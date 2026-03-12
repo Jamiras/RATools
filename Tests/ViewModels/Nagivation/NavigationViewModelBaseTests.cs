@@ -71,7 +71,7 @@ namespace RATools.Tests.ViewModels.Nagivation
 
             harness.SetCompareState(GeneratedCompareState.GeneratedOnly);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.GeneratedOnly));
-            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated assets match published"));
+            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated only"));
 
             Assert.That(changedProperties,
                 Has.Member("CompareState").And.Member("ModificationMessage").And.Count.EqualTo(2));
@@ -82,11 +82,11 @@ namespace RATools.Tests.ViewModels.Nagivation
 
             harness.SetCompareState(GeneratedCompareState.PublishedDiffers);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
-            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated assets differ from published"));
+            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated asset differs from published"));
 
             harness.SetCompareState(GeneratedCompareState.LocalDiffers);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.LocalDiffers));
-            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated assets not exported"));
+            Assert.That(harness.ModificationMessage, Is.EqualTo("Generated asset differs from unpublished"));
 
             changedProperties.Clear();
             harness.SetCompareState(GeneratedCompareState.Same);
