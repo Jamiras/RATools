@@ -31,6 +31,10 @@ namespace RATools.ViewModels
             get { return _asset; } 
             set
             {
+                bool hadAsset = _asset != null;
+                if (hadAsset && value == null)
+                    _owner.ClearBindings();
+
                 _asset = value;
                 if (value != null)
                 {
@@ -57,6 +61,9 @@ namespace RATools.ViewModels
                     BadgeName = (string)BadgeNameProperty.DefaultValue;
                 }
 
+                bool hasAsset = _asset != null;
+                if (hasAsset != hadAsset)
+                    _owner.Refresh();
 
                 if (_triggerList != null)
                 {

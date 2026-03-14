@@ -25,6 +25,8 @@ namespace RATools.ViewModels
 
         public CommandBase UpdateLocalCommand { get; protected set; }
 
+        internal int SortOrder { get; set; }
+
         internal string RACacheDirectory
         {
             get { return _owner.RACacheDirectory; }
@@ -65,7 +67,7 @@ namespace RATools.ViewModels
             protected set { SetValue(ModificationMessageProperty, value); }
         }
 
-        public static readonly ModelProperty CompareStateProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "CompareState", typeof(GeneratedCompareState), GeneratedCompareState.None);
+        public static readonly ModelProperty CompareStateProperty = ModelProperty.Register(typeof(ViewerViewModelBase), "CompareState", typeof(GeneratedCompareState), GeneratedCompareState.Same);
         public GeneratedCompareState CompareState
         {
             get { return (GeneratedCompareState)GetValue(CompareStateProperty); }
@@ -90,28 +92,33 @@ namespace RATools.ViewModels
     public enum GeneratedCompareState
     {
         /// <summary>
-        /// Not generated
+        ///   unspecified
         /// </summary>
         None = 0,
 
         /// <summary>
-        /// Same as published and/or local
+        ///   generated matches core and/or local. no icon
         /// </summary>
         Same,
 
         /// <summary>
-        /// Differs from local value
+        /// ◖ not generated (core only). half circle icon
         /// </summary>
-        LocalDiffers,
+        NotGenerated,
 
         /// <summary>
-        /// Differs from published value
+        /// ○ generated but not stored (no core or no local). hollow circle icon
+        /// </summary>
+        GeneratedOnly,
+
+        /// <summary>
+        /// ◐ generated differs from core (local may or may not exist). half filled circle icon
         /// </summary>
         PublishedDiffers,
 
         /// <summary>
-        /// Same as published but not in local
+        /// ● generated differs from local (core may or may not exist). fully filled circle icon
         /// </summary>
-        PublishedMatchesNotLocal,
+        LocalDiffers,
     }
 }

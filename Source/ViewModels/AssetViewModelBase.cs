@@ -166,7 +166,6 @@ namespace RATools.ViewModels
 
             if (!IsGenerated)
             {
-                ModificationMessage = null;
                 CanUpdate = false;
 
                 Other = null;
@@ -174,12 +173,13 @@ namespace RATools.ViewModels
                 IsDescriptionModified = false;
                 IsPointsModified = false;
                 CompareState = GeneratedCompareState.None;
+                ModificationMessage = "Not generated";
 
                 if (coreAsset != null)
                 {
                     Triggers = Published.TriggerList;
                     if (coreAsset.IsUnofficial)
-                        TriggerSource = "Unofficial (Not Generated)";
+                        TriggerSource = "Unpublished (Not Generated)";
                     else
                         TriggerSource = "Core (Not Generated)";
                 }
@@ -201,7 +201,7 @@ namespace RATools.ViewModels
                     if (differsFromPublished)
                     {
                         if (coreAsset.IsUnofficial)
-                            TriggerSource = "Generated (Same as Unofficial)";
+                            TriggerSource = "Generated (Same as Unpublished)";
                         else
                             TriggerSource = "Generated (Same as Core)";
                     }
@@ -226,26 +226,34 @@ namespace RATools.ViewModels
                 }
 
                 if (coreAsset.IsUnofficial)
-                    ModificationMessage = "Unofficial differs from generated";
+                    ModificationMessage = "Unpublished differs from generated";
                 else
                     ModificationMessage = "Core differs from generated";
 
                 Other = Published;
-                CompareState = GeneratedCompareState.PublishedDiffers;
+                CompareState = (Local.Asset != null) ? GeneratedCompareState.PublishedDiffers : GeneratedCompareState.LocalDiffers;
             }
             else
             {
                 if (Local.Asset == null && IsGenerated)
                 {
                     if (coreAsset == null)
+                    {
                         TriggerSource = "Generated (Not in Local)";
-                    else if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unofficial, not in Local)";
+                        ModificationMessage = "Local " + ViewerType + " does not exist";
+                        CompareState = GeneratedCompareState.GeneratedOnly;
+                    }
                     else
-                        TriggerSource = "Generated (Same as Core, not in Local)";
+                    {
+                        if (coreAsset.IsUnofficial)
+                            TriggerSource = "Generated (Same as Unpublished, not in Local)";
+                        else
+                            TriggerSource = "Generated (Same as Core, not in Local)";
 
-                    ModificationMessage = "Local " + ViewerType + " does not exist";
-                    CompareState = GeneratedCompareState.PublishedMatchesNotLocal;
+                        ModificationMessage = null;
+                        CompareState = GeneratedCompareState.Same;
+                    }
+
                     CanUpdate = true;
                     Other = null;
                 }
@@ -254,7 +262,7 @@ namespace RATools.ViewModels
                     if (coreAsset == null)
                         TriggerSource = "Generated (Same as Local)";
                     else if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unofficial and Local)";
+                        TriggerSource = "Generated (Same as Unpublished and Local)";
                     else
                         TriggerSource = "Generated (Same as Core and Local)";
 
@@ -438,11 +446,17 @@ namespace RATools.ViewModels
                 coreAsset.IsUnofficial ? "Published (Unofficial)" : "Published (Core)";
 
             if (generatedAsset != null)
+            {
                 BindViewModel(Generated);
-            else if (coreAsset != null)
-                LoadViewModel(Published);
-            else if (localAsset != null)
-                LoadViewModel(Local);
+            }
+            else
+            {
+                ClearBindings();
+                if (coreAsset != null)
+                    LoadViewModel(Published);
+                else if (localAsset != null)
+                    LoadViewModel(Local);
+            }
 
             if (Generated.Id != 0)
                 Id = Generated.Id;
@@ -472,6 +486,13 @@ namespace RATools.ViewModels
             SetBinding(TitleProperty, new ModelBinding(viewModel.Title, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
             SetBinding(DescriptionProperty, new ModelBinding(viewModel.Description, TextFieldViewModel.TextProperty, ModelBindingMode.OneWay));
             SetBinding(PointsProperty, new ModelBinding(viewModel.Points, IntegerFieldViewModel.ValueProperty, ModelBindingMode.OneWay));
+        }
+
+        internal void ClearBindings()
+        {
+            SetBinding(TitleProperty, null);
+            SetBinding(DescriptionProperty, null);
+            SetBinding(PointsProperty, null);
         }
 
         private void LoadViewModel(AssetSourceViewModel viewModel)
