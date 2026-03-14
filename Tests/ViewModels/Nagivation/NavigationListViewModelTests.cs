@@ -482,8 +482,8 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(generatedAchievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
             Assert.AreSame(publishedAchievement, ((AchievementViewModel)achievementNode.Editor).Published.Asset);
-            Assert.AreEqual(GeneratedCompareState.PublishedDiffers, achievementNode.CompareState);
-            Assert.AreEqual("Generated asset differs from published", achievementNode.ModificationMessage);
+            Assert.AreEqual(GeneratedCompareState.LocalDiffers, achievementNode.CompareState);
+            Assert.AreEqual("Generated asset differs from unpublished", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());

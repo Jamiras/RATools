@@ -179,7 +179,7 @@ namespace RATools.ViewModels
                 {
                     Triggers = Published.TriggerList;
                     if (coreAsset.IsUnofficial)
-                        TriggerSource = "Unofficial (Not Generated)";
+                        TriggerSource = "Unpublished (Not Generated)";
                     else
                         TriggerSource = "Core (Not Generated)";
                 }
@@ -201,7 +201,7 @@ namespace RATools.ViewModels
                     if (differsFromPublished)
                     {
                         if (coreAsset.IsUnofficial)
-                            TriggerSource = "Generated (Same as Unofficial)";
+                            TriggerSource = "Generated (Same as Unpublished)";
                         else
                             TriggerSource = "Generated (Same as Core)";
                     }
@@ -226,12 +226,12 @@ namespace RATools.ViewModels
                 }
 
                 if (coreAsset.IsUnofficial)
-                    ModificationMessage = "Unofficial differs from generated";
+                    ModificationMessage = "Unpublished differs from generated";
                 else
                     ModificationMessage = "Core differs from generated";
 
                 Other = Published;
-                CompareState = GeneratedCompareState.PublishedDiffers;
+                CompareState = (Local.Asset != null) ? GeneratedCompareState.PublishedDiffers : GeneratedCompareState.LocalDiffers;
             }
             else
             {
@@ -246,7 +246,7 @@ namespace RATools.ViewModels
                     else
                     {
                         if (coreAsset.IsUnofficial)
-                            TriggerSource = "Generated (Same as Unofficial, not in Local)";
+                            TriggerSource = "Generated (Same as Unpublished, not in Local)";
                         else
                             TriggerSource = "Generated (Same as Core, not in Local)";
 
@@ -262,7 +262,7 @@ namespace RATools.ViewModels
                     if (coreAsset == null)
                         TriggerSource = "Generated (Same as Local)";
                     else if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unofficial and Local)";
+                        TriggerSource = "Generated (Same as Unpublished and Local)";
                     else
                         TriggerSource = "Generated (Same as Core and Local)";
 
