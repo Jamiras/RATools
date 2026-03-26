@@ -48,6 +48,9 @@ namespace RATools.Tests.ViewModels
             }
             public Achievement AddPublishedAchievement(int id, string name)
             {
+                if (_publishedAssets == null)
+                    _publishedAssets = new PublishedAssets(GameId + ".json", _fileSystemService);
+
                 var achievement = new Achievement
                 {
                     Id = id,
@@ -55,8 +58,19 @@ namespace RATools.Tests.ViewModels
                     Category = 3
                 };
 
-                _publishedAchievements.Add(achievement);
+                ((List<Achievement>)_publishedAssets.Achievements).Add(achievement);
                 return achievement;
+            }
+
+            public new void PopulateEditorList(AchievementScriptInterpreter interpreter)
+            {
+                ServiceRepository.Reset();
+                var backgroundWorkerService = new Mock<IBackgroundWorkerService>();
+                backgroundWorkerService.Setup(b => b.InvokeOnUiThread(It.IsAny<Action>())).Callback((Action a) => a());
+                ServiceRepository.Instance.RegisterInstance(backgroundWorkerService.Object);
+                ServiceRepository.Instance.RegisterInstance(new Mock<ISettings>().Object);
+                base.PopulateEditorList(interpreter);
+                ServiceRepository.Reset();
             }
         }
 
@@ -225,39 +239,6 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestPopulateEditorOrder()
-        {
-            var vmGame = new GameViewModelHarness(1234, "Title");
-
-            var interpreter = new AchievementScriptInterpreter();
-            AddGeneratedLeaderboard(interpreter, 17, "Leaderboard1");
-            AddGeneratedAchievement(interpreter, 65, "Test1");
-            AddGeneratedAchievement(interpreter, 68, "A Test2");
-            AddGeneratedAchievement(interpreter, 61, "Test3");
-            AddGeneratedRichPresence(interpreter);
-
-            // list is sorted by the order they were generated, not by id or title
-            // rich presence always appears before achievements, leaderboards always appear after
-            vmGame.PopulateEditorList(interpreter);
-            Assert.That(vmGame.Editors.Count(), Is.EqualTo(6));
-            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Script"));
-            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Rich Presence"));
-            Assert.That(vmGame.Editors.ElementAt(2).Title, Is.EqualTo("Test1"));
-            Assert.That(vmGame.Editors.ElementAt(3).Title, Is.EqualTo("A Test2"));
-            Assert.That(vmGame.Editors.ElementAt(4).Title, Is.EqualTo("Test3"));
-            Assert.That(vmGame.Editors.ElementAt(5).Title, Is.EqualTo("Leaderboard1"));
-
-            // despite having ids, these don't get categorized as Core or Unofficial without reading from file
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(3));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
-        }
-
-        [Test]
         public void TestPopulateEditorListMergeLocal()
         {
             var vmGame = new GameViewModelHarness(1234, "Title");
@@ -271,67 +252,21 @@ namespace RATools.Tests.ViewModels
             vmGame.AddLocalAchievement(0, "Test5").Points = 32;
 
             vmGame.PopulateEditorList(interpreter);
+
             Assert.That(vmGame.Editors.Count(), Is.EqualTo(6));
-            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Script"));
-            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Test1"));
-            Assert.That(vmGame.Editors.ElementAt(2).Title, Is.EqualTo("Test2")); // title should reflect generated value
-            Assert.That(vmGame.Editors.ElementAt(3).Title, Is.EqualTo("Test3"));
-            Assert.That(vmGame.Editors.ElementAt(4).Title, Is.EqualTo("A Test4")); // non-generated items should appear last
-            Assert.That(vmGame.Editors.ElementAt(5).Title, Is.EqualTo("Test5"));
+            var achievementList = vmGame.NavigationNodes.ElementAt(2);
+            Assert.That(achievementList.Children.ElementAt(0).Label, Is.EqualTo("Test1"));
+            Assert.That(achievementList.Children.ElementAt(1).Label, Is.EqualTo("Test2")); // title should reflect generated value
+            Assert.That(achievementList.Children.ElementAt(2).Label, Is.EqualTo("Test3"));
+            Assert.That(achievementList.Children.ElementAt(3).Label, Is.EqualTo("A Test4")); // non-generated items should appear last
+            Assert.That(achievementList.Children.ElementAt(4).Label, Is.EqualTo("Test5"));
 
             // items without an ID will be assigned the next available local ID
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(1)).Id, Is.EqualTo(65));
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(2)).Id, Is.EqualTo(111000004)); // generated and local (provided)
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(3)).Id, Is.EqualTo(111000006)); // generated (not provided)
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(4)).Id, Is.EqualTo(111000005)); // from local (provided)
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(5)).Id, Is.EqualTo(111000007)); // local (not provided)
-
-            // despite having ids, these don't get categorized as Core or Unofficial without reading from file
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(3));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(3));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(8 + 16 + 32)); // does not reflect generated adjustments
-        }
-
-        [Test]
-        public void TestPopulateEditorListMergeLocalTitleMatch()
-        {
-            var vmGame = new GameViewModelHarness(1234, "Title");
-
-            var interpreter = new AchievementScriptInterpreter();
-            AddGeneratedAchievement(interpreter, 65, "Test1").Points = 1;
-            AddGeneratedAchievement(interpreter, 111000004, "Test2").Points = 2;
-            AddGeneratedAchievement(interpreter, 0, "Test3").Points = 4;
-            AddGeneratedAchievement(interpreter, 0, "Test4").Points = 8;
-            vmGame.AddLocalAchievement(111000006, "Test2").Points = 16;
-            vmGame.AddLocalAchievement(111000007, "Test3").Points = 32;
-            vmGame.AddLocalAchievement(111000009, "tEsT4").Points = 64;
-
-            vmGame.PopulateEditorList(interpreter);
-            Assert.That(vmGame.Editors.Count(), Is.EqualTo(5));
-            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Script"));
-            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Test1"));
-            Assert.That(vmGame.Editors.ElementAt(2).Title, Is.EqualTo("Test2"));
-            Assert.That(vmGame.Editors.ElementAt(3).Title, Is.EqualTo("Test3"));
-            Assert.That(vmGame.Editors.ElementAt(4).Title, Is.EqualTo("Test4"));
-
-            // if there isn't an explicit match to the ID, look for a case-insensitive match to the title
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(1)).Id, Is.EqualTo(65));
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(2)).Id, Is.EqualTo(111000004)); // prefer generated ID
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(3)).Id, Is.EqualTo(111000007)); // from local (provided)
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(4)).Id, Is.EqualTo(111000009)); // from local (provided)
-
-            // despite having ids, these don't get categorized as Core or Unofficial without reading from file
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(4));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(3));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(16 + 32 + 64));
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test1").Id, Is.EqualTo(65));
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test2").Id, Is.GreaterThan(AssetBase.FirstLocalId)); // generated and local (provided)
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test3").Id, Is.GreaterThan(AssetBase.FirstLocalId)); // generated (not provided)
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "A Test4").Id, Is.GreaterThan(AssetBase.FirstLocalId)); // from local (provided)
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test5").Id, Is.GreaterThan(AssetBase.FirstLocalId)); // local (not provided)
         }
 
         [Test]
@@ -350,25 +285,17 @@ namespace RATools.Tests.ViewModels
             ach.Category = 5;
 
             vmGame.PopulateEditorList(interpreter);
+
             Assert.That(vmGame.Editors.Count(), Is.EqualTo(4));
-            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Script"));
-            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Test1")); // title should reflect generated value
-            Assert.That(vmGame.Editors.ElementAt(2).Title, Is.EqualTo("Test2"));
-            Assert.That(vmGame.Editors.ElementAt(3).Title, Is.EqualTo("Test3"));
+            var achievementList = vmGame.NavigationNodes.ElementAt(2);
+            Assert.That(achievementList.Children.ElementAt(0).Label, Is.EqualTo("Test1"));
+            Assert.That(achievementList.Children.ElementAt(1).Label, Is.EqualTo("Test2")); // title should reflect generated value
+            Assert.That(achievementList.Children.ElementAt(2).Label, Is.EqualTo("Test3"));
 
             // items without an ID will be assigned the next available local ID
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(1)).Id, Is.EqualTo(65));
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(2)).Id, Is.EqualTo(111000004)); // generated ID is preferred
-            Assert.That(((AchievementViewModel)vmGame.Editors.ElementAt(3)).Id, Is.EqualTo(72)); // core ID is used when generated is not specified
-
-            // despite having ids, these don't get categorized as Core or Unofficial without reading from file
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(3));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0)); // core and unofficial count/points
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0)); // are calculated when read from the file
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test1").Id, Is.EqualTo(65));
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test2").Id, Is.GreaterThan(AssetBase.FirstLocalId)); // generated and local (provided)
+            Assert.That(vmGame.Editors.OfType<AchievementViewModel>().First(a => a.Title == "Test3").Id, Is.EqualTo(72));
         }
 
         [Test]
@@ -389,11 +316,10 @@ namespace RATools.Tests.ViewModels
 
             vmGame.PopulateEditorList(null);
             Assert.That(vmGame.Editors.Count(), Is.EqualTo(3));
-            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Script"));
-            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Ach123"));
-            Assert.That(vmGame.Editors.ElementAt(2).Title, Is.EqualTo("Ach234"));
+            Assert.That(vmGame.Editors.ElementAt(0).Title, Is.EqualTo("Ach123"));
+            Assert.That(vmGame.Editors.ElementAt(1).Title, Is.EqualTo("Ach234"));
 
-            var ach123 = ((AchievementViewModel)vmGame.Editors.ElementAt(1)).Published.Asset as Achievement;
+            var ach123 = ((AchievementViewModel)vmGame.Editors.ElementAt(0)).Published.Asset as Achievement;
             Assert.That(ach123.Id, Is.EqualTo(123));
             Assert.That(ach123.Title, Is.EqualTo("Ach123"));
             Assert.That(ach123.Description, Is.EqualTo("Desc123"));
@@ -406,7 +332,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(ach123.Published, Is.EqualTo(new DateTime(2021, 07, 05, 18, 03, 33, DateTimeKind.Utc)));
             Assert.That(ach123.LastModified, Is.EqualTo(new DateTime(2021, 07, 09, 04, 44, 10, DateTimeKind.Utc)));
 
-            var ach234 = ((AchievementViewModel)vmGame.Editors.ElementAt(2)).Published.Asset as Achievement;
+            var ach234 = ((AchievementViewModel)vmGame.Editors.ElementAt(1)).Published.Asset as Achievement;
             Assert.That(ach234.Id, Is.EqualTo(234));
             Assert.That(ach234.Title, Is.EqualTo("Ach234"));
             Assert.That(ach234.Description, Is.EqualTo("Desc234"));

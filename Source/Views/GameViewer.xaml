@@ -1,5 +1,6 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:jamiras="clr-namespace:Jamiras.Controls;assembly=Jamiras.UI.WPF"
                     xmlns:vm="clr-namespace:RATools.ViewModels">
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ScriptViewer.xaml" />
@@ -8,35 +9,32 @@
         <ResourceDictionary Source="LeaderboardViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
 
-    <DataTemplate x:Key="editorRowTemplate">
-        <Grid HorizontalAlignment="Left" Width="{Binding ActualWidth, ElementName=maxAchievementRowWidth}" Height="13" Margin="-1,0,0,0">
+    <HierarchicalDataTemplate x:Key="navigationNodeTemplate" ItemsSource="{Binding Children}">
+        <Grid HorizontalAlignment="Stretch" Height="13" Margin="-1,0,0,0">
             <Grid.Resources>
-                <ContextMenu x:Key="updateLocalContextMenu" DataContext="{Binding PlacementTarget, RelativeSource={RelativeSource Self}}">
-                    <MenuItem Header="Update Local" Command="{Binding DataContext.UpdateLocalCommand}" />
-                </ContextMenu>
+                <Style x:Key="navigationNodeContextMenuItemStyle" TargetType="MenuItem">
+                    <Setter Property="Header" Value="{Binding Label}" />
+                    <Setter Property="Command" Value="{Binding Command}" />
+                    <Setter Property="CommandParameter" Value="{Binding CommandParameter}" />
+                </Style>
+                <ContextMenu x:Key="navigationNodeContextMenu" ItemsSource="{Binding ContextMenu}"
+                             ItemContainerStyle="{StaticResource navigationNodeContextMenuItemStyle}" />
             </Grid.Resources>
             <Grid.Style>
                 <Style TargetType="{x:Type Grid}">
-                    <Setter Property="ContextMenu" Value="{StaticResource updateLocalContextMenu}" />
+                    <Setter Property="ContextMenu" Value="{StaticResource navigationNodeContextMenu}" />
                     <Style.Triggers>
-                        <DataTrigger Binding="{Binding CompareState}" Value="None">
+                        <DataTrigger Binding="{Binding ContextMenu}" Value="{x:Null}">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
                         </DataTrigger>
-                        <DataTrigger Binding="{Binding CompareState}" Value="Same">
+                        <DataTrigger Binding="{Binding ContextMenu.Count}" Value="0">
                             <Setter Property="ContextMenu" Value="{x:Null}" />
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding UpdateLocalCommand}" Value="{x:Null}">
-                            <Setter Property="ContextMenu" Value="{x:Null}" />
-                        </DataTrigger>
-                        <DataTrigger Binding="{Binding IsGenerated}" Value="False">
-                            <Setter Property="ContextMenu" Value="{x:Null}" />
-                            <Setter Property="Opacity" Value="0.6" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="8" />
+                <ColumnDefinition Width="9" />
                 <ColumnDefinition Width="14" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="30" />
@@ -45,11 +43,14 @@
 
             <!-- Modified (explicitly gray to match images) -->
             <TextBlock FontSize="10" VerticalAlignment="Center" Foreground="Gray" 
-                       ToolTip="{Binding ModificationMessage}" Margin="-2,-2,0,0">
+                       ToolTip="{Binding ModificationMessage}" Margin="-1,-2,0,0">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding CompareState}" Value="PublishedMatchesNotLocal">
+                            <DataTrigger Binding="{Binding CompareState}" Value="NotGenerated">
+                                <Setter Property="Text" Value="&#x25D6;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CompareState}" Value="GeneratedOnly">
                                 <Setter Property="Text" Value="&#x25CB;" />
                             </DataTrigger>
                             <DataTrigger Binding="{Binding CompareState}" Value="LocalDiffers">
@@ -66,19 +67,30 @@
             <!-- Image -->
             <Image Grid.Column="1" Width="12" Height="12" Margin="0,-1,0,-1"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
-                   Source="{Binding ViewerImage}" ToolTip="{Binding ViewerType}" />
+                   Source="{Binding ImageResourcePath}" ToolTip="{Binding ImageTooltip}" />
 
             <!-- Name -->
             <TextBlock Grid.Column="2" Margin="2,-3,2,0" HorizontalAlignment="Stretch"
-                       Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                       Text="{Binding Label}" TextTrimming="CharacterEllipsis">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Setter Property="Grid.ColumnSpan" Value="3" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ImageName}" Value="achievement">
+                                <Setter Property="Grid.ColumnSpan" Value="1" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
 
             <!-- Points -->
-            <TextBlock Grid.Column="3" Text="{Binding Points}" Margin="2,-2,2,0" HorizontalAlignment="Right">
+            <TextBlock Grid.Column="3" Margin="2,-2,2,0" HorizontalAlignment="Right">
                 <TextBlock.Style>
                     <Style TargetType="{x:Type TextBlock}">
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Points}" Value="0">
-                                <Setter Property="Visibility" Value="Collapsed" />
+                            <DataTrigger Binding="{Binding ImageName}" Value="achievement">
+                                <Setter Property="Text" Value="{Binding Points}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
@@ -86,22 +98,30 @@
             </TextBlock>
             
             <!-- Type -->
-            <Image Grid.Column="4" Source="{Binding TypeImage}" ToolTip="{Binding AchievementType}">
+            <Image Grid.Column="4">
                 <Image.Style>
                     <Style TargetType="{x:Type Image}">
-                        <Setter Property="Width" Value="13" />
-                        <Setter Property="Height" Value="13" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding AchievementType}" Value="Missable">
+                            <DataTrigger Binding="{Binding ImageName}" Value="achievement">
+                                <Setter Property="Width" Value="13" />
+                                <Setter Property="Height" Value="13" />
+                                <Setter Property="Source" Value="{Binding TypeImage, TargetNullValue={x:Null}}" />
+                                <Setter Property="ToolTip" Value="{Binding AchievementType}" />
+                            </DataTrigger>
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding ImageName}" Value="achievement" />
+                                    <Condition Binding="{Binding AchievementType}" Value="Missable" />
+                                </MultiDataTrigger.Conditions>
                                 <Setter Property="Width" Value="11" />
                                 <Setter Property="Height" Value="11" />
-                            </DataTrigger>
+                            </MultiDataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Image.Style>
             </Image>
         </Grid>
-    </DataTemplate>
+    </HierarchicalDataTemplate>
 
     <DataTemplate DataType="{x:Type vm:GameViewModel}">
         <Grid Background="#F0F0F0" x:Name="gameGrid">
@@ -125,17 +145,19 @@
                 <ScrollBar Grid.Column="2" Orientation="Vertical" />
             </Grid>
 
-            <ListBox ItemsSource="{Binding Editors}" SelectedItem="{Binding SelectedEditor}" HorizontalContentAlignment="Stretch"
-                     ItemTemplate="{StaticResource editorRowTemplate}" x:Name="achievementsList" 
-                     ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                     Style="{StaticResource themedListBox}">
-                <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
+            <TreeView ItemsSource="{Binding NavigationNodes}" HorizontalContentAlignment="Stretch"
+                      ItemTemplate="{StaticResource navigationNodeTemplate}" x:Name="navigationNodes"
+                      jamiras:TreeUtils.SelectedItem="{Binding SelectedNavigationNode}"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      Style="{StaticResource themedTreeView}">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource themedTreeViewItem}">
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Margin" Value="1" />
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
-                </ListBox.ItemContainerStyle>
-            </ListBox>
+                </TreeView.ItemContainerStyle>
+            </TreeView>
 
             <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" ResizeDirection="Columns" />
 

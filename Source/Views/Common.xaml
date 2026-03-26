@@ -181,6 +181,105 @@
         </Grid>
     </ControlTemplate>
 
+    <Style TargetType="{x:Type ToggleButton}" x:Key="ExpandCollapseToggleStyle">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                    <ControlTemplate.Resources>
+                        <PathGeometry x:Key="TreeArrow" Figures="M0,0 L0,6 L6,0 z"/>
+                    </ControlTemplate.Resources>
+                    <Border Background="Transparent" Height="16" Padding="5,5,5,5" Width="16">
+                        <Path x:Name="ExpandPath" Data="{StaticResource TreeArrow}"
+                              Fill="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}"
+                              Stroke="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}">
+                            <Path.RenderTransform>
+                                <RotateTransform Angle="135" CenterY="3" CenterX="3"/>
+                            </Path.RenderTransform>
+                        </Path>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter Property="RenderTransform" TargetName="ExpandPath">
+                                <Setter.Value>
+                                    <RotateTransform Angle="180" CenterY="3" CenterX="3"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Fill" TargetName="ExpandPath" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}"/>
+                            <Setter Property="Stroke" TargetName="ExpandPath" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type TreeViewItem}" x:Key="themedTreeViewItem">
+        <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
+        <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
+        <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TreeViewItem}">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition MinWidth="11" Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <ToggleButton x:Name="Expander" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}" Style="{StaticResource ExpandCollapseToggleStyle}"/>
+                        <Border x:Name="Bd" Grid.Column="1" HorizontalAlignment="Stretch"
+                                Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                            <ContentPresenter x:Name="PART_Header" ContentSource="Header" HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ItemsPresenter x:Name="ItemsHost" Grid.ColumnSpan="2" Grid.Column="1" Grid.Row="1" Margin="-4,0,0,0"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="false">
+                            <Setter Property="Visibility" TargetName="ItemsHost" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="false">
+                            <Setter Property="Visibility" TargetName="Expander" Value="Hidden"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="true">
+                            <Setter Property="Background" TargetName="Bd" Value="{Binding DataContext.Script.Editor.Resources.Selection.Brush, ElementName=gameGrid}"/>
+                            <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="false">
+                            <Setter Property="Opacity" Value="0.4"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="{x:Type TreeView}" x:Key="themedTreeView">
+        <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
+        <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />
+        <Setter Property="BorderBrush" Value="{Binding DataContext.Script.Editor.Resources.LineNumber.Brush, ElementName=gameGrid}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type TreeView}">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}">
+                        <ScrollViewer x:Name="ScrollViewer"
+                                      Foreground="{TemplateBinding Foreground}"
+                                      Template="{StaticResource themedScrollViewerTemplate}">
+                            <ItemsPresenter />
+                        </ScrollViewer>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="{x:Type ListBox}" x:Key="themedListBox">
         <Setter Property="Background" Value="{Binding DataContext.Script.Editor.Resources.Background.Brush, ElementName=gameGrid}" />
         <Setter Property="Foreground" Value="{Binding DataContext.Script.Editor.Resources.Foreground.Brush, ElementName=gameGrid}" />

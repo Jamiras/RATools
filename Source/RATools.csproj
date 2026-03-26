@@ -30,6 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Resources\folder.png" />
     <None Remove="Resources\missable.png" />
     <None Remove="Resources\progression.png" />
     <None Remove="Resources\win-condition.png" />
@@ -54,6 +55,7 @@
 
   <ItemGroup>
     <Resource Include="Resources\achievement.png" />
+    <Resource Include="Resources\folder.png" />
     <Resource Include="Resources\Icon.png" />
     <Resource Include="Resources\leaderboard.png" />
     <Resource Include="Resources\missable.png" />

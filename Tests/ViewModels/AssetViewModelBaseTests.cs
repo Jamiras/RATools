@@ -89,7 +89,7 @@ namespace RATools.Tests.ViewModels
             var vmAsset = new AssetViewModelBaseHarness();
             Assert.That(vmAsset.BadgeName, Is.Null);
             Assert.That(vmAsset.CanUpdate, Is.False);
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Same));
             Assert.That(vmAsset.DeleteLocalCommand, Is.InstanceOf<DisabledCommand>());
             Assert.That(vmAsset.Description, Is.EqualTo(""));
             Assert.That(vmAsset.Generated, Is.Not.Null);
@@ -130,7 +130,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
-            Assert.That(vmAsset.ModificationMessage, Is.Null);
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Not generated"));
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
@@ -159,14 +159,14 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
-            Assert.That(vmAsset.ModificationMessage, Is.Null);
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Not generated"));
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unofficial (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unpublished (Not Generated)"));
         }
 
         [Test]
@@ -187,7 +187,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
-            Assert.That(vmAsset.ModificationMessage, Is.Null);
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Not generated"));
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.Null);
@@ -267,7 +267,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unofficial)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished)"));
         }
 
         [Test]
@@ -365,7 +365,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.True);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unofficial differs from generated"));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpublished differs from generated"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
@@ -397,8 +397,8 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsTitleModified, Is.True);
             Assert.That(vmAsset.IsDescriptionModified, Is.True);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unofficial differs from generated"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.LocalDiffers));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpublished differs from generated"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
@@ -425,7 +425,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsTitleModified, Is.False);
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedMatchesNotLocal));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.GeneratedOnly));
             Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Local Test does not exist"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
@@ -457,8 +457,8 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsTitleModified, Is.False);
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedMatchesNotLocal));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Local Test does not exist"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Same));
+            Assert.That(vmAsset.ModificationMessage, Is.Null);
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.Null);
@@ -490,15 +490,15 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsTitleModified, Is.False);
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedMatchesNotLocal));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Local Test does not exist"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Same));
+            Assert.That(vmAsset.ModificationMessage, Is.Null);
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.Null);
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unofficial, not in Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished, not in Local)"));
         }
 
         [Test]
@@ -639,7 +639,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unofficial and Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished and Local)"));
         }
     }
 }
