@@ -128,6 +128,11 @@ namespace RATools.ViewModels
             int gameId = GameId;
 
             var gameJson = RAWebCache.Instance.GetGameJson(gameId);
+            if (gameJson == null)
+            {
+                Progress.Label = String.Empty;
+                return;
+            }
 
             _gameName = gameJson.GetField("Title").StringValue;
             DialogTitle = "Game Badges - " + _gameName;
@@ -136,6 +141,7 @@ namespace RATools.ViewModels
             {
                 var achievements = gameJson.GetField("Achievements").ObjectValue; // "id":{} map
                 Progress.Target = achievements.Count();
+                Progress.Current = 0;
                 foreach (var pair in achievements)
                 {
                     var achievement = pair.ObjectValue;
