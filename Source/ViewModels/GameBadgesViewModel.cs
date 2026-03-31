@@ -10,10 +10,10 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using static RATools.ViewModels.GameStatsViewModel;
 
 namespace RATools.ViewModels
 {
@@ -35,16 +35,17 @@ namespace RATools.ViewModels
             Progress = new ProgressFieldViewModel { Label = String.Empty };
             DialogTitle = "Game Badges";
             CanClose = true;
-            CancelButtonText = null;
-            ExtraButtonCommand = new DelegateCommand(Export);
 
             _achievements = new ObservableCollection<BadgeViewModel>();
             SearchCommand = new DelegateCommand(Search);
+            ExportCommand = new DelegateCommand<ItemsControl>(Export);
         }
 
         private readonly IBackgroundWorkerService _backgroundWorkerService;
         private readonly IFileSystemService _fileSystem;
         private readonly ISettings _settings;
+
+        private string _gameName;
 
         public ProgressFieldViewModel Progress { get; private set; }
 
@@ -77,7 +78,8 @@ namespace RATools.ViewModels
                 if (File.Exists(filename))
                 {
                     var publishedAssets = new PublishedAssets(filename, _fileSystem);
-                    DialogTitle = "Game Badges - " + publishedAssets.Title;
+                    _gameName = publishedAssets.Title;
+                    DialogTitle = "Game Badges - " + _gameName;
 
                     var badgeDirectory = Path.Combine(directory, "RACache", "Badge");
                     foreach (var achievement in publishedAssets.Achievements)
@@ -139,24 +141,39 @@ namespace RATools.ViewModels
             set { SetValue(ShowHardcoreBorderProperty, value); }
         }
 
-        public string ExtraButtonText {  get { return "Export"; } }
-        public CommandBase ExtraButtonCommand { get; private set; }
+        public CommandBase<ItemsControl> ExportCommand { get; private set; }
 
-        private void Export()
+        private void Export(ItemsControl listView)
         {
-            var filename = "achievements";
+            var filename = _gameName + ".png";
 
             var vm = new FileDialogViewModel();
-            vm.DialogTitle = "Export achievement information";
-            vm.Filters["CSV file"] = "*.csv";
-            vm.FileNames = new[] { filename + ".csv" };
+            vm.DialogTitle = "Export badges";
+            vm.Filters["Image File"] = "*.png";
+            vm.FileNames = new[] { filename };
             vm.OverwritePrompt = true;
 
             if (vm.ShowSaveFileDialog() == DialogResult.Ok)
             {
-                using (var file = File.CreateText(vm.FileNames[0]))
+                var rect = new Rect(new Point(), listView.RenderSize);
+                DrawingVisual dv = new DrawingVisual();
+                using (var context = dv.RenderOpen())
                 {
+                    var brush = new VisualBrush(listView);
+                    context.DrawRectangle(brush, null, rect);
+                }
+                RenderTargetBitmap renderTargetBitmap = new RenderTargetBitmap(
+                    (int)rect.Width,
+                    (int)rect.Height,
+                    96, 96, // DPI
+                    PixelFormats.Default);
+                renderTargetBitmap.Render(dv);
 
+                PngBitmapEncoder pngEncoder = new PngBitmapEncoder();
+                pngEncoder.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
+                using (var fileStream = new FileStream(vm.FileNames[0], FileMode.Create))
+                {
+                    pngEncoder.Save(fileStream);
                 }
             }
         }
