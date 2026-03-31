@@ -76,6 +76,6 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <ContentPresenter Grid.ColumnSpan="4" Grid.RowSpan="2" Margin="-4" Content="{Binding Progress}" />
+        <ContentPresenter Grid.ColumnSpan="6" Grid.RowSpan="2" Margin="-4" Content="{Binding Progress}" />
     </Grid>
 </UserControl>

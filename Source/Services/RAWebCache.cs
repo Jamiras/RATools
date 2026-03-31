@@ -212,7 +212,7 @@ namespace RATools.Services
             }
         }
 
-        private string GetPage(string filename, string url)
+        private bool DownloadFile(string url, string filename)
         {
             bool fileValid = false;
             if (_fileSystemService.FileExists(filename))
@@ -231,7 +231,7 @@ namespace RATools.Services
 
                 var response = _httpRequestService.Request(request);
                 if (response.Status != System.Net.HttpStatusCode.OK)
-                    return null;
+                    return false;
 
                 using (var outputStream = _fileSystemService.CreateFile(filename))
                 {
@@ -244,6 +244,14 @@ namespace RATools.Services
                     }
                 }
             }
+
+            return true;
+        }
+
+        private string GetPage(string filename, string url)
+        {
+            if (!DownloadFile(url, filename))
+                return null;
 
             using (var stream = new StreamReader(_fileSystemService.OpenFile(filename, OpenFileMode.Read)))
             {
@@ -262,6 +270,19 @@ namespace RATools.Services
         {
             return CallJsonAPI("API_GetUserCompletedGames", "u=" + user,
                 String.Format("raUser{0}_Masteries.json", user));
+        }
+
+        public string GetBadge(string badgeName, bool isLocked = false)
+        {
+            if (isLocked)
+                badgeName += "_lock";
+            badgeName += ".png";
+
+            var filename = Path.Combine(Path.GetTempPath(), "raBadge" + badgeName);
+            if (!DownloadFile("https://media.retroachievements.org/Badge/" + badgeName, filename))
+                return null;
+
+            return filename;
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
+using Jamiras.IO.Serialization;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using Jamiras.ViewModels.Fields;
@@ -10,10 +11,13 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using static RATools.ViewModels.GameStatsViewModel;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace RATools.ViewModels
 {
@@ -123,6 +127,46 @@ namespace RATools.ViewModels
         {
             int gameId = GameId;
 
+            var gameJson = RAWebCache.Instance.GetGameJson(gameId);
+
+            _gameName = gameJson.GetField("Title").StringValue;
+            DialogTitle = "Game Badges - " + _gameName;
+
+            if (gameJson.GetField("Achievements").Type == JsonFieldType.Object)
+            {
+                var achievements = gameJson.GetField("Achievements").ObjectValue; // "id":{} map
+                Progress.Target = achievements.Count();
+                foreach (var pair in achievements)
+                {
+                    var achievement = pair.ObjectValue;
+
+                    AchievementStats stats = new AchievementStats();
+                    var title = achievement.GetField("Title").StringValue;
+                    var description = achievement.GetField("Description").StringValue;
+                    var badgeName = achievement.GetField("BadgeName").StringValue;
+
+                    var path = RAWebCache.Instance.GetBadge(badgeName);
+
+                    BitmapImage image = null;
+                    if (File.Exists(path))
+                    {
+                        image = new BitmapImage(new Uri(path));
+                        image.Freeze();
+                    }
+
+                    _backgroundWorkerService.InvokeOnUiThread(() =>
+                    {
+                        _achievements.Add(new BadgeViewModel
+                        {
+                            Title = title,
+                            Description = description,
+                            Badge = image,
+                        });
+                    });
+
+                    Progress.Current++;
+                }
+            }
 
             Progress.Label = String.Empty;
         }
