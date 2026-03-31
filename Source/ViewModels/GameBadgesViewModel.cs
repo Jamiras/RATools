@@ -73,6 +73,19 @@ namespace RATools.ViewModels
         {
             _achievements.Clear();
 
+            if (!LoadGameFromCache())
+            {
+                Progress.Label = "Fetching Game " + GameId;
+                Progress.IsEnabled = true;
+                _backgroundWorkerService.RunAsync(() =>
+                {
+                    LoadGame();
+                });
+            }
+        }
+
+        private bool LoadGameFromCache()
+        {
             int gameId = GameId;
             foreach (var directory in _settings.EmulatorDirectories)
             {
@@ -95,32 +108,28 @@ namespace RATools.ViewModels
                         if (Path.GetExtension(path) == "")
                             path += ".png";
 
-                        BitmapImage image = null;
-                        if (File.Exists(path))
+                        if (!File.Exists(path))
                         {
-                            image = new BitmapImage(new Uri(path));
-                            image.Freeze();
+                            _achievements.Clear();
+                            return false;
                         }
 
-                        var badge = new BadgeViewModel
+                        BitmapImage image = new BitmapImage(new Uri(path));
+                        image.Freeze();
+
+                        _achievements.Add(new BadgeViewModel
                         {
                             Title = achievement.Title,
                             Description = achievement.Description,
                             Badge = image,
-                        };
-                        _achievements.Add(badge);
+                        });
                     }
 
-                    return;
+                    return true;
                 }
             }
 
-            Progress.Label = "Fetching Game " + GameId;
-            Progress.IsEnabled = true;
-            _backgroundWorkerService.RunAsync(() =>
-            {
-                LoadGame();
-            });
+            return false;
         }
 
         internal void LoadGame()
