@@ -200,6 +200,11 @@ namespace RATools.Parser
             {
                 var builder = new AchievementBuilder();
                 builder.Id = publishedAchievement.GetField("ID").IntegerValue.GetValueOrDefault();
+
+                // ignore server generated warning achievements
+                if (builder.Id >= 101000001)
+                    continue;
+
                 builder.Title = publishedAchievement.GetField("Title").StringValue;
                 builder.Description = publishedAchievement.GetField("Description").StringValue;
                 builder.Points = publishedAchievement.GetField("Points").IntegerValue.GetValueOrDefault();
