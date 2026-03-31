@@ -16,8 +16,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using static RATools.ViewModels.GameStatsViewModel;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace RATools.ViewModels
 {
@@ -148,39 +146,53 @@ namespace RATools.ViewModels
 
             if (gameJson.GetField("Achievements").Type == JsonFieldType.Object)
             {
-                var achievements = gameJson.GetField("Achievements").ObjectValue; // "id":{} map
+                var achievements = new List<Tuple<JsonObject, long>>();
+                foreach (var pair in gameJson.GetField("Achievements").ObjectValue) // "id":{} map
+                {
+                    long displayOrder = pair.ObjectValue.GetField("DisplayOrder").IntegerValue.GetValueOrDefault();
+                    long id = pair.ObjectValue.GetField("ID").IntegerValue.GetValueOrDefault();
+                    long sortKey = displayOrder << 32 | id;
+                    achievements.Add(new Tuple<JsonObject, long>(pair.ObjectValue, sortKey));
+                }
+                achievements.Sort((a, b) => a.Item2 > b.Item2 ? 1 : a.Item2 < b.Item2 ? -1 : 0);
+
                 Progress.Target = achievements.Count();
                 Progress.Current = 0;
                 foreach (var pair in achievements)
                 {
-                    var achievement = pair.ObjectValue;
+                    var achievement = pair.Item1;
 
-                    AchievementStats stats = new AchievementStats();
-                    var title = achievement.GetField("Title").StringValue;
-                    var description = achievement.GetField("Description").StringValue;
                     var badgeName = achievement.GetField("BadgeName").StringValue;
+                    RAWebCache.Instance.GetBadge(badgeName);
+                    Progress.Current++;
+                }
 
-                    var path = RAWebCache.Instance.GetBadge(badgeName);
-
-                    BitmapImage image = null;
-                    if (File.Exists(path))
+                _backgroundWorkerService.InvokeOnUiThread(() =>
+                {
+                    foreach (var pair in achievements)
                     {
-                        image = new BitmapImage(new Uri(path));
-                        image.Freeze();
-                    }
+                        var achievement = pair.Item1;
 
-                    _backgroundWorkerService.InvokeOnUiThread(() =>
-                    {
+                        var title = achievement.GetField("Title").StringValue;
+                        var description = achievement.GetField("Description").StringValue;
+                        var badgeName = achievement.GetField("BadgeName").StringValue;
+
+                        var path = RAWebCache.Instance.GetBadge(badgeName);
+                        BitmapImage image = null;
+                        if (File.Exists(path))
+                        {
+                            image = new BitmapImage(new Uri(path));
+                            image.Freeze();
+                        }
+
                         _achievements.Add(new BadgeViewModel
                         {
                             Title = title,
                             Description = description,
                             Badge = image,
                         });
-                    });
-
-                    Progress.Current++;
-                }
+                    }
+                });
             }
 
             Progress.Label = String.Empty;
