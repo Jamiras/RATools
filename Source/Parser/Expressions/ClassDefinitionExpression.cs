@@ -33,14 +33,10 @@ namespace RATools.Parser.Expressions
         private readonly List<AssignmentExpression> _fields;
         private readonly List<FunctionDefinitionExpression> _functions;
 
-        public ErrorExpression AddField(VariableExpression variable, ExpressionBase initialValue)
-        {
-            if (variable.GetType() != typeof(VariableExpression))
-                return new ErrorExpression("Complex field name not allowed", variable);
-
-            _fields.Add(new AssignmentExpression(variable, initialValue));
-            return null;
-        }
+        /// <summary>
+        /// Gets the fields exposed by the class (and their default values).
+        /// </summary>
+        public IEnumerable<AssignmentExpression> Fields { get { return _fields; } }
 
         public FunctionDefinitionExpression GetFunctionDefinition(string functionName)
         {

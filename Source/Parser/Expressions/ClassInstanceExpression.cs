@@ -22,6 +22,11 @@ namespace RATools.Parser.Expressions
             get { return _classDefinition.Name.Name; }
         }
 
+        public ClassDefinitionExpression ClassDefinition
+        {
+            get { return _classDefinition; }
+        }
+
         public void SetFieldValue(string fieldName, ExpressionBase value)
         {
             _fieldValues[fieldName] = value;
