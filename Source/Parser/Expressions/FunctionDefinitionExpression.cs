@@ -4,6 +4,7 @@ using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -34,6 +35,7 @@ namespace RATools.Parser.Expressions
             Parameters = source.Parameters;
             Expressions = source.Expressions;
             DefaultParameters = source.DefaultParameters;
+            Location = source.Location;
 
             MakeReadOnly();
         }
@@ -625,6 +627,11 @@ namespace RATools.Parser.Expressions
         {
         }
 
+        protected UserFunctionDefinitionExpression(UserFunctionDefinitionExpression source)
+            : base(source)
+        {
+        }
+
         /// <summary>
         /// Parses a function definition.
         /// </summary>
@@ -806,7 +813,7 @@ namespace RATools.Parser.Expressions
         /// Evaluates an expression
         /// </summary>
         /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>
-        public ExpressionBase Evaluate(InterpreterScope scope)
+        public virtual ExpressionBase Evaluate(InterpreterScope scope)
         {
             return this;
         }
@@ -936,6 +943,13 @@ namespace RATools.Parser.Expressions
             CapturedVariables = Enumerable.Empty<VariableReferenceExpression>();
         }
 
+        protected AnonymousUserFunctionDefinitionExpression(AnonymousUserFunctionDefinitionExpression source, IEnumerable<VariableReferenceExpression> capturedVariables)
+            : base(source)
+        {
+            CapturedVariables = capturedVariables;
+            _isConstant = true;
+        }
+
         /// <summary>
         /// Determines if the tokenizer is pointing at a parameter list for an anonymous function.
         /// </summary>
@@ -1025,31 +1039,64 @@ namespace RATools.Parser.Expressions
 
         public IEnumerable<VariableReferenceExpression> CapturedVariables { get; private set; }
 
-        public void IdentifyCaptureVariables(InterpreterScope scope)
+        /// <summary>
+        /// Gets whether this is non-changing.
+        /// </summary>
+        /// <remarks>
+        /// An anonymous function may see variables in the current function scope.
+        /// If this function is dependent on scoped variables, the definition will not be constant.
+        /// </remarks>
+        public override bool IsConstant { get { return _isConstant; } }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private bool _isConstant = false;
+
+        /// <summary>
+        /// Evaluates an expression.
+        /// </summary>
+        /// <remarks>
+        /// An anonymous function may see variables in the current function scope.
+        /// If this function is dependent on scoped variables, this will return a scope-specific function definition containing the captured variables.
+        /// </remarks>
+        public override ExpressionBase Evaluate(InterpreterScope scope)
         {
-            // Initialize a new scope object with a FunctionCall context so we can determine which
-            // variables have to be captured. The FunctionCall context will only see the globals.
-            var captureScope = new InterpreterScope(scope);
-            captureScope.Context = new FunctionCallExpression("NonAnonymousFunction", new ExpressionBase[0]);
+            if (_isConstant) // previously determined there's no dependencies
+                return this;
 
-            var capturedVariables = new List<VariableReferenceExpression>();
-
+            // A function normally can only see its variables and global variables. an
+            // anonymous function may also see variables in the current function scope.
+            // Identify any local variables the anonymous function needs so we can copy
+            // them to the function call scope when the function is invoked.
             var possibleDependencies = new HashSet<string>();
             ((INestedExpressions)this).GetDependencies(possibleDependencies);
-            foreach (var dependency in possibleDependencies)
+            if (possibleDependencies.Count > 0)
             {
-                if (captureScope.GetVariable(dependency) == null)
+                // Initialize a new scope object with a FunctionCall context so we can determine which
+                // variables have to be captured. The FunctionCall context will only see the globals.
+                var captureScope = new InterpreterScope(scope);
+                captureScope.Context = new FunctionCallExpression("GlobalFilter", new ExpressionBase[0]);
+
+                var capturedVariables = new List<VariableReferenceExpression>();
+
+                foreach (var dependency in possibleDependencies)
                 {
-                    // the variable is not visible to the function scope. check to see if it's visible
-                    // in the calling scope. if it is, create a copy for the function call.
-                    var variable = scope.GetVariableReference(dependency);
-                    if (variable != null)
-                        capturedVariables.Add(variable);
+                    if (captureScope.GetVariable(dependency) == null)
+                    {
+                        // The variable is not visible to the function scope. Check to see if it's visible
+                        // in the calling scope. If it is, create a reference for the function call.
+                        var variable = scope.GetVariableReference(dependency);
+                        if (variable != null)
+                            capturedVariables.Add(variable);
+                    }
                 }
+
+                // If variables were captured, create a unique instance of the definition with the captured values.
+                if (capturedVariables.Count > 0)
+                    return new AnonymousUserFunctionDefinitionExpression(this, capturedVariables.ToArray());
             }
 
-            if (capturedVariables.Count > 0)
-                CapturedVariables = capturedVariables.ToArray();
+            // No dependencies. Flag as constant and return the definition.
+            _isConstant = true;
+            return this;
         }
     }
 

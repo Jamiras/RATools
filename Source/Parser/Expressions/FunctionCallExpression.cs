@@ -341,17 +341,6 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            var anonymousFunction = value as AnonymousUserFunctionDefinitionExpression;
-            if (anonymousFunction != null)
-            {
-                // a function normally can only see its variables and global variables. an
-                // anonymous function may also see variables in the current function scope.
-                // identify any local variables the anonymous function needs so we can copy
-                // them to the function call scope when the function is invoked.
-                anonymousFunction.IdentifyCaptureVariables(parameterScope);
-                parameterScope.AddFunction(anonymousFunction);
-            }
-
             return value;
         }
 

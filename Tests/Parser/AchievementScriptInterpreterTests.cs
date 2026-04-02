@@ -1399,5 +1399,32 @@ namespace RATools.Parser.Tests
             var interpreter = AchievementScriptTests.Parse("function f(class, i) => class + i", false);
             Assert.That(interpreter.ErrorMessage, Is.EqualTo("1:25 class is a reserved word"));
         }
+
+        [Test]
+        public void TestLambdaCaptureInReturn()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "function f(arg) { return () => arg }\r\n" +
+                "str = format(\"{0} {1}\", f(\"good\")(), f(\"bad\")())");
+
+            var str = scope.GetVariable("str");
+            Assert.That(str, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)str).Value, Is.EqualTo("good bad"));
+        }
+
+        [Test]
+        public void TestLambdaCaptureInClassInstance()
+        {
+            var scope = AchievementScriptTests.Evaluate(
+                "class RememberArg { arg_f = 0 }\r\n" +
+                "function f(arg) { return RememberArg(() => arg) }\r\n" +
+                "f_good = f(\"good\")\r\n" +
+                "f_bad = f(\"bad\")\r\n" +
+                "str = format(\"{0} {1}\", f_good.arg_f(), f_bad.arg_f())");
+
+            var str = scope.GetVariable("str");
+            Assert.That(str, Is.InstanceOf<StringConstantExpression>());
+            Assert.That(((StringConstantExpression)str).Value, Is.EqualTo("good bad"));
+        }
     }
 }
