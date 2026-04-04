@@ -53,7 +53,7 @@ namespace RATools.Tests.Regression
                 AssertContents(outputFileContents, expectedFileContents);
 
                 // failed to find differing line, fallback to nunit assertion
-                FileAssert.AreEqual(expectedFileName, outputFileName);
+                Assert.That(File.ReadAllBytes(expectedFileName), Is.EqualTo(File.ReadAllBytes(outputFileName)));
             }
 
             // file matched, delete temporary file

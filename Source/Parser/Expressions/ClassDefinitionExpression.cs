@@ -119,8 +119,8 @@ namespace RATools.Parser.Expressions
                 if (Name != null)
                     yield return Name;
 
-                foreach (var field in _fields)
-                    yield return field;
+                foreach (var @field in _fields)
+                    yield return @field;
 
                 foreach (var function in _functions)
                     yield return function;
