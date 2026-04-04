@@ -62,6 +62,7 @@
             </MenuItem>
             <MenuItem Header="_Analysis">
                 <MenuItem Header="Open _Tickets" Command="{Binding OpenTicketsCommand}" />
+                <MenuItem Header="Game _Badges" Command="{Binding GameBadgesCommand}" />
                 <MenuItem Header="Game _Stats" Command="{Binding GameStatsCommand}" />
                 <MenuItem Header="Game _Progression" Command="{Binding GameProgressionCommand}" />
                 <MenuItem Header="Unlock _Distance" Command="{Binding UnlockDistanceCommand}" />

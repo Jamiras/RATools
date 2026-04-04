@@ -30,6 +30,7 @@ namespace RATools.ViewModels
             UpdateLocalCommand = DisabledCommand.Instance;
             ViewAchievementsCommand = DisabledCommand.Instance;
 
+            GameBadgesCommand = new DelegateCommand(GameBadges);
             GameStatsCommand = new DelegateCommand(GameStats);
             GameProgressionCommand = new DelegateCommand(GameProgression);
             OpenTicketsCommand = new DelegateCommand(OpenTickets);
@@ -531,6 +532,16 @@ namespace RATools.ViewModels
             }
 
             return true;
+        }
+
+        public CommandBase GameBadgesCommand { get; private set; }
+        private void GameBadges()
+        {
+            if (!ValidateForApi())
+                return;
+
+            var vm = new GameBadgesViewModel();
+            vm.ShowDialog();
         }
 
         public CommandBase GameStatsCommand { get; private set; }

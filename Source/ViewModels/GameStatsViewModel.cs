@@ -66,12 +66,6 @@ namespace RATools.ViewModels
             });
         }
 
-        private static void OnGameIdChanged(object sender, ModelPropertyChangedEventArgs e)
-        {
-            var vm = (GameStatsViewModel)sender;
-            vm.Search();
-        }
-
         [DebuggerDisplay("{Title} ({Id})")]
         public class AchievementStats
         {
