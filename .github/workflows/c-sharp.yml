@@ -8,20 +8,20 @@ on:
 
 jobs:
   Build-and-Tests:
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026 # TODO: change back to windows-latest after May 5 (see https://github.com/actions/runner-images/issues/13638)
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         submodules: recursive
 
     - name: Setup dotnet
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 6.x
+        dotnet-version: 10.x
 
     - name: Install MSBuild
-      uses: microsoft/setup-msbuild@v1.0.2
+      uses: microsoft/setup-msbuild@v2
 
     - name: Install dependencies
       run: dotnet restore RATools.sln
@@ -30,10 +30,10 @@ jobs:
       run: msbuild.exe RATools.sln -p:Configuration=Release -p:Platform="Any CPU"
 
     - name: Run Data Tests
-      run: dotnet test Tests\Data\bin\Release\net6.0-windows\RATools.Data.Tests.dll
+      run: dotnet test Tests\Data\bin\Release\net10.0-windows\RATools.Data.Tests.dll
 
     - name: Run Parser Tests
-      run: dotnet test Tests\Parser\bin\Release\net6.0-windows\RATools.Parser.Tests.dll
+      run: dotnet test Tests\Parser\bin\Release\net10.0-windows\RATools.Parser.Tests.dll
 
     - name: Run RATools Tests
-      run: dotnet test Tests\bin\Release\net6.0-windows\RATools.Tests.dll
+      run: dotnet test Tests\bin\Release\net10.0-windows\RATools.Tests.dll

@@ -264,7 +264,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                                 var updatedExpression = ExpressionBase.Parse(new PositionalTokenizer(tokenizer));
                                 var updatedEval = IsComparisonTrue(updatedExpression, false);
 
-                                Assert.That(originalEval, Is.EqualTo(updatedEval), "{0} ({1})  ~>  {2} ({3})", original, originalEval, updated, updatedEval);
+                                Assert.That(originalEval, Is.EqualTo(updatedEval), String.Format("{0} ({1})  ~>  {2} ({3})", original, originalEval, updated, updatedEval));
                             }
                         }
                     }
