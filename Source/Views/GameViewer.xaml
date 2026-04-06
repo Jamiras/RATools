@@ -148,6 +148,7 @@
             <TreeView ItemsSource="{Binding NavigationNodes}" HorizontalContentAlignment="Stretch"
                       ItemTemplate="{StaticResource navigationNodeTemplate}" x:Name="navigationNodes"
                       jamiras:TreeUtils.SelectedItem="{Binding SelectedNavigationNode}"
+                      jamiras:TreeUtils.SelectOnRightClick="True"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       Style="{StaticResource themedTreeView}">
                 <TreeView.ItemContainerStyle>
