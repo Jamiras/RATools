@@ -313,5 +313,16 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(achievement.OwnerGameId, Is.EqualTo(3333));
             Assert.That(achievement.OwnerSetId, Is.EqualTo(9999));
         }
+
+        [Test]
+        public void TestInvalidPointValue()
+        {
+            AchievementScriptTests.Evaluate(
+                "achievement(\"T\", \"D\", 15, byte(0x1234) == 1)",
+
+                "1:1 achievement call failed\r\n" +
+                "- 1:23 15 is not a supported value for points"
+            );
+        }
     }
 }

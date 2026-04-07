@@ -2,6 +2,7 @@
 using RATools.Parser.Expressions;
 using RATools.Parser.Internal;
 using System.Diagnostics;
+using System.Linq;
 
 namespace RATools.Parser.Functions
 {
@@ -54,6 +55,11 @@ namespace RATools.Parser.Functions
             var integerExpression = GetIntegerParameter(scope, "points", out result);
             if (integerExpression == null)
                 return false;
+            if (!Achievement.ValidPointValues.Contains(integerExpression.Value))
+            {
+                result = new ErrorExpression(integerExpression.Value + " is not a supported value for points", integerExpression);
+                return false;
+            }
             achievement.Points = integerExpression.Value;
 
             integerExpression = GetIntegerParameter(scope, "id", out result);
