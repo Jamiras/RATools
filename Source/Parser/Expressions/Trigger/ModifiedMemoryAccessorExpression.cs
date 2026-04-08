@@ -593,7 +593,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             if (field.Type == FieldType.None)
-                return new MathematicExpression(this, operation, right);
+                return new RememberRecallExpression(this).Combine(right, operation);
 
             if (ModifyingOperator == RequirementOperator.BitwiseAnd && field.Type == FieldType.Value)
             {

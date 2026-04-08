@@ -74,6 +74,10 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("(bit1(0x001234) ^ 1) + (bit1(0x001235) ^ 1) == 2", "A:0xN001234^1_A:0xN001235^1_0=2")]
         [TestCase("prev((bit1(0x001234) ^ 1) + (bit1(0x001235) ^ 1)) == 2", "A:d0xN001234^1_A:d0xN001235^1_0=2")]
         [TestCase("byte(0x1234) / 0x40 == 3", "A:0xH001234/64_0=3")]
+        [TestCase("byte(0x1234) * byte(0x2345) * byte(0x3456) == 99",
+            "K:0xH001234*0xH002345_A:{recall}*0xH003456_0=99")]
+        [TestCase("byte(0x1234) * byte(0x2345) * byte(0x3456) * byte(0x4567) == 99",
+            "K:0xH001234*0xH002345_K:{recall}*0xH003456_A:{recall}*0xH004567_0=99")]
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
