@@ -762,9 +762,28 @@ namespace RATools.Parser.Expressions.Trigger
                         });
                     }
 
-                    error = BuildTrigger(achievementContext, resetRequirements, RequirementType.None);
-                    if (error != null)
-                        return error;
+                    bool hasAddHitsChain = conditions.OfType<TalliedRequirementExpression>().Any(c => c.Conditions.Count() > 1);
+                    if (hasAddHitsChain)
+                    {
+                        // if there's an AddHits chain, the ResetNextIf has to be attached to each subclause
+                        for (int i = 0; i < conditions.Count; i++)
+                        {
+                            var talliedCondition = conditions[i] as TalliedRequirementExpression;
+                            if (talliedCondition != null)
+                            {
+                                var clone = talliedCondition.Clone();
+                                clone.ResetCondition = resetRequirements.First();
+                                conditions[i] = clone;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // no add hits chain, just put it in front of everything.
+                        error = BuildTrigger(achievementContext, resetRequirements, RequirementType.None);
+                        if (error != null)
+                            return error;
+                    }
                 }
 
                 if (this.Operation == ConditionalOperation.And)
