@@ -1,9 +1,7 @@
-﻿using Jamiras.Components;
-using Jamiras.Core.Tests;
+﻿using Jamiras.Core.Tests;
 using NUnit.Framework;
 using RATools.Data;
 using RATools.Parser.Expressions;
-using RATools.Parser.Internal;
 using System.Linq;
 
 namespace RATools.Parser.Tests
@@ -432,12 +430,12 @@ namespace RATools.Parser.Tests
         {
             var parser = AchievementScriptTests.Parse(
                 "p = 5\n" +
-                "function test() { p = 6 }\n" +
+                "function test() { p = 10 }\n" +
                 "test()\n" +
                 "achievement(\"T\", \"D\", p, prev(byte(0x1234)) == 1)");
             Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
             var achievement = parser.Achievements.First();
-            Assert.That(achievement.Points, Is.EqualTo(6));
+            Assert.That(achievement.Points, Is.EqualTo(10));
         }
 
         [Test]

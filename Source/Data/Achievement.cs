@@ -22,6 +22,11 @@ namespace RATools.Data
         public int Points { get; set; }
 
         /// <summary>
+        /// Specifies the allowed values for the <see cref="Points"/> field.
+        /// </summary>
+        public static readonly int[] ValidPointValues = { 0, 1, 2, 3, 4, 5, 10, 25, 50, 100 };
+
+        /// <summary>
         /// Gets the name of the badge for the achievement.
         /// </summary>
         public string BadgeName { get; set; }
