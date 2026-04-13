@@ -78,6 +78,8 @@ namespace RATools.Parser.Tests.Functions
         [TestCase("measured(repeated(0, byte(0x1234) == 5))", "M:0xH001234=5")]
         [TestCase("measured(tally(0, byte(0x1234) == 20, byte(0x1234) == 67))", "C:0xH001234=20_M:0xH001234=67")]
         [TestCase("measured(tally(0, byte(0x1234) == 20 && byte(0x2345) == 67))", "N:0xH001234=20_M:0xH002345=67")]
+        [TestCase("measured(100, when = tally(1, byte(0x1234) == 1, byte(0x1234) == 2) && never(byte(0x2345) == 1))",
+            "M:100_Z:0xH002345=1_C:0xH001234=1_Z:0xH002345=1_Q:0xH001234=2.1.")]
         public void TestBuildValue(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<MeasuredRequirementExpression>(input);
