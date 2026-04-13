@@ -181,8 +181,14 @@ namespace RATools.Parser.Expressions.Trigger
                             var combined = accessor.Clone().Combine(right, operation);
                             if (combined is ErrorExpression)
                                 return combined;
+
                             var newAccessor = combined as ModifiedMemoryAccessorExpression;
                             if (newAccessor == null)
+                                return null;
+
+                            // if the modifier couldn't be directly applied to a single clause of a multi-clause expression, bail.
+                            // the caller will remember the entire expression and apply the modifier to that.
+                            if (newAccessor.MemoryAccessor is RememberRecallExpression && _memoryAccessors.Count > 1)
                                 return null;
 
                             clone._memoryAccessors.Add(newAccessor);

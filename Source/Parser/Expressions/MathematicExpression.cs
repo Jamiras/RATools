@@ -177,7 +177,7 @@ namespace RATools.Parser.Expressions
                             {
                                 result = remember.Combine(right, Operation);
 
-                                if (result == null&& inverseCombinable != null)
+                                if (result == null && inverseCombinable != null)
                                     result = inverseCombinable.CombineInverse(remember, Operation);
                             }
                         }

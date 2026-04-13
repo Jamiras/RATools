@@ -82,7 +82,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x001234) * 10", "-", "byte(0x002345)",
             ExpressionType.MemoryAccessor, "byte(0x001234) * 10 - byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "*", "byte(0x002345)",
-            ExpressionType.Mathematic, "byte(0x001234) * 10 * byte(0x002345)")]
+            ExpressionType.MemoryAccessor, "remembered(byte(0x001234) * 10) * byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "/", "byte(0x002345)",
             ExpressionType.MemoryAccessor, "remembered(byte(0x001234) * 10) / byte(0x002345)")]
         [TestCase("byte(0x001234) * 10", "&", "byte(0x002345)",
