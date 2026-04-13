@@ -31,14 +31,14 @@ namespace RATools.ViewModels.Navigation
         private readonly List<ViewerViewModelBase> _editors;
         private readonly IBackgroundWorkerService _backgroundWorkerService;
 
-        private void MergeScript()
+        private void MergeScript(IEnumerable<NavigationViewModelBase> navigationNodes)
         {
             if (_gameViewModel.Script != null)
             {
                 if (!_editors.Contains(_gameViewModel.Script))
                     _editors.Add(_gameViewModel.Script);
 
-                var scriptFolder = _gameViewModel.NavigationNodes.OfType<ScriptFolderNavigationViewModel>().First();
+                var scriptFolder = navigationNodes.OfType<ScriptFolderNavigationViewModel>().First();
                 var scriptNode = scriptFolder.Children.OfType<ScriptNavigationViewModel>().FirstOrDefault();
                 if (scriptNode == null)
                 {
@@ -349,21 +349,45 @@ namespace RATools.ViewModels.Navigation
             }
         }
 
-        private void UpdateNavigationNodes()
+        private void UpdateNavigationNodes(IEnumerable<NavigationViewModelBase> navigationNodes)
         {
-            MergeScript();
+            MergeScript(navigationNodes);
 
             var richPresence = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();
             if (richPresence != null)
             {
-                var richPresenceNode = _gameViewModel.NavigationNodes.OfType<RichPresenceNavigationViewModel>().First();
+                var richPresenceNode = navigationNodes.OfType<RichPresenceNavigationViewModel>().First();
                 richPresenceNode.Editor = richPresence;
             }
 
-            var achievementsFolder = _gameViewModel.NavigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
+            bool hasSubsets = false;
+            foreach (var achievementSetNode in navigationNodes.OfType<AchievementSetFolderNavigationViewModel>())
+            {
+                var achievementsFolder = achievementSetNode.Children.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
+                var leaderboardsFolder = achievementSetNode.Children.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
+                UpdateAchievementSetNodes(achievementsFolder, leaderboardsFolder, achievementSetNode.AchievementSet);
+                hasSubsets = true;
+            }
+
+            if (!hasSubsets)
+            {
+                var achievementsFolder = navigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
+                var leaderboardsFolder = navigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
+                UpdateAchievementSetNodes(achievementsFolder, leaderboardsFolder, null);
+            }
+        }
+
+        private void UpdateAchievementSetNodes(AssetFolderNavigationViewModel achievementsFolder, AssetFolderNavigationViewModel leaderboardsFolder, AchievementSet achievementSet)
+        {
             var achievementNodes = achievementsFolder.Children.OfType<AchievementNavigationViewModel>().ToList();
             foreach (var achievement in _editors.OfType<AchievementViewModel>())
             {
+                if (achievementSet != null && achievement.OwnerSetId != achievementSet.Id)
+                {
+                    if (achievement.OwnerSetId != 0 || achievementSet.Type != AchievementSetType.Core)
+                        continue;
+                }
+
                 if (achievement.Generated.Asset == null && achievement.Local.Asset == null && achievement.Published.Asset == null)
                 {
                     // nothing keeping this node around, let it get discarded
@@ -387,7 +411,6 @@ namespace RATools.ViewModels.Navigation
             foreach (var achievementNode in achievementNodes)
                 achievementsFolder.Children.Remove(achievementNode);
 
-            var leaderboardsFolder = _gameViewModel.NavigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
             var leaderboardNodes = leaderboardsFolder.Children.OfType<LeaderboardNavigationViewModel>().ToList();
             foreach (var leaderboard in _editors.OfType<LeaderboardViewModel>())
             {
@@ -459,8 +482,32 @@ namespace RATools.ViewModels.Navigation
             }
         }
 
-        public void Merge(AchievementScriptInterpreter interpreter)
+        public IEnumerable<NavigationViewModelBase> Merge(AchievementScriptInterpreter interpreter)
         {
+            var hasSubsets = _gameViewModel.PublishedSets.Count() > 1;
+
+            var navigationNodes = _gameViewModel.NavigationNodes;
+            if (navigationNodes == null || !navigationNodes.Any())
+            {
+                var newNavigationNodes = new List<NavigationViewModelBase>();
+                newNavigationNodes.Add(new ScriptFolderNavigationViewModel());
+                newNavigationNodes.Add(new RichPresenceNavigationViewModel(null));
+                AddAchievementSetNodes(newNavigationNodes, hasSubsets);
+                navigationNodes = newNavigationNodes.ToArray();
+            }
+            else
+            {
+                var achievementsNode = navigationNodes.OfType<AssetFolderNavigationViewModel>().FirstOrDefault(f => f.Label == "Achievements");
+                bool hadSubsets = achievementsNode == null;
+                if (hasSubsets != hadSubsets)
+                {
+                    var newNavigationNodes = new List<NavigationViewModelBase>();
+                    newNavigationNodes.AddRange(navigationNodes.Take(2));
+                    AddAchievementSetNodes(newNavigationNodes, hasSubsets);
+                    navigationNodes = newNavigationNodes.ToArray();
+                }
+            }
+
             foreach (var editor in _editors.OfType<AssetViewModelBase>())
                 editor.SortOrder = 0;
 
@@ -480,11 +527,32 @@ namespace RATools.ViewModels.Navigation
 
             _backgroundWorkerService.InvokeOnUiThread(() =>
             {
-                UpdateNavigationNodes();
+                UpdateNavigationNodes(navigationNodes);
 
-                foreach (var node in _gameViewModel.NavigationNodes)
+                foreach (var node in navigationNodes)
                     ApplySort(node.Children);
             });
+
+            return navigationNodes;
+        }
+
+        private void AddAchievementSetNodes(List<NavigationViewModelBase> newNavigationNodes, bool hasSubsets)
+        {
+            if (!hasSubsets)
+            {
+                newNavigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
+                newNavigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
+            }
+            else
+            {
+                foreach (var achievementSet in _gameViewModel.PublishedSets)
+                {
+                    var setFolderNode = new AchievementSetFolderNavigationViewModel(achievementSet);
+                    setFolderNode.AddChild(new AssetFolderNavigationViewModel("Achievements"));
+                    setFolderNode.AddChild(new AssetFolderNavigationViewModel("Leaderboards"));
+                    newNavigationNodes.Add(setFolderNode);
+                }
+            }
         }
     }
 }

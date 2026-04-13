@@ -224,18 +224,8 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = 0;
             }
 
-            if (NavigationNodes == null || !NavigationNodes.Any())
-            {
-                var navigationNodes = new List<NavigationViewModelBase>();
-                navigationNodes.Add(new ScriptFolderNavigationViewModel());
-                navigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
-                NavigationNodes = navigationNodes;
-            }
-
             var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
-            navigation.Merge(interpreter);
+            NavigationNodes = navigation.Merge(interpreter);
 
             SelectedNavigationNode = FindEditorNavigationNode(NavigationNodes, SelectedEditor);
         }

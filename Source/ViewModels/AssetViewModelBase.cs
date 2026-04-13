@@ -145,6 +145,20 @@ namespace RATools.ViewModels
             protected set { SetValue(IdProperty, value); }
         }
 
+        public int OwnerSetId
+        {
+            get
+            {
+                if (Generated.Asset != null && Generated.Asset.OwnerSetId != 0)
+                    return Generated.Asset.OwnerSetId;
+                if (Local.Asset != null && Local.Asset.OwnerSetId != 0)
+                    return Local.Asset.OwnerSetId;
+                if (Published.Asset != null && Published.Asset.OwnerSetId != 0)
+                    return Published.Asset.OwnerSetId;
+                return 0;
+            }
+        }
+
         public static readonly ModelProperty PointsProperty = ModelProperty.Register(typeof(AssetViewModelBase), "Points", typeof(int), 0);
         public int Points
         {
@@ -187,6 +201,7 @@ namespace RATools.ViewModels
                 {
                     Triggers = Local.TriggerList;
                     TriggerSource = "Local (Not Generated)";
+                    CompareState = GeneratedCompareState.NotGenerated;
                 }
             }
             else if (IsModified(Local, true))
