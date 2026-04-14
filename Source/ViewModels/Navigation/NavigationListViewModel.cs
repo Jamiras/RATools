@@ -484,28 +484,40 @@ namespace RATools.ViewModels.Navigation
 
         public IEnumerable<NavigationViewModelBase> Merge(AchievementScriptInterpreter interpreter)
         {
-            var hasSubsets = _gameViewModel.PublishedSets.Count() > 1;
-
             var navigationNodes = _gameViewModel.NavigationNodes;
-            if (navigationNodes == null || !navigationNodes.Any())
+            var previousSubsetCount = navigationNodes != null ? navigationNodes.OfType<AchievementSetFolderNavigationViewModel>().Count() : 1;
+            var subsetCount = _gameViewModel.PublishedSets.Count();
+
+            if (subsetCount != previousSubsetCount)
             {
                 var newNavigationNodes = new List<NavigationViewModelBase>();
-                newNavigationNodes.Add(new ScriptFolderNavigationViewModel());
-                newNavigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                AddAchievementSetNodes(newNavigationNodes, hasSubsets);
-                navigationNodes = newNavigationNodes.ToArray();
-            }
-            else
-            {
-                var achievementsNode = navigationNodes.OfType<AssetFolderNavigationViewModel>().FirstOrDefault(f => f.Label == "Achievements");
-                bool hadSubsets = achievementsNode == null;
-                if (hasSubsets != hadSubsets)
+                if (navigationNodes != null && navigationNodes.Any())
                 {
-                    var newNavigationNodes = new List<NavigationViewModelBase>();
                     newNavigationNodes.AddRange(navigationNodes.Take(2));
-                    AddAchievementSetNodes(newNavigationNodes, hasSubsets);
-                    navigationNodes = newNavigationNodes.ToArray();
                 }
+                else
+                {
+                    newNavigationNodes.Add(new ScriptFolderNavigationViewModel());
+                    newNavigationNodes.Add(new RichPresenceNavigationViewModel(null));
+                }
+
+                if (subsetCount < 2)
+                {
+                    newNavigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
+                    newNavigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
+                }
+                else
+                {
+                    foreach (var achievementSet in _gameViewModel.PublishedSets)
+                    {
+                        var setFolderNode = new AchievementSetFolderNavigationViewModel(achievementSet);
+                        setFolderNode.AddChild(new AssetFolderNavigationViewModel("Achievements"));
+                        setFolderNode.AddChild(new AssetFolderNavigationViewModel("Leaderboards"));
+                        newNavigationNodes.Add(setFolderNode);
+                    }
+                }
+
+                navigationNodes = newNavigationNodes.ToArray();
             }
 
             foreach (var editor in _editors.OfType<AssetViewModelBase>())
@@ -534,25 +546,6 @@ namespace RATools.ViewModels.Navigation
             });
 
             return navigationNodes;
-        }
-
-        private void AddAchievementSetNodes(List<NavigationViewModelBase> newNavigationNodes, bool hasSubsets)
-        {
-            if (!hasSubsets)
-            {
-                newNavigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
-                newNavigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
-            }
-            else
-            {
-                foreach (var achievementSet in _gameViewModel.PublishedSets)
-                {
-                    var setFolderNode = new AchievementSetFolderNavigationViewModel(achievementSet);
-                    setFolderNode.AddChild(new AssetFolderNavigationViewModel("Achievements"));
-                    setFolderNode.AddChild(new AssetFolderNavigationViewModel("Leaderboards"));
-                    newNavigationNodes.Add(setFolderNode);
-                }
-            }
         }
     }
 }
