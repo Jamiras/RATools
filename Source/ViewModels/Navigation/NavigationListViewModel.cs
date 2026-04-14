@@ -487,6 +487,8 @@ namespace RATools.ViewModels.Navigation
             var navigationNodes = _gameViewModel.NavigationNodes;
             var previousSubsetCount = navigationNodes != null ? navigationNodes.OfType<AchievementSetFolderNavigationViewModel>().Count() : 1;
             var subsetCount = _gameViewModel.PublishedSets.Count();
+            if (subsetCount == 0)
+                subsetCount = 1;
 
             if (subsetCount != previousSubsetCount)
             {
