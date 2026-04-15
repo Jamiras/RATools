@@ -529,7 +529,13 @@ namespace RATools.ViewModels
             private set { SetValue(TitleProperty, value); }
         }
 
-        public IEnumerable<AchievementSet> PublishedSets { get { return _publishedAssets?.Sets ?? new AchievementSet[0]; } }
+        public IEnumerable<AchievementSet> PublishedSets
+        {
+            get
+            {
+                return _publishedAssets?.Sets ?? new [] { new AchievementSet { OwnerGameId = GameId, Title = Title } };
+            }
+        }
 
         public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
         public int GeneratedAchievementCount

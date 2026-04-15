@@ -485,12 +485,20 @@ namespace RATools.ViewModels.Navigation
         public IEnumerable<NavigationViewModelBase> Merge(AchievementScriptInterpreter interpreter)
         {
             var navigationNodes = _gameViewModel.NavigationNodes;
-            var previousSubsetCount = navigationNodes != null ? navigationNodes.OfType<AchievementSetFolderNavigationViewModel>().Count() : 0;
-            var subsetCount = _gameViewModel.PublishedSets.Count();
-            if (subsetCount == 0)
-                subsetCount = 1;
 
-            if (subsetCount != previousSubsetCount)
+            var previousSubsetCount = navigationNodes != null ? navigationNodes.OfType<AchievementSetFolderNavigationViewModel>().Count() : 0;
+            var sets = new List<AchievementSet>();
+            if (interpreter != null)
+                sets.AddRange(interpreter.Sets);
+            foreach (var set in _gameViewModel.PublishedSets)
+            {
+                if (!sets.Any(s => s.Id == set.Id))
+                    sets.Add(set);
+            }
+            if (sets.Count == 0)
+                sets.Add(new AchievementSet { OwnerGameId = _gameViewModel.GameId, Title = _gameViewModel.Title });
+
+            if (sets.Count != previousSubsetCount)
             {
                 var newNavigationNodes = new List<NavigationViewModelBase>();
                 if (navigationNodes != null && navigationNodes.Any())
@@ -503,14 +511,14 @@ namespace RATools.ViewModels.Navigation
                     newNavigationNodes.Add(new RichPresenceNavigationViewModel(null));
                 }
 
-                if (subsetCount < 2)
+                if (sets.Count < 2)
                 {
                     newNavigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
                     newNavigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
                 }
                 else
                 {
-                    foreach (var achievementSet in _gameViewModel.PublishedSets)
+                    foreach (var achievementSet in sets)
                     {
                         var setFolderNode = new AchievementSetFolderNavigationViewModel(achievementSet);
                         setFolderNode.AddChild(new AssetFolderNavigationViewModel("Achievements"));
