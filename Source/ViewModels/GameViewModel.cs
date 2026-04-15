@@ -248,7 +248,7 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
+        public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "NavigationNodes", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
         public IEnumerable<NavigationViewModelBase> NavigationNodes
         {
             get { return (IEnumerable<NavigationViewModelBase>)GetValue(NavigationNodesProperty); }
