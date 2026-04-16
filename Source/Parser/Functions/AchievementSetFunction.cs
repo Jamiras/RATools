@@ -79,6 +79,7 @@ namespace RATools.Parser.Functions
                         case "BONUS": set.Type = AchievementSetType.Bonus; break;
                         case "SPECIALTY": set.Type = AchievementSetType.Specialty; break;
                         case "EXCLUSIVE": set.Type = AchievementSetType.Exclusive; break;
+                        case "CHALLENGE": set.Type = AchievementSetType.Challenge; break;
 
                         case "CORE":
                             result = new ErrorExpression("Cannot add CORE set. Only one is allowed, and is provided by default.", type);
