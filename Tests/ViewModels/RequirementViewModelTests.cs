@@ -25,6 +25,7 @@ namespace RATools.Tests.ViewModels
         [TestCase("D:0xH1234=7_0xH2345=7", "SubHits byte(0x001234) == 7")]
         [TestCase("N:0xH1234=7_0xH2345=7", "AndNext byte(0x001234) == 7")]
         [TestCase("O:0xH1234=7_0xH2345=7", "OrNext byte(0x001234) == 7")]
+        [TestCase("I:{recall}_0xH2345=7", "AddAddress {recall}")]
         public void TestDefinition(string serialized, string expected)
         {
             var builder = new AchievementBuilder();
