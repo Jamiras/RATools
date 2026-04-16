@@ -128,9 +128,9 @@ namespace RATools.ViewModels
                 UpdateDefinition((bool)e.NewValue ? NumberFormat.Hexadecimal : NumberFormat.Decimal);
         }
 
-        private void UpdateDefinition(NumberFormat numberFormat)
+        protected virtual void UpdateDefinition(NumberFormat numberFormat)
         {
-            Definition = BuildDefinition(Requirement, numberFormat);
+            Definition = Requirement != null ? BuildDefinition(Requirement, numberFormat) : "";
         }
 
         protected string BuildDefinition(Requirement requirement, NumberFormat numberFormat)

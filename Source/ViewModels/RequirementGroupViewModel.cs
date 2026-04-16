@@ -183,10 +183,7 @@ namespace RATools.ViewModels
                 requirement.IsValueDependentOnPreviousRequirement = isValueDependentOnPreviousRequirement;
 
                 if (requirement.Requirement == null)
-                {
-                    isValueDependentOnPreviousRequirement = false;
                     continue;
-                }
 
                 switch (requirement.Requirement.Type)
                 {
@@ -203,7 +200,7 @@ namespace RATools.ViewModels
             }
         }
 
-        private void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
+        private static void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             if (right == null)
             {

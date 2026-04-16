@@ -71,7 +71,13 @@ namespace RATools.ViewModels
 
         private void UpdateOtherDefinition(NumberFormat numberFormat)
         {
-            OtherDefinition = BuildDefinition(CompareRequirement, numberFormat);
+            OtherDefinition = CompareRequirement != null ? BuildDefinition(CompareRequirement, numberFormat) : "";
+        }
+
+        protected override void UpdateDefinition(NumberFormat numberFormat)
+        {
+            base.UpdateDefinition(numberFormat);
+            UpdateOtherDefinition(numberFormat);
         }
     }
 }
