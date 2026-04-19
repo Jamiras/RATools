@@ -804,11 +804,18 @@ namespace RATools.Parser
 
         private void AppendField(StringBuilder builder, Field field)
         {
-            if (field.Type == FieldType.Recall && _remember != null && _remember.Length > 0)
+            if (field.Type == FieldType.Recall)
             {
-                builder.Append('(');
-                builder.Append(_remember);
-                builder.Append(')');
+                if (_remember != null && _remember.Length > 0)
+                {
+                    builder.Append('(');
+                    builder.Append(_remember);
+                    builder.Append(')');
+                }
+                else
+                {
+                    builder.Append("{recall}");
+                }
             }
             else if (field.IsMemoryReference)
             {

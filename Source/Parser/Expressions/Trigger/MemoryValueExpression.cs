@@ -1622,8 +1622,34 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             // output the accessor chain
+            var constantAccessorIndex = -1;
             foreach (var accessor in memoryAccessors)
+            {
+                if (ReferenceEquals(accessor, constantAccessor))
+                    constantAccessorIndex = context.Trigger.Count;
+
                 accessor.BuildTrigger(context);
+            }
+
+            // if a constant is prefixed and any Remembers where generated, move the Remember clause before
+            // the constant by moving the constant after the Remember.
+            if (constantAccessorIndex != -1 && constantAccessorIndex != context.Trigger.Count - 1)
+            {
+                var list = context.Trigger as List<Requirement>;
+                if (list != null)
+                {
+                    for (int i = context.Trigger.Count - 1; i > constantAccessorIndex; i--)
+                    {
+                        if (list[i].Type == RequirementType.Remember)
+                        {
+                            var constantRequirement = list[constantAccessorIndex];
+                            list.RemoveAt(constantAccessorIndex);
+                            list.Insert(i, constantRequirement);
+                            break;
+                        }
+                    }
+                }
+            }
 
             // the last item will be flagged as an AddSource (or None if 0 was appended)
             // make sure it's None before leaving.

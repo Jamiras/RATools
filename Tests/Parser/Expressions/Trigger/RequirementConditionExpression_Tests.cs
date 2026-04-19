@@ -1,8 +1,7 @@
-﻿using NUnit.Framework;
-using RATools.Data;
+﻿using Jamiras.Components;
+using NUnit.Framework;
+using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
-using RATools.Parser.Internal;
-using System.Collections.Generic;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -268,9 +267,6 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var expression = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
 
-            var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext { Trigger = requirements };
-            expression.BuildTrigger(context);
             TriggerExpressionTests.AssertSerialize(expression, "I:0xX001234_A:0xH000001*10_I:0xX001234_A:0xH000002*100_I:0xX001234_B:d0xH000001*10_I:0xX001234_B:d0xH000002*100_0=200");
         }
 
@@ -282,14 +278,40 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var expression = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
 
-            var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext { Trigger = requirements };
-            expression.BuildTrigger(context);
             TriggerExpressionTests.AssertSerialize(expression,
                 "I:0xX001234_K:0xX000004^0xX000008_" + // remember(dword(ptr + 4)  ^ dword(ptr + 8))
                 "I:0xX001234_K:0xX00000c^{recall}_" +  // remember(dword(ptr + 12) ^ {recall}      )
                 "I:0xX001234_A:0xX000010^{recall}_" +  // capture: dword(ptr + 16) ^ {recall}
                 "0=6");                                // compare to 6
+        }
+
+        [Test]
+        public void TestRecallPointerChainValueChanges()
+        {
+            var input =
+                "regional_offset = bit4(0x3183) * 0x7a0 + bit3(0x3183) * -0x520\r\n" +
+                "player_base = dword_be(0x353128 + regional_offset) & 0x1fffffff\r\n" +
+                "score = dword_be(player_base + 0x190)\r\n" +
+                "trigger = score == prev(score) + 200000\r\n";
+
+            var tokenizer = Tokenizer.CreateTokenizer(input);
+            var groups = new ExpressionGroupCollection();
+            groups.Parse(tokenizer);
+
+            var context = new AchievementScriptContext();
+            groups.Scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope()) { Context = context };
+
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.Run(groups);
+
+            var trigger = groups.Scope.GetVariable("trigger");
+            Assert.That(trigger, Is.Not.Null.And.InstanceOf<RequirementConditionExpression>());
+            var condition = (RequirementConditionExpression)trigger;
+            TriggerExpressionTests.AssertSerialize(condition,
+                "A:0xQ003183*1952_K:0xP003183*4294965984_" + // remember(bit4(0x3183) * 0x7a0 + bit3(0x3183) * -0x520)
+                "A:200000_" +                                // 200000 +
+                "I:{recall}_I:0xG353128&536870911_" +        // addaddress(dword_be({recall} + 0x353128) & 0x1fffffff)
+                "d0xG000190=0xG000190");                     // prev(dword_be(0x190)) = dword_be(0x190)
         }
     }
 }
