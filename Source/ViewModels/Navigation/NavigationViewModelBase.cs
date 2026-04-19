@@ -96,6 +96,13 @@ namespace RATools.ViewModels.Navigation
             CompareState = compareState;
         }
 
+        public static readonly ModelProperty IsSelectedProperty = ModelProperty.Register(typeof(NavigationViewModelBase), "IsSelected", typeof(bool), false);
+        public bool IsSelected
+        {
+            get { return (bool)GetValue(IsSelectedProperty); }
+            set { SetValue(IsSelectedProperty, value); }
+        }
+
         public static readonly ModelProperty IsExpandedProperty = ModelProperty.Register(typeof(NavigationViewModelBase), "IsExpanded", typeof(bool), true);
         public bool IsExpanded
         {
@@ -122,5 +129,37 @@ namespace RATools.ViewModels.Navigation
         }
 
         public IEnumerable<CommandViewModel> ContextMenu { get; protected set; }
+
+        public static bool operator ==(NavigationViewModelBase left, NavigationViewModelBase right)
+        {
+            if (ReferenceEquals(left, right))
+                return true;
+            if (left is null || right is null)
+                return false;
+
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(NavigationViewModelBase left, NavigationViewModelBase right)
+        {
+            if (ReferenceEquals(left, right))
+                return false;
+            if (left is null || right is null)
+                return true;
+
+            return !left.Equals(right);
+        }
+
+        public override bool Equals(object obj)
+        {
+            var that = obj as NavigationViewModelBase;
+
+            return that != null && this.ImageName == that.ImageName && this.Label == that.Label;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
 }

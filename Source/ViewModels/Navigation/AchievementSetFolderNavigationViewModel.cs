@@ -11,5 +11,16 @@ namespace RATools.ViewModels.Navigation
         }
 
         public AchievementSet AchievementSet { get; private set; }
+
+        public override bool Equals(object obj)
+        {
+            var that = obj as AchievementSetFolderNavigationViewModel;
+            return (that != null && this.AchievementSet.Id == that.AchievementSet.Id);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
 }

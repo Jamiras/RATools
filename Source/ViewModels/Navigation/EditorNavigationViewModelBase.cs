@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace RATools.ViewModels.Navigation
 {
-    public abstract class EditorNavigationViewModelBase : NavigationViewModelBase
+    public abstract class EditorNavigationViewModelBase : NavigationViewModelBase, IEditorNavigationViewModel
     {
         public EditorNavigationViewModelBase()
         {
@@ -125,5 +125,28 @@ namespace RATools.ViewModels.Navigation
             return false;
         }
 
+        public override bool Equals(object obj)
+        {
+            var that = obj as EditorNavigationViewModelBase;
+            if (that == null || this.Editor?.ViewerType != that.Editor?.ViewerType)
+                return false;
+
+            var assetEditorViewModel = this.Editor as AssetViewModelBase;
+            if (assetEditorViewModel != null)
+                return assetEditorViewModel.Id == ((AssetViewModelBase)that.Editor).Id;
+
+            return base.Equals(obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
+
+    public interface IEditorNavigationViewModel
+    {
+        public ViewerViewModelBase Editor { get; }
+    }
+
 }

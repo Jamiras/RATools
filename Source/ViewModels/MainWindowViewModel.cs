@@ -4,12 +4,14 @@ using Jamiras.DataModels;
 using Jamiras.Services;
 using Jamiras.ViewModels;
 using RATools.Services;
+using RATools.ViewModels.Navigation;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Xml.Linq;
 
 namespace RATools.ViewModels
 {
@@ -28,7 +30,6 @@ namespace RATools.ViewModels
 
             DragDropScriptCommand = new DelegateCommand<string[]>(DragDropFile, CanDragDropFile);
             UpdateLocalCommand = DisabledCommand.Instance;
-            ViewAchievementsCommand = DisabledCommand.Instance;
 
             GameBadgesCommand = new DelegateCommand(GameBadges);
             GameStatsCommand = new DelegateCommand(GameStats);
@@ -154,12 +155,10 @@ namespace RATools.ViewModels
                 vm.SaveScriptAsCommand = new DelegateCommand(() => vm.SaveScriptAs());
                 vm.RefreshScriptCommand = new DelegateCommand(vm.RefreshScript);
                 vm.UpdateLocalCommand = new DelegateCommand(vm.UpdateLocal);
-                vm.ViewAchievementsCommand = new DelegateCommand(vm.ViewAchievements);
                 vm.OnPropertyChanged(() => vm.SaveScriptCommand);
                 vm.OnPropertyChanged(() => vm.SaveScriptAsCommand);
                 vm.OnPropertyChanged(() => vm.RefreshScriptCommand);
                 vm.OnPropertyChanged(() => vm.UpdateLocalCommand);
-                vm.OnPropertyChanged(() => vm.ViewAchievementsCommand);
             }
         }
 
@@ -214,7 +213,7 @@ namespace RATools.ViewModels
 
             int line = 1;
             int column = 1;
-            string selectedEditor = null;
+            NavigationViewModelBase selectedNavigationNode = null;
             if (Game != null && Game.Script.Filename == filename)
             {
                 if (Game.Script.CompareState == GeneratedCompareState.LocalDiffers)
@@ -226,8 +225,7 @@ namespace RATools.ViewModels
                 // capture current location so we can restore it after refreshing
                 line = Game.Script.Editor.CursorLine;
                 column = Game.Script.Editor.CursorColumn;
-                if (Game.SelectedEditor != null)
-                    selectedEditor = Game.SelectedEditor.Title;
+                selectedNavigationNode = Game.SelectedNavigationNode;
             }
             else if (!CloseEditor())
             {
@@ -359,7 +357,7 @@ namespace RATools.ViewModels
                 existingViewModel.Script.SetContent(content);
                 viewModel = existingViewModel;
 
-                existingViewModel.SelectedEditor = existingViewModel.Editors.FirstOrDefault(e => e.Title == selectedEditor);
+                existingViewModel.UpdateSelectedNavigationNode(selectedNavigationNode);
                 existingViewModel.Script.Editor.MoveCursorTo(line, column, Jamiras.ViewModels.CodeEditor.CodeEditorViewModel.MoveCursorFlags.None);
             }
             else
@@ -480,20 +478,6 @@ namespace RATools.ViewModels
             }
 
             var dialog = new UpdateLocalViewModel(game);
-            dialog.ShowDialog();
-        }
-
-        public CommandBase ViewAchievementsCommand { get; private set; }
-        private void ViewAchievements()
-        {
-            var game = Game;
-            if (game == null)
-            {
-                TaskDialogViewModel.ShowErrorMessage("No game loaded", "Cannot view achievements if game not loaded.");
-                return;
-            }
-
-            var dialog = new ViewAchievementsViewModel(game);
             dialog.ShowDialog();
         }
 
