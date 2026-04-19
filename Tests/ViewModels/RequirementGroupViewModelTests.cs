@@ -38,8 +38,17 @@ namespace RATools.Tests.ViewModels
             "unless(byte(0x001234) == 7)|OrNext byte(0x001234) == 7\nunless(byte(0x001235) == 6)|unless(byte(0x001235) == 6)")]
         [TestCase("0xH1234=7_0xH1235=6", "N:0xH1234=7_0xH1235=6", // AndNext a,b => a,b
             "byte(0x001234) == 7|AndNext byte(0x001234) == 7\nbyte(0x001235) == 6|byte(0x001235) == 6")]
+        [TestCase("A:0xH1234*100_A:100*1_M:1=333", "A:0xH1234*100_M:101=333", // A*100+100+1=333 => A*100+101=333
+            "byte(0x001234) * 100 + |byte(0x001234) * 100 + \n100 * 1 + |\nmeasured(1 == 333)|measured(101 == 333)")]
+        [TestCase("A:0xH1234*100_M:101=333", "A:0xH1234*100_A:100*1_M:1=333", // A*100+101=333 => A*100+100+1=333
+            "byte(0x001234) * 100 + |byte(0x001234) * 100 + \n|100 * 1 + \nmeasured(101 == 333)|measured(1 == 333)")]
         public void TestDiff(string leftSerialized, string rightSerialized, string expected)
         {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
             var notes = new Dictionary<uint, CodeNote>();
 
             var builder = new AchievementBuilder();
