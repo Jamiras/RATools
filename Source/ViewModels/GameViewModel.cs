@@ -224,18 +224,8 @@ namespace RATools.ViewModels
                 GeneratedAchievementCount = 0;
             }
 
-            if (NavigationNodes == null || !NavigationNodes.Any())
-            {
-                var navigationNodes = new List<NavigationViewModelBase>();
-                navigationNodes.Add(new ScriptFolderNavigationViewModel());
-                navigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
-                NavigationNodes = navigationNodes;
-            }
-
             var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
-            navigation.Merge(interpreter);
+            NavigationNodes = navigation.Merge(interpreter);
 
             SelectedNavigationNode = FindEditorNavigationNode(NavigationNodes, SelectedEditor);
         }
@@ -258,7 +248,7 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "Editors", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
+        public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "NavigationNodes", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
         public IEnumerable<NavigationViewModelBase> NavigationNodes
         {
             get { return (IEnumerable<NavigationViewModelBase>)GetValue(NavigationNodesProperty); }
@@ -539,7 +529,13 @@ namespace RATools.ViewModels
             private set { SetValue(TitleProperty, value); }
         }
 
-        public IEnumerable<AchievementSet> PublishedSets { get { return _publishedAssets?.Sets ?? new AchievementSet[0]; } }
+        public IEnumerable<AchievementSet> PublishedSets
+        {
+            get
+            {
+                return _publishedAssets?.Sets ?? new [] { new AchievementSet { OwnerGameId = GameId, Title = Title } };
+            }
+        }
 
         public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
         public int GeneratedAchievementCount

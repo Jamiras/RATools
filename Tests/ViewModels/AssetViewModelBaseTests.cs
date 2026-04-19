@@ -186,7 +186,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsTitleModified, Is.False);
             Assert.That(vmAsset.IsDescriptionModified, Is.False);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
-            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.None));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.NotGenerated));
             Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Not generated"));
             Assert.That(vmAsset.IsGenerated, Is.False);
             Assert.That(vmAsset.CanUpdate, Is.False);

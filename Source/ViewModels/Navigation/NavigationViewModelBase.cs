@@ -77,7 +77,7 @@ namespace RATools.ViewModels.Navigation
                 case GeneratedCompareState.PublishedDiffers: // ◐
                     return "Generated asset differs from published";
                 case GeneratedCompareState.NotGenerated: // ◖
-                    return "Published asset is not generated";
+                    return "Local asset is not generated";
                 default:
                     return null;
             }

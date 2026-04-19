@@ -16,6 +16,8 @@ namespace RATools.Parser.Internal
 
         public RichPresenceBuilder GeneratedRichPresence { get; private set; }
 
+        public AchievementSet[] GeneratedSets { get; private set; }
+
         protected override ExpressionGroup CreateGroup()
         {
             return new AssetExpressionGroup();
@@ -47,6 +49,12 @@ namespace RATools.Parser.Internal
             {
                 GeneratedRichPresence = context.RichPresence;
                 context.RichPresence = null;
+            }
+
+            if (context.Sets.Count > 0)
+            {
+                GeneratedSets = context.Sets.ToArray();
+                context.Sets.Clear();
             }
         }
 

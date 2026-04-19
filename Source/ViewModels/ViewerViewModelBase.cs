@@ -97,27 +97,27 @@ namespace RATools.ViewModels
         None = 0,
 
         /// <summary>
-        ///   generated matches core and/or local. no icon
+        ///   published by not generated or generated matches core and/or local. no icon
         /// </summary>
         Same,
 
         /// <summary>
-        /// ◖ not generated (core only). half circle icon
+        /// ◖ not generated (local only). half circle icon
         /// </summary>
         NotGenerated,
 
         /// <summary>
-        /// ○ generated but not stored (no core or no local). hollow circle icon
+        /// ○ generated but not stored (no published or no local). hollow circle icon
         /// </summary>
         GeneratedOnly,
 
         /// <summary>
-        /// ◐ generated differs from core (local may or may not exist). half filled circle icon
+        /// ◐ generated differs from published (local may or may not exist). half filled circle icon
         /// </summary>
         PublishedDiffers,
 
         /// <summary>
-        /// ● generated differs from local (core may or may not exist). fully filled circle icon
+        /// ● generated differs from local (published may or may not exist). fully filled circle icon
         /// </summary>
         LocalDiffers,
     }

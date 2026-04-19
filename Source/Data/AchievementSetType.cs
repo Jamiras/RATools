@@ -27,6 +27,15 @@
         /// A unique way to play the game.
         /// </summary>
         /// <remarks>
+        /// Allows loading the core set and potentially bonus sets.
+        /// Must be explicitly opted-in by the player.
+        /// </remarks>
+        Challenge,
+
+        /// <summary>
+        /// A unique way to play the game.
+        /// </summary>
+        /// <remarks>
         /// Still requires a unique hash that targets the specialty set.
         /// Allows loading the core set and potentially bonus sets.
         /// </remarks>

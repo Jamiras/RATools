@@ -27,13 +27,6 @@ namespace RATools.Tests.ViewModels.Nagivation
 
                 _editors = new List<ViewerViewModelBase>();
 
-                var navigationNodes = new List<NavigationViewModelBase>();
-                navigationNodes.Add(new ScriptFolderNavigationViewModel());
-                navigationNodes.Add(new RichPresenceNavigationViewModel(null));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
-                navigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
-                NavigationNodes = navigationNodes;
-
                 ServiceRepository.Reset();
                 ServiceRepository.Instance.RegisterInstance(new Mock<ISettings>().Object);
             }
@@ -42,12 +35,21 @@ namespace RATools.Tests.ViewModels.Nagivation
             {
                 if (Game == null)
                 {
-                    Game = new MockGameViewModel(_fileSystemService.Object);
-                    Game.SetValue(GameViewModel.NavigationNodesProperty, NavigationNodes);
-
                     _publishedAssets = new PublishedAssets("1234.json", _fileSystemService.Object);
                     _localAssets = new LocalAssets("1234-User.txt", _fileSystemService.Object);
+
+                    Game = new MockGameViewModel(_fileSystemService.Object, _publishedAssets, _localAssets);
+                    Game.SetValue(GameViewModel.NavigationNodesProperty, NavigationNodes);
                 }
+            }
+
+            public void InitializeSubsets()
+            {
+                Initialize();
+
+                var sets = (List<AchievementSet>)_publishedAssets.Sets;
+                sets.Add(new AchievementSet { Id = 1111, Title = Game.Title, Type = AchievementSetType.Core });
+                sets.Add(new AchievementSet { Id = 2222, Title = "Bonus", Type = AchievementSetType.Bonus });
             }
 
             public void Merge(AchievementScriptInterpreter interpreter)
@@ -55,7 +57,7 @@ namespace RATools.Tests.ViewModels.Nagivation
                 Initialize();
 
                 var viewModel = new NavigationListViewModel(Game, _publishedAssets, _localAssets, _editors, _backgroundWorkerService.Object);
-                viewModel.Merge(interpreter);
+                NavigationNodes = viewModel.Merge(interpreter).ToList();
             }
 
             public Achievement CreateAchievement(string title, int points = 5, AchievementType type = AchievementType.None)
@@ -105,10 +107,13 @@ namespace RATools.Tests.ViewModels.Nagivation
 
         class MockGameViewModel : GameViewModel
         {
-            public MockGameViewModel(IFileSystemService fileSystemService)
+            public MockGameViewModel(IFileSystemService fileSystemService, PublishedAssets publishedAssets, LocalAssets localAssets)
                 : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService)
             {
                 SetRACacheDirectory("C:\\RACache\\");
+
+                _publishedAssets = publishedAssets;
+                _localAssets = localAssets;
             }
 
             public void InitScript(string filename)
@@ -170,8 +175,8 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreEqual("Test Achievement", achievementNode.Label);
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
-            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.IsNull(achievementNode.ModificationMessage);
+            Assert.AreEqual(GeneratedCompareState.NotGenerated, achievementNode.CompareState);
+            Assert.AreEqual("Local asset is not generated", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -283,8 +288,8 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Published.Asset);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
-            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.IsNull(achievementNode.ModificationMessage);
+            Assert.AreEqual(GeneratedCompareState.NotGenerated, achievementNode.CompareState);
+            Assert.AreEqual("Local asset is not generated", achievementNode.ModificationMessage);
 
             achievementNode = harness.NavigationNodes[2].Children[1] as AchievementNavigationViewModel;
             Assert.IsNotNull(achievementNode);
@@ -421,8 +426,8 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.IsNotNull(achievementNode.Editor);
             Assert.AreSame(localAchievement, ((AchievementViewModel)achievementNode.Editor).Local.Asset);
             Assert.IsNull(((AchievementViewModel)achievementNode.Editor).Generated.Asset);
-            Assert.AreEqual(GeneratedCompareState.None, achievementNode.CompareState);
-            Assert.IsNull(achievementNode.ModificationMessage);
+            Assert.AreEqual(GeneratedCompareState.NotGenerated, achievementNode.CompareState);
+            Assert.AreEqual("Local asset is not generated", achievementNode.ModificationMessage);
 
             Assert.IsNotNull(achievementNode.ContextMenu);
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
@@ -537,6 +542,47 @@ namespace RATools.Tests.ViewModels.Nagivation
             menuItem = achievementNode.ContextMenu.First();
             Assert.AreEqual("Update Local", menuItem.Label);
             Assert.IsFalse(menuItem.Command.CanExecute(null));
+        }
+
+
+        [Test]
+        public void TestMergeSubsetGeneratedAchievement()
+        {
+            var harness = new NavigationListViewModelHarness();
+            var achievement = harness.CreateAchievement("Test Achievement");
+            achievement.OwnerSetId = 2222;
+            harness.InitializeSubsets();
+
+            var interpreter = new AchievementScriptInterpreter();
+            interpreter.AddAchievement(achievement);
+            harness.Merge(interpreter);
+
+            Assert.AreEqual("Game Title", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(2, harness.NavigationNodes[2].Children?.Count ?? 0);
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Children[0].Label);
+            Assert.AreEqual(0, harness.NavigationNodes[2].Children[0].Children?.Count ?? 0);
+            Assert.AreEqual("Leaderboards", harness.NavigationNodes[2].Children[1].Label);
+            Assert.AreEqual(0, harness.NavigationNodes[2].Children[1].Children?.Count ?? 0);
+
+            Assert.AreEqual("Bonus", harness.NavigationNodes[3].Label);
+            Assert.AreEqual(2, harness.NavigationNodes[3].Children?.Count ?? 0);
+
+            Assert.AreEqual("Achievements", harness.NavigationNodes[3].Children[0].Label);
+            Assert.AreEqual(1, harness.NavigationNodes[3].Children[0].Children?.Count ?? 0);
+
+            var achievementNode = harness.NavigationNodes[3].Children[0].Children[0] as AchievementNavigationViewModel;
+            Assert.IsNotNull(achievementNode);
+            Assert.AreEqual("Test Achievement", achievementNode.Label);
+            Assert.IsNotNull(achievementNode.Editor);
+            Assert.AreSame(achievement, ((AchievementViewModel)achievementNode.Editor).Generated.Asset);
+            Assert.AreEqual(GeneratedCompareState.GeneratedOnly, achievementNode.CompareState);
+            Assert.AreEqual("Generated only", achievementNode.ModificationMessage);
+
+            Assert.IsNotNull(achievementNode.ContextMenu);
+            Assert.AreEqual(1, achievementNode.ContextMenu.Count());
+            var menuItem = achievementNode.ContextMenu.First();
+            Assert.AreEqual("Update Local", menuItem.Label);
+            Assert.IsTrue(menuItem.Command.CanExecute(null));
         }
     }
 }

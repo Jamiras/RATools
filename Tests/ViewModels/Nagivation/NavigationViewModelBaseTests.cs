@@ -78,7 +78,7 @@ namespace RATools.Tests.ViewModels.Nagivation
 
             harness.SetCompareState(GeneratedCompareState.NotGenerated);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.NotGenerated));
-            Assert.That(harness.ModificationMessage, Is.EqualTo("Published asset is not generated"));
+            Assert.That(harness.ModificationMessage, Is.EqualTo("Local asset is not generated"));
 
             harness.SetCompareState(GeneratedCompareState.PublishedDiffers);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
