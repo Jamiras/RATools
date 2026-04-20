@@ -425,32 +425,20 @@ namespace RATools.ViewModels
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (AssetViewModelBase)model;
-            if (IsValidBadgeName(vm.Generated.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Generated.BadgeName))
                 return vm.Generated.Badge;
-            if (IsValidBadgeName(vm.Local.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Local.BadgeName))
                 return vm.Local.Badge;
-            if (IsValidBadgeName(vm.Published.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Published.BadgeName))
                 return vm.Published.Badge;
 
-            if (IsValidBadgeName(vm.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.BadgeName))
             {
                 vm.Local.BadgeName = vm.BadgeName;
                 return vm.Local.Badge;
             }
 
             return null;
-        }
-
-        private static bool IsValidBadgeName(string badgeName)
-        {
-            if (String.IsNullOrEmpty(badgeName))
-                return false;
-            if (badgeName == "0")
-                return false;
-            if (badgeName == "00000")
-                return false;
-
-            return true;
         }
 
         public override void Refresh()
@@ -484,11 +472,11 @@ namespace RATools.ViewModels
             else
                 Id = Published.Id;
 
-            if (IsValidBadgeName(Generated.BadgeName))
+            if (Achievement.IsValidBadgeName(Generated.BadgeName))
                 BadgeName = Generated.BadgeName;
-            else if (IsValidBadgeName(Local.BadgeName))
+            else if (Achievement.IsValidBadgeName(Local.BadgeName))
                 BadgeName = Local.BadgeName;
-            else if (IsValidBadgeName(Published.BadgeName))
+            else if (Achievement.IsValidBadgeName(Published.BadgeName))
                 BadgeName = Published.BadgeName;
             else
                 BadgeName = null;

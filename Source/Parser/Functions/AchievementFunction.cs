@@ -25,7 +25,7 @@ namespace RATools.Parser.Functions
             Parameters.Add(new VariableDefinitionExpression("modified"));
             DefaultParameters["modified"] = new StringConstantExpression("");
             Parameters.Add(new VariableDefinitionExpression("badge"));
-            DefaultParameters["badge"] = new StringConstantExpression("0");
+            DefaultParameters["badge"] = new StringConstantExpression("00000");
 
             Parameters.Add(new VariableDefinitionExpression("type"));
             DefaultParameters["type"] = new StringConstantExpression("");
