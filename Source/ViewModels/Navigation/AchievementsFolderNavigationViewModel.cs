@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using System.Linq;
 
 namespace RATools.ViewModels.Navigation
 {
@@ -19,7 +20,7 @@ namespace RATools.ViewModels.Navigation
         {
             get
             {
-                _editor ??= new AchievementsListViewModel(_game, _achievementSet);
+                _editor ??= new AchievementsListViewModel(_game, _achievementSet, Children.OfType<AchievementNavigationViewModel>());
                 return _editor;
             }
         }

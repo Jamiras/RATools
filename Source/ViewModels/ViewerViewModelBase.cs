@@ -23,6 +23,8 @@ namespace RATools.ViewModels
             get { return String.Format("/RATools;component/Resources/{0}.png", ViewerType.ToLower()); }
         }
 
+        public virtual int ViewerId { get { return 0; } }
+
         public CommandBase UpdateLocalCommand { get; protected set; }
 
         internal int SortOrder { get; set; }

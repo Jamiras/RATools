@@ -134,20 +134,7 @@ namespace RATools.ViewModels
 
         private void NavigateTo(NavigationItem item)
         {
-            ViewerViewModelBase editor = null;
-            foreach (var scan in Editors)
-            {
-                if (scan.ViewerType != item.EditorType)
-                    continue;
-
-                var assetEditor = scan as AssetViewModelBase;
-                if (assetEditor != null && assetEditor.Id != item.EditorId)
-                    continue;
-
-                editor = scan;
-                break;
-            }
-
+            ViewerViewModelBase editor = FindEditor(NavigationNodes, item);
             if (editor == null)
                 return;
 
@@ -199,16 +186,35 @@ namespace RATools.ViewModels
 
         private static NavigationItem CaptureNavigationItem(ViewerViewModelBase editor)
         {
-            var item = new NavigationItem { EditorType = editor.ViewerType };
-            var assetEditor = editor as AssetViewModelBase;
-            if (assetEditor != null)
-                item.EditorId = assetEditor.Id;
+            var item = new NavigationItem { EditorType = editor.ViewerType, EditorId = editor.ViewerId };
 
             var scriptEditor = editor as ScriptViewModel;
             if (scriptEditor != null)
                 item.CursorPosition = new TextLocation(scriptEditor.Editor.CursorLine, scriptEditor.Editor.CursorColumn);
 
             return item;
+        }
+
+        private static ViewerViewModelBase FindEditor(IEnumerable<NavigationViewModelBase> nodes, NavigationItem item)
+        {
+            foreach (var node in nodes.OfType<IEditorNavigationViewModel>())
+            {
+                var editor = node.Editor;
+                if (editor.ViewerType == item.EditorType && editor.ViewerId == item.EditorId)
+                    return editor;
+            }
+
+            foreach (var node in nodes)
+            {
+                if (node.Children != null && node.Children.Count > 0)
+                {
+                    var child = FindEditor(node.Children, item);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
         }
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)

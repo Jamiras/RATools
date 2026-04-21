@@ -2,6 +2,7 @@
 using Jamiras.DataModels;
 using Jamiras.ViewModels;
 using RATools.Data;
+using RATools.ViewModels.Navigation;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,21 +15,34 @@ namespace RATools.ViewModels
 {
     public class AchievementsListViewModel : ViewerViewModelBase
     {
-        public AchievementsListViewModel(GameViewModel owner, AchievementSet achievementSet)
+        public AchievementsListViewModel(GameViewModel owner, AchievementSet achievementSet, IEnumerable<NavigationViewModelBase> navigationNodes)
             : base(owner)
         {
-            var achievements = owner.Editors.OfType<AchievementViewModel>()
-                .Where(a => a.BelongsToSet(achievementSet)).ToArray();
+            AchievementViewModel[] achievements;
+
+            if (navigationNodes != null)
+            {
+                achievements = navigationNodes.OfType<AchievementNavigationViewModel>()
+                    .Select(vm => vm.Editor as AchievementViewModel).ToArray();
+            }
+            else
+            {
+                achievements = owner.Editors.OfType<AchievementViewModel>()
+                    .Where(a => a.BelongsToSet(achievementSet)).ToArray();
+            }
+
             Achievements = achievements;
 
             Title = achievementSet.Title;
             CountAchievements(achievements);
             _badgeName = achievementSet?.BadgeName ?? owner.BadgeName;
 
-            Id = (achievementSet != null) ? achievementSet.Id : 0;
+            _id = (achievementSet != null) ? achievementSet.Id : 0;
 
             ExportCommand = new DelegateCommand(Export);
         }
+
+        private readonly int _id;
 
         private void CountAchievements(AchievementViewModel[] achievements)
         {
@@ -92,7 +106,7 @@ namespace RATools.ViewModels
 
         public override string ViewerType => "AchievementList";
 
-        public int Id { get; private set; }
+        public override int ViewerId { get { return _id; } }
 
         public static readonly ModelProperty BadgeProperty = ModelProperty.RegisterDependant(typeof(AchievementsListViewModel), "Badge", typeof(ImageSource), new ModelProperty[0], GetBadge);
         public ImageSource Badge
