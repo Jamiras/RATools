@@ -277,7 +277,7 @@ namespace RATools.Parser.Tests.Expressions
             interpreter.Run(group, null);
 
             Assert.That(group.HasEvaluationErrors, Is.True);
-            Assert.That(group.Errors.First().Location.Start.Line, Is.EqualTo(3));
+            Assert.That(group.Errors.First().Location.Start.Line, Is.EqualTo(2));
 
             var updatedInput = "a = 3\n" +
                                "\n" +
@@ -289,14 +289,14 @@ namespace RATools.Parser.Tests.Expressions
 
             Assert.That(group.HasEvaluationErrors, Is.True);
             var error = group.Errors.First();
-            Assert.That(error.Location.Start.Line, Is.EqualTo(5));
+            Assert.That(error.Location.Start.Line, Is.EqualTo(4));
             Assert.That(error.InnermostError.Location.Start.Line, Is.EqualTo(5));
 
             group.Update(Tokenizer.CreateTokenizer(input), new int[] { 2, 3 });
 
             Assert.That(group.HasEvaluationErrors, Is.True);
             error = group.Errors.First();
-            Assert.That(error.Location.Start.Line, Is.EqualTo(3));
+            Assert.That(error.Location.Start.Line, Is.EqualTo(2));
             Assert.That(error.InnermostError.Location.Start.Line, Is.EqualTo(3));
         }
     }
