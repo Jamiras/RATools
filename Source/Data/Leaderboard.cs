@@ -241,7 +241,12 @@ namespace RATools.Data
         Value,
 
         /// <summary>
-        /// Generic value followed by "Points" - %06d Points
+        /// Generic unsigned value - %01u
+        /// </summary>
+        Unsigned,
+
+        /// <summary>
+        /// Generic value padded with 0s to 6 digits - %06d Points
         /// </summary>
         Score,
 

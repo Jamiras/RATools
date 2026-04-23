@@ -165,8 +165,15 @@ namespace RATools.Tests.ViewModels.Nagivation
         {
             var harness = new NavigationListViewModelHarness();
             var achievement = harness.AddLocalAchievement("Test Achievement");
-            harness.Merge(null);
 
+            // if generated assets aren't provided, local assets shouldn't be loaded. this prevents them
+            // from appearing as "Local, but not generated" while the script is initially being processed.
+            harness.Merge(null);
+            Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
+            Assert.AreEqual(0, harness.NavigationNodes[2].Children?.Count ?? 0);
+
+            // when generated assets are provided, local assets should be loaded.
+            harness.Merge(new AchievementScriptInterpreter());
             Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
             Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
 
@@ -218,7 +225,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             publishedAchievement.Id = 12345;
             var localAchievement = harness.AddLocalAchievement("Test Achievement");
             localAchievement.Id = 12345;
-            harness.Merge(null);
+            harness.Merge(new AchievementScriptInterpreter());
 
             Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
             Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
@@ -247,7 +254,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             publishedAchievement.Id = 12345;
             var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
             localAchievement.Id = 12345;
-            harness.Merge(null);
+            harness.Merge(new AchievementScriptInterpreter());
 
             Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
             Assert.AreEqual(1, harness.NavigationNodes[2].Children?.Count ?? 0);
@@ -276,7 +283,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             publishedAchievement.Id = 12345;
             var localAchievement = harness.AddLocalAchievement("Test Achievement 2");
             localAchievement.Id = 12346;
-            harness.Merge(null);
+            harness.Merge(new AchievementScriptInterpreter());
 
             Assert.AreEqual("Achievements", harness.NavigationNodes[2].Label);
             Assert.AreEqual(2, harness.NavigationNodes[2].Children?.Count ?? 0);
