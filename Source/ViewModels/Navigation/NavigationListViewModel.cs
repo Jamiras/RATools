@@ -363,7 +363,7 @@ namespace RATools.ViewModels.Navigation
             bool hasSubsets = false;
             foreach (var achievementSetNode in navigationNodes.OfType<AchievementSetFolderNavigationViewModel>())
             {
-                var achievementsFolder = achievementSetNode.Children.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
+                var achievementsFolder = achievementSetNode.Children.OfType<AchievementsFolderNavigationViewModel>().First();
                 var leaderboardsFolder = achievementSetNode.Children.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
                 UpdateAchievementSetNodes(achievementsFolder, leaderboardsFolder, achievementSetNode.AchievementSet);
                 hasSubsets = true;
@@ -371,7 +371,7 @@ namespace RATools.ViewModels.Navigation
 
             if (!hasSubsets)
             {
-                var achievementsFolder = navigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Achievements");
+                var achievementsFolder = navigationNodes.OfType<AchievementsFolderNavigationViewModel>().First();
                 var leaderboardsFolder = navigationNodes.OfType<AssetFolderNavigationViewModel>().First(n => n.Label == "Leaderboards");
                 UpdateAchievementSetNodes(achievementsFolder, leaderboardsFolder, null);
             }
@@ -382,11 +382,8 @@ namespace RATools.ViewModels.Navigation
             var achievementNodes = achievementsFolder.Children.OfType<AchievementNavigationViewModel>().ToList();
             foreach (var achievement in _editors.OfType<AchievementViewModel>())
             {
-                if (achievementSet != null && achievement.OwnerSetId != achievementSet.Id)
-                {
-                    if (achievement.OwnerSetId != 0 || achievementSet.Type != AchievementSetType.Core)
-                        continue;
-                }
+                if (!achievement.BelongsToSet(achievementSet))
+                    continue;
 
                 if (achievement.Generated.Asset == null && achievement.Local.Asset == null && achievement.Published.Asset == null)
                 {
@@ -513,7 +510,7 @@ namespace RATools.ViewModels.Navigation
 
                 if (sets.Count < 2)
                 {
-                    newNavigationNodes.Add(new AssetFolderNavigationViewModel("Achievements"));
+                    newNavigationNodes.Add(new AchievementsFolderNavigationViewModel(_gameViewModel, sets[0]));
                     newNavigationNodes.Add(new AssetFolderNavigationViewModel("Leaderboards"));
                 }
                 else
@@ -521,7 +518,7 @@ namespace RATools.ViewModels.Navigation
                     foreach (var achievementSet in sets)
                     {
                         var setFolderNode = new AchievementSetFolderNavigationViewModel(achievementSet);
-                        setFolderNode.AddChild(new AssetFolderNavigationViewModel("Achievements"));
+                        setFolderNode.AddChild(new AchievementsFolderNavigationViewModel(_gameViewModel, achievementSet));
                         setFolderNode.AddChild(new AssetFolderNavigationViewModel("Leaderboards"));
                         newNavigationNodes.Add(setFolderNode);
                     }
@@ -539,11 +536,13 @@ namespace RATools.ViewModels.Navigation
                     MergePublished();
             }
 
-            if (_localAssets != null)
-                MergeLocal();
-
             if (interpreter != null)
+            {
+                if (_localAssets != null)
+                    MergeLocal();
+
                 MergeGenerated(interpreter);
+            }
 
             UpdateTemporaryIds();
 

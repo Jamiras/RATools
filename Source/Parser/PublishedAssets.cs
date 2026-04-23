@@ -5,6 +5,7 @@ using RATools.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 namespace RATools.Parser
@@ -129,6 +130,7 @@ namespace RATools.Parser
                         OwnerGameId = GameId,
                         Title = Title,
                         Type = AchievementSetType.Core,
+                        BadgeName = ExtractBadgeName(publishedData.GetField("ImageIconUrl").StringValue),
                     });
 
                     var publishedAchievements = publishedData.GetField("Achievements");
@@ -168,6 +170,16 @@ namespace RATools.Parser
             }
         }
 
+        private static string ExtractBadgeName(string url)
+        {
+            if (url == null)
+                return null;
+
+            var index = url.LastIndexOf('/');
+            var filename = url.Substring(index + 1);
+            return Path.GetFileNameWithoutExtension(filename);
+        }
+
         private void ReadSets(JsonField sets)
         {
             foreach (var set in sets.ObjectArrayValue)
@@ -182,6 +194,7 @@ namespace RATools.Parser
                     OwnerGameId = gameId,
                     Title = set.GetField("Title").StringValue ?? Title,
                     Type = ConvertType(set.GetField("Type").StringValue),
+                    BadgeName = ExtractBadgeName(set.GetField("ImageIconUrl").StringValue),
                 });
 
                 var publishedAchievements = set.GetField("Achievements");

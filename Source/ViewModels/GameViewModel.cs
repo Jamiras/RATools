@@ -134,20 +134,7 @@ namespace RATools.ViewModels
 
         private void NavigateTo(NavigationItem item)
         {
-            ViewerViewModelBase editor = null;
-            foreach (var scan in Editors)
-            {
-                if (scan.ViewerType != item.EditorType)
-                    continue;
-
-                var assetEditor = scan as AssetViewModelBase;
-                if (assetEditor != null && assetEditor.Id != item.EditorId)
-                    continue;
-
-                editor = scan;
-                break;
-            }
-
+            ViewerViewModelBase editor = FindEditor(NavigationNodes, item);
             if (editor == null)
                 return;
 
@@ -199,16 +186,35 @@ namespace RATools.ViewModels
 
         private static NavigationItem CaptureNavigationItem(ViewerViewModelBase editor)
         {
-            var item = new NavigationItem { EditorType = editor.ViewerType };
-            var assetEditor = editor as AssetViewModelBase;
-            if (assetEditor != null)
-                item.EditorId = assetEditor.Id;
+            var item = new NavigationItem { EditorType = editor.ViewerType, EditorId = editor.ViewerId };
 
             var scriptEditor = editor as ScriptViewModel;
             if (scriptEditor != null)
                 item.CursorPosition = new TextLocation(scriptEditor.Editor.CursorLine, scriptEditor.Editor.CursorColumn);
 
             return item;
+        }
+
+        private static ViewerViewModelBase FindEditor(IEnumerable<NavigationViewModelBase> nodes, NavigationItem item)
+        {
+            foreach (var node in nodes.OfType<IEditorNavigationViewModel>())
+            {
+                var editor = node.Editor;
+                if (editor.ViewerType == item.EditorType && editor.ViewerId == item.EditorId)
+                    return editor;
+            }
+
+            foreach (var node in nodes)
+            {
+                if (node.Children != null && node.Children.Count > 0)
+                {
+                    var child = FindEditor(node.Children, item);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
         }
 
         internal void PopulateEditorList(AchievementScriptInterpreter interpreter)
@@ -227,8 +233,47 @@ namespace RATools.ViewModels
             var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
             NavigationNodes = navigation.Merge(interpreter);
 
-            SelectedNavigationNode = FindEditorNavigationNode(NavigationNodes, SelectedEditor);
+            UpdateSelectedNavigationNode(SelectedNavigationNode);
         }
+
+        internal void UpdateSelectedNavigationNode(NavigationViewModelBase searchNode)
+        {
+            var newNode = searchNode != null
+                ? FindNavigationNode(NavigationNodes, searchNode)
+                : FindEditorNavigationNode(NavigationNodes, Script);
+            if (!ReferenceEquals(searchNode, newNode))
+            {
+                SelectedNavigationNode = newNode;
+
+                if (newNode != null)
+                    newNode.IsSelected = true;
+
+                if (searchNode != null)
+                    searchNode.IsSelected = false;
+            }
+        }
+
+        internal static NavigationViewModelBase FindNavigationNode(IEnumerable<NavigationViewModelBase> nodes, NavigationViewModelBase searchNode)
+        {
+            foreach (var node in nodes)
+            {
+                if (node == searchNode)
+                    return node;
+            }
+
+            foreach (var node in nodes)
+            {
+                if (node.Children != null && node.Children.Count > 0)
+                {
+                    var child = FindNavigationNode(node.Children, searchNode);
+                    if (child != null)
+                        return child;
+                }
+            }
+
+            return null;
+        }
+
 
         public int CompileProgress { get; internal set; }
         public int CompileProgressLine { get; internal set; }
@@ -264,7 +309,7 @@ namespace RATools.ViewModels
 
         private static void OnSelectedNavigationNodeChanged(object sender, ModelPropertyChangedEventArgs e)
         {
-            var editorNavigationViewModel = e.NewValue as EditorNavigationViewModelBase;
+            var editorNavigationViewModel = e.NewValue as IEditorNavigationViewModel;
             if (editorNavigationViewModel != null)
                 ((GameViewModel)sender).SelectedEditor = editorNavigationViewModel.Editor;
         }
@@ -307,10 +352,10 @@ namespace RATools.ViewModels
 
         private static NavigationViewModelBase FindEditorNavigationNode(IEnumerable<NavigationViewModelBase> nodes, ViewerViewModelBase editor)
         {
-            foreach (var node in nodes.OfType<EditorNavigationViewModelBase>())
+            foreach (var node in nodes.OfType<IEditorNavigationViewModel>())
             {
                 if (ReferenceEquals(node.Editor, editor))
-                    return node;
+                    return (NavigationViewModelBase)node;
             }
 
             foreach (var node in nodes)
@@ -522,11 +567,18 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(MainWindowViewModel), "Title", typeof(string), String.Empty);
+        public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(GameViewModel), "Title", typeof(string), String.Empty);
         public string Title
         {
             get { return (string)GetValue(TitleProperty); }
             private set { SetValue(TitleProperty, value); }
+        }
+
+        public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(GameViewModel), "BadgeName", typeof(string), String.Empty);
+        public string BadgeName
+        {
+            get { return (string)GetValue(BadgeNameProperty); }
+            set { SetValue(BadgeNameProperty, value); }
         }
 
         public IEnumerable<AchievementSet> PublishedSets
@@ -537,49 +589,49 @@ namespace RATools.ViewModels
             }
         }
 
-        public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "GeneratedAchievementCount", typeof(int), 0);
+        public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "GeneratedAchievementCount", typeof(int), 0);
         public int GeneratedAchievementCount
         {
             get { return (int)GetValue(GeneratedAchievementCountProperty); }
             private set { SetValue(GeneratedAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty CoreAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CoreAchievementCount", typeof(int), 0);
+        public static readonly ModelProperty CoreAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "CoreAchievementCount", typeof(int), 0);
         public int CoreAchievementCount
         {
             get { return (int)GetValue(CoreAchievementCountProperty); }
             private set { SetValue(CoreAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty CoreAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "CoreAchievementPoints", typeof(int), 0);
+        public static readonly ModelProperty CoreAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "CoreAchievementPoints", typeof(int), 0);
         public int CoreAchievementPoints
         {
             get { return (int)GetValue(CoreAchievementPointsProperty); }
             private set { SetValue(CoreAchievementPointsProperty, value); }
         }
 
-        public static readonly ModelProperty UnofficialAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "UnofficialAchievementCount", typeof(int), 0);
+        public static readonly ModelProperty UnofficialAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "UnofficialAchievementCount", typeof(int), 0);
         public int UnofficialAchievementCount
         {
             get { return (int)GetValue(UnofficialAchievementCountProperty); }
             private set { SetValue(UnofficialAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty UnofficialAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "UnofficialAchievementPoints", typeof(int), 0);
+        public static readonly ModelProperty UnofficialAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "UnofficialAchievementPoints", typeof(int), 0);
         public int UnofficialAchievementPoints
         {
             get { return (int)GetValue(UnofficialAchievementPointsProperty); }
             private set { SetValue(UnofficialAchievementPointsProperty, value); }
         }
 
-        public static readonly ModelProperty LocalAchievementCountProperty = ModelProperty.Register(typeof(MainWindowViewModel), "LocalAchievementCount", typeof(int), 0);
+        public static readonly ModelProperty LocalAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "LocalAchievementCount", typeof(int), 0);
         public int LocalAchievementCount
         {
             get { return (int)GetValue(LocalAchievementCountProperty); }
             private set { SetValue(LocalAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty LocalAchievementPointsProperty = ModelProperty.Register(typeof(MainWindowViewModel), "LocalAchievementPoints", typeof(int), 0);
+        public static readonly ModelProperty LocalAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "LocalAchievementPoints", typeof(int), 0);
         public int LocalAchievementPoints
         {
             get { return (int)GetValue(LocalAchievementPointsProperty); }

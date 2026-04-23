@@ -5,6 +5,7 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ScriptViewer.xaml" />
         <ResourceDictionary Source="AchievementViewer.xaml" />
+        <ResourceDictionary Source="AchievementsListViewer.xaml" />
         <ResourceDictionary Source="RichPresenceViewer.xaml" />
         <ResourceDictionary Source="LeaderboardViewer.xaml" />
     </ResourceDictionary.MergedDictionaries>
@@ -156,6 +157,7 @@
                         <Setter Property="BorderThickness" Value="0" />
                         <Setter Property="Margin" Value="1" />
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                        <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                     </Style>
                 </TreeView.ItemContainerStyle>
             </TreeView>

@@ -184,5 +184,13 @@ namespace RATools.ViewModels
 
             return null;
         }
+
+        public bool BelongsToSet(AchievementSet achievementSet)
+        {
+            if (OwnerSetId == 0)
+                return (achievementSet == null || achievementSet.Type == AchievementSetType.Core);
+
+            return (achievementSet == null || achievementSet.Id == OwnerSetId);
+        }
     }
 }
