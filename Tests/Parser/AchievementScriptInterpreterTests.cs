@@ -1103,7 +1103,7 @@ namespace RATools.Parser.Tests
             // calling achievement() directly without a badge or id
             var achievement = parser.Achievements.ElementAt(0);
             Assert.That(achievement.Id, Is.EqualTo(0));
-            Assert.That(achievement.BadgeName, Is.EqualTo("0"));
+            Assert.That(achievement.BadgeName, Is.EqualTo("00000"));
 
             // calling achievement() indirectly without a badge or id
             achievement = parser.Achievements.ElementAt(1);
