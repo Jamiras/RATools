@@ -555,11 +555,13 @@ namespace RATools.ViewModels.Navigation
                     MergePublished();
             }
 
-            if (_localAssets != null)
-                MergeLocal();
-
             if (interpreter != null)
+            {
+                if (_localAssets != null)
+                    MergeLocal();
+
                 MergeGenerated(interpreter);
+            }
 
             UpdateTemporaryIds();
 
