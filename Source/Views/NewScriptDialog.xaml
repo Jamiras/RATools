@@ -68,7 +68,7 @@
                             <TextBlock.Style>
                                 <Style TargetType="{x:Type TextBlock}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
+                                        <DataTrigger Binding="{Binding IsUnpromoted}" Value="True">
                                             <Setter Property="FontStyle" Value="Italic" />
                                         </DataTrigger>
                                     </Style.Triggers>

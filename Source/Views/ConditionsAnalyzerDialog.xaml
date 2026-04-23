@@ -89,8 +89,8 @@
         <TextBlock Grid.Row="1" Text="Scan:" />
         <StackPanel Grid.Row="1" Grid.Column="1">
             <StackPanel Orientation="Horizontal">
-                <CheckBox Content="Core Achievements" IsChecked="{Binding IsCoreAchievementsScanned}" Margin="6,0,6,0" />
-                <CheckBox Content="Non-Core Achievements" IsChecked="{Binding IsNonCoreAchievementsScanned}" Margin="6,0,6,0" />
+                <CheckBox Content="Promoted Achievements" IsChecked="{Binding IsPromotedAchievementsScanned}" Margin="6,0,6,0" />
+                <CheckBox Content="Unpromoted Achievements" IsChecked="{Binding IsUnpromotedAchievementsScanned}" Margin="6,0,6,0" />
                 <CheckBox Content="Rich Presence" IsChecked="{Binding IsRichPresenceScanned}" Margin="6,0,6,0" />
                 <CheckBox Content="Leaderboard Start" IsChecked="{Binding IsLeaderboardStartScanned}" Margin="6,0,6,0" />
                 <CheckBox Content="Leaderboard Submit" IsChecked="{Binding IsLeaderboardSubmitScanned}" Margin="6,0,6,0" />
@@ -146,7 +146,7 @@
                                     <TextBlock.Style>
                                         <Style TargetType="{x:Type TextBlock}">
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
+                                                <DataTrigger Binding="{Binding IsUnpromoted}" Value="True">
                                                     <DataTrigger.Setters>
                                                         <Setter Property="FontStyle" Value="Italic" />
                                                     </DataTrigger.Setters>

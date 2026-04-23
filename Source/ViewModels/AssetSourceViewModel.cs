@@ -26,10 +26,10 @@ namespace RATools.ViewModels
 
         protected readonly AssetViewModelBase _owner;
 
-        internal AssetBase Asset 
+        public AssetBase Asset 
         { 
             get { return _asset; } 
-            set
+            internal set
             {
                 bool hadAsset = _asset != null;
                 if (hadAsset && value == null)

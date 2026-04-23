@@ -164,6 +164,7 @@ namespace RATools.Parser
             {
                 case "core": return AchievementSetType.Core;
                 case "bonus": return AchievementSetType.Bonus;
+                case "challenge": return AchievementSetType.Challenge;
                 case "specialty": return AchievementSetType.Specialty;
                 case "exclusive": return AchievementSetType.Exclusive;
                 default: return AchievementSetType.None;

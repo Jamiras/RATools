@@ -113,7 +113,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshCoreNotGenerated()
+        public void TestRefreshPromotedNotGenerated()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -137,11 +137,11 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Core (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Promoted (Not Generated)"));
         }
 
         [Test]
-        public void TestRefreshUnofficialNotGenerated()
+        public void TestRefreshUnpromotedNotGenerated()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -166,7 +166,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unpublished (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unpromoted (Not Generated)"));
         }
 
         [Test]
@@ -198,7 +198,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsCore()
+        public void TestRefreshGeneratedSameAsPromoted()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
@@ -230,11 +230,11 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Core)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Promoted)"));
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsUnofficial()
+        public void TestRefreshGeneratedSameAsUnpromoted()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
@@ -267,7 +267,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpromoted)"));
         }
 
         [Test]
@@ -303,7 +303,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsLocalButNotCore()
+        public void TestRefreshGeneratedSameAsLocalButNotPromoted()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
@@ -328,7 +328,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.True);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Core differs from generated"));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Promoted differs from generated"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
@@ -339,7 +339,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsLocalButNotUnofficial()
+        public void TestRefreshGeneratedSameAsLocalButNotUnpromoted()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
@@ -365,7 +365,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.True);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.PublishedDiffers));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpublished differs from generated"));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpromoted differs from generated"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.False);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
@@ -376,7 +376,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedNotInLocalDiffersFromCore()
+        public void TestRefreshGeneratedNotInLocalDiffersFromPromoted()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1235, "TitleP", "DescriptionP")
@@ -398,7 +398,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.IsDescriptionModified, Is.True);
             Assert.That(vmAsset.BadgeName, Is.EqualTo("Badge"));
             Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.LocalDiffers));
-            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpublished differs from generated"));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Unpromoted differs from generated"));
             Assert.That(vmAsset.IsGenerated, Is.True);
             Assert.That(vmAsset.CanUpdate, Is.True);
             Assert.That(vmAsset.Other, Is.SameAs(vmAsset.Published));
@@ -437,7 +437,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsCoreNotInLocal()
+        public void TestRefreshGeneratedSameAsPromotedNotInLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -465,11 +465,11 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Core, not in Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Promoted, not in Local)"));
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsUnofficialNotInLocal()
+        public void TestRefreshGeneratedSameAsUnpromotedNotInLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -498,7 +498,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished, not in Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpromoted, not in Local)"));
         }
 
         [Test]
@@ -534,7 +534,7 @@ namespace RATools.Tests.ViewModels
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsCoreAndLocal()
+        public void TestRefreshGeneratedSameAsPromotedAndLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -566,11 +566,11 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Core and Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Promoted and Local)"));
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsCoreAndLocalExceptBadge()
+        public void TestRefreshGeneratedSameAsPromotedAndLocalExceptBadge()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -602,11 +602,11 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Core and Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Promoted and Local)"));
         }
 
         [Test]
-        public void TestRefreshGeneratedSameAsUnofficialAndLocal()
+        public void TestRefreshGeneratedSameAsUnpromotedAndLocal()
         {
             var vmAsset = new AssetViewModelBaseHarness();
             vmAsset.Published.Asset = new TestAchievement(1234, "Title", "Description")
@@ -639,7 +639,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished and Local)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpromoted and Local)"));
         }
     }
 }

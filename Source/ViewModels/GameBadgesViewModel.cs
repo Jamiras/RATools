@@ -99,7 +99,7 @@ namespace RATools.ViewModels
                     var badgeDirectory = Path.Combine(directory, "RACache", "Badge");
                     foreach (var achievement in publishedAssets.Achievements)
                     {
-                        if (achievement.IsUnofficial)
+                        if (achievement.IsUnpromoted)
                             continue;
 
                         var path = Path.Combine(badgeDirectory, achievement.BadgeName);

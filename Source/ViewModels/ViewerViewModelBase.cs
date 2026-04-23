@@ -99,7 +99,7 @@ namespace RATools.ViewModels
         None = 0,
 
         /// <summary>
-        ///   published by not generated or generated matches core and/or local. no icon
+        ///   published but not generated or generated matches published and/or local. no icon
         /// </summary>
         Same,
 

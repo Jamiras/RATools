@@ -37,14 +37,14 @@ namespace RATools.Data
         public Trigger Trigger { get; internal set; }
 
         /// <summary>
-        /// Gets the achievement category (3=Core, 5=Unofficial).
+        /// Gets the achievement category (3=Promoted, 5=Unpromoted).
         /// </summary>
         public int Category { get; internal set; }
 
         /// <summary>
-        /// Gets whether or not the achievement is Unofficial.
+        /// Gets whether or not the achievement is Unpromoted.
         /// </summary>
-        public override bool IsUnofficial
+        public override bool IsUnpromoted
         {
             get { return Category == 5; }
         }

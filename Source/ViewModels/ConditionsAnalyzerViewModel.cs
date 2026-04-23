@@ -124,7 +124,7 @@ namespace RATools.ViewModels
             public int AchievementId { get; internal set; }
             public int LeaderboardId { get; internal set; }
             public string Details { get; internal set; }
-            public bool IsUnofficial { get; internal set; }
+            public bool IsUnpromoted { get; internal set; }
         }
 
         public ObservableCollection<Result> Results { get; private set; }
@@ -245,18 +245,18 @@ namespace RATools.ViewModels
             Progress.IsEnabled = false;
         }
 
-        public static readonly ModelProperty IsCoreAchievementsScannedProperty = ModelProperty.Register(typeof(ConditionsAnalyzerViewModel), "IsAchievementsScanned", typeof(bool), true);
-        public bool IsCoreAchievementsScanned
+        public static readonly ModelProperty IsPromotedAchievementsScannedProperty = ModelProperty.Register(typeof(ConditionsAnalyzerViewModel), "IsPromotedAchievementsScanned", typeof(bool), true);
+        public bool IsPromotedAchievementsScanned
         {
-            get { return (bool)GetValue(IsCoreAchievementsScannedProperty); }
-            set { SetValue(IsCoreAchievementsScannedProperty, value); }
+            get { return (bool)GetValue(IsPromotedAchievementsScannedProperty); }
+            set { SetValue(IsPromotedAchievementsScannedProperty, value); }
         }
 
-        public static readonly ModelProperty IsNonCoreAchievementsScannedProperty = ModelProperty.Register(typeof(ConditionsAnalyzerViewModel), "IsAchievementsScanned", typeof(bool), true);
-        public bool IsNonCoreAchievementsScanned
+        public static readonly ModelProperty IsUnpromotedAchievementsScannedProperty = ModelProperty.Register(typeof(ConditionsAnalyzerViewModel), "IsUnpromotedAchievementsScanned", typeof(bool), true);
+        public bool IsUnpromotedAchievementsScanned
         {
-            get { return (bool)GetValue(IsNonCoreAchievementsScannedProperty); }
-            set { SetValue(IsNonCoreAchievementsScannedProperty, value); }
+            get { return (bool)GetValue(IsUnpromotedAchievementsScannedProperty); }
+            set { SetValue(IsUnpromotedAchievementsScannedProperty, value); }
         }
 
         public static readonly ModelProperty IsLeaderboardStartScannedProperty = ModelProperty.Register(typeof(ConditionsAnalyzerViewModel), "IsLeaderboardStartScanned", typeof(bool), true);
@@ -329,7 +329,7 @@ namespace RATools.ViewModels
             var directory = _settings.DumpDirectory;
 
             var filesToRead = 0;
-            if (IsCoreAchievementsScanned || IsNonCoreAchievementsScanned)
+            if (IsPromotedAchievementsScanned || IsUnpromotedAchievementsScanned)
                 filesToRead += Snapshot.AchievementGameCount;
             if (IsLeaderboardCancelScanned || IsLeaderboardStartScanned || IsLeaderboardSubmitScanned)
                 filesToRead += Snapshot.LeaderboardGameCount;
@@ -341,7 +341,7 @@ namespace RATools.ViewModels
 
             var results = new List<Result>();
 
-            if (IsCoreAchievementsScanned || IsNonCoreAchievementsScanned)
+            if (IsPromotedAchievementsScanned || IsUnpromotedAchievementsScanned)
             {
                 Progress.Label = "Processing Achievements...";
 
@@ -365,12 +365,12 @@ namespace RATools.ViewModels
                     foreach (var achievement in achievements)
                     {
                         var flags = achievement.GetField("Flags").IntegerValue;
-                        if (!IsCoreAchievementsScanned)
+                        if (!IsPromotedAchievementsScanned)
                         {
                             if (flags == 3)
                                 continue;
                         }
-                        else if (!IsNonCoreAchievementsScanned)
+                        else if (!IsUnpromotedAchievementsScanned)
                         {
                             if (flags != 3)
                                 continue;
@@ -386,7 +386,7 @@ namespace RATools.ViewModels
                                 AchievementId = achievement.GetField("ID").IntegerValue.GetValueOrDefault(),
                                 ItemName = achievement.GetField("Title").StringValue,
                                 Details = memAddr,
-                                IsUnofficial = flags == 5
+                                IsUnpromoted = flags == 5
                             });
                         }
                     }

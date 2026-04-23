@@ -596,32 +596,32 @@ namespace RATools.ViewModels
             private set { SetValue(GeneratedAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty CoreAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "CoreAchievementCount", typeof(int), 0);
-        public int CoreAchievementCount
+        public static readonly ModelProperty PromotedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "PromotedAchievementCount", typeof(int), 0);
+        public int PromotedAchievementCount
         {
-            get { return (int)GetValue(CoreAchievementCountProperty); }
-            private set { SetValue(CoreAchievementCountProperty, value); }
+            get { return (int)GetValue(PromotedAchievementCountProperty); }
+            private set { SetValue(PromotedAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty CoreAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "CoreAchievementPoints", typeof(int), 0);
-        public int CoreAchievementPoints
+        public static readonly ModelProperty PromotedAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "PromotedAchievementPoints", typeof(int), 0);
+        public int PromotedAchievementPoints
         {
-            get { return (int)GetValue(CoreAchievementPointsProperty); }
-            private set { SetValue(CoreAchievementPointsProperty, value); }
+            get { return (int)GetValue(PromotedAchievementPointsProperty); }
+            private set { SetValue(PromotedAchievementPointsProperty, value); }
         }
 
-        public static readonly ModelProperty UnofficialAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "UnofficialAchievementCount", typeof(int), 0);
-        public int UnofficialAchievementCount
+        public static readonly ModelProperty UnpromotedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "UnpromotedAchievementCount", typeof(int), 0);
+        public int UnpromotedAchievementCount
         {
-            get { return (int)GetValue(UnofficialAchievementCountProperty); }
-            private set { SetValue(UnofficialAchievementCountProperty, value); }
+            get { return (int)GetValue(UnpromotedAchievementCountProperty); }
+            private set { SetValue(UnpromotedAchievementCountProperty, value); }
         }
 
-        public static readonly ModelProperty UnofficialAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "UnofficialAchievementPoints", typeof(int), 0);
-        public int UnofficialAchievementPoints
+        public static readonly ModelProperty UnpromotedAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "UnpromotedAchievementPoints", typeof(int), 0);
+        public int UnpromotedAchievementPoints
         {
-            get { return (int)GetValue(UnofficialAchievementPointsProperty); }
-            private set { SetValue(UnofficialAchievementPointsProperty, value); }
+            get { return (int)GetValue(UnpromotedAchievementPointsProperty); }
+            private set { SetValue(UnpromotedAchievementPointsProperty, value); }
         }
 
         public static readonly ModelProperty LocalAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "LocalAchievementCount", typeof(int), 0);
@@ -663,34 +663,34 @@ namespace RATools.ViewModels
             var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
             var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
 
-            var coreCount = 0;
-            var corePoints = 0;
-            var unofficialCount = 0;
-            var unofficialPoints = 0;
+            var promotedCount = 0;
+            var promotedPoints = 0;
+            var unpromotedCount = 0;
+            var unpromotedPoints = 0;
             foreach (var achievement in publishedAssets.Achievements)
             {
                 if (achievement.Category == 3)
                 {
-                    coreCount++;
-                    corePoints += achievement.Points;
+                    promotedCount++;
+                    promotedPoints += achievement.Points;
                 }
                 else
                 {
-                    unofficialCount++;
-                    unofficialPoints += achievement.Points;
+                    unpromotedCount++;
+                    unpromotedPoints += achievement.Points;
                 }
             }
 
-            CoreAchievementCount = coreCount;
-            CoreAchievementPoints = corePoints;
-            UnofficialAchievementCount = unofficialCount;
-            UnofficialAchievementPoints = unofficialPoints;
+            PromotedAchievementCount = promotedCount;
+            PromotedAchievementPoints = promotedPoints;
+            UnpromotedAchievementCount = unpromotedCount;
+            UnpromotedAchievementPoints = unpromotedPoints;
 
             Title = publishedAssets.Title;
             ConsoleId = publishedAssets.ConsoleId;
 
-            _logger.WriteVerbose(String.Format("Identified {0} core achievements ({1} points)", coreCount, corePoints));
-            _logger.WriteVerbose(String.Format("Identified {0} unofficial achievements ({1} points)", unofficialCount, unofficialPoints));
+            _logger.WriteVerbose(String.Format("Identified {0} promoted achievements ({1} points)", promotedCount, promotedPoints));
+            _logger.WriteVerbose(String.Format("Identified {0} unpromoted achievements ({1} points)", unpromotedCount, unpromotedPoints));
 
             publishedAssets.LoadNotes();
             Notes = publishedAssets.Notes;
