@@ -33,39 +33,46 @@ namespace RATools.Parser.Functions
             DefaultParameters["set"] = new IntegerConstantExpression(0);
         }
 
+        public override bool DelayError(string parameterName)
+        {
+            return true;
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var achievement = new ScriptInterpreterAchievementBuilder();
 
             var stringExpression = GetStringParameter(scope, "title", out result);
-            if (stringExpression == null)
-                return false;
-            achievement.Title = stringExpression.Value;
+            if (stringExpression != null)
+                achievement.Title = stringExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             stringExpression = GetStringParameter(scope, "description", out result);
-            if (stringExpression == null)
-                return false;
-            achievement.Description = stringExpression.Value;
+            if (stringExpression != null)
+                achievement.Description = stringExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             stringExpression = GetStringParameter(scope, "badge", out result);
-            if (stringExpression == null)
-                return false;
-            achievement.BadgeName = stringExpression.Value;
+            if (stringExpression != null)
+                achievement.BadgeName = stringExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             var integerExpression = GetIntegerParameter(scope, "points", out result);
             if (integerExpression == null)
-                return false;
-            if (!Achievement.ValidPointValues.Contains(integerExpression.Value))
-            {
-                result = new ErrorExpression(integerExpression.Value + " is not a supported value for points", integerExpression);
-                return false;
-            }
-            achievement.Points = integerExpression.Value;
+                scope.ReturnValue ??= result;
+            else if (!Achievement.ValidPointValues.Contains(integerExpression.Value))
+                scope.ReturnValue ??= new ErrorExpression(integerExpression.Value + " is not a supported value for points", integerExpression);
+            else
+                achievement.Points = integerExpression.Value;
 
             integerExpression = GetIntegerParameter(scope, "id", out result);
-            if (integerExpression == null)
-                return false;
-            achievement.Id = integerExpression.Value;
+            if (integerExpression != null)
+                achievement.Id = integerExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             stringExpression = GetStringParameter(scope, "published", out result);
             if (stringExpression != null && !string.IsNullOrEmpty(stringExpression.Value))
@@ -73,44 +80,48 @@ namespace RATools.Parser.Functions
 
             stringExpression = GetStringParameter(scope, "type", out result);
             if (stringExpression == null)
-                return false;
-            achievement.Type = Achievement.ParseType(stringExpression.Value);
-            if (achievement.Type == AchievementType.None)
             {
-                result = new ErrorExpression(stringExpression.Value + " is not a supported achievement type", stringExpression);
-                return false;
+                scope.ReturnValue ??= result;
             }
-
-            integerExpression = GetIntegerParameter(scope, "set", out result);
-            if (integerExpression == null)
-                return false;
+            else
+            {
+                achievement.Type = Achievement.ParseType(stringExpression.Value);
+                if (achievement.Type == AchievementType.None)
+                    scope.ReturnValue ??= new ErrorExpression(stringExpression.Value + " is not a supported achievement type", stringExpression);
+            }
 
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
             AchievementSet set = null;
-            if (integerExpression.Value != 0)
+
+            integerExpression = GetIntegerParameter(scope, "set", out result);
+            if (integerExpression == null)
+            {
+                scope.ReturnValue ??= result;
+            }
+            else if (integerExpression.Value != 0)
             {
                 set = context.GetSet(integerExpression.Value);
                 if (set == null)
-                {
-                    result = new ErrorExpression("Unknown set id: " + integerExpression.Value, integerExpression);
-                    return false;
-                }
+                    scope.ReturnValue ??= new ErrorExpression("Unknown set id: " + integerExpression.Value, integerExpression);
             }
 
             var trigger = GetRequirementParameter(scope, "trigger", out result);
             if (trigger == null)
-                return false;
-
-            if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
+            {
+                scope.ReturnValue ??= result;
+            }
+            else if (!TriggerBuilderContext.ProcessAchievementConditions(achievement, trigger, scope, out result))
             {
                 if (result.Location.Start != trigger.Location.Start || result.Location.End != trigger.Location.End)
                 {
                     var error = (ErrorExpression)result;
-                    result = new ErrorExpression(error.Message, trigger) { InnerError = error };
+                    scope.ReturnValue ??= new ErrorExpression(error.Message, trigger) { InnerError = error };
                 }
-
-                return false;
+                else
+                {
+                    scope.ReturnValue ??= result;
+                }
             }
 
             var newAchievement = achievement.ToAchievement();
@@ -123,6 +134,14 @@ namespace RATools.Parser.Functions
                 sourceLine = functionCall.Location.Start.Line;
 
             context.Achievements[newAchievement] = sourceLine;
+
+            result = scope.ReturnValue;
+            if (result != null)
+            {
+                newAchievement.IsInvalid = true;
+                return false;
+            }
+
             return true;
         }
     }

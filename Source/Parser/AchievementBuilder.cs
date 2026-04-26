@@ -85,7 +85,9 @@ namespace RATools.Parser
 
         public static SoftwareVersion GetMinimumVersion(Achievement achievement)
         {
-            var minimumVersion = achievement.Trigger.MinimumVersion();
+            var minimumVersion = Data.Version.MinimumVersion;
+            if (achievement.Trigger != null)
+                minimumVersion = minimumVersion.OrNewer(achievement.Trigger.MinimumVersion());
 
             if (achievement.Type != AchievementType.Standard)
                 minimumVersion = minimumVersion.OrNewer(Data.Version._1_3);

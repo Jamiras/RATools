@@ -180,7 +180,7 @@ namespace RATools.ViewModels
         {
             var coreAsset = Published.Asset;
 
-            if (!IsGenerated)
+            if (!IsGenerated || Generated.Asset.IsInvalid)
             {
                 CanUpdate = false;
 
@@ -188,22 +188,33 @@ namespace RATools.ViewModels
                 IsTitleModified = false;
                 IsDescriptionModified = false;
                 IsPointsModified = false;
-                CompareState = GeneratedCompareState.None;
-                ModificationMessage = "Not generated";
+
+                if (!IsGenerated)
+                {
+                    CompareState = GeneratedCompareState.None;
+                    ModificationMessage = "Not generated";
+                }
+                else
+                {
+                    CompareState = GeneratedCompareState.Invalid;
+                    ModificationMessage = "Generation failed";
+                }
 
                 if (coreAsset != null)
                 {
                     Triggers = Published.TriggerList;
                     if (coreAsset.IsUnofficial)
-                        TriggerSource = "Unpublished (Not Generated)";
+                        TriggerSource = String.Format("Unpublished ({0})", ModificationMessage);
                     else
-                        TriggerSource = "Core (Not Generated)";
+                        TriggerSource = String.Format("Core ({0})", ModificationMessage);
                 }
                 else if (Local.Asset != null)
                 {
                     Triggers = Local.TriggerList;
-                    TriggerSource = "Local (Not Generated)";
-                    CompareState = GeneratedCompareState.NotGenerated;
+                    TriggerSource = String.Format("Local ({0})", ModificationMessage);
+
+                    if (!IsGenerated)
+                        CompareState = GeneratedCompareState.NotGenerated;
                 }
             }
             else if (IsModified(Local, true))

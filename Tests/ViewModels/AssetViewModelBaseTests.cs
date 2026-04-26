@@ -137,7 +137,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Core (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Core (Not generated)"));
         }
 
         [Test]
@@ -166,7 +166,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unpublished (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Unpublished (Not generated)"));
         }
 
         [Test]
@@ -194,7 +194,7 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.Not.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
-            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Local (Not Generated)"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Local (Not generated)"));
         }
 
         [Test]
@@ -268,6 +268,76 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerComparisonViewModel>());
             Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
             Assert.That(vmAsset.TriggerSource, Is.EqualTo("Generated (Same as Unpublished)"));
+        }
+
+        [Test]
+        public void TestRefreshGenerationFailedWithCore()
+        {
+            var vmAsset = new AssetViewModelBaseHarness();
+            vmAsset.Published.Asset = new TestAchievement(1235, "TitleC", "DescriptionC")
+            {
+                BadgeName = "BadgeC"
+            };
+            vmAsset.Local.Asset = new TestAchievement(1234, "TitleL", "DescriptionL")
+            {
+                BadgeName = "BadgeL"
+            };
+            vmAsset.Generated.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
+            {
+                BadgeName = "BadgeG",
+                IsInvalid = true,
+            };
+
+            vmAsset.Refresh();
+
+            Assert.That(vmAsset.Id, Is.EqualTo(1235));
+            Assert.That(vmAsset.Title, Is.EqualTo("TitleG"));
+            Assert.That(vmAsset.Description, Is.EqualTo("DescriptionG"));
+            Assert.That(vmAsset.IsTitleModified, Is.False);
+            Assert.That(vmAsset.IsDescriptionModified, Is.False);
+            Assert.That(vmAsset.BadgeName, Is.EqualTo("BadgeG"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Invalid));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Generation failed"));
+            Assert.That(vmAsset.IsGenerated, Is.True);
+            Assert.That(vmAsset.CanUpdate, Is.False);
+            Assert.That(vmAsset.Other, Is.Null);
+            Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
+            Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerViewModel>());
+            Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1234"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Core (Generation failed)"));
+        }
+
+        [Test]
+        public void TestRefreshGenerationFailedWithLocal()
+        {
+            var vmAsset = new AssetViewModelBaseHarness();
+            vmAsset.Local.Asset = new TestAchievement(1234, "TitleL", "DescriptionL")
+            {
+                BadgeName = "BadgeL"
+            };
+            vmAsset.Generated.Asset = new TestAchievement(1235, "TitleG", "DescriptionG")
+            {
+                BadgeName = "BadgeG",
+                IsInvalid = true,
+            };
+
+            vmAsset.Refresh();
+
+            Assert.That(vmAsset.Id, Is.EqualTo(1235));
+            Assert.That(vmAsset.Title, Is.EqualTo("TitleG"));
+            Assert.That(vmAsset.Description, Is.EqualTo("DescriptionG"));
+            Assert.That(vmAsset.IsTitleModified, Is.False);
+            Assert.That(vmAsset.IsDescriptionModified, Is.False);
+            Assert.That(vmAsset.BadgeName, Is.EqualTo("BadgeG"));
+            Assert.That(vmAsset.CompareState, Is.EqualTo(GeneratedCompareState.Invalid));
+            Assert.That(vmAsset.ModificationMessage, Is.EqualTo("Generation failed"));
+            Assert.That(vmAsset.IsGenerated, Is.True);
+            Assert.That(vmAsset.CanUpdate, Is.False);
+            Assert.That(vmAsset.Other, Is.Null);
+            Assert.That(vmAsset.Triggers.Count(), Is.EqualTo(1));
+            Assert.That(vmAsset.Triggers.ElementAt(0), Is.InstanceOf<TriggerViewModel>());
+            Assert.That(vmAsset.Triggers.ElementAt(0).Label, Is.EqualTo("Trigger1235"));
+            Assert.That(vmAsset.TriggerSource, Is.EqualTo("Local (Generation failed)"));
         }
 
         [Test]

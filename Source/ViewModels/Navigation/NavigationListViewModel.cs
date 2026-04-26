@@ -260,7 +260,7 @@ namespace RATools.ViewModels.Navigation
                             editor = assetEditors.FirstOrDefault(e => e.Published.Asset == null
                                                                    && e.Generated.Asset == null
                                                                    && e.Local.Asset == null
-                                                                   && e.Title == achievement.Title);
+                                                                   && e.Title == leaderboard.Title);
                         }
 
                         if (editor == null)

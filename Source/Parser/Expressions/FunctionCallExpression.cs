@@ -450,7 +450,13 @@ namespace RATools.Parser.Expressions
                     var value = GetParameter(parameterScope, initializationScope, assignedParameter);
                     error = value as ErrorExpression;
                     if (error != null)
-                        return null;
+                    {
+                        if (!function.DelayError(assignedParameter.Variable.Name))
+                            return null;
+
+                        parameterScope.ReturnValue ??= error;
+                        error = null;
+                    }
 
                     var variableDefinition = new VariableDefinitionExpression(assignedParameter.Variable);
                     parameter.CopyLocation(variableDefinition);
@@ -477,7 +483,13 @@ namespace RATools.Parser.Expressions
                     var value = GetParameter(parameterScope, initializationScope, assignedParameter);
                     error = value as ErrorExpression;
                     if (error != null)
-                        return null;
+                    {
+                        if (!function.DelayError(assignedParameter.Variable.Name))
+                            return null;
+
+                        parameterScope.ReturnValue ??= error;
+                        error = null;
+                    }
 
                     if (index < parameterCount)
                     {

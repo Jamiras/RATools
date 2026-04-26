@@ -89,20 +89,29 @@ namespace RATools.Parser
         {
             var minimumVersion = GetMinimumVersion(leaderboard.Format);
 
-            minimumVersion = minimumVersion.OrNewer(leaderboard.Start.MinimumVersion());
-            minimumVersion = minimumVersion.OrNewer(leaderboard.Cancel.MinimumVersion());
-            minimumVersion = minimumVersion.OrNewer(leaderboard.Submit.MinimumVersion());
-            minimumVersion = minimumVersion.OrNewer(leaderboard.Value.MinimumVersion());
+            if (leaderboard.Start != null)
+                minimumVersion = minimumVersion.OrNewer(leaderboard.Start.MinimumVersion());
+            if (leaderboard.Cancel != null)
+                minimumVersion = minimumVersion.OrNewer(leaderboard.Cancel.MinimumVersion());
+            if (leaderboard.Submit != null)
+                minimumVersion = minimumVersion.OrNewer(leaderboard.Submit.MinimumVersion());
+            if (leaderboard.Value != null)
+                minimumVersion = minimumVersion.OrNewer(leaderboard.Value.MinimumVersion());
 
             return minimumVersion;
         }
 
         public static uint GetMaximumAddress(Leaderboard leaderboard)
         {
-            var maximumAddress = leaderboard.Start.MaximumAddress();
-            maximumAddress = Math.Max(maximumAddress, leaderboard.Cancel.MaximumAddress());
-            maximumAddress = Math.Max(maximumAddress, leaderboard.Submit.MaximumAddress());
-            maximumAddress = Math.Max(maximumAddress, leaderboard.Value.MaximumAddress());
+            uint maximumAddress = 0;
+            if (leaderboard.Start != null)
+                maximumAddress = Math.Max(maximumAddress, leaderboard.Start.MaximumAddress());
+            if (leaderboard.Cancel != null)
+                maximumAddress = Math.Max(maximumAddress, leaderboard.Cancel.MaximumAddress());
+            if (leaderboard.Submit != null)
+                maximumAddress = Math.Max(maximumAddress, leaderboard.Submit.MaximumAddress());
+            if (leaderboard.Value != null)
+                maximumAddress = Math.Max(maximumAddress, leaderboard.Value.MaximumAddress());
 
             return maximumAddress;
         }

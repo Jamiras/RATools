@@ -60,6 +60,9 @@
                             <DataTrigger Binding="{Binding CompareState}" Value="PublishedDiffers">
                                 <Setter Property="Text" Value="&#x25D0;" />
                             </DataTrigger>
+                            <DataTrigger Binding="{Binding CompareState}" Value="Invalid">
+                                <Setter Property="Text" Value="&#x25B3;" />
+                            </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </TextBlock.Style>

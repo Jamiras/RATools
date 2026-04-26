@@ -122,5 +122,10 @@ namespace RATools.ViewModels
         /// ● generated differs from local (published may or may not exist). fully filled circle icon
         /// </summary>
         LocalDiffers,
+
+        /// <summary>
+        /// △ generation failed. hollow triangle icon
+        /// </summary>
+        Invalid,
     }
 }

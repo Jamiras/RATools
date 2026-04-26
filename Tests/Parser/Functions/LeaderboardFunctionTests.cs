@@ -112,9 +112,16 @@ namespace RATools.Parser.Tests.Functions
         [Test]
         public void TestFormatUnknown()
         {
-            Evaluate("leaderboard(\"T\", \"D\", " +
+            var leaderboard = Evaluate(
+                "leaderboard(\"T\", \"D\", " +
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, byte(0x4567), \"banana\")",
-                "1:1 leaderboard call failed\r\n- 1:94 banana is not a supported leaderboard format");
+
+                "1:1 leaderboard call failed\r\n" +
+                "- 1:94 banana is not a supported leaderboard format");
+
+            // leaderboard should still be generated, but marked invalid
+            Assert.That(leaderboard != null);
+            Assert.That(leaderboard.IsInvalid, Is.True);
         }
 
         [Test]
@@ -172,7 +179,8 @@ namespace RATools.Parser.Tests.Functions
                 "byte(0x1234) == 1, byte(0x1234) == 2, byte(0x1234) == 3, " +
                 "max_of())",
 
-                "1:80 Invalid value for parameter: value\r\n" +
+                "1:1 leaderboard call failed\r\n" +
+                "- 1:80 Invalid value for parameter: value\r\n" +
                 "- 1:80 max_of call failed\r\n" +
                 "- 1:80 At least one expression is required");
         }
