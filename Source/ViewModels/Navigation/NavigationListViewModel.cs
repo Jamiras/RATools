@@ -500,9 +500,24 @@ namespace RATools.ViewModels.Navigation
 
         public IEnumerable<NavigationViewModelBase> Merge(AchievementScriptInterpreter interpreter)
         {
+            var previousSubsetCount = 0;
             var navigationNodes = _gameViewModel.NavigationNodes;
+            if (navigationNodes != null)
+            {
+                foreach ( var node in navigationNodes)
+                {
+                    if (node is AchievementsFolderNavigationViewModel)
+                    {
+                        previousSubsetCount = 1;
+                        break;
+                    }
+                    else if (node is AchievementSetFolderNavigationViewModel)
+                    {
+                        previousSubsetCount++;
+                    }
+                }
+            }
 
-            var previousSubsetCount = navigationNodes != null ? navigationNodes.OfType<AchievementSetFolderNavigationViewModel>().Count() : 0;
             var sets = new List<AchievementSet>();
             if (interpreter != null)
                 sets.AddRange(interpreter.Sets);
