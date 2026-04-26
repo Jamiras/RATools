@@ -180,7 +180,7 @@ namespace RATools.ViewModels
         {
             var publishedAsset = Published.Asset;
 
-            if (!IsGenerated)
+            if (!IsGenerated || Generated.Asset.IsInvalid)
             {
                 CanUpdate = false;
 
@@ -188,22 +188,34 @@ namespace RATools.ViewModels
                 IsTitleModified = false;
                 IsDescriptionModified = false;
                 IsPointsModified = false;
-                CompareState = GeneratedCompareState.None;
-                ModificationMessage = "Not generated";
+
+                if (!IsGenerated)
+                {
+                    CompareState = GeneratedCompareState.None;
+                    ModificationMessage = "Not generated";
+                }
+                else
+                {
+                    CompareState = GeneratedCompareState.Invalid;
+                    ModificationMessage = "Generation failed";
+                }
 
                 if (publishedAsset != null)
                 {
                     Triggers = Published.TriggerList;
+
                     if (publishedAsset.IsUnpromoted)
-                        TriggerSource = "Unpromoted (Not Generated)";
+                        TriggerSource = String.Format("Unpromoted ({0})", ModificationMessage);
                     else
-                        TriggerSource = "Promoted (Not Generated)";
+                        TriggerSource = String.Format("Promoted ({0})", ModificationMessage);
                 }
                 else if (Local.Asset != null)
                 {
                     Triggers = Local.TriggerList;
-                    TriggerSource = "Local (Not Generated)";
-                    CompareState = GeneratedCompareState.NotGenerated;
+                    TriggerSource = String.Format("Local ({0})", ModificationMessage);
+
+                    if (!IsGenerated)
+                        CompareState = GeneratedCompareState.NotGenerated;
                 }
             }
             else if (IsModified(Local, true))
@@ -425,32 +437,20 @@ namespace RATools.ViewModels
         private static ImageSource GetBadge(ModelBase model)
         {
             var vm = (AssetViewModelBase)model;
-            if (IsValidBadgeName(vm.Generated.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Generated.BadgeName))
                 return vm.Generated.Badge;
-            if (IsValidBadgeName(vm.Local.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Local.BadgeName))
                 return vm.Local.Badge;
-            if (IsValidBadgeName(vm.Published.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.Published.BadgeName))
                 return vm.Published.Badge;
 
-            if (IsValidBadgeName(vm.BadgeName))
+            if (Achievement.IsValidBadgeName(vm.BadgeName))
             {
                 vm.Local.BadgeName = vm.BadgeName;
                 return vm.Local.Badge;
             }
 
             return null;
-        }
-
-        private static bool IsValidBadgeName(string badgeName)
-        {
-            if (String.IsNullOrEmpty(badgeName))
-                return false;
-            if (badgeName == "0")
-                return false;
-            if (badgeName == "00000")
-                return false;
-
-            return true;
         }
 
         public override void Refresh()
@@ -484,11 +484,11 @@ namespace RATools.ViewModels
             else
                 Id = Published.Id;
 
-            if (IsValidBadgeName(Generated.BadgeName))
+            if (Achievement.IsValidBadgeName(Generated.BadgeName))
                 BadgeName = Generated.BadgeName;
-            else if (IsValidBadgeName(Local.BadgeName))
+            else if (Achievement.IsValidBadgeName(Local.BadgeName))
                 BadgeName = Local.BadgeName;
-            else if (IsValidBadgeName(Published.BadgeName))
+            else if (Achievement.IsValidBadgeName(Published.BadgeName))
                 BadgeName = Published.BadgeName;
             else
                 BadgeName = null;

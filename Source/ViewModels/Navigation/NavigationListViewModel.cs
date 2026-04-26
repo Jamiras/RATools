@@ -72,9 +72,28 @@ namespace RATools.ViewModels.Navigation
 
             MergeAndPruneAssets<AchievementViewModel>(interpreter.Achievements, 10000, (vm, a) =>
             {
+                var generatedAchievement = a as Achievement;
+                if (generatedAchievement != null)
+                {
+                    vm.SourceLine = interpreter.GetSourceLine(generatedAchievement);
+
+                    if (!Achievement.IsValidBadgeName(generatedAchievement.BadgeName))
+                    {
+                        var localAchievement = vm.Local.Asset as Achievement;
+                        if (localAchievement != null && Achievement.IsValidBadgeName(localAchievement.BadgeName))
+                        {
+                            generatedAchievement.BadgeName = localAchievement.BadgeName;
+                        }
+                        else
+                        {
+                            var publishedAchievement = vm.Published.Asset as Achievement;
+                            if (publishedAchievement != null && Achievement.IsValidBadgeName(publishedAchievement.BadgeName))
+                                generatedAchievement.BadgeName = publishedAchievement.BadgeName;
+                        }
+                    }
+                }
+
                 vm.Generated.Asset = a;
-                if (a != null)
-                    vm.SourceLine = interpreter.GetSourceLine((Achievement)a);
             }, (vm) => vm.Generated.Asset);
 
             MergeAndPruneAssets<LeaderboardViewModel>(interpreter.Leaderboards, 10000, (vm, a) =>
@@ -241,7 +260,7 @@ namespace RATools.ViewModels.Navigation
                             editor = assetEditors.FirstOrDefault(e => e.Published.Asset == null
                                                                    && e.Generated.Asset == null
                                                                    && e.Local.Asset == null
-                                                                   && e.Title == achievement.Title);
+                                                                   && e.Title == leaderboard.Title);
                         }
 
                         if (editor == null)

@@ -88,6 +88,10 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.LocalDiffers));
             Assert.That(harness.ModificationMessage, Is.EqualTo("Generated asset differs from unpublished"));
 
+            harness.SetCompareState(GeneratedCompareState.Invalid);
+            Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.Invalid));
+            Assert.That(harness.ModificationMessage, Is.EqualTo("Generation failed"));
+
             changedProperties.Clear();
             harness.SetCompareState(GeneratedCompareState.Same);
             Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.Same));

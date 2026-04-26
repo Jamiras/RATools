@@ -36,7 +36,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.DefaultParameters["modified"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["modified"]).Value, Is.EqualTo(""));
             Assert.That(def.DefaultParameters["badge"], Is.InstanceOf<StringConstantExpression>());
-            Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("0"));
+            Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("00000"));
             Assert.That(def.DefaultParameters["type"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["type"]).Value, Is.EqualTo(""));
             Assert.That(def.DefaultParameters["set"], Is.InstanceOf<IntegerConstantExpression>());
@@ -124,8 +124,13 @@ namespace RATools.Parser.Tests.Functions
             var parser = new AchievementScriptInterpreter();
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
-                "2:26 Invalid value for parameter: trigger\r\n" +
+                "2:1 achievement call failed\r\n" +
+                "- 2:26 Invalid value for parameter: trigger\r\n" +
                 "- 2:26 Cannot compare function reference and integer"));
+
+            // achievement should still be generated, but marked invalid
+            Assert.That(parser.Achievements.Count, Is.EqualTo(1));
+            Assert.That(parser.Achievements.First().IsInvalid, Is.True);
         }
 
         [Test]
@@ -139,7 +144,8 @@ namespace RATools.Parser.Tests.Functions
             var parser = new AchievementScriptInterpreter();
             Assert.That(parser.Run(tokenizer), Is.False);
             Assert.That(parser.ErrorMessage, Is.EqualTo(
-                "3:26 Invalid value for parameter: trigger\r\n" +
+                "3:1 achievement call failed\r\n" +
+                "- 3:26 Invalid value for parameter: trigger\r\n" +
                 "- 3:26 b call failed\r\n" +
                 "- 2:17 Cannot compare function reference and integer"));
         }

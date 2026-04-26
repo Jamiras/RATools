@@ -43,6 +43,11 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets whether or not the asset failed to generate.
+        /// </summary>
+        public bool IsInvalid { get; set; }
+
+        /// <summary>
         /// Gets the first unique identifier reserved for locally generated assets.
         /// </summary>
         public static readonly int FirstLocalId = 111000001;

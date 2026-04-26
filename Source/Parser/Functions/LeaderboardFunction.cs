@@ -30,74 +30,82 @@ namespace RATools.Parser.Functions
             DefaultParameters["set"] = new IntegerConstantExpression(0);
         }
 
+        public override bool DelayError(string parameterName)
+        {
+            return true;
+        }
+
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
             var leaderboard = new Leaderboard();
 
             var stringExpression = GetStringParameter(scope, "title", out result);
-            if (stringExpression == null)
-                return false;
-            leaderboard.Title = stringExpression.Value;
+            if (stringExpression != null)
+                leaderboard.Title = stringExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             stringExpression = GetStringParameter(scope, "description", out result);
-            if (stringExpression == null)
-                return false;
-            leaderboard.Description = stringExpression.Value;
+            if (stringExpression != null)
+                leaderboard.Description = stringExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
+            AchievementSet set = null;
             var context = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(context != null);
             var serializationContext = context.SerializationContext;
 
             leaderboard.Start = ProcessTrigger(scope, "start", serializationContext, out result);
             if (leaderboard.Start == null)
-                return false;
+                scope.ReturnValue ??= result;
 
             leaderboard.Cancel = ProcessTrigger(scope, "cancel", serializationContext, out result);
             if (leaderboard.Cancel == null)
-                return false;
+                scope.ReturnValue ??= result;
 
             leaderboard.Submit = ProcessTrigger(scope, "submit", serializationContext, out result);
             if (leaderboard.Submit == null)
-                return false;
+                scope.ReturnValue ??= result;
 
             leaderboard.Value = ProcessValue(scope, "value", serializationContext, out result);
             if (leaderboard.Value == null)
-                return false;
+                scope.ReturnValue ??= result;
 
             var format = GetStringParameter(scope, "format", out result);
             if (format == null)
-                return false;
-
-            leaderboard.Format = Leaderboard.ParseFormat(format.Value);
-            if (leaderboard.Format == ValueFormat.None)
             {
-                result = new ErrorExpression(format.Value + " is not a supported leaderboard format", format);
-                return false;
+                scope.ReturnValue ??= result;
+            }
+            else
+            {
+                leaderboard.Format = Leaderboard.ParseFormat(format.Value);
+                if (leaderboard.Format == ValueFormat.None)
+                    scope.ReturnValue ??= new ErrorExpression(format.Value + " is not a supported leaderboard format", format);
             }
 
             var lowerIsBetter = GetBooleanParameter(scope, "lower_is_better", out result);
-            if (lowerIsBetter == null)
-                return false;
-            leaderboard.LowerIsBetter = lowerIsBetter.Value;
+            if (lowerIsBetter != null)
+                leaderboard.LowerIsBetter = lowerIsBetter.Value;
+            else
+                scope.ReturnValue ??= result;
 
             var integerExpression = GetIntegerParameter(scope, "id", out result);
-            if (integerExpression == null)
-                return false;
-            leaderboard.Id = integerExpression.Value;
+            if (integerExpression != null)
+                leaderboard.Id = integerExpression.Value;
+            else
+                scope.ReturnValue ??= result;
 
             integerExpression = GetIntegerParameter(scope, "set", out result);
             if (integerExpression == null)
-                return false;
-
-            AchievementSet set = null;
-            if (integerExpression.Value != 0)
+            {
+                scope.ReturnValue ??= result;
+            }
+            else if (integerExpression.Value != 0)
             {
                 set = context.GetSet(integerExpression.Value);
                 if (set == null)
-                {
-                    result = new ErrorExpression("Unknown set id: " + integerExpression.Value, integerExpression);
-                    return false;
-                }
+                    scope.ReturnValue ??= new ErrorExpression("Unknown set id: " + integerExpression.Value, integerExpression);
             }
 
             if (leaderboard.Submit == leaderboard.Start)
@@ -119,6 +127,14 @@ namespace RATools.Parser.Functions
                 sourceLine = functionCall.Location.Start.Line;
 
             context.Leaderboards[leaderboard] = sourceLine;
+
+            result = scope.ReturnValue;
+            if (result != null)
+            {
+                leaderboard.IsInvalid = true;
+                return false;
+            }
+
             return true;
         }
 

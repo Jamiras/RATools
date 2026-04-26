@@ -31,6 +31,18 @@ namespace RATools.Data
         /// </summary>
         public string BadgeName { get; set; }
 
+        public static bool IsValidBadgeName(string badgeName)
+        {
+            if (String.IsNullOrEmpty(badgeName))
+                return false;
+            if (badgeName == "0")
+                return false;
+            if (badgeName == "00000")
+                return false;
+
+            return true;
+        }
+
         /// <summary>
         /// Gets the trigger for the achievement.
         /// </summary>

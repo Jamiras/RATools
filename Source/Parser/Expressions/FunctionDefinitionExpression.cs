@@ -618,6 +618,17 @@ namespace RATools.Parser.Expressions
             scope.AddFunction(this);
             return null;
         }
+
+        /// <summary>
+        /// If this returns <c>true</c>, the error will be loaded into the function parameters
+        /// <see cref="InterpreterScope" /> as ReturnValue. The <see cref="Invoke"/> and
+        /// <see cref="Evaluate"/> functions should do whatever processing is still valid, then
+        /// return the captured error as the result.
+        /// </summary>
+        public virtual bool DelayError(string parameterName)
+        {
+            return false;
+        }
     }
 
     internal class UserFunctionDefinitionExpression : FunctionDefinitionExpression, IValueExpression

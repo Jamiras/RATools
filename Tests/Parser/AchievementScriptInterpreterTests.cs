@@ -575,8 +575,11 @@ namespace RATools.Parser.Tests
         [Test]
         public void TestMeasuredMultipleDiffering()
         {
-            var parser = AchievementScriptTests.Parse("achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1))", false);
-            Assert.That(AchievementScriptTests.GetInnerErrorMessage(parser), Is.EqualTo("1:26 Multiple measured() conditions must have the same target."));
+            AchievementScriptTests.Evaluate(
+                "achievement(\"T\", \"D\", 5, measured(byte(0x1234) == 10) && measured(byte(0x2345) == 1))\n",
+
+                "1:1 achievement call failed\r\n" +
+                "- 1:26 Multiple measured() conditions must have the same target.");
         }
 
         [Test]
@@ -1103,7 +1106,7 @@ namespace RATools.Parser.Tests
             // calling achievement() directly without a badge or id
             var achievement = parser.Achievements.ElementAt(0);
             Assert.That(achievement.Id, Is.EqualTo(0));
-            Assert.That(achievement.BadgeName, Is.EqualTo("0"));
+            Assert.That(achievement.BadgeName, Is.EqualTo("00000"));
 
             // calling achievement() indirectly without a badge or id
             achievement = parser.Achievements.ElementAt(1);
@@ -1154,7 +1157,8 @@ namespace RATools.Parser.Tests
                 "function f() => byte(0x1234) == 2\n" +
                 "achievement(\"T\", \"D\", 5, f() == 1)\n",
 
-                "2:26 Invalid value for parameter: trigger\r\n" +
+                "2:1 achievement call failed\r\n" +
+                "- 2:26 Invalid value for parameter: trigger\r\n" +
                 "- 2:26 Cannot chain comparisons");
         }
 
