@@ -156,7 +156,7 @@ namespace RATools.ViewModels
 
         private void LoadAchievements()
         {
-            var unofficialAchievements = new List<DumpAsset>();
+            var unpromotedAchievements = new List<DumpAsset>();
             foreach (var publishedAchievement in _publishedAssets.Achievements)
             {
                 var dumpAchievement = new DumpAsset(publishedAchievement.Id, publishedAchievement.Title)
@@ -166,11 +166,11 @@ namespace RATools.ViewModels
                     ViewerType = "Achievement",
                 };
 
-                if (publishedAchievement.IsUnofficial)
+                if (publishedAchievement.IsUnpromoted)
                 {
-                    dumpAchievement.IsUnofficial = true;
-                    dumpAchievement.ViewerType = "Unofficial Achievement";
-                    unofficialAchievements.Add(dumpAchievement);
+                    dumpAchievement.IsUnpromoted = true;
+                    dumpAchievement.ViewerType = "Unpromoted Achievement";
+                    unpromotedAchievements.Add(dumpAchievement);
                 }
                 else
                 {
@@ -181,15 +181,15 @@ namespace RATools.ViewModels
                 dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
             }
 
-            foreach (var unofficialAchievement in unofficialAchievements)
-                _assets.Add(unofficialAchievement);
+            foreach (var unpromotedAchievement in unpromotedAchievements)
+                _assets.Add(unpromotedAchievement);
 
             foreach (var localAchievement in _localAssets.Achievements)
             {
                 var dumpAchievement = _assets.FirstOrDefault(a => a.Id == localAchievement.Id && a.Type == DumpAssetType.Achievement);
                 if (dumpAchievement != null)
                 {
-                    dumpAchievement.IsUnofficial = true;
+                    dumpAchievement.IsUnpromoted = true;
                     dumpAchievement.ViewerType = "Local Achievement";
                 }
                 else
@@ -199,7 +199,7 @@ namespace RATools.ViewModels
                         Type = DumpAssetType.Achievement,
                         ViewerImage = "/RATools;component/Resources/achievement.png",
                         ViewerType = "Local Achievement",
-                        IsUnofficial = true
+                        IsUnpromoted = true
                     };
 
                     dumpAchievement.PropertyChanged += DumpAsset_PropertyChanged;
@@ -230,7 +230,7 @@ namespace RATools.ViewModels
                 var dumpLeaderboard = _assets.FirstOrDefault(a => a.Id == localLeaderboard.Id && a.Type == DumpAssetType.Leaderboard);
                 if (dumpLeaderboard != null)
                 {
-                    dumpLeaderboard.IsUnofficial = true;
+                    dumpLeaderboard.IsUnpromoted = true;
                     dumpLeaderboard.ViewerType = "Local Leaderboard";
                 }
                 else
@@ -240,7 +240,7 @@ namespace RATools.ViewModels
                         Type = DumpAssetType.Achievement,
                         ViewerImage = "/RATools;component/Resources/leaderboard.png",
                         ViewerType = "Local Leaderboard",
-                        IsUnofficial = true
+                        IsUnpromoted = true
                     };
 
                     dumpLeaderboard.PropertyChanged += DumpAsset_PropertyChanged;
@@ -479,7 +479,7 @@ namespace RATools.ViewModels
                 MemoryAddresses = new List<MemoryItem>();
             }
 
-            public bool IsUnofficial { get; set; }
+            public bool IsUnpromoted { get; set; }
 
             public DumpAssetType Type { get; set; }
 

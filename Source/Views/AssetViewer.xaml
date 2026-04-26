@@ -96,10 +96,10 @@
             <DataTrigger Binding="{Binding Id}" Value="0">
                 <Setter Property="Visibility" Value="Collapsed" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding Published.IsUnofficial}" Value="True">
+            <DataTrigger Binding="{Binding Published.Asset.IsUnpromoted}" Value="True">
                 <Setter Property="Text">
                     <Setter.Value>
-                        <Binding StringFormat="{}ID: {0} (Unofficial)" Path="Id" />
+                        <Binding StringFormat="{}ID: {0} (Unpromoted)" Path="Id" />
                     </Setter.Value>
                 </Setter>
             </DataTrigger>

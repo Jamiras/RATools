@@ -105,10 +105,10 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.CompileProgress, Is.EqualTo(0));
             Assert.That(vmGame.CompileProgressLine, Is.EqualTo(0));
             Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
+            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(0));
+            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(0));
+            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(0));
+            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(0));
             Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
             Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }
@@ -196,10 +196,10 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.SelectedEditor, Is.SameAs(vmGame.Script));
             Assert.That(vmGame.Notes, Is.Not.Null.And.Empty);
             Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(0));
+            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(0));
+            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(0));
+            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(0));
+            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(0));
             Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
             Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }
@@ -346,10 +346,10 @@ namespace RATools.Tests.ViewModels
             Assert.That(ach234.LastModified, Is.EqualTo(new DateTime(2021, 07, 09, 04, 44, 13, DateTimeKind.Utc)));
 
             Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.CoreAchievementCount, Is.EqualTo(1));
-            Assert.That(vmGame.CoreAchievementPoints, Is.EqualTo(6));
-            Assert.That(vmGame.UnofficialAchievementCount, Is.EqualTo(1));
-            Assert.That(vmGame.UnofficialAchievementPoints, Is.EqualTo(3));
+            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(1));
+            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(6));
+            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(1));
+            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(3));
             Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
             Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }

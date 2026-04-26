@@ -178,7 +178,7 @@ namespace RATools.ViewModels
 
         private void UpdateModified()
         {
-            var coreAsset = Published.Asset;
+            var publishedAsset = Published.Asset;
 
             if (!IsGenerated || Generated.Asset.IsInvalid)
             {
@@ -200,13 +200,14 @@ namespace RATools.ViewModels
                     ModificationMessage = "Generation failed";
                 }
 
-                if (coreAsset != null)
+                if (publishedAsset != null)
                 {
                     Triggers = Published.TriggerList;
-                    if (coreAsset.IsUnofficial)
-                        TriggerSource = String.Format("Unpublished ({0})", ModificationMessage);
+
+                    if (publishedAsset.IsUnpromoted)
+                        TriggerSource = String.Format("Unpromoted ({0})", ModificationMessage);
                     else
-                        TriggerSource = String.Format("Core ({0})", ModificationMessage);
+                        TriggerSource = String.Format("Promoted ({0})", ModificationMessage);
                 }
                 else if (Local.Asset != null)
                 {
@@ -221,17 +222,17 @@ namespace RATools.ViewModels
             {
                 TriggerSource = "Generated";
 
-                if (coreAsset != null)
+                if (publishedAsset != null)
                 {
                     bool differsFromPublished = !IsModified(Published, false);
                     UpdateModifiedProperties(Local); // reset title/description modified properties
 
                     if (differsFromPublished)
                     {
-                        if (coreAsset.IsUnofficial)
-                            TriggerSource = "Generated (Same as Unpublished)";
+                        if (publishedAsset.IsUnpromoted)
+                            TriggerSource = "Generated (Same as Unpromoted)";
                         else
-                            TriggerSource = "Generated (Same as Core)";
+                            TriggerSource = "Generated (Same as Promoted)";
                     }
                 }
 
@@ -240,7 +241,7 @@ namespace RATools.ViewModels
                 CompareState = GeneratedCompareState.LocalDiffers;
                 CanUpdate = true;
             }
-            else if (coreAsset != null && IsModified(Published, true))
+            else if (publishedAsset != null && IsModified(Published, true))
             {
                 if (Local.Asset != null)
                 {
@@ -253,10 +254,10 @@ namespace RATools.ViewModels
                     CanUpdate = true;
                 }
 
-                if (coreAsset.IsUnofficial)
-                    ModificationMessage = "Unpublished differs from generated";
+                if (publishedAsset.IsUnpromoted)
+                    ModificationMessage = "Unpromoted differs from generated";
                 else
-                    ModificationMessage = "Core differs from generated";
+                    ModificationMessage = "Promoted differs from generated";
 
                 Other = Published;
                 CompareState = (Local.Asset != null) ? GeneratedCompareState.PublishedDiffers : GeneratedCompareState.LocalDiffers;
@@ -265,7 +266,7 @@ namespace RATools.ViewModels
             {
                 if (Local.Asset == null && IsGenerated)
                 {
-                    if (coreAsset == null)
+                    if (publishedAsset == null)
                     {
                         TriggerSource = "Generated (Not in Local)";
                         ModificationMessage = "Local " + ViewerType + " does not exist";
@@ -273,10 +274,10 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        if (coreAsset.IsUnofficial)
-                            TriggerSource = "Generated (Same as Unpublished, not in Local)";
+                        if (publishedAsset.IsUnpromoted)
+                            TriggerSource = "Generated (Same as Unpromoted, not in Local)";
                         else
-                            TriggerSource = "Generated (Same as Core, not in Local)";
+                            TriggerSource = "Generated (Same as Promoted, not in Local)";
 
                         ModificationMessage = null;
                         CompareState = GeneratedCompareState.Same;
@@ -287,12 +288,12 @@ namespace RATools.ViewModels
                 }
                 else
                 {
-                    if (coreAsset == null)
+                    if (publishedAsset == null)
                         TriggerSource = "Generated (Same as Local)";
-                    else if (coreAsset.IsUnofficial)
-                        TriggerSource = "Generated (Same as Unpublished and Local)";
+                    else if (publishedAsset.IsUnpromoted)
+                        TriggerSource = "Generated (Same as Unpromoted and Local)";
                     else
-                        TriggerSource = "Generated (Same as Core and Local)";
+                        TriggerSource = "Generated (Same as Promoted and Local)";
 
                     ModificationMessage = null;
                     CompareState = GeneratedCompareState.Same;
@@ -456,10 +457,10 @@ namespace RATools.ViewModels
         {
             var generatedAsset = Generated.Asset;
             var localAsset = Local.Asset;
-            var coreAsset = Published.Asset;
+            var publishedAsset = Published.Asset;
 
-            Published.Source = (coreAsset == null) ? "Published" :
-                coreAsset.IsUnofficial ? "Published (Unofficial)" : "Published (Core)";
+            Published.Source = (publishedAsset == null) ? "Published" :
+                publishedAsset.IsUnpromoted ? "Published (Unpromoted)" : "Published (Promoted)";
 
             if (generatedAsset != null)
             {
@@ -468,7 +469,7 @@ namespace RATools.ViewModels
             else
             {
                 ClearBindings();
-                if (coreAsset != null)
+                if (publishedAsset != null)
                     LoadViewModel(Published);
                 else if (localAsset != null)
                     LoadViewModel(Local);

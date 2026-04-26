@@ -56,18 +56,18 @@ namespace RATools.ViewModels
             var initialPointsLength = points.Length;
             points.Append(" (");
 
-            var published = achievements.Where(a => !a.Published?.Asset?.IsUnofficial ?? false);
-            if (published.Any())
+            var promoted = achievements.Where(a => !a.Published?.Asset?.IsUnpromoted ?? false);
+            if (promoted.Any())
             {
-                description.AppendFormat("{0} published, ", published.Count());
-                points.AppendFormat("{0} published, ", published.Sum(a => a.Points));
+                description.AppendFormat("{0} promoted, ", promoted.Count());
+                points.AppendFormat("{0} promoted, ", promoted.Sum(a => a.Points));
             }
 
-            var unpublished = achievements.Where(a => a.Published?.Asset?.IsUnofficial ?? false);
-            if (unpublished.Any())
+            var unpromoted = achievements.Where(a => a.Published?.Asset?.IsUnpromoted ?? false);
+            if (unpromoted.Any())
             {
-                description.AppendFormat("{0} unpublished, ", unpublished.Count());
-                points.AppendFormat("{0} unpublished, ", unpublished.Sum(a => a.Points));
+                description.AppendFormat("{0} unpromoted, ", unpromoted.Count());
+                points.AppendFormat("{0} unpromoted, ", unpromoted.Sum(a => a.Points));
             }
 
             var local = achievements.Where(a => a.Published?.Asset == null);

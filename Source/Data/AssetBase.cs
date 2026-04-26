@@ -35,9 +35,9 @@ namespace RATools.Data
         public DateTime LastModified { get; set; }
 
         /// <summary>
-        /// Gets whether or not the asset has been published but not promoted to Core.
+        /// Gets whether or not the asset has been published but not promoted.
         /// </summary>
-        public virtual bool IsUnofficial
+        public virtual bool IsUnpromoted
         {
             get { return false; }
         }

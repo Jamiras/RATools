@@ -182,32 +182,32 @@
                         <TextBlock.Style>
                             <Style TargetType="{x:Type TextBlock}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding CoreAchievementCount}" Value="0">
+                                    <DataTrigger Binding="{Binding PromotedAchievementCount}" Value="0">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
-                        <Run Text="Core(" />
-                        <TextBlock Text="{Binding CoreAchievementCount}" Margin="-3,0,-3,0" />                        
+                        <Run Text="Promoted(" />
+                        <TextBlock Text="{Binding PromotedAchievementCount}" Margin="-3,0,-3,0" />                        
                         <Run Text="): " />
-                        <TextBlock Text="{Binding CoreAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <TextBlock Text="{Binding PromotedAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
                         <Run Text="pts" />
                     </TextBlock>
                     <TextBlock Grid.Column="1" Margin="4,0,4,0">
                         <TextBlock.Style>
                             <Style TargetType="{x:Type TextBlock}">
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding UnofficialAchievementCount}" Value="0">
+                                    <DataTrigger Binding="{Binding UnpromotedAchievementCount}" Value="0">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBlock.Style>
-                        <Run Text="Unofficial(" />
-                        <TextBlock Text="{Binding UnofficialAchievementCount}" Margin="-3,0,-3,0" />
+                        <Run Text="Unpromoted(" />
+                        <TextBlock Text="{Binding UnpromotedAchievementCount}" Margin="-3,0,-3,0" />
                         <Run Text="): " />
-                        <TextBlock Text="{Binding UnofficialAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
+                        <TextBlock Text="{Binding UnpromotedAchievementPoints, FallbackValue=0}" Margin="-3,0,-3,0" />
                         <Run Text="pts" />
                     </TextBlock>
                     <TextBlock Grid.Column="2" Margin="4,0,4,0" ToolTip="{Binding LocalFilePath}">
