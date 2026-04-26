@@ -40,7 +40,14 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <ContentPresenter ContentTemplate="{StaticResource assetImageTemplate}" />
+                <Grid>
+                    <ContentPresenter ContentTemplate="{StaticResource assetImageTemplate}" />
+                    <Grid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Change Image" Command="{Binding ChangeImageCommand}" />
+                        </ContextMenu>
+                    </Grid.ContextMenu>
+                </Grid>
 
                 <StackPanel Grid.Column="1">
                     <TextBlock Style="{StaticResource assetTitleStyle}" />

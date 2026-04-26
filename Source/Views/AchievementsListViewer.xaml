@@ -48,19 +48,27 @@
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <Image Source="{Binding Badge}" Width="64" Height="64" />
-                                <Image Width="56" Height="56" Source="{Binding ViewerImage}">
-                                    <Image.Style>
-                                        <Style TargetType="{x:Type Image}">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding Badge}" Value="{x:Null}">
-                                                    <Setter Property="Visibility" Value="Visible" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Image.Style>
-                                </Image>
+                                <Grid>
+                                    <Grid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Change Image" Command="{Binding ChangeImageCommand}" />
+                                        </ContextMenu>
+                                    </Grid.ContextMenu>
+
+                                    <Image Source="{Binding Badge}" Width="64" Height="64" />
+                                    <Image Width="56" Height="56" Source="{Binding ViewerImage}">
+                                        <Image.Style>
+                                            <Style TargetType="{x:Type Image}">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding Badge}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Image.Style>
+                                    </Image>
+                                </Grid>
 
                                 <Grid Grid.Column="1" Margin="8,0,0,0"
                                       VerticalAlignment="Top" HorizontalAlignment="Stretch">

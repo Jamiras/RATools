@@ -36,7 +36,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.DefaultParameters["modified"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["modified"]).Value, Is.EqualTo(""));
             Assert.That(def.DefaultParameters["badge"], Is.InstanceOf<StringConstantExpression>());
-            Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("0"));
+            Assert.That(((StringConstantExpression)def.DefaultParameters["badge"]).Value, Is.EqualTo("00000"));
             Assert.That(def.DefaultParameters["type"], Is.InstanceOf<StringConstantExpression>());
             Assert.That(((StringConstantExpression)def.DefaultParameters["type"]).Value, Is.EqualTo(""));
             Assert.That(def.DefaultParameters["set"], Is.InstanceOf<IntegerConstantExpression>());

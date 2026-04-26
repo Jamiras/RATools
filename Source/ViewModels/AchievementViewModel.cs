@@ -2,10 +2,12 @@
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
+using Jamiras.ViewModels;
 using RATools.Data;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 
 namespace RATools.ViewModels
@@ -16,6 +18,7 @@ namespace RATools.ViewModels
             : base(owner)
         {
             CopyDefinitionToClipboardCommand = new DelegateCommand(CopyDefinitionToClipboard);
+            ChangeImageCommand = new DelegateCommand(ChangeImage);
         }
 
         public override string ViewerType
@@ -37,7 +40,13 @@ namespace RATools.ViewModels
             else if (localAsset != null)
                 AchievementType = localAsset.Type;
 
-            if (String.IsNullOrEmpty(BadgeName))
+            if (generatedAsset != null && Achievement.IsValidBadgeName(generatedAsset.BadgeName))
+                BadgeName = generatedAsset.BadgeName;
+            else if (localAsset != null && Achievement.IsValidBadgeName(localAsset.BadgeName))
+                BadgeName = localAsset.BadgeName;
+            else if (coreAsset != null && Achievement.IsValidBadgeName(coreAsset.BadgeName))
+                BadgeName = coreAsset.BadgeName;
+            else
                 BadgeName = "00000";
         }
 
@@ -79,6 +88,7 @@ namespace RATools.ViewModels
         protected override bool AreAssetSpecificPropertiesModified(AssetSourceViewModel left, AssetSourceViewModel right)
         {
             IsPointsModified = (left.Points.Value != right.Points.Value);
+            bool badgeModified = left.BadgeName != right.BadgeName;
 
             var leftAchievement = left.Asset as Achievement;
             var rightAchievement = right.Asset as Achievement;
@@ -86,7 +96,7 @@ namespace RATools.ViewModels
             var rightAchievementType = rightAchievement?.Type ?? AchievementType.Standard;
             IsAchievementTypeModified = leftAchievementType != rightAchievementType;
 
-            return IsPointsModified || IsAchievementTypeModified;
+            return IsPointsModified || IsAchievementTypeModified || badgeModified;
         }
 
         internal override IEnumerable<TriggerViewModel> BuildTriggerList(AssetSourceViewModel assetViewModel)
@@ -114,7 +124,7 @@ namespace RATools.ViewModels
 
             if (achievement != null)
             {
-                if (String.IsNullOrEmpty(achievement.BadgeName) || achievement.BadgeName == "0")
+                if (!Achievement.IsValidBadgeName(achievement.BadgeName))
                     achievement.BadgeName = BadgeName;
             }
 
@@ -133,6 +143,67 @@ namespace RATools.ViewModels
             {
                 var clipboard = ServiceRepository.Instance.FindService<IClipboardService>();
                 clipboard.SetData(achievement.Trigger.Serialize(_owner.SerializationContext));
+            }
+        }
+
+        public DelegateCommand ChangeImageCommand { get; private set; }
+
+        private void ChangeImage()
+        {
+            var vm = new FileDialogViewModel();
+            vm.DialogTitle = "Select badge image";
+            vm.Filters["Image file"] = "*.png;*.gif;*.jpg;*.jpeg";
+            vm.CheckFileExists = true;
+
+            if (vm.ShowOpenFileDialog() != DialogResult.Ok)
+                return;
+
+            var bValid = false;
+            var bytes = File.ReadAllBytes(vm.FileNames[0]);
+            var sExtension = Path.GetExtension(vm.FileNames[0]).Substring(1).ToLower();
+            switch (sExtension)
+            {
+                case "png":
+                    bValid = bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G';
+                    break;
+
+                case "gif":
+                    bValid = bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == '8';
+                    break;
+
+                case "jpg":
+                case "jpeg":
+                    bValid = bytes[6] == 'J' && bytes[7] == 'F' && bytes[8] == 'I' && bytes[9] == 'F';
+                    break;
+            }
+
+            if (!bValid)
+            {
+                MessageBoxViewModel.ShowMessage("File does not appear to be a valid " + sExtension + " image.");
+                return;
+            }
+
+            var achievement = Generated.Asset as Achievement;
+            if (achievement == null)
+                achievement = Published.Asset as Achievement;
+
+            if (achievement != null)
+            {
+                var md5 = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(bytes)).ToLower();
+                var localFolder = Path.Combine(_owner.RACacheDirectory, "..", "Badge", "local");
+                if (!Directory.Exists(localFolder))
+                    Directory.CreateDirectory(localFolder);
+                var localFilename = Path.Combine(localFolder, String.Format("{0}-{1}.{2}", _owner.GameId, md5, sExtension));
+                if (!File.Exists(localFilename))
+                    File.Copy(vm.FileNames[0], localFilename);
+
+                achievement.BadgeName = localFilename.Substring(localFilename.LastIndexOf("local"));
+                if (ReferenceEquals(Generated.Asset, achievement))
+                    Generated.BadgeName = achievement.BadgeName;
+                else
+                    Published.BadgeName = achievement.BadgeName;
+
+                Refresh();
             }
         }
 
