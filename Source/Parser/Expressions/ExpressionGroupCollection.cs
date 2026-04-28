@@ -278,6 +278,19 @@ namespace RATools.Parser.Expressions
                     affectedVariables.Add(variable);
             }
 
+            // if any groups being replaced generated assets, indicate evaluation is needed
+            // even if it's not so commenting things out still causes the asset list to update.
+            bool needsEvaluated = false;
+            for (int i = groupStart; i < groupStop; i++)
+            {
+                var assetGroup = _groups[i] as AssetExpressionGroup;
+                if (assetGroup != null && assetGroup.HasGeneratedAssets)
+                {
+                    needsEvaluated = true;
+                    break;
+                }
+            }
+
             // perform the swap
             if (newGroupStop == 0)
             {
@@ -307,8 +320,6 @@ namespace RATools.Parser.Expressions
             }
 
             LOG_GROUPS(groupStart - 2, groupStart + newGroupStop + 2);
-
-            bool needsEvaluated = false;
 
             // re-evaluate any groups that are dependent on (or modify) the affected variables
             if (affectedVariables.Count > 0)

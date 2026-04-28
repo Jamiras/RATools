@@ -9,6 +9,7 @@ using RATools.Services;
 using RATools.ViewModels.Navigation;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -516,6 +517,37 @@ namespace RATools.ViewModels
 
                 LocalAchievementCount = _localAssets.Achievements.Count();
                 LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+
+                foreach (var node in NavigationNodes)
+                {
+                    if (node.Children != null)
+                        PruneDeletedAssets(node.Children);
+                }
+            }
+        }
+
+        private static void PruneDeletedAssets(ObservableCollection<NavigationViewModelBase> nodes)
+        {
+            for (int i = nodes.Count - 1; i >= 0; i--)
+            {
+                var node = nodes[i];
+
+                var editorNode = node as EditorNavigationViewModelBase;
+                if (editorNode != null)
+                {
+                    var assetEditor = editorNode.Editor as AssetViewModelBase;
+                    if (assetEditor != null)
+                    {
+                        if (assetEditor.Generated.Asset == null && assetEditor.Local.Asset == null && assetEditor.Published.Asset == null)
+                        {
+                            nodes.RemoveAt(i);
+                            continue;
+                        }
+                    }
+                }
+
+                if (node.Children != null)
+                    PruneDeletedAssets(node.Children);
             }
         }
 

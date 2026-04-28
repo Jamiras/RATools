@@ -18,6 +18,17 @@ namespace RATools.Parser.Internal
 
         public AchievementSet[] GeneratedSets { get; private set; }
 
+        public bool HasGeneratedAssets
+        {
+            get
+            {
+                return (GeneratedAchievements != null ||
+                        GeneratedLeaderboards != null ||
+                        GeneratedSets != null ||
+                        GeneratedSets != null);
+            }
+        }
+
         protected override ExpressionGroup CreateGroup()
         {
             return new AssetExpressionGroup();
