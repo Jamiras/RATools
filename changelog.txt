@@ -1,3 +1,25 @@
+v1.17.0 - 28 Apr 2026
+* upgrade to .NET 10
+* add folders to navigation list
+* add field_map function
+* remove Achievement List dialog; functionality is now embedded in Achievements folder node
+* add tool to Analysis menu for creating collage of achievement badges from a game
+* add ability to associate images to achievements
+* add navigation list indicator for failed achievement/leaderboard calls instead of removing the items from the list
+* change core/unofficial nomenclature to published/unpublished
+* report error when invalid point value provided to achievement function
+* support Remember/{recall} in more situations
+* fix Update Local not writing subset decorator
+* fix handling of logic that results in {recall}/{recall}
+* fix ResetNextIf not being applied to all elements of an AddHits chain when using never inside tally
+* fix lambda capture when using a helper function to construct class instances
+* fix float() % 1.0 getting turned into 0
+* fix AddSource construction logic to not move constants before a Remember
+* fix constant comparisons at the end of a combining chain being collapsed to always_false() in achievement viewer
+* fix exception building diff for AddSource chain where an intermediate node was removed
+* fix nodes not being removed from navigation list when no longer generated and not in local
+* fix editor not scrolling when using scrollwheel on line numbers
+
 v1.16.2 - 19 Dec 2025
 * improved New Script functionality to create helper functions for pointed-at data
 * add [...] to filtered note in logic viewer to see the whole note
