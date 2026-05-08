@@ -161,6 +161,14 @@ namespace RATools.ViewModels
             }
         }
 
+        public bool BelongsToSet(AchievementSet achievementSet)
+        {
+            if (OwnerSetId == 0)
+                return (achievementSet == null || achievementSet.Type == AchievementSetType.Core);
+
+            return (achievementSet == null || achievementSet.Id == OwnerSetId);
+        }
+
         public static readonly ModelProperty PointsProperty = ModelProperty.Register(typeof(AssetViewModelBase), "Points", typeof(int), 0);
         public int Points
         {

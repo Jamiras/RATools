@@ -51,16 +51,35 @@
         Exclusive,
     }
 
-    internal static class AchievementSetTypeExtension
+    public static class AchievementSetTypeExtension
     {
         /// <summary>
-        /// Gets whether or not the achievement set supports progression markings
+        /// Gets whether or not the achievement set supports progression markings.
         /// </summary>
         public static bool SupportsProgression(this AchievementSetType type)
         {
             switch (type)
             {
                 case AchievementSetType.Core:
+                    return true;
+
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Gets whether or not the achievement set loads with the base set.
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns></returns>
+        public static bool CanLoadWithBaseSet(this AchievementSetType type)
+        {
+            switch (type)
+            {
+                case AchievementSetType.Core:
+                case AchievementSetType.Bonus:
+                case AchievementSetType.Challenge:
                     return true;
 
                 default:

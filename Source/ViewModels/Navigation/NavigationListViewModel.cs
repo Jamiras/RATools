@@ -11,23 +11,21 @@ namespace RATools.ViewModels.Navigation
 {
     internal class NavigationListViewModel
     {
-        public NavigationListViewModel(GameViewModel gameViewModel, PublishedAssets publishedAssets, LocalAssets localAssets, List<ViewerViewModelBase> editors)
-            : this(gameViewModel, publishedAssets, localAssets, editors, ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
+        public NavigationListViewModel(GameViewModel gameViewModel, List<AchievementSetViewModel> achievementSets, List<ViewerViewModelBase> editors)
+            : this(gameViewModel, achievementSets, editors, ServiceRepository.Instance.FindService<IBackgroundWorkerService>())
         {
         }
 
-        public NavigationListViewModel(GameViewModel gameViewModel, PublishedAssets publishedAssets, LocalAssets localAssets, List<ViewerViewModelBase> editors, IBackgroundWorkerService backgroundWorkerService)
+        public NavigationListViewModel(GameViewModel gameViewModel, List<AchievementSetViewModel> achievementSets, List<ViewerViewModelBase> editors, IBackgroundWorkerService backgroundWorkerService)
         {
             _gameViewModel = gameViewModel;
-            _publishedAssets = publishedAssets;
-            _localAssets = localAssets;
+            _achievementSets = achievementSets;
             _editors = editors;
             _backgroundWorkerService = backgroundWorkerService;
         }
 
         private readonly GameViewModel _gameViewModel;
-        private readonly PublishedAssets _publishedAssets;
-        private readonly LocalAssets _localAssets;
+        private readonly List<AchievementSetViewModel> _achievementSets;
         private readonly List<ViewerViewModelBase> _editors;
         private readonly IBackgroundWorkerService _backgroundWorkerService;
 
@@ -309,6 +307,9 @@ namespace RATools.ViewModels.Navigation
             Func<AssetViewModelBase, AssetBase> getAsset)
             where T : AssetViewModelBase
         {
+            if (!assets.Any())
+                return;
+
             MergeAssets(assets, assign);
 
             // clear out any items not in the new list
@@ -334,10 +335,14 @@ namespace RATools.ViewModels.Navigation
 
         private void MergePublished()
         {
-            MergeAndPruneAssets<AchievementViewModel>(_publishedAssets.Achievements, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
-            MergeAndPruneAssets<LeaderboardViewModel>(_publishedAssets.Leaderboards, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+            foreach (var achievementSet in _achievementSets)
+            {
+                MergeAndPruneAssets<AchievementViewModel>(achievementSet.PublishedAssets.Achievements, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+                MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.PublishedAssets.Leaderboards, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+            }
 
-            if (_publishedAssets.RichPresence != null)
+            var richPresence = _achievementSets.Where(s => s.AchievementSet.Type == AchievementSetType.Core).First()?.PublishedAssets.RichPresence;
+            if (richPresence != null)
             {
                 var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();
                 if (richPresenceViewModel == null)
@@ -346,16 +351,20 @@ namespace RATools.ViewModels.Navigation
                     _editors.Add(richPresenceViewModel);
                 }
 
-                richPresenceViewModel.Published.Asset = _publishedAssets.RichPresence;
+                richPresenceViewModel.Published.Asset = richPresence;
             }
         }
 
         private void MergeLocal()
         {
-            MergeAndPruneAssets<AchievementViewModel>(_localAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
-            MergeAndPruneAssets<LeaderboardViewModel>(_localAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+            foreach (var achievementSet in _achievementSets)
+            {
+                MergeAndPruneAssets<AchievementViewModel>(achievementSet.LocalAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+                MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.LocalAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+            }
 
-            if (_localAssets.RichPresence != null)
+            var richPresence = _achievementSets.Where(s => s.AchievementSet.Type == AchievementSetType.Core).First()?.LocalAssets.RichPresence;
+            if (richPresence != null)
             {
                 var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();
                 if (richPresenceViewModel == null)
@@ -364,7 +373,7 @@ namespace RATools.ViewModels.Navigation
                     _editors.Add(richPresenceViewModel);
                 }
 
-                richPresenceViewModel.Local.Asset = _localAssets.RichPresence;
+                richPresenceViewModel.Local.Asset = richPresence;
             }
         }
 
@@ -430,6 +439,9 @@ namespace RATools.ViewModels.Navigation
             var leaderboardNodes = leaderboardsFolder.Children.OfType<LeaderboardNavigationViewModel>().ToList();
             foreach (var leaderboard in _editors.OfType<LeaderboardViewModel>())
             {
+                if (!leaderboard.BelongsToSet(achievementSet))
+                    continue;
+
                 if (leaderboard.Generated.Asset == null && leaderboard.Local.Asset == null && leaderboard.Published.Asset == null)
                 {
                     // nothing keeping this node around, let it get discarded
@@ -504,7 +516,7 @@ namespace RATools.ViewModels.Navigation
             var navigationNodes = _gameViewModel.NavigationNodes;
             if (navigationNodes != null)
             {
-                foreach ( var node in navigationNodes)
+                foreach (var node in navigationNodes)
                 {
                     if (node is AchievementsFolderNavigationViewModel)
                     {
@@ -564,16 +576,11 @@ namespace RATools.ViewModels.Navigation
             foreach (var editor in _editors.OfType<AssetViewModelBase>())
                 editor.SortOrder = 0;
 
-            if (_publishedAssets != null)
-            {
-                if (_publishedAssets.Achievements.Any() || _publishedAssets.Leaderboards.Any() || _publishedAssets.RichPresence != null)
-                    MergePublished();
-            }
+            MergePublished();
 
             if (interpreter != null)
             {
-                if (_localAssets != null)
-                    MergeLocal();
+                MergeLocal();
 
                 MergeGenerated(interpreter);
             }

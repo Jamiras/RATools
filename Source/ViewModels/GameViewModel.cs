@@ -38,18 +38,23 @@ namespace RATools.ViewModels
             Notes = new Dictionary<uint, CodeNote>();
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
-            _logger = logger;
             _fileSystemService = fileSystemService;
+            _achievementSets = new List<AchievementSetViewModel>();
+            _achievementSets.Add(new AchievementSetViewModel(new AchievementSet
+            {
+                OwnerGameId = gameId,
+                Title = title,
+                Type = AchievementSetType.Core,
+            }, logger, fileSystemService));
+
             _editors = new List<ViewerViewModelBase>();
 
             _backNavigationStack = new FixedSizeStack<NavigationItem>(128);
             _forwardNavigationStack = new Stack<NavigationItem>(32);
         }
 
-        private readonly ILogger _logger;
         protected readonly IFileSystemService _fileSystemService;
-        protected PublishedAssets _publishedAssets;
-        protected LocalAssets _localAssets;
+        protected readonly List<AchievementSetViewModel> _achievementSets;
 
         public void InitializeForUI()
         {
@@ -77,10 +82,10 @@ namespace RATools.ViewModels
         {
             RACacheDirectory = value;
         }
+        public string LocalFilePath { get { return _achievementSets.FirstOrDefault()?.LocalAssets?.Filename; } }
+
         internal Dictionary<uint, CodeNote> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
-
-        public string LocalFilePath { get { return _localAssets?.Filename; } }
 
         public ScriptViewModel Script { get; protected set; }
 
@@ -223,18 +228,44 @@ namespace RATools.ViewModels
             if (interpreter != null)
             {
                 SerializationContext = interpreter.SerializationContext;
+                var coreSet = _achievementSets.FirstOrDefault(s => s.AchievementSet.Type == AchievementSetType.Core);
 
-                GeneratedAchievementCount = interpreter.Achievements.Count();
-            }
-            else
-            {
-                GeneratedAchievementCount = 0;
+                foreach (var set in interpreter.Sets)
+                {
+                    if (_achievementSets.Any(s => ReferenceEquals(s.AchievementSet, set)))
+                        continue;
+
+                    var existingSet = _achievementSets.FirstOrDefault(s => s.Id == set.OwnerSetId);
+                    if (existingSet != null)
+                    {
+                        existingSet.AchievementSet = set;
+                    }
+                    else if (coreSet != null && set.Type.CanLoadWithBaseSet())
+                    {
+                        _achievementSets.Add(new AchievementSetViewModel(set, coreSet));
+                    }
+                    else
+                    {
+                        var fileName = Path.Combine(RACacheDirectory, set.OwnerGameId + ".json");
+                        if (_fileSystemService.FileExists(fileName))
+                        {
+                            var newSet = new AchievementSetViewModel(set);
+                            newSet.AssociateRACacheDirectory(RACacheDirectory);
+                            _achievementSets.Add(newSet);
+                        }
+                        else if (coreSet != null)
+                        {
+                            _achievementSets.Add(new AchievementSetViewModel(set, coreSet));
+                        }
+                    }
+                }
             }
 
-            var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
+            var navigation = new NavigationListViewModel(this, _achievementSets, _editors);
             NavigationNodes = navigation.Merge(interpreter);
 
             UpdateSelectedNavigationNode(SelectedNavigationNode);
+            UpdateStatusBarText();
         }
 
         internal void UpdateSelectedNavigationNode(NavigationViewModelBase searchNode)
@@ -292,6 +323,68 @@ namespace RATools.ViewModels
                 CompileProgressLine = line;
                 OnPropertyChanged(() => CompileProgressLine);
             }
+        }
+
+        public static readonly ModelProperty StatusBarTextProperty = ModelProperty.Register(typeof(GameViewModel), "StatusBarText", typeof(string), "");
+        public string StatusBarText
+        {
+            get { return (string)GetValue(StatusBarTextProperty); }
+            private set { SetValue(StatusBarTextProperty, value); }
+        }
+
+        private void UpdateStatusBarText()
+        {
+            var promotedAchievementCount = 0;
+            var promotedAchievementPoints = 0;
+            var unpromotedAchievementCount = 0;
+            var unpromotedAchievementPoints = 0;
+            var localAchievementCount = 0;
+            var localAchievementPoints = 0;
+
+            foreach (var achievementSet in _achievementSets)
+            {
+                foreach (var achievement in achievementSet.PublishedAssets.Achievements)
+                {
+                    if (achievement.IsUnpromoted)
+                    {
+                        unpromotedAchievementCount++;
+                        unpromotedAchievementPoints += achievement.Points;
+                    }
+                    else
+                    {
+                        promotedAchievementCount++;
+                        promotedAchievementPoints += achievement.Points;
+                    }
+                }
+
+                foreach (var achievement in achievementSet.LocalAssets.Achievements)
+                {
+                    localAchievementCount++;
+                    localAchievementPoints += achievement.Points;
+                }
+            }
+
+            var builder = new StringBuilder();
+            if (promotedAchievementCount > 0)
+                builder.AppendFormat("Promoted({0}): {1}pts", promotedAchievementCount, promotedAchievementPoints);
+
+            if (unpromotedAchievementCount > 0)
+            {
+                if (builder.Length > 0)
+                    builder.Append("  ");
+
+                builder.AppendFormat("Unpromoted({0}): {1}pts", unpromotedAchievementCount, unpromotedAchievementPoints);
+            }
+
+            if (localAchievementCount > 0 || (promotedAchievementCount == 0 && unpromotedAchievementCount == 0))
+            {
+                if (builder.Length > 0)
+                    builder.Append("  ");
+
+                builder.AppendFormat("Local({0}): {1}pts", localAchievementCount, localAchievementPoints);
+            }
+
+            StatusBarText = builder.ToString();
         }
 
         public static readonly ModelProperty NavigationNodesProperty = ModelProperty.Register(typeof(GameViewModel), "NavigationNodes", typeof(IEnumerable<NavigationViewModelBase>), new NavigationViewModelBase[0]);
@@ -374,136 +467,81 @@ namespace RATools.ViewModels
 
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)
         {
-            if (_localAchievementCommitSuspendCount == 0)
+            bool refresh = (_localAchievementCommitSuspendCount == 0);
+
+            foreach (var achievementSet in _achievementSets)
             {
-                _localAssets.MergeExternalChanges((asset, change) =>
-                {
-                    var modifiedAchievement = asset as Achievement;
-                    if (modifiedAchievement != null && modifiedAchievement.Id == achievement.Id)
-                        localAchievement = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedAchievement;
-                    else
-                        HandleLocalAssetChange(asset, change);
-                });
-            }
-
-            if (achievement == null)
-            {
-                _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localAchievement.Title));
-
-                var previous = _localAssets.Replace(localAchievement, null);
-                if (previous != null && previous.Points != 0)
-                    LocalAchievementPoints -= previous.Points;
-
-                LocalAchievementCount--;
-            }
-            else
-            {
-                if (localAchievement != null)
-                    _logger.WriteVerbose(String.Format("Updating {0} in local achievements", achievement.Title));
-                else
-                    _logger.WriteVerbose(String.Format("Committing {0} to local achievements", achievement.Title));
-
-                var previous = _localAssets.Replace(localAchievement, achievement);
-                if (previous != null)
-                {
-                    var diff = achievement.Points - previous.Points;
-                    if (diff != 0)
-                        LocalAchievementPoints += diff;
-                }
-                else
-                {
-                    LocalAchievementCount++;
-                    LocalAchievementPoints += achievement.Points;
-                }
+                if (achievementSet.UpdateLocal(achievement, localAchievement, HandleLocalAssetChange, refresh))
+                    break;
             }
 
             if (_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName, warning,
-                    SerializationContext, validateAll ? null : new List<AssetBase>() { achievement },
-                    PublishedSets);
-                LocalAchievementCount = _localAssets.Achievements.Count();
-                LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                foreach (var achievementSet in _achievementSets)
+                {
+                    if (!achievementSet.AchievementSet.Type.CanLoadWithBaseSet())
+                    {
+                        achievementSet.LocalAssets.Commit(username, warning,
+                            SerializationContext, validateAll ? null : new List<AssetBase>() { achievement },
+                            PublishedSets);
+                    }
+                }
             }
         }
 
         internal void UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, StringBuilder warning, bool validateAll)
         {
+            bool refresh = (_localAchievementCommitSuspendCount == 0);
+
+            foreach (var achievementSet in _achievementSets)
+            {
+                if (achievementSet.UpdateLocal(leaderboard, localLeaderboard, HandleLocalAssetChange, refresh))
+                    break;
+            }
+
             if (_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.MergeExternalChanges((asset, change) =>
+                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                foreach (var achievementSet in _achievementSets)
                 {
-                    var modifiedLeaderboard = asset as Leaderboard;
-                    if (modifiedLeaderboard != null && modifiedLeaderboard.Id == leaderboard.Id)
-                        localLeaderboard = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedLeaderboard;
-                    else
-                        HandleLocalAssetChange(asset, change);
-                });
+                    if (!achievementSet.AchievementSet.Type.CanLoadWithBaseSet())
+                    {
+                        achievementSet.LocalAssets.Commit(username,
+                            warning, SerializationContext,
+                            validateAll ? null : new List<AssetBase>() { leaderboard },
+                            PublishedSets);
+                    }
+                }
             }
-
-            if (leaderboard == null)
-            {
-                _logger.WriteVerbose(String.Format("Deleting {0} from local achievements", localLeaderboard.Title));
-                _localAssets.Replace(localLeaderboard, null);
-            }
-            else
-            {
-                if (localLeaderboard != null)
-                    _logger.WriteVerbose(String.Format("Updating {0} in local achievements", leaderboard.Title));
-                else
-                    _logger.WriteVerbose(String.Format("Committing {0} to local achievements", leaderboard.Title));
-
-                _localAssets.Replace(localLeaderboard, leaderboard);
-            }
-
-            if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
-                    warning, SerializationContext, 
-                    validateAll ? null : new List<AssetBase>() { leaderboard },
-                    PublishedSets);
         }
 
         internal void UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, StringBuilder warning, bool validateAll)
         {
-            if (_localAchievementCommitSuspendCount == 0)
-            {
-                _localAssets.MergeExternalChanges((asset, change) =>
-                {
-                    var modifiedRichPresence = asset as RichPresence;
-                    if (modifiedRichPresence != null)
-                        localRichPresence = (change == LocalAssets.LocalAssetChange.Removed) ? null : modifiedRichPresence;
-                    else
-                        HandleLocalAssetChange(asset, change);
-                });
-            }
+            var coreSet = _achievementSets.FirstOrDefault(s => s.AchievementSet.Type == AchievementSetType.Core);
+            if (coreSet == null)
+                return;
 
-            if (richPresence == null)
-            {
-                _logger.WriteVerbose("Deleting local rich presence");
-                _localAssets.Replace(localRichPresence, null);
-            }
-            else
-            {
-                if (localRichPresence != null)
-                    _logger.WriteVerbose("Updating rich presence");
-                else
-                    _logger.WriteVerbose("Committing rich presence");
-
-                _localAssets.Replace(localRichPresence, richPresence);
-            }
+            bool refresh = (_localAchievementCommitSuspendCount == 0);
+            coreSet.UpdateLocal(richPresence, localRichPresence, HandleLocalAssetChange, refresh);
 
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
-                    warning, SerializationContext, 
-                    validateAll ? null : new List<AssetBase>() { _localAssets.RichPresence },
+            {
+                coreSet.LocalAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
+                    warning, SerializationContext,
+                    validateAll ? null : new List<AssetBase>() { coreSet.LocalAssets.RichPresence },
                     PublishedSets);
+            }
         }
 
         private int _localAchievementCommitSuspendCount = 0;
         internal void SuspendCommitLocalAchievements()
         {
             if (_localAchievementCommitSuspendCount == 0)
-                _localAssets.MergeExternalChanges(HandleLocalAssetChange);
+            {
+                foreach (var achievementSet in _achievementSets)
+                    achievementSet.MergeExternalChanges(HandleLocalAssetChange);
+            }
 
             ++_localAchievementCommitSuspendCount;
         }
@@ -512,11 +550,12 @@ namespace RATools.ViewModels
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
             {
-                _localAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
-                    warning, SerializationContext, assetsToValidate, PublishedSets);
-
-                LocalAchievementCount = _localAssets.Achievements.Count();
-                LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
+                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                foreach (var achievementSet in _achievementSets)
+                {
+                    achievementSet.LocalAssets.Commit(username,
+                        warning, SerializationContext, assetsToValidate, PublishedSets);
+                }
 
                 foreach (var node in NavigationNodes)
                 {
@@ -567,7 +606,7 @@ namespace RATools.ViewModels
             {
                 case LocalAssets.LocalAssetChange.Added:
                 case LocalAssets.LocalAssetChange.Modified:
-                    var navigation = new NavigationListViewModel(this, _publishedAssets, _localAssets, _editors);
+                    var navigation = new NavigationListViewModel(this, _achievementSets, _editors);
                     navigation.MergeAssets(new[] { asset }, (vm, a) =>
                     {
                         vm.Local.Asset = a;
@@ -606,129 +645,30 @@ namespace RATools.ViewModels
             private set { SetValue(TitleProperty, value); }
         }
 
-        public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(GameViewModel), "BadgeName", typeof(string), String.Empty);
-        public string BadgeName
-        {
-            get { return (string)GetValue(BadgeNameProperty); }
-            set { SetValue(BadgeNameProperty, value); }
-        }
 
         public IEnumerable<AchievementSet> PublishedSets
         {
             get
             {
-                return _publishedAssets?.Sets ?? new [] { new AchievementSet { OwnerGameId = GameId, Title = Title } };
+                foreach (var achievementSet in _achievementSets)
+                    yield return achievementSet.AchievementSet;
             }
-        }
-
-        public static readonly ModelProperty GeneratedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "GeneratedAchievementCount", typeof(int), 0);
-        public int GeneratedAchievementCount
-        {
-            get { return (int)GetValue(GeneratedAchievementCountProperty); }
-            private set { SetValue(GeneratedAchievementCountProperty, value); }
-        }
-
-        public static readonly ModelProperty PromotedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "PromotedAchievementCount", typeof(int), 0);
-        public int PromotedAchievementCount
-        {
-            get { return (int)GetValue(PromotedAchievementCountProperty); }
-            private set { SetValue(PromotedAchievementCountProperty, value); }
-        }
-
-        public static readonly ModelProperty PromotedAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "PromotedAchievementPoints", typeof(int), 0);
-        public int PromotedAchievementPoints
-        {
-            get { return (int)GetValue(PromotedAchievementPointsProperty); }
-            private set { SetValue(PromotedAchievementPointsProperty, value); }
-        }
-
-        public static readonly ModelProperty UnpromotedAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "UnpromotedAchievementCount", typeof(int), 0);
-        public int UnpromotedAchievementCount
-        {
-            get { return (int)GetValue(UnpromotedAchievementCountProperty); }
-            private set { SetValue(UnpromotedAchievementCountProperty, value); }
-        }
-
-        public static readonly ModelProperty UnpromotedAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "UnpromotedAchievementPoints", typeof(int), 0);
-        public int UnpromotedAchievementPoints
-        {
-            get { return (int)GetValue(UnpromotedAchievementPointsProperty); }
-            private set { SetValue(UnpromotedAchievementPointsProperty, value); }
-        }
-
-        public static readonly ModelProperty LocalAchievementCountProperty = ModelProperty.Register(typeof(GameViewModel), "LocalAchievementCount", typeof(int), 0);
-        public int LocalAchievementCount
-        {
-            get { return (int)GetValue(LocalAchievementCountProperty); }
-            private set { SetValue(LocalAchievementCountProperty, value); }
-        }
-
-        public static readonly ModelProperty LocalAchievementPointsProperty = ModelProperty.Register(typeof(GameViewModel), "LocalAchievementPoints", typeof(int), 0);
-        public int LocalAchievementPoints
-        {
-            get { return (int)GetValue(LocalAchievementPointsProperty); }
-            private set { SetValue(LocalAchievementPointsProperty, value); }
         }
 
         public void AssociateRACacheDirectory(string raCacheDirectory)
         {
             RACacheDirectory = raCacheDirectory;
 
-            ReadPublished();
+            var coreSet = _achievementSets.First();
+            coreSet.AssociateRACacheDirectory(raCacheDirectory, _achievementSets);
 
-            var fileName = Path.Combine(RACacheDirectory, GameId + "-User.txt");
-            _localAssets = new LocalAssets(fileName, _fileSystemService);
+            foreach (var kvp in coreSet.PublishedAssets.Notes)
+                Notes[kvp.Key] = kvp.Value;
 
-            if (String.IsNullOrEmpty(_localAssets.Title))
-                _localAssets.Title = Title;
-
-            foreach (var kvp in _localAssets.Notes)
+            foreach (var kvp in coreSet.LocalAssets.Notes)
                 Notes[kvp.Key] = new CodeNote(kvp.Key, kvp.Value);
 
-            LocalAchievementCount = _localAssets.Achievements.Count();
-            LocalAchievementPoints = _localAssets.Achievements.Sum(a => a.Points);
-            _logger.WriteVerbose(String.Format("Read {0} local achievements ({1} points)", LocalAchievementCount, LocalAchievementPoints));
-        }
-
-        private void ReadPublished()
-        {
-            var fileName = Path.Combine(RACacheDirectory, GameId + ".json");
-            var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
-
-            var promotedCount = 0;
-            var promotedPoints = 0;
-            var unpromotedCount = 0;
-            var unpromotedPoints = 0;
-            foreach (var achievement in publishedAssets.Achievements)
-            {
-                if (achievement.Category == 3)
-                {
-                    promotedCount++;
-                    promotedPoints += achievement.Points;
-                }
-                else
-                {
-                    unpromotedCount++;
-                    unpromotedPoints += achievement.Points;
-                }
-            }
-
-            PromotedAchievementCount = promotedCount;
-            PromotedAchievementPoints = promotedPoints;
-            UnpromotedAchievementCount = unpromotedCount;
-            UnpromotedAchievementPoints = unpromotedPoints;
-
-            Title = publishedAssets.Title;
-            ConsoleId = publishedAssets.ConsoleId;
-
-            _logger.WriteVerbose(String.Format("Identified {0} promoted achievements ({1} points)", promotedCount, promotedPoints));
-            _logger.WriteVerbose(String.Format("Identified {0} unpromoted achievements ({1} points)", unpromotedCount, unpromotedPoints));
-
-            publishedAssets.LoadNotes();
-            Notes = publishedAssets.Notes;
-            _logger.WriteVerbose("Read " + Notes.Count + " code notes");
-
-            _publishedAssets = publishedAssets;
+            UpdateStatusBarText();
         }
 
         public class ResourceContainer : PropertyChangedObject

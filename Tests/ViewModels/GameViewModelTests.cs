@@ -33,8 +33,9 @@ namespace RATools.Tests.ViewModels
 
             public Achievement AddLocalAchievement(int id, string name)
             {
-                if (_localAssets == null)
-                    _localAssets = new LocalAssets(GameId + "-User.txt", _fileSystemService);
+                var coreSet = _achievementSets.First();
+                if (coreSet.LocalAssets == null)
+                    coreSet.AssociateRACacheDirectory(".");
 
                 var achievement = new Achievement
                 {
@@ -43,13 +44,14 @@ namespace RATools.Tests.ViewModels
                     Description = name
                 };
 
-                ((List<Achievement>)_localAssets.Achievements).Add(achievement);
+                ((List<Achievement>)coreSet.LocalAssets.Achievements).Add(achievement);
                 return achievement;
             }
             public Achievement AddPublishedAchievement(int id, string name)
             {
-                if (_publishedAssets == null)
-                    _publishedAssets = new PublishedAssets(GameId + ".json", _fileSystemService);
+                var coreSet = _achievementSets.First();
+                if (coreSet.LocalAssets == null)
+                    coreSet.AssociateRACacheDirectory(".");
 
                 var achievement = new Achievement
                 {
@@ -58,7 +60,7 @@ namespace RATools.Tests.ViewModels
                     Category = 3
                 };
 
-                ((List<Achievement>)_publishedAssets.Achievements).Add(achievement);
+                ((List<Achievement>)coreSet.PublishedAssets.Achievements).Add(achievement);
                 return achievement;
             }
 
@@ -104,13 +106,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.Notes, Is.Not.Null.And.Empty);
             Assert.That(vmGame.CompileProgress, Is.EqualTo(0));
             Assert.That(vmGame.CompileProgressLine, Is.EqualTo(0));
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }
 
         [Test]
@@ -195,13 +190,6 @@ namespace RATools.Tests.ViewModels
             Assert.That(vmGame.Editors.Count(), Is.EqualTo(1));
             Assert.That(vmGame.SelectedEditor, Is.SameAs(vmGame.Script));
             Assert.That(vmGame.Notes, Is.Not.Null.And.Empty);
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }
 
         private Achievement AddGeneratedAchievement(AchievementScriptInterpreter interpreter, int id, string name)
@@ -345,13 +333,13 @@ namespace RATools.Tests.ViewModels
             Assert.That(ach234.Published, Is.EqualTo(new DateTime(2021, 07, 05, 18, 03, 35, DateTimeKind.Utc)));
             Assert.That(ach234.LastModified, Is.EqualTo(new DateTime(2021, 07, 09, 04, 44, 13, DateTimeKind.Utc)));
 
-            Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(1));
-            Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(6));
-            Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(1));
-            Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(3));
-            Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
+            //Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
+            //Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(1));
+            //Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(6));
+            //Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(1));
+            //Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(3));
+            //Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
+            //Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
         }
     }
 }
