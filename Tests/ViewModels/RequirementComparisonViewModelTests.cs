@@ -36,7 +36,7 @@ namespace RATools.Tests.ViewModels
             builder.ParseRequirements(Tokenizer.CreateTokenizer(rightSerialized));
             var compareRequirement = builder.ToAchievement().CoreRequirements.First();
 
-            var vmRequirement = new RequirementComparisonViewModel(requirement, compareRequirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementComparisonViewModel(requirement, compareRequirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo(expectedDefinition));
             Assert.That(vmRequirement.OtherDefinition, Is.EqualTo(expectedOtherDefinition));
@@ -52,7 +52,7 @@ namespace RATools.Tests.ViewModels
             builder.ParseRequirements(Tokenizer.CreateTokenizer("0xH1234=7"));
             var requirement = builder.ToAchievement().CoreRequirements.First();
 
-            var vmRequirement = new RequirementComparisonViewModel(requirement, null, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementComparisonViewModel(requirement, null, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo("byte(0x001234) == 7"));
             Assert.That(vmRequirement.OtherDefinition, Is.EqualTo(""));
@@ -68,7 +68,7 @@ namespace RATools.Tests.ViewModels
             builder.ParseRequirements(Tokenizer.CreateTokenizer("0xH1234=7"));
             var requirement = builder.ToAchievement().CoreRequirements.First();
 
-            var vmRequirement = new RequirementComparisonViewModel(null, requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementComparisonViewModel(null, requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo(""));
             Assert.That(vmRequirement.OtherDefinition, Is.EqualTo("byte(0x001234) == 7"));

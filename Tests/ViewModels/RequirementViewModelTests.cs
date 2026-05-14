@@ -1,4 +1,4 @@
-﻿using Jamiras.Components;
+using Jamiras.Components;
 using Moq;
 using NUnit.Framework;
 using RATools.Data;
@@ -33,7 +33,7 @@ namespace RATools.Tests.ViewModels
 
             var requirement = builder.ToAchievement().CoreRequirements.First();
             var notes = new Dictionary<uint, CodeNote>();
-            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo(expected));
         }
@@ -64,7 +64,7 @@ namespace RATools.Tests.ViewModels
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
             var requirement = builder.ToAchievement().CoreRequirements.First();
-            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Notes, Is.EqualTo(expectedNote));
 
@@ -92,7 +92,7 @@ namespace RATools.Tests.ViewModels
             var builder = new AchievementBuilder();
             builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
             var requirement = builder.ToAchievement().CoreRequirements.First();
-            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.NotesShort, Is.EqualTo(expected));
 
@@ -118,7 +118,7 @@ namespace RATools.Tests.ViewModels
             };
 
             var notes = new Dictionary<uint, CodeNote>();
-            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo("always_false()"));
 
@@ -145,7 +145,7 @@ namespace RATools.Tests.ViewModels
             };
 
             var notes = new Dictionary<uint, CodeNote>();
-            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes);
+            var vmRequirement = new RequirementViewModel(requirement, NumberFormat.Decimal, notes, null);
 
             Assert.That(vmRequirement.Definition, Is.EqualTo("repeated(10, always_false())"));
 

@@ -894,5 +894,14 @@ namespace RATools.Data
 
             return false;
         }
+
+        public static CodeNote ResolveNote(uint address, IDictionary<uint, CodeNote> notes, CodeNote parentNote)
+        {
+            if (parentNote != null)
+                return parentNote.OffsetNotes.FirstOrDefault(n => n.Address == address);
+
+            notes.TryGetValue(address, out CodeNote note);
+            return note;
+        }
     }
 }

@@ -14,7 +14,7 @@ namespace RATools.ViewModels
     [DebuggerDisplay("{Requirement}")]
     public class RequirementViewModel : ViewModelBase
     {
-        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
+        public RequirementViewModel(Requirement requirement, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes, CodeNote parentNote)
         {
             Requirement = requirement;
 
@@ -28,14 +28,15 @@ namespace RATools.ViewModels
                     {
                         var builder = new StringBuilder();
 
-                        CodeNote note;
-                        if (notes.TryGetValue(requirement.Left.Value, out note))
+                        var note = CodeNote.ResolveNote(requirement.Left.Value, notes, parentNote);
+                        if (note != null)
                         {
                             var subNote = note.GetSubNote(requirement.Left.Size);
                             builder.AppendFormat("0x{0:x6}:{1}", requirement.Left.Value, subNote ?? note.Summary);
                         }
 
-                        if (notes.TryGetValue(requirement.Right.Value, out note))
+                        note = CodeNote.ResolveNote(requirement.Right.Value, notes, parentNote);
+                        if (note != null)
                         {
                             if (builder.Length > 0)
                                 builder.AppendLine();
@@ -48,8 +49,8 @@ namespace RATools.ViewModels
                     }
                     else
                     {
-                        CodeNote note;
-                        if (notes.TryGetValue(requirement.Left.Value, out note))
+                        var note = CodeNote.ResolveNote(requirement.Left.Value, notes, parentNote);
+                        if (note != null)
                         {
                             Notes = note.Note;
                             var subNote = note.GetSubNote(requirement.Left.Size);
@@ -63,8 +64,8 @@ namespace RATools.ViewModels
                 }
                 else if (requirement.Right.IsMemoryReference)
                 {
-                    CodeNote note;
-                    if (notes.TryGetValue(requirement.Right.Value, out note))
+                    var note = CodeNote.ResolveNote(requirement.Right.Value, notes, parentNote);
+                    if (note != null)
                     {
                         Notes = note.Note;
                         var subNote = note.GetSubNote(requirement.Left.Size);
