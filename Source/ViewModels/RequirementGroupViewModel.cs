@@ -20,8 +20,12 @@ namespace RATools.ViewModels
             Label = label;
 
             var list = new List<RequirementViewModel>();
+            CodeNote parentNote = null;
             foreach (var requirement in requirements)
-                list.Add(new RequirementViewModel(requirement, numberFormat, notes));
+            {
+                list.Add(new RequirementViewModel(requirement, numberFormat, notes, parentNote));
+                parentNote = UpdateParentNote(requirement, parentNote, notes);
+            }
 
             UpdateDependencies(list);
             Requirements = list;
@@ -200,22 +204,44 @@ namespace RATools.ViewModels
             }
         }
 
+        private static CodeNote UpdateParentNote(Requirement requirement, CodeNote parentNote, IDictionary<uint, CodeNote> notes)
+        {
+            if (requirement.Type == RequirementType.AddAddress && requirement.Left.IsMemoryReference)
+            {
+                var leftNote = CodeNote.ResolveNote(requirement.Left.Value, notes, parentNote);
+                return (leftNote != null && leftNote.IsPointer) ? leftNote : null;
+            }
+            else if (requirement.Type != RequirementType.AddAddress)
+            {
+                return null;
+            }
+            return parentNote;
+        }
+
         private static void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
         {
             if (right == null)
             {
+                CodeNote parentNote = null;
                 foreach (var requirement in left.Requirements)
-                    list.Add(new RequirementComparisonViewModel(requirement, null, numberFormat, notes));
+                {
+                    list.Add(new RequirementComparisonViewModel(requirement, null, numberFormat, notes, parentNote));
+                    parentNote = UpdateParentNote(requirement, parentNote, notes);
+                }
             }
             else if (left == null)
             {
                 foreach (var requirement in right.Requirements)
-                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
+                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes, null));
             }
             else if (left.Requirements.Count == right.Requirements.Count)
             {
+                CodeNote parentNote = null;
                 for (int i = 0; i < left.Requirements.Count; ++i)
-                    list.Add(new RequirementComparisonViewModel(left.Requirements[i], right.Requirements[i], numberFormat, notes));
+                {
+                    list.Add(new RequirementComparisonViewModel(left.Requirements[i], right.Requirements[i], numberFormat, notes, parentNote));
+                    parentNote = UpdateParentNote(left.Requirements[i], parentNote, notes);
+                }
             }
             else
             {
@@ -272,6 +298,7 @@ namespace RATools.ViewModels
                 }
 
                 var rightIndex = 0;
+                CodeNote parentNote = null;
 
                 foreach (var requirement in left.Requirements)
                 {
@@ -283,17 +310,18 @@ namespace RATools.ViewModels
                         {
                             var rightRequirement = right.Requirements[rightIndex++];
                             if (unmatchedCompareRequirements.Remove(rightRequirement))
-                                list.Add(new RequirementComparisonViewModel(null, rightRequirement, numberFormat, notes));
+                                list.Add(new RequirementComparisonViewModel(null, rightRequirement, numberFormat, notes, null));
                         }
 
                         rightIndex++;
                     }
 
-                    list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes));
+                    list.Add(new RequirementComparisonViewModel(requirement, match, numberFormat, notes, parentNote));
+                    parentNote = UpdateParentNote(requirement, parentNote, notes);
                 }
 
                 foreach (var requirement in unmatchedCompareRequirements)
-                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes));
+                    list.Add(new RequirementComparisonViewModel(null, requirement, numberFormat, notes, null));
             }
         }
 
@@ -450,7 +478,7 @@ namespace RATools.ViewModels
             while (GetBestMerge(list, out leftIndex, out rightIndex))
             {
                 list[leftIndex] = new RequirementComparisonViewModel(list[leftIndex].Requirement, 
-                    ((RequirementComparisonViewModel)list[rightIndex]).CompareRequirement, numberFormat, notes);
+                    ((RequirementComparisonViewModel)list[rightIndex]).CompareRequirement, numberFormat, notes, null);
                 list.RemoveAt(rightIndex);
             }
 

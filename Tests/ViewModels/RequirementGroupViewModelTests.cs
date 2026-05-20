@@ -1,4 +1,4 @@
-﻿using Jamiras.Components;
+using Jamiras.Components;
 using Moq;
 using NUnit.Framework;
 using RATools.Data;
@@ -6,6 +6,7 @@ using RATools.Parser;
 using RATools.Services;
 using RATools.ViewModels;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace RATools.Tests.ViewModels
@@ -105,6 +106,38 @@ namespace RATools.Tests.ViewModels
             ServiceRepository.Reset();
 
             Assert.That(strBuilder.ToString(), Is.EqualTo(expected));
+        }
+
+        [Test]
+        [TestCase("I:0xX1000_I:0xX0068_0xH0004=1",  // nested pointer
+            new[] { "[32-bit pointer] root\n+0x68 | [32-bit pointer] nested\n++0x4 | [8-bit] value" },
+            new[] { "[32-bit pointer] root\n+0x68 | [32-bit pointer] nested\n++0x4 | [8-bit] value", "[32-bit pointer] nested\n+0x4 | [8-bit] value", "[8-bit] value" })]
+        [TestCase("I:0xX1000_0xH0004=1_0xH2000=2",  // resets after pointer chain
+            new[] { "[32-bit pointer] root\n+0x4 | [8-bit] hp", "unrelated" },
+            new[] { "[32-bit pointer] root\n+0x4 | [8-bit] hp", "[8-bit] hp", "unrelated" })]
+        public void TestNotes(string serialized, string[] notes, string[] expectedNotes)
+        {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.HexValues).Returns(false);
+            ServiceRepository.Reset();
+            ServiceRepository.Instance.RegisterInstance(mockSettings.Object);
+
+            var builder = new AchievementBuilder();
+            builder.ParseRequirements(Tokenizer.CreateTokenizer(serialized));
+            var requirements = builder.ToAchievement().CoreRequirements;
+
+            // notes are for 0x1000, 0x2000, ...
+            var notesDict = new Dictionary<uint, CodeNote>();
+            for (int i = 0; i < notes.Length; i++)
+            {
+                uint address = (uint)(0x1000 * (i + 1));
+                notesDict[address] = new CodeNote(address, notes[i]);
+            }
+
+            var vmRequirementGroup = new RequirementGroupViewModel("Group", requirements, NumberFormat.Decimal, notesDict);
+
+            for (int i = 0; i < expectedNotes.Length; i++)
+                Assert.That(vmRequirementGroup.Requirements.ElementAt(i).Notes, Is.EqualTo(expectedNotes[i]));
         }
     }
 }
