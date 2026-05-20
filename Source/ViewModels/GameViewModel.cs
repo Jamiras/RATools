@@ -82,10 +82,6 @@ namespace RATools.ViewModels
         internal int GameId { get; private set; }
         internal int ConsoleId { get; private set; }
         internal string RACacheDirectory { get; private set; }
-        protected void SetRACacheDirectory(string value)
-        {
-            RACacheDirectory = value;
-        }
         public string LocalFilePath { get { return _achievementSets.FirstOrDefault()?.LocalAssets?.Filename; } }
 
         internal Dictionary<uint, CodeNote> Notes { get; private set; }

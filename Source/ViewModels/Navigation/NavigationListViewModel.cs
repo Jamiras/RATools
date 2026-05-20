@@ -362,14 +362,11 @@ namespace RATools.ViewModels.Navigation
         {
             foreach (var achievementSet in _achievementSets)
             {
-                if (achievementSet.LocalAssets != null)
-                {
-                    MergeAndPruneAssets<AchievementViewModel>(achievementSet.LocalAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
-                    MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.LocalAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
-                }
+                MergeAndPruneAssets<AchievementViewModel>(achievementSet.LocalAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+                MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.LocalAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
             }
 
-            var richPresence = _achievementSets.First(s => s.AchievementSet.Type == AchievementSetType.Core)?.LocalAssets?.RichPresence;
+            var richPresence = _achievementSets.First(s => s.AchievementSet.Type == AchievementSetType.Core).LocalAssets.RichPresence;
             if (richPresence != null)
             {
                 var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();

@@ -47,6 +47,8 @@ namespace RATools.Tests.ViewModels.Nagivation
                 var sets = (List<AchievementSet>)Game.AchievementSets.First().PublishedAssets.Sets;
                 sets.Add(new AchievementSet { Id = 1111, Title = Game.Title, Type = AchievementSetType.Core });
                 sets.Add(new AchievementSet { Id = 2222, Title = "Bonus", Type = AchievementSetType.Bonus });
+
+                Game.AchievementSets.Add(new AchievementSetViewModel(sets[1], Game.AchievementSets[0]));
             }
 
             public void Merge(AchievementScriptInterpreter interpreter)
@@ -105,7 +107,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             public MockGameViewModel(IFileSystemService fileSystemService)
                 : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService, new Mock<ISettings>().Object)
             {
-                SetRACacheDirectory("C:\\RACache\\");
+                AssociateRACacheDirectory("C:\\RACache\\");
             }
 
             public List<AchievementSetViewModel> AchievementSets

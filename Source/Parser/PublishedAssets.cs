@@ -6,7 +6,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
 namespace RATools.Parser
 {
@@ -35,9 +34,11 @@ namespace RATools.Parser
             RichPresence = null;
             Notes = new Dictionary<uint, CodeNote>();
 
-            _filename = filename;
-
-            Read();
+            if (!String.IsNullOrEmpty(filename))
+            {
+                _filename = filename;
+                Read();
+            }
         }
 
         private readonly IFileSystemService _fileSystemService;
@@ -290,6 +291,9 @@ namespace RATools.Parser
         public void LoadNotes()
         {
             Notes.Clear();
+
+            if (String.IsNullOrEmpty(_filename))
+                return;
 
             var filename = _filename.Replace(".json", "-Notes.json");
             using (var notesStream = _fileSystemService.OpenFile(filename, OpenFileMode.Read))

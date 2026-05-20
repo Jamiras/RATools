@@ -99,6 +99,13 @@ namespace RATools.ViewModels
         /// <param name="sets">[optional] Collection to populat with subsets.</param>
         public void AssociateRACacheDirectory(string raCacheDirectory, List<AchievementSetViewModel> sets = null)
         {
+            if (raCacheDirectory == null)
+            {
+                PublishedAssets = new PublishedAssets(null, _fileSystemService);
+                LocalAssets = new LocalAssets(null, _fileSystemService);
+                return;
+            }
+
             // published assets
             var fileName = Path.Combine(raCacheDirectory, _achievementSet.OwnerGameId + ".json");
             var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
