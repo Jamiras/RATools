@@ -125,7 +125,7 @@ namespace RATools.ViewModels
 
         public bool IsAddAddress
         {
-            get { return Requirement.Type == RequirementType.AddAddress; }
+            get { return Requirement?.Type == RequirementType.AddAddress; }
         }
 
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
