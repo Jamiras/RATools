@@ -206,16 +206,14 @@ namespace RATools.ViewModels
 
         private static CodeNote UpdateParentNote(Requirement requirement, CodeNote parentNote, IDictionary<uint, CodeNote> notes)
         {
-            if (requirement.Type == RequirementType.AddAddress && requirement.Left.IsMemoryReference)
-            {
-                var leftNote = CodeNote.ResolveNote(requirement.Left.Value, notes, parentNote);
-                return (leftNote != null && leftNote.IsPointer) ? leftNote : null;
-            }
-            else if (requirement.Type != RequirementType.AddAddress)
-            {
+            if (requirement.Type != RequirementType.AddAddress)
                 return null;
-            }
-            return parentNote;
+
+            if (!requirement.Left.IsMemoryReference)
+                return parentNote;
+
+            var leftNote = CodeNote.ResolveNote(requirement.Left.Value, notes, parentNote);
+            return (leftNote != null && leftNote.IsPointer) ? leftNote : null;
         }
 
         private static void AppendRequirements(List<RequirementViewModel> list, RequirementEx left, RequirementEx right, NumberFormat numberFormat, IDictionary<uint, CodeNote> notes)
