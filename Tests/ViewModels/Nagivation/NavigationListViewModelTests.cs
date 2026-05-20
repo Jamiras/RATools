@@ -103,7 +103,7 @@ namespace RATools.Tests.ViewModels.Nagivation
         class MockGameViewModel : GameViewModel
         {
             public MockGameViewModel(IFileSystemService fileSystemService)
-                : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService)
+                : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService, new Mock<ISettings>().Object)
             {
                 SetRACacheDirectory("C:\\RACache\\");
             }

@@ -13,7 +13,6 @@ using System.Linq;
 namespace RATools.ViewModels
 {
     [DebuggerDisplay("{Title}")]
-
     public class AchievementSetViewModel : ViewModelBase
     {
         public AchievementSetViewModel(AchievementSet achievementSet)
@@ -33,14 +32,15 @@ namespace RATools.ViewModels
         internal AchievementSetViewModel(AchievementSet achievementSet,
             ILogger logger, IFileSystemService fileSystemService)
         {
-            /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
-            _achievementSet = achievementSet;
-            Title = achievementSet.Title;
+            AchievementSet = achievementSet;
 
             _logger = logger;
             _fileSystemService = fileSystemService;
         }
 
+        /// <summary>
+        /// Gets the achievement set this view model wraps.
+        /// </summary>
         public AchievementSet AchievementSet
         {
             get { return _achievementSet; } 
@@ -48,6 +48,7 @@ namespace RATools.ViewModels
             {
                 _achievementSet = value;
                 Title = value.Title;
+                BadgeName = value.BadgeName ?? "";
             }
         }
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -55,13 +56,26 @@ namespace RATools.ViewModels
 
         protected readonly ILogger _logger;
         protected readonly IFileSystemService _fileSystemService;
+
+        /// <summary>
+        /// Gets the published assets managed by this view model.
+        /// </summary>
         public PublishedAssets PublishedAssets { get; private set; }
+
+        /// <summary>
+        /// Gets the local assets managed by this view model.
+        /// </summary>
         public LocalAssets LocalAssets { get; private set; }
 
-        public int GameId { get { return _achievementSet.OwnerGameId; } }
+        /// <summary>
+        /// Gets the unique identifier of the achievement set.
+        /// </summary>
         public int Id { get { return _achievementSet.OwnerSetId; } }
 
         public static readonly ModelProperty TitleProperty = ModelProperty.Register(typeof(AchievementSetViewModel), "Title", typeof(string), String.Empty);
+        /// <summary>
+        /// Gets the title of the achievement set.
+        /// </summary>
         public string Title
         {
             get { return (string)GetValue(TitleProperty); }
@@ -69,17 +83,57 @@ namespace RATools.ViewModels
         }
 
         public static readonly ModelProperty BadgeNameProperty = ModelProperty.Register(typeof(AchievementSetViewModel), "BadgeName", typeof(string), String.Empty);
+        /// <summary>
+        /// Gets the name of the badge for the achievement set.
+        /// </summary>
         public string BadgeName
         {
             get { return (string)GetValue(BadgeNameProperty); }
             set { SetValue(BadgeNameProperty, value); }
         }
 
+        /// <summary>
+        /// Loads local files related to the achievement set.
+        /// </summary>
+        /// <param name="raCacheDirectory">Path where the local files are stored.</param>
+        /// <param name="sets">[optional] Collection to populat with subsets.</param>
         public void AssociateRACacheDirectory(string raCacheDirectory, List<AchievementSetViewModel> sets = null)
         {
-            ReadPublished(raCacheDirectory);
+            // published assets
+            var fileName = Path.Combine(raCacheDirectory, _achievementSet.OwnerGameId + ".json");
+            var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
 
-            var fileName = Path.Combine(raCacheDirectory, GameId + "-User.txt");
+            var coreSet = publishedAssets.Sets.FirstOrDefault(s => s.Type == AchievementSetType.Core);
+            if (coreSet != null)
+            {
+                AchievementSet = coreSet;
+            }
+            else
+            {
+                Title = publishedAssets.Title;
+            }
+
+            if (_logger.IsEnabled(LogLevel.Verbose))
+            {
+                var promotedCount = publishedAssets.Achievements.Count(a => !a.IsUnpromoted);
+                var promotedPoints = publishedAssets.Achievements.Where(a => !a.IsUnpromoted).Sum(a => a.Points);
+                _logger.WriteVerbose(String.Format("Identified {0} promoted achievements ({1} points) for game {2}", promotedCount, promotedPoints, _achievementSet.OwnerGameId));
+
+                var unpromotedCount = publishedAssets.Achievements.Count(a => a.IsUnpromoted);
+                var unpromotedPoints = publishedAssets.Achievements.Where(a => a.IsUnpromoted).Sum(a => a.Points);
+                _logger.WriteVerbose(String.Format("Identified {0} unpromoted achievements ({1} points) for game {2}", unpromotedCount, unpromotedPoints, _achievementSet.OwnerGameId));
+            }
+
+            if (AchievementSet.Type == AchievementSetType.Core)
+            {
+                publishedAssets.LoadNotes();
+                _logger.WriteVerbose(String.Format("Read {0} code notes for game {1}", publishedAssets.Notes.Count, _achievementSet.OwnerGameId));
+            }
+
+            PublishedAssets = publishedAssets;
+
+            // local assets
+            fileName = Path.Combine(raCacheDirectory, _achievementSet.OwnerGameId + "-User.txt");
             LocalAssets = new LocalAssets(fileName, _fileSystemService);
 
             if (String.IsNullOrEmpty(LocalAssets.Title))
@@ -89,7 +143,7 @@ namespace RATools.ViewModels
             {
                 var localAchievementCount = LocalAssets.Achievements.Count();
                 var localAchievementPoints = LocalAssets.Achievements.Sum(a => a.Points);
-                _logger.WriteVerbose(String.Format("Read {0} local achievements ({1} points) from {2}-User.txt", localAchievementCount, localAchievementPoints, GameId));
+                _logger.WriteVerbose(String.Format("Read {0} local achievements ({1} points) from {2}-User.txt", localAchievementCount, localAchievementPoints, _achievementSet.OwnerGameId));
             }
 
             if (sets != null)
@@ -102,46 +156,21 @@ namespace RATools.ViewModels
             }
         }
 
-        private void ReadPublished(string raCacheDirectory)
-        {
-            var fileName = Path.Combine(raCacheDirectory, GameId + ".json");
-            var publishedAssets = new PublishedAssets(fileName, _fileSystemService);
-
-            var coreSet = publishedAssets.Sets.FirstOrDefault(s => s.Type == AchievementSetType.Core);
-            if (coreSet != null)
-            {
-                _achievementSet = coreSet;
-                Title = coreSet.Title;
-            }
-            else
-            {
-                Title = publishedAssets.Title;
-            }
-
-            if (_logger.IsEnabled(LogLevel.Verbose))
-            {
-                var promotedCount = publishedAssets.Achievements.Count(a => !a.IsUnpromoted);
-                var promotedPoints = publishedAssets.Achievements.Where(a => !a.IsUnpromoted).Sum(a => a.Points);
-                _logger.WriteVerbose(String.Format("Identified {0} promoted achievements ({1} points) for game {2}", promotedCount, promotedPoints, GameId));
-
-                var unpromotedCount = publishedAssets.Achievements.Count(a => a.IsUnpromoted);
-                var unpromotedPoints = publishedAssets.Achievements.Where(a => a.IsUnpromoted).Sum(a => a.Points);
-                _logger.WriteVerbose(String.Format("Identified {0} unpromoted achievements ({1} points) for game {2}", unpromotedCount, unpromotedPoints, GameId));
-            }
-
-            if (AchievementSet.Type == AchievementSetType.Core)
-            {
-                publishedAssets.LoadNotes();
-                _logger.WriteVerbose(String.Format("Read {0} code notes for game {1}", publishedAssets.Notes.Count, GameId));
-            }
-
-            PublishedAssets = publishedAssets;
-        }
-
+        /// <summary>
+        /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
+        /// </summary>
+        /// <param name="achievement">The existing achievement.</param>
+        /// <param name="localAchievement">The new achievement, or <c>null</c> to remove.</param>
+        /// <param name="assetChangedHandler">A callback to call if the achievement is updated by the refresh.</param>
+        /// <param name="refresh"><c>true</c> to reload the local file before merging.</param>
+        /// <returns></returns>
         public bool UpdateLocal(Achievement achievement, Achievement localAchievement, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
-            if (achievement.OwnerSetId != AchievementSet.OwnerSetId)
-                return false;
+            if (localAchievement != null && localAchievement.OwnerSetId != AchievementSet.OwnerSetId)
+            {
+                if (localAchievement.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
+                    return false;
+            }
 
             if (refresh)
             {
@@ -176,7 +205,10 @@ namespace RATools.ViewModels
         public bool UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
             if (leaderboard.OwnerSetId != AchievementSet.OwnerSetId)
-                return false;
+            {
+                if (leaderboard.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
+                    return false;
+            }
 
             if (refresh)
             {
@@ -211,7 +243,10 @@ namespace RATools.ViewModels
         internal bool UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
             if (richPresence.OwnerSetId != AchievementSet.OwnerSetId)
-                return false;
+            {
+                if (richPresence.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
+                    return false;
+            }
 
             if (refresh)
             {

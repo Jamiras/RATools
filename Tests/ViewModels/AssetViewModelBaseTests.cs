@@ -49,7 +49,7 @@ namespace RATools.Tests.ViewModels
             private class MockGameViewModel : GameViewModel
             {
                 public MockGameViewModel()
-                    : base(99, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object)
+                    : base(99, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object, new Mock<ISettings>().Object)
                 { 
                 }
             }

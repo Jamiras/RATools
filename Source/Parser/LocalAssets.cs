@@ -425,7 +425,7 @@ namespace RATools.Parser
         /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
         /// </summary>
         /// <param name="existingAchievement">The existing achievement.</param>
-        /// <param name="newAchievement">The new achievement, <c>null</c> to remove.</param>
+        /// <param name="newAchievement">The new achievement, or <c>null</c> to remove.</param>
         /// <returns>The previous version if the item was replaced, <c>null</c> if the <paramref name="existingAchievement"/> was not in the list.</returns>
         public Achievement Replace(Achievement existingAchievement, Achievement newAchievement)
         {

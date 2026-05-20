@@ -25,10 +25,27 @@ namespace RATools.Tests.ViewModels
             }
 
             public GameViewModelHarness(int gameId, string title, IFileSystemService fileSystemService)
-                : base(gameId, title, new Mock<ILogger>().Object, fileSystemService)
+                : this(gameId, title, fileSystemService, new Mock<ISettings>().Object)
+            {
+            }
+
+            public GameViewModelHarness(int gameId, string title, IFileSystemService fileSystemService, ISettings settings)
+                : base(gameId, title, new Mock<ILogger>().Object, fileSystemService, settings)
             {
                 Script = new Mock<ScriptViewModel>().Object;
                 SelectedEditor = Script;
+            }
+
+            public Achievement FindLocalAchievement(int id)
+            {
+                foreach (var achievementSet in _achievementSets)
+                {
+                    var achievement = achievementSet.LocalAssets.Achievements.FirstOrDefault(a => a.Id == id);
+                    if (achievement != null)
+                        return achievement;
+                }
+
+                return null;
             }
 
             public Achievement AddLocalAchievement(int id, string name)
@@ -47,6 +64,7 @@ namespace RATools.Tests.ViewModels
                 ((List<Achievement>)coreSet.LocalAssets.Achievements).Add(achievement);
                 return achievement;
             }
+
             public Achievement AddPublishedAchievement(int id, string name)
             {
                 var coreSet = _achievementSets.First();
@@ -332,14 +350,119 @@ namespace RATools.Tests.ViewModels
             Assert.That(ach234.CoreRequirements.First().Right.Value, Is.EqualTo(3));
             Assert.That(ach234.Published, Is.EqualTo(new DateTime(2021, 07, 05, 18, 03, 35, DateTimeKind.Utc)));
             Assert.That(ach234.LastModified, Is.EqualTo(new DateTime(2021, 07, 09, 04, 44, 13, DateTimeKind.Utc)));
+        }
 
-            //Assert.That(vmGame.GeneratedAchievementCount, Is.EqualTo(0));
-            //Assert.That(vmGame.PromotedAchievementCount, Is.EqualTo(1));
-            //Assert.That(vmGame.PromotedAchievementPoints, Is.EqualTo(6));
-            //Assert.That(vmGame.UnpromotedAchievementCount, Is.EqualTo(1));
-            //Assert.That(vmGame.UnpromotedAchievementPoints, Is.EqualTo(3));
-            //Assert.That(vmGame.LocalAchievementCount, Is.EqualTo(0));
-            //Assert.That(vmGame.LocalAchievementPoints, Is.EqualTo(0));
+        private static (GameViewModelHarness vmGame, MemoryStream stream) InitUserFile(string mockLocalContents)
+        {
+            var mockSettings = new Mock<ISettings>();
+            mockSettings.Setup(s => s.UserName).Returns("Test");
+
+            var mockFileSystemService = new Mock<IFileSystemService>();
+            string mockPublished = "{\"ID\":1234,\"Title\":\"GameTitle\",\"Achievements\":[]}";
+            mockFileSystemService.Setup(f => f.OpenFile("C:\\Emulator\\RACache\\Data\\1234.json", OpenFileMode.Read))
+                .Returns(new MemoryStream(Encoding.UTF8.GetBytes(mockPublished)));
+
+            mockFileSystemService.Setup(f => f.FileExists("C:\\Emulator\\RACache\\Data\\1234-User.txt")).Returns(true);
+            mockFileSystemService.Setup(f => f.OpenFile("C:\\Emulator\\RACache\\Data\\1234-User.txt", OpenFileMode.Read))
+                .Returns(new MemoryStream(Encoding.UTF8.GetBytes(mockLocalContents)));
+
+            var memoryStream = new MemoryStream();
+            mockFileSystemService.Setup(f => f.CreateFile("C:\\Emulator\\RACache\\Data\\1234-User.txt"))
+                .Returns(memoryStream);
+
+            var vmGame = new GameViewModelHarness(1234, "Title", mockFileSystemService.Object, mockSettings.Object)
+            {
+                SerializationContext = new SerializationContext { MinimumVersion = Data.Version._1_3, AddressWidth = 4 }
+            };
+            vmGame.AssociateRACacheDirectory("C:\\Emulator\\RACache\\Data");
+
+            return (vmGame, memoryStream);
+        }
+
+        [Test]
+        public void TestAddAchievementToLocalFile()
+        {
+            string mockLocal = 
+                "0.99\r\n" +
+                "GameTitle\r\n" +
+                "123:\"0xH2222=2\":\"Test\":\"TestDesc\": : ::Test:10:0:0:0:0:\r\n";
+            var x = InitUserFile(mockLocal);
+            var vmGame = x.vmGame;
+            var memoryStream = x.stream;
+
+            var achievement = new Achievement
+            {
+                Id = Achievement.FirstLocalId,
+                Title = "NewAchievement",
+                Description = "NewDescription",
+                Points = 5,
+                Type = AchievementType.Progression,
+                Trigger = Trigger.Deserialize("0xH1234=1_P:0x 2345=0"),
+            };
+
+            var warning = new StringBuilder();
+            vmGame.UpdateLocal(achievement, null, warning, false);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo(
+                "1.3\r\n" +
+                "GameTitle\r\n" +
+                "123:\"0xH2222=2\":\"Test\":\"TestDesc\": : ::Test:10:0:0:0:0:\r\n" +
+                achievement.Id + ":\"0xH1234=1_P:0x 2345=0\":\"NewAchievement\":\"NewDescription\": : :progression:Test:5:0:0:0:0:\r\n"));
+        }
+
+        [Test]
+        public void TestUpdateAchievementInLocalFile()
+        {
+            string mockLocal =
+                "0.99\r\n" +
+                "GameTitle\r\n" +
+                "123:\"0xH2222=2\":\"Test\":\"TestDesc\": : ::Test:10:0:0:0:0:\r\n";
+            var x = InitUserFile(mockLocal);
+            var vmGame = x.vmGame;
+            var memoryStream = x.stream;
+
+            var localAchievement = vmGame.FindLocalAchievement(123);
+            var achievement = new Achievement
+            {
+                Id = 123,
+                Title = "NewAchievement",
+                Description = "NewDescription",
+                Points = 5,
+                Type = AchievementType.Progression,
+                Trigger = Trigger.Deserialize("0xH1234=1_P:0x 2345=0"),
+            };
+
+            var warning = new StringBuilder();
+            vmGame.UpdateLocal(achievement, localAchievement, warning, false);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo(
+                "1.3\r\n" +
+                "GameTitle\r\n" +
+                "123:\"0xH1234=1_P:0x 2345=0\":\"NewAchievement\":\"NewDescription\": : :progression:Test:5:0:0:0:0:\r\n"));
+        }
+
+        [Test]
+        public void TestRemoveAchievementFromLocalFile()
+        {
+            string mockLocal =
+                "0.99\r\n" +
+                "GameTitle\r\n" +
+                "123:\"0xH2222=2\":\"Test\":\"TestDesc\": : ::Test:10:0:0:0:0:\r\n";
+            var x = InitUserFile(mockLocal);
+            var vmGame = x.vmGame;
+            var memoryStream = x.stream;
+
+            var localAchievement = vmGame.FindLocalAchievement(123);
+
+            var warning = new StringBuilder();
+            vmGame.UpdateLocal(null, localAchievement, warning, false);
+
+            var output = Encoding.UTF8.GetString(memoryStream.ToArray());
+            Assert.That(output, Is.EqualTo(
+                "1.3\r\n" +
+                "GameTitle\r\n"));
         }
     }
 }

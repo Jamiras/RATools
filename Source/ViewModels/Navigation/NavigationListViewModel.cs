@@ -337,11 +337,14 @@ namespace RATools.ViewModels.Navigation
         {
             foreach (var achievementSet in _achievementSets)
             {
-                MergeAndPruneAssets<AchievementViewModel>(achievementSet.PublishedAssets.Achievements, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
-                MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.PublishedAssets.Leaderboards, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+                if (achievementSet.PublishedAssets != null)
+                {
+                    MergeAndPruneAssets<AchievementViewModel>(achievementSet.PublishedAssets.Achievements, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+                    MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.PublishedAssets.Leaderboards, 30000, (vm, a) => vm.Published.Asset = a, (vm) => vm.Published.Asset);
+                }
             }
 
-            var richPresence = _achievementSets.Where(s => s.AchievementSet.Type == AchievementSetType.Core).First()?.PublishedAssets.RichPresence;
+            var richPresence = _achievementSets.FirstOrDefault(s => s.AchievementSet.Type == AchievementSetType.Core).PublishedAssets?.RichPresence;
             if (richPresence != null)
             {
                 var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();
@@ -359,11 +362,14 @@ namespace RATools.ViewModels.Navigation
         {
             foreach (var achievementSet in _achievementSets)
             {
-                MergeAndPruneAssets<AchievementViewModel>(achievementSet.LocalAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
-                MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.LocalAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+                if (achievementSet.LocalAssets != null)
+                {
+                    MergeAndPruneAssets<AchievementViewModel>(achievementSet.LocalAssets.Achievements, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+                    MergeAndPruneAssets<LeaderboardViewModel>(achievementSet.LocalAssets.Leaderboards, 20000, (vm, a) => vm.Local.Asset = a, (vm) => vm.Local.Asset);
+                }
             }
 
-            var richPresence = _achievementSets.Where(s => s.AchievementSet.Type == AchievementSetType.Core).First()?.LocalAssets.RichPresence;
+            var richPresence = _achievementSets.First(s => s.AchievementSet.Type == AchievementSetType.Core)?.LocalAssets?.RichPresence;
             if (richPresence != null)
             {
                 var richPresenceViewModel = _editors.OfType<RichPresenceViewModel>().FirstOrDefault();

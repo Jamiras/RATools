@@ -24,13 +24,14 @@ namespace RATools.ViewModels
         public GameViewModel(int gameId, string title)
             : this(gameId, title,
                   ServiceRepository.Instance.FindService<ILogService>().GetLogger("RATools"),
-                  ServiceRepository.Instance.FindService<IFileSystemService>())
+                  ServiceRepository.Instance.FindService<IFileSystemService>(),
+                  ServiceRepository.Instance.FindService<ISettings>())
         {
             InitializeForUI();
         }
 
         internal GameViewModel(int gameId, string title,
-            ILogger logger, IFileSystemService fileSystemService)
+            ILogger logger, IFileSystemService fileSystemService, ISettings settings)
         {
             /* unit tests call this constructor directly and will provide their own Script object and don't need Resources */
             GameId = gameId;
@@ -39,6 +40,8 @@ namespace RATools.ViewModels
             GoToSourceCommand = new DelegateCommand<int>(GoToSource);
 
             _fileSystemService = fileSystemService;
+            _settings = settings;
+
             _achievementSets = new List<AchievementSetViewModel>();
             _achievementSets.Add(new AchievementSetViewModel(new AchievementSet
             {
@@ -54,6 +57,7 @@ namespace RATools.ViewModels
         }
 
         protected readonly IFileSystemService _fileSystemService;
+        protected readonly ISettings _settings;
         protected readonly List<AchievementSetViewModel> _achievementSets;
 
         public void InitializeForUI()
@@ -343,24 +347,30 @@ namespace RATools.ViewModels
 
             foreach (var achievementSet in _achievementSets)
             {
-                foreach (var achievement in achievementSet.PublishedAssets.Achievements)
+                if (achievementSet.PublishedAssets != null)
                 {
-                    if (achievement.IsUnpromoted)
+                    foreach (var achievement in achievementSet.PublishedAssets.Achievements)
                     {
-                        unpromotedAchievementCount++;
-                        unpromotedAchievementPoints += achievement.Points;
-                    }
-                    else
-                    {
-                        promotedAchievementCount++;
-                        promotedAchievementPoints += achievement.Points;
+                        if (achievement.IsUnpromoted)
+                        {
+                            unpromotedAchievementCount++;
+                            unpromotedAchievementPoints += achievement.Points;
+                        }
+                        else
+                        {
+                            promotedAchievementCount++;
+                            promotedAchievementPoints += achievement.Points;
+                        }
                     }
                 }
 
-                foreach (var achievement in achievementSet.LocalAssets.Achievements)
+                if (achievementSet.LocalAssets != null)
                 {
-                    localAchievementCount++;
-                    localAchievementPoints += achievement.Points;
+                    foreach (var achievement in achievementSet.LocalAssets.Achievements)
+                    {
+                        localAchievementCount++;
+                        localAchievementPoints += achievement.Points;
+                    }
                 }
             }
 
@@ -465,6 +475,13 @@ namespace RATools.ViewModels
             return null;
         }
 
+        /// <summary>
+        /// Replaces an existing local achievement with a new value.
+        /// </summary>
+        /// <param name="achievement">The new achievement, or <c>null</c> to delete the achievement.</param>
+        /// <param name="localAchievement">The existing local achievemetn, or <c>null</c> for a new achievement.</param>
+        /// <param name="warning">A buffer to capture serialization errors.</param>
+        /// <param name="validateAll"><c>false</c> to write the other assets without validating them.</param>
         internal void UpdateLocal(Achievement achievement, Achievement localAchievement, StringBuilder warning, bool validateAll)
         {
             bool refresh = (_localAchievementCommitSuspendCount == 0);
@@ -477,7 +494,7 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
             {
-                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                var username = _settings.UserName;
                 foreach (var achievementSet in _achievementSets)
                 {
                     if (!achievementSet.AchievementSet.Type.CanLoadWithBaseSet())
@@ -502,7 +519,7 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
             {
-                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                var username = _settings.UserName;
                 foreach (var achievementSet in _achievementSets)
                 {
                     if (!achievementSet.AchievementSet.Type.CanLoadWithBaseSet())
@@ -527,7 +544,7 @@ namespace RATools.ViewModels
 
             if (_localAchievementCommitSuspendCount == 0)
             {
-                coreSet.LocalAssets.Commit(ServiceRepository.Instance.FindService<ISettings>().UserName,
+                coreSet.LocalAssets.Commit(_settings.UserName,
                     warning, SerializationContext,
                     validateAll ? null : new List<AssetBase>() { coreSet.LocalAssets.RichPresence },
                     PublishedSets);
@@ -550,7 +567,7 @@ namespace RATools.ViewModels
         {
             if (_localAchievementCommitSuspendCount > 0 && --_localAchievementCommitSuspendCount == 0)
             {
-                var username = ServiceRepository.Instance.FindService<ISettings>().UserName;
+                var username = _settings.UserName;
                 foreach (var achievementSet in _achievementSets)
                 {
                     achievementSet.LocalAssets.Commit(username,
@@ -661,6 +678,7 @@ namespace RATools.ViewModels
 
             var coreSet = _achievementSets.First();
             coreSet.AssociateRACacheDirectory(raCacheDirectory, _achievementSets);
+            Title = coreSet.Title;
 
             foreach (var kvp in coreSet.PublishedAssets.Notes)
                 Notes[kvp.Key] = kvp.Value;

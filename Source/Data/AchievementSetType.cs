@@ -71,13 +71,11 @@
         /// <summary>
         /// Gets whether or not the achievement set loads with the base set.
         /// </summary>
-        /// <param name="type"></param>
-        /// <returns></returns>
+        /// <remarks>If <c>false</c>, the achievement set has its own XXX.json and XXX-User.txt</c></remarks>
         public static bool CanLoadWithBaseSet(this AchievementSetType type)
         {
             switch (type)
             {
-                case AchievementSetType.Core:
                 case AchievementSetType.Bonus:
                 case AchievementSetType.Challenge:
                     return true;
