@@ -14,6 +14,7 @@ namespace RATools.Parser
 
         public int GameId { get; set; }
         public List<AchievementSet> Sets { get; private set; }
+        public List<AchievementSet> GeneratedSets { get; set; }
         public Dictionary<Achievement, int> Achievements { get; set; }
         public Dictionary<Leaderboard, int> Leaderboards { get; set; }
         public RichPresenceBuilder RichPresence { get; set; }

@@ -107,6 +107,9 @@ namespace RATools.Parser
             _leaderboards.Clear();
             RichPresence = null;
 
+            if (!_fileSystemService.FileExists(_filename))
+                return;
+
             using (var stream = _fileSystemService.OpenFile(_filename, OpenFileMode.Read))
             {
                 if (stream == null)

@@ -25,8 +25,17 @@ namespace RATools.ViewModels
         public AchievementSetViewModel(AchievementSet subset, AchievementSetViewModel coreSetViewModel)
             : this(subset, coreSetViewModel._logger, coreSetViewModel._fileSystemService)
         {
-            PublishedAssets = coreSetViewModel.PublishedAssets;
-            LocalAssets = coreSetViewModel.LocalAssets;
+            if (!subset.Type.CanLoadWithBaseSet())
+            {
+                var raCacheDirectory = Path.GetDirectoryName(coreSetViewModel.LocalAssets.Filename);
+                AssociateRACacheDirectory(raCacheDirectory);
+            }
+
+            if (PublishedAssets == null)
+            {
+                PublishedAssets = coreSetViewModel.PublishedAssets;
+                LocalAssets = coreSetViewModel.LocalAssets;
+            }
         }
 
         internal AchievementSetViewModel(AchievementSet achievementSet,
@@ -96,7 +105,7 @@ namespace RATools.ViewModels
         /// Loads local files related to the achievement set.
         /// </summary>
         /// <param name="raCacheDirectory">Path where the local files are stored.</param>
-        /// <param name="sets">[optional] Collection to populat with subsets.</param>
+        /// <param name="sets">[optional] Collection to populate with subsets.</param>
         public void AssociateRACacheDirectory(string raCacheDirectory, List<AchievementSetViewModel> sets = null)
         {
             if (raCacheDirectory == null)
@@ -117,7 +126,7 @@ namespace RATools.ViewModels
             }
             else
             {
-                Title = publishedAssets.Title;
+                Title = publishedAssets.Title ?? _achievementSet.Title;
             }
 
             if (_logger.IsEnabled(LogLevel.Verbose))
@@ -173,9 +182,9 @@ namespace RATools.ViewModels
         /// <returns></returns>
         public bool UpdateLocal(Achievement achievement, Achievement localAchievement, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
-            if (localAchievement != null && localAchievement.OwnerSetId != AchievementSet.OwnerSetId)
+            if (achievement != null && achievement.OwnerSetId != AchievementSet.OwnerSetId)
             {
-                if (localAchievement.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
+                if (achievement.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
                     return false;
             }
 

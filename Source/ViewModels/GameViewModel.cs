@@ -82,7 +82,6 @@ namespace RATools.ViewModels
         internal int GameId { get; private set; }
         internal int ConsoleId { get; private set; }
         internal string RACacheDirectory { get; private set; }
-        public string LocalFilePath { get { return _achievementSets.FirstOrDefault()?.LocalAssets?.Filename; } }
 
         internal Dictionary<uint, CodeNote> Notes { get; private set; }
         internal SerializationContext SerializationContext { get; set; }
@@ -672,12 +671,19 @@ namespace RATools.ViewModels
             }
         }
 
+        internal IEnumerable<AchievementSetViewModel> AchievementSets
+        {
+            get { return _achievementSets; }
+        }
+
         public void AssociateRACacheDirectory(string raCacheDirectory)
         {
             RACacheDirectory = raCacheDirectory;
 
+            foreach (var set in _achievementSets)
+                set.AssociateRACacheDirectory(raCacheDirectory);
+
             var coreSet = _achievementSets.First();
-            coreSet.AssociateRACacheDirectory(raCacheDirectory, _achievementSets);
             Title = coreSet.Title;
 
             foreach (var kvp in coreSet.PublishedAssets.Notes)

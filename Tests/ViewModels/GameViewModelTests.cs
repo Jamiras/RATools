@@ -314,6 +314,7 @@ namespace RATools.Tests.ViewModels
                 "{\"ID\":234,\"MemAddr\":\"2=3\",\"Title\":\"Ach234\",\"Description\":\"Desc234\"," +
                  "\"Points\":3,\"Modified\":1625805853,\"Created\":1625508215,\"BadgeName\":\"5555\",\"Flags\":5}" +
               "]}";
+            mockFileSystemService.Setup(f => f.FileExists("C:\\Emulator\\RACache\\Data\\1234.json")).Returns(true);
             mockFileSystemService.Setup(f => f.OpenFile("C:\\Emulator\\RACache\\Data\\1234.json", OpenFileMode.Read))
                 .Returns(new MemoryStream(Encoding.UTF8.GetBytes(mockPublished)));
             var vmGame = new GameViewModelHarness(1234, "Title", mockFileSystemService.Object);

@@ -1,5 +1,6 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -56,21 +57,6 @@ namespace RATools.Parser.Functions
                     Title = title.Value,
                 };
 
-                if ((set.Id != 0 || set.OwnerGameId != 0) &&
-                    context.Sets.Any(s => s.Id < AssetBase.FirstLocalId / 10))
-                {
-                    if (set.Id != 0)
-                        result = new ErrorExpression("Could not find set " + set.Id, id);
-                    else
-                        result = new ErrorExpression("Could not find set for game " + set.OwnerGameId, gameId);
-                    return false;
-                }
-
-                if (set.Id == 0)
-                    set.Id = set.OwnerSetId = AssetBase.FirstLocalId / 10 + context.Sets.Count + 1;
-                if (set.OwnerGameId == 0)
-                    set.OwnerGameId = context.GameId;
-
                 var type = GetStringParameter(scope, "type", out result);
                 if (type != null)
                 {
@@ -91,7 +77,26 @@ namespace RATools.Parser.Functions
                     }
                 }
 
+                if ((set.Id != 0 || set.OwnerGameId != 0) &&
+                    set.Type.CanLoadWithBaseSet() &&
+                    context.Sets.Any(s => s.Id < AssetBase.FirstLocalId / 10))
+                {
+                    if (set.Id != 0)
+                        result = new ErrorExpression("Could not find set " + set.Id, id);
+                    else
+                        result = new ErrorExpression("Could not find set for game " + set.OwnerGameId, gameId);
+                    return false;
+                }
+
+                if (set.Id == 0)
+                    set.Id = set.OwnerSetId = AssetBase.FirstLocalId / 10 + context.Sets.Count + 1;
+                if (set.OwnerGameId == 0)
+                    set.OwnerGameId = context.GameId;
+
                 context.Sets.Add(set);
+
+                context.GeneratedSets ??= new List<AchievementSet>();
+                context.GeneratedSets.Add(set);
             }
 
             result = new IntegerConstantExpression(set.Id);
