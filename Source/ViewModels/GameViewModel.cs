@@ -500,6 +500,8 @@ namespace RATools.ViewModels
                             PublishedSets);
                     }
                 }
+
+                UpdateStatusBarText();
             }
         }
 
@@ -575,6 +577,8 @@ namespace RATools.ViewModels
                     if (node.Children != null)
                         PruneDeletedAssets(node.Children);
                 }
+
+                UpdateStatusBarText();
             }
         }
 
