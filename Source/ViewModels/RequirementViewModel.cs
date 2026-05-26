@@ -123,6 +123,11 @@ namespace RATools.ViewModels
 
         public bool IsNoteShortened { get; private set; }
 
+        public bool IsAddAddress
+        {
+            get { return Requirement?.Type == RequirementType.AddAddress; }
+        }
+
         internal virtual void OnShowHexValuesChanged(ModelPropertyChangedEventArgs e)
         {
             if (Requirement != null)

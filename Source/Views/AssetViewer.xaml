@@ -108,7 +108,17 @@
 
     <DataTemplate x:Key="codeNotesStackPanelTemplate">
         <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Binding NotesShort}" Style="{StaticResource themedTextBlock}" TextWrapping="Wrap" FontStyle="Italic" />
+            <TextBlock Text="{Binding NotesShort}" TextWrapping="Wrap" FontStyle="Italic">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource themedTextBlock}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsAddAddress}" Value="True">
+                                <Setter Property="Opacity" Value="0.6" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
             <Border BorderBrush="{Binding DataContext.Resources.ScrollBarForegroundBrush, ElementName=gameGrid}"
                     BorderThickness="2" CornerRadius="4" Margin="6,0,0,0">
                 <Border.Style>
