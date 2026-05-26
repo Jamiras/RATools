@@ -35,10 +35,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             {
                 if (Game == null)
                 {
-                    _publishedAssets = new PublishedAssets("1234.json", _fileSystemService.Object);
-                    _localAssets = new LocalAssets("1234-User.txt", _fileSystemService.Object);
-
-                    Game = new MockGameViewModel(_fileSystemService.Object, _publishedAssets, _localAssets);
+                    Game = new MockGameViewModel(_fileSystemService.Object);
                     Game.SetValue(GameViewModel.NavigationNodesProperty, NavigationNodes);
                 }
             }
@@ -47,16 +44,18 @@ namespace RATools.Tests.ViewModels.Nagivation
             {
                 Initialize();
 
-                var sets = (List<AchievementSet>)_publishedAssets.Sets;
+                var sets = (List<AchievementSet>)Game.AchievementSets.First().PublishedAssets.Sets;
                 sets.Add(new AchievementSet { Id = 1111, Title = Game.Title, Type = AchievementSetType.Core });
                 sets.Add(new AchievementSet { Id = 2222, Title = "Bonus", Type = AchievementSetType.Bonus });
+
+                Game.AchievementSets.Add(new AchievementSetViewModel(sets[1], Game.AchievementSets[0]));
             }
 
             public void Merge(AchievementScriptInterpreter interpreter)
             {
                 Initialize();
 
-                var viewModel = new NavigationListViewModel(Game, _publishedAssets, _localAssets, _editors, _backgroundWorkerService.Object);
+                var viewModel = new NavigationListViewModel(Game, Game.AchievementSets, _editors, _backgroundWorkerService.Object);
                 NavigationNodes = viewModel.Merge(interpreter).ToList();
             }
 
@@ -74,7 +73,7 @@ namespace RATools.Tests.ViewModels.Nagivation
                 Initialize();
 
                 var achievement = CreateAchievement(title, points, type);
-                ((List<Achievement>)_localAssets.Achievements).Add(achievement);
+                ((List<Achievement>)Game.AchievementSets.First().LocalAssets.Achievements).Add(achievement);
                 return achievement;
             }
 
@@ -83,15 +82,13 @@ namespace RATools.Tests.ViewModels.Nagivation
                 Initialize();
 
                 var achievement = CreateAchievement(title, points, type);
-                ((List<Achievement>)_publishedAssets.Achievements).Add(achievement);
+                ((List<Achievement>)Game.AchievementSets.First().PublishedAssets.Achievements).Add(achievement);
                 return achievement;
             }
 
             private readonly Mock<IFileSystemService> _fileSystemService;
             private readonly Mock<IBackgroundWorkerService> _backgroundWorkerService;
             public MockGameViewModel Game { get; private set; }
-            private PublishedAssets _publishedAssets;
-            private LocalAssets _localAssets;
             private readonly List<ViewerViewModelBase> _editors;
 
             public List<NavigationViewModelBase> NavigationNodes { get; private set; }
@@ -107,13 +104,15 @@ namespace RATools.Tests.ViewModels.Nagivation
 
         class MockGameViewModel : GameViewModel
         {
-            public MockGameViewModel(IFileSystemService fileSystemService, PublishedAssets publishedAssets, LocalAssets localAssets)
-                : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService)
+            public MockGameViewModel(IFileSystemService fileSystemService)
+                : base(1234, "Game Title", new Mock<ILogger>().Object, fileSystemService, new Mock<ISettings>().Object)
             {
-                SetRACacheDirectory("C:\\RACache\\");
+                AssociateRACacheDirectory("C:\\RACache\\");
+            }
 
-                _publishedAssets = publishedAssets;
-                _localAssets = localAssets;
+            public List<AchievementSetViewModel> AchievementSets
+            {
+                get { return _achievementSets; }
             }
 
             public void InitScript(string filename)

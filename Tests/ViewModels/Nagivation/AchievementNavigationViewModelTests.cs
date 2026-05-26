@@ -17,7 +17,7 @@ namespace RATools.Tests.ViewModels.Nagivation
         [Test]
         public void TestInitialState()
         {
-            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object);
+            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object, new Mock<ISettings>().Object);
             var achievement = new AchievementViewModel(game);
             var harness = new AchievementNavigationViewModel(achievement);
             Assert.That(harness.ImageName, Is.EqualTo("achievement"));
@@ -45,7 +45,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             ServiceRepository.Reset();
             ServiceRepository.Instance.RegisterInstance(new Mock<ISettings>().Object);
 
-            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object);
+            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object, new Mock<ISettings>().Object);
             var achievement = new Achievement { Points = 5 };
             var achievementViewModel = new AchievementViewModel(game);
             achievementViewModel.Generated.Asset = achievement;
@@ -70,7 +70,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             ServiceRepository.Reset();
             ServiceRepository.Instance.RegisterInstance(new Mock<ISettings>().Object);
 
-            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object);
+            var game = new GameViewModel(1, "Game", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object, new Mock<ISettings>().Object);
             var achievement = new Achievement { Type = AchievementType.Progression };
             var achievementViewModel = new AchievementViewModel(game);
             achievementViewModel.Generated.Asset = achievement;

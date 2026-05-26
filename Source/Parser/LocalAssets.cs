@@ -38,10 +38,13 @@ namespace RATools.Parser
             _notes = new Dictionary<uint, string>();
             RichPresence = null;
 
-            _filename = filename;
             Version = Data.Version.MinimumVersion;
 
-            Read();
+            if (!String.IsNullOrEmpty(filename))
+            {
+                _filename = filename;
+                Read();
+            }
         }
 
         private readonly IFileSystemService _fileSystemService;
@@ -94,6 +97,12 @@ namespace RATools.Parser
 
         private void Read()
         {
+            if (String.IsNullOrEmpty(_filename))
+            {
+                RichPresence = null;
+                return;
+            }
+
             if (_fileSystemService.FileExists(_filename))
             {
                 _lastSave = _fileSystemService.GetFileLastModified(_filename);
@@ -308,6 +317,9 @@ namespace RATools.Parser
 
         public void MergeExternalChanges(Action<AssetBase, LocalAssetChange> changeHandler)
         {
+            if (String.IsNullOrEmpty(_filename))
+                return;
+
             var fileDate = _fileSystemService.GetFileLastModified(_filename);
             if (fileDate - _lastSave < TimeSpan.FromSeconds(15))
                 return;
@@ -425,7 +437,7 @@ namespace RATools.Parser
         /// Replaces an achievement in the list with a new version, or appends a new achievement to the list.
         /// </summary>
         /// <param name="existingAchievement">The existing achievement.</param>
-        /// <param name="newAchievement">The new achievement, <c>null</c> to remove.</param>
+        /// <param name="newAchievement">The new achievement, or <c>null</c> to remove.</param>
         /// <returns>The previous version if the item was replaced, <c>null</c> if the <paramref name="existingAchievement"/> was not in the list.</returns>
         public Achievement Replace(Achievement existingAchievement, Achievement newAchievement)
         {
@@ -520,6 +532,9 @@ namespace RATools.Parser
             SerializationContext serializationContext, List<AssetBase> assetsToValidate,
             IEnumerable<AchievementSet> sets = null)
         {
+            if (String.IsNullOrEmpty(_filename))
+                return;
+
             SoftwareVersion minimumVersion = serializationContext.MinimumVersion.OrNewer(Version);
 
             foreach (var achievement in _achievements)

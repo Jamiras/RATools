@@ -202,7 +202,7 @@ namespace RATools.Data
                 if (nextNote.StartsWith("0x"))
                 {
                     index = 2;
-                    while (Char.IsLetterOrDigit(nextNote[index]))
+                    while (index < nextNote.Length && Char.IsLetterOrDigit(nextNote[index]))
                         index++;
 
                     success = UInt32.TryParse(nextNote.Substring(2, index - 2),
@@ -210,7 +210,7 @@ namespace RATools.Data
                 }
                 else
                 {
-                    while (Char.IsDigit(nextNote[index]))
+                    while (index < nextNote.Length && Char.IsDigit(nextNote[index]))
                         index++;
 
                     success = UInt32.TryParse(nextNote.Substring(0, index), out offset);

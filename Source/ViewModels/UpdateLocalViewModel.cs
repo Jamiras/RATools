@@ -26,22 +26,41 @@ namespace RATools.ViewModels
                     _assets.Add(new UpdateAssetViewModel(asset));
             }
 
-            if (File.Exists(LocalFilePath))
-                GoToFileCommand = new DelegateCommand(GoToFile);
-            else
-                GoToFileCommand = DisabledCommand.Instance;
+            var localFiles = new List<LocalFile>();
+            foreach (var achievementSet in game.AchievementSets)
+            {
+                var filename = achievementSet.LocalAssets?.Filename;
+                if (!string.IsNullOrEmpty(filename) && !localFiles.Any(f => f.FilePath == filename))
+                    localFiles.Add(new LocalFile {  FilePath = filename });
+            }
+            LocalFiles = localFiles;
+
+            GoToFileCommand = new DelegateCommand<string>(GoToFile);
         }
 
         private readonly GameViewModel _game;
 
-        public string LocalFile { get { return Path.GetFileName(_game.LocalFilePath); } }
-        public string LocalFilePath { get { return _game.LocalFilePath; } }
+        public class LocalFile
+        {
+            public string FilePath { get; set; }
+            public string FileName { get { return Path.GetFileName(FilePath); } }
+        }
+
+        public IEnumerable<LocalFile> LocalFiles { get; private set; }
 
         public ICommand GoToFileCommand { get; private set; }
 
-        private void GoToFile()
+        private static void GoToFile(string filePath)
         {
-            Process.Start("explorer.exe", "/select,\"" + LocalFilePath + "\"");
+            if (!File.Exists(filePath))
+            {
+                filePath = Path.GetDirectoryName(filePath);
+                Process.Start("explorer.exe", "\"" + filePath + "\"");
+            }
+            else
+            {
+                Process.Start("explorer.exe", "/select,\"" + filePath + "\"");
+            }
         }
 
         /// <summary>

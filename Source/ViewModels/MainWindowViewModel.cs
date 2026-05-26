@@ -333,11 +333,13 @@ namespace RATools.ViewModels
                         "The game does not appear to have been recently loaded in any of the emulators specified in the Settings dialog.");
 
                     viewModel = new GameViewModel(gameId, gameTitle);
+                    viewModel.AssociateRACacheDirectory(null);
                 }
             }
             else
             {
                 viewModel = new GameViewModel(gameId, gameTitle);
+                viewModel.AssociateRACacheDirectory(null);
             }
 
 

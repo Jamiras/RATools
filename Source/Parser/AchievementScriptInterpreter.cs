@@ -334,7 +334,6 @@ namespace RATools.Parser
             _achievements.Clear();
             _leaderboards.Clear();
             _richPresence.Clear();
-            var sets = new List<AchievementSet>();
 
             foreach (var expressionGroup in expressionGroups.Groups.OfType<AssetExpressionGroup>())
             {
@@ -359,11 +358,9 @@ namespace RATools.Parser
                         result = false;
                     }
                 }
-
-                if (expressionGroup.GeneratedSets != null)
-                    sets.AddRange(expressionGroup.GeneratedSets);
             }
-            Sets = sets;
+
+            Sets = scriptContext.Sets.ToArray();
 
             SoftwareVersion minimumVersion = scriptContext.SerializationContext.MinimumVersion.OrNewer(_minimumVersion);
             uint maxAddress = 0;

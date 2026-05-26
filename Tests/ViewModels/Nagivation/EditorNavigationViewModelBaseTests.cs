@@ -3,6 +3,7 @@ using Jamiras.Components;
 using Jamiras.Services;
 using Moq;
 using NUnit.Framework;
+using RATools.Services;
 using RATools.ViewModels;
 using RATools.ViewModels.Navigation;
 using System.Collections.Generic;
@@ -28,7 +29,7 @@ namespace RATools.Tests.ViewModels.Nagivation
         private class DummyViewerViewModel : ViewerViewModelBase
         {
             public DummyViewerViewModel()
-                : base(new GameViewModel(1, "GameTitle", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object))
+                : base(new GameViewModel(1, "GameTitle", new Mock<ILogger>().Object, new Mock<IFileSystemService>().Object, new Mock<ISettings>().Object))
             {
                 UpdateLocalCommand = new DelegateCommand(() => { });
             }

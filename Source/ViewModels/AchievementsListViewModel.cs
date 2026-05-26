@@ -35,7 +35,7 @@ namespace RATools.ViewModels
 
             Title = achievementSet.Title;
             CountAchievements(achievements);
-            _badgeName = achievementSet?.BadgeName ?? owner.BadgeName;
+            _badgeName = achievementSet?.BadgeName;
 
             _id = (achievementSet != null) ? achievementSet.Id : 0;
 

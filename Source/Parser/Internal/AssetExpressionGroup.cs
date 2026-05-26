@@ -16,7 +16,7 @@ namespace RATools.Parser.Internal
 
         public RichPresenceBuilder GeneratedRichPresence { get; private set; }
 
-        public AchievementSet[] GeneratedSets { get; private set; }
+        public List<AchievementSet> GeneratedSets { get; private set; }
 
         public bool HasGeneratedAssets
         {
@@ -24,7 +24,6 @@ namespace RATools.Parser.Internal
             {
                 return (GeneratedAchievements != null ||
                         GeneratedLeaderboards != null ||
-                        GeneratedSets != null ||
                         GeneratedSets != null);
             }
         }
@@ -62,10 +61,10 @@ namespace RATools.Parser.Internal
                 context.RichPresence = null;
             }
 
-            if (context.Sets.Count > 0)
+            if (context.GeneratedSets != null && context.GeneratedSets.Count > 0)
             {
-                GeneratedSets = context.Sets.ToArray();
-                context.Sets.Clear();
+                GeneratedSets = context.GeneratedSets;
+                context.GeneratedSets = null;
             }
         }
 

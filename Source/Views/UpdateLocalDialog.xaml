@@ -77,12 +77,36 @@
             </ListView.ItemTemplate>
         </ListView>
 
-        <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Margin="2,0,3,0"
-                    ToolTip="{Binding LocalFilePath}">
-            <TextBlock Margin="0,0,2,0">File:</TextBlock>
-            <Hyperlink Command="{Binding GoToFileCommand}">
-                <TextBlock Text="{Binding LocalFile}" />
-            </Hyperlink>
+        <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Margin="2,0,3,0">
+            <TextBlock Margin="0,0,2,0">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Setter Property="Text" Value="Files:" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LocalFiles.Count}" Value="1">
+                                <Setter Property="Text" Value="File:" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <ItemsControl ItemsSource="{Binding LocalFiles}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock ToolTip="{Binding FilePath}" Margin="2,2,2,-3">
+                            <Hyperlink Command="{Binding Path=DataContext.GoToFileCommand, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ItemsControl}}}"
+                                       CommandParameter="{Binding FilePath}">
+                                <TextBlock Text="{Binding FileName}" />
+                            </Hyperlink>
+                        </TextBlock>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </TextBlock>
     </Grid>
 </UserControl>
