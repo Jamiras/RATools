@@ -85,6 +85,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("(byte(1) - 1) / 10 == 10", "B:1_K:0xH000001_A:{recall}/10_0=10")] // integer division ignores remainder, multiple values could be result in equality
         [TestCase("(byte(1) - 1) / 10 > 10", "0xH000001>=111")] // factor out division and subtraction
         [TestCase("(byte(1) - 1) * 10 < 99", "0xH000001<=10")] // factor out multiplication and subtraction
+        [TestCase("byte(1) / 10 <= 0", "0xH000001<10")] // a/n<=x -> a/n<x+1 -> a<n*(x+1)
         [TestCase("0 + byte(1) + 0 == 9", "0xH000001=9")] // 0s should be removed without reordering
         [TestCase("0 + byte(1) - 9 == 0", "0xH000001=9")] // 9 should be moved to right hand side, then 0s removed
         [TestCase("bcd(byte(1)) == 24", "0xH000001=36")] // bcd should be factored out
