@@ -70,6 +70,47 @@ namespace RATools.Parser.Expressions.Trigger
                 Right == that.Right && Left == that.Left);
         }
 
+        public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
+        {
+            return Optimize(context, true);
+        }
+
+        internal RequirementExpressionBase Optimize(TriggerBuilderContext context, bool canModifyRight)
+        {
+            var comparison = new ComparisonExpression(Left, Comparison, Right);
+            var originalComparison = comparison;
+            do
+            {
+                var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
+                if (comparisonNormalize == null)
+                    break;
+
+                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation, canModifyRight);
+                if (newComparison == null)
+                {
+                    // could not make any further normalizations, we're done
+                    break;
+                }
+
+                comparison = newComparison as ComparisonExpression;
+                if (comparison == null)
+                    return ConvertToRequirementExpression(newComparison);
+            } while (true);
+
+            if (ReferenceEquals(comparison, originalComparison))
+                return this;
+
+            var requirement = new RequirementConditionExpression
+            {
+                Left = comparison.Left,
+                Comparison = comparison.Operation,
+                Right = comparison.Right,
+                Location = Location
+            };
+            requirement.MakeReadOnly();
+            return requirement;
+        }
+
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             ErrorExpression error;
@@ -81,7 +122,8 @@ namespace RATools.Parser.Expressions.Trigger
             var rightAccessor = MemoryAccessorExpression.Extract(right);
             if (rightAccessor != null && rightAccessor.HasPointerChain)
             {
-                if (rightAccessor.PointerChainMatches(left as MemoryAccessorExpressionBase))
+                if (left is not ModifiedMemoryAccessorExpression &&
+                    rightAccessor.PointerChainMatches(left as MemoryAccessorExpressionBase))
                 {
                     rightAccessor = rightAccessor.Clone();
                     rightAccessor.ClearPointerChain();
@@ -90,7 +132,8 @@ namespace RATools.Parser.Expressions.Trigger
                 else
                 {
                     var leftMemoryValue = left as MemoryValueExpression;
-                    if (leftMemoryValue != null && leftMemoryValue.MemoryAccessors.All(m => m.ModifyingOperator != RequirementOperator.None))
+                    if (leftMemoryValue != null &&
+                        leftMemoryValue.MemoryAccessors.All(m => m.ModifyingOperator != RequirementOperator.None))
                     {
                         // all elements on left side are modified, so we'd need a 0 placeholder for the comparison
                         // attempt to avoid that by making the right value the AddSource element.
@@ -152,6 +195,14 @@ namespace RATools.Parser.Expressions.Trigger
                 return error;
 
             var lastRequirement = context.LastRequirement;
+            if (lastRequirement.Operator.IsModifier())
+            {
+                lastRequirement.Type = RequirementType.AddSource;
+
+                lastRequirement = new Requirement();
+                lastRequirement.Left = FieldFactory.CreateField(0);
+                context.Trigger.Add(lastRequirement);
+            }
 
             if (rightAccessor != null)
             {
@@ -268,7 +319,7 @@ namespace RATools.Parser.Expressions.Trigger
                 int newValue = 0;
                 int modifier = 0;
                 int value = integerExpression.Value;
-                while (value > 0)
+                while (value != 0)
                 {
                     newValue |= value % 10 << modifier;
                     modifier += 4;
@@ -306,7 +357,19 @@ namespace RATools.Parser.Expressions.Trigger
                     return null;
                 }
 
-                rightHasBCD = ConvertToBCD(Right, out newRight);
+                newRight = Right;
+                var rightConstant = newRight as IntegerConstantExpression;
+                if (rightConstant != null)
+                {
+                    var leftMemoryValue = newLeft as MemoryValueExpression;
+                    if (leftMemoryValue != null && leftMemoryValue.HasConstant)
+                    {
+                        newRight = rightConstant.Combine(leftMemoryValue.ExtractConstant(), MathematicOperation.Subtract);
+                        newLeft = leftMemoryValue.ClearConstant();
+                    }
+                }
+
+                rightHasBCD = ConvertToBCD(newRight, out newRight);
                 if (newRight == null)
                 {
                     // right value cannot be decoded into 32-bits
@@ -356,7 +419,7 @@ namespace RATools.Parser.Expressions.Trigger
                         return new ErrorExpression("Cannot eliminate bcd from equality comparison with modifier", leftMemoryValue);
                     }
 
-                    var rightMemoryValue = newLeft as MemoryValueExpression;
+                    var rightMemoryValue = newRight as MemoryValueExpression;
                     if (rightMemoryValue != null && rightMemoryValue.HasConstant)
                     {
                         result = null;

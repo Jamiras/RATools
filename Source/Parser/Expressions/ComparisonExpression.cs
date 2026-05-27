@@ -163,62 +163,36 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            bool canModifyRight = true;
-            // if the right side is only a constant, check to see if we're in a measured.
-            // if we are, the right side is the measured target, and we don't want to modify that.
-            if (right.Type == ExpressionType.IntegerConstant || right.Type == ExpressionType.FloatConstant)
+            var comparisonNormalize = left as IComparisonNormalizeExpression;
+            if (comparisonNormalize != null)
             {
-                var initializationContext = scope.GetContext<ParameterInitializationContext>();
-                if (initializationContext != null &&
-                    initializationContext.Function.Name.Name == "measured")
+                var normalized = comparisonNormalize.NormalizeComparison(right, Operation, true);
+                if (normalized != null && normalized is not ComparisonExpression)
                 {
-                    // capturing measured value - don't modify comparison. the user has already
-                    // determined the limits they want to use for the progress tracker.
-                    canModifyRight = false;
+                    result = normalized;
+                    result.Location = Location;
+                    return (result is not ErrorExpression);
                 }
             }
 
             var comparison = new ComparisonExpression(left, Operation, right);
-            do
+            if (comparison.Left.Type != comparison.Right.Type)
             {
-                if (comparison.Left.Type != comparison.Right.Type)
+                // attempt to find a common type to perform the comparison
+                var converter = comparison.Left as IUpconvertibleExpression;
+                var newLeft = (converter != null) ? converter.UpconvertTo(comparison.Right.Type) : null;
+                if (newLeft != null)
                 {
-                    // attempt to find a common type to perform the comparison
-                    var converter = comparison.Left as IUpconvertibleExpression;
-                    var newLeft = (converter != null) ? converter.UpconvertTo(comparison.Right.Type) : null;
-                    if (newLeft != null)
-                    {
-                        comparison = new ComparisonExpression(newLeft, comparison.Operation, comparison.Right);
-                    }
-                    else
-                    {
-                        converter = comparison.Right as IUpconvertibleExpression;
-                        var newRight = (converter != null) ? converter.UpconvertTo(comparison.Left.Type) : null;
-                        if (newRight != null)
-                            comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
-                    }
+                    comparison = new ComparisonExpression(newLeft, comparison.Operation, comparison.Right);
                 }
-
-                var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
-                if (comparisonNormalize == null)
-                    break;
-
-                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation, canModifyRight);
-                if (newComparison == null)
+                else
                 {
-                    // could not make any further normalizations, we're done
-                    break;
+                    converter = comparison.Right as IUpconvertibleExpression;
+                    var newRight = (converter != null) ? converter.UpconvertTo(comparison.Left.Type) : null;
+                    if (newRight != null)
+                        comparison = new ComparisonExpression(comparison.Left, comparison.Operation, newRight);
                 }
-
-                comparison = newComparison as ComparisonExpression;
-                if (comparison == null)
-                {
-                    // result of normalization is error or constant, return it
-                    result = newComparison;
-                    CopyLocation(result);
-                    return (result.Type != ExpressionType.Error);
-                }
-            } while (true);
+            }
 
             // if it's a memory comparison, wrap it in a RequirementClause
             switch (comparison.Left.Type)

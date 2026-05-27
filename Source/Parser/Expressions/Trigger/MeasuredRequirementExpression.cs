@@ -75,7 +75,8 @@ namespace RATools.Parser.Expressions.Trigger
             var whenOptimized = When.Optimize(context);
             var updated = !ReferenceEquals(whenOptimized, When);
 
-            var conditionOptimized = Condition.Optimize(context);
+            var comparison = Condition as RequirementConditionExpression;
+            var conditionOptimized = (comparison != null) ? comparison.Optimize(context, false) : Condition.Optimize(context);
             updated |= !ReferenceEquals(conditionOptimized, Condition);
 
             if (updated)

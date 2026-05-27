@@ -31,20 +31,9 @@ namespace RATools.Parser.Tests.Expressions
         [Test]
         [TestCase("byte(1) > variable2", "byte(0x000001) > 99")] // simple variable substitution
         [TestCase("variable1 > variable2", "false")] // evaluates to a constant
-        [TestCase("byte(1) * 10 / 3 == 10", "remembered(byte(0x000001) * 10) / 3 == 10")] // integer division ignores remainder, multiple values could be result in equality
-        [TestCase("byte(1) * 10 + 10 == 100", "byte(0x000001) == 9")] // factor out multiplication and addition
-        [TestCase("byte(1) * 10 - 10 == 100", "byte(0x000001) == 11")] // factor out multiplication and subtraction
-        [TestCase("(byte(1) - 1) * 10 == 100", "byte(0x000001) == 11")] // factor out multiplication and subtraction
-        [TestCase("(byte(1) - 1) / 10 == 10", "remembered(byte(0x000001) - 1) / 10 == 10")] // integer division ignores remainder, multiple values could be result in equality
-        [TestCase("(byte(1) - 1) / 10 > 10", "byte(0x000001) >= 111")] // factor out division and subtraction
-        [TestCase("(byte(1) - 1) * 10 < 99", "byte(0x000001) <= 10")] // factor out multiplication and subtraction
-        [TestCase("byte(1) + variable1 < byte(2) + 3", "byte(0x000001) + 95 < byte(0x000002)")] // differing modifier should be merged
-        [TestCase("byte(2) + 1 == variable1", "byte(0x000002) == 97")] // differing modifier should be merged
-        [TestCase("variable1 == byte(2) + 1", "byte(0x000002) == 97")] // differing modifier should be merged, move constant to right side
-        [TestCase("0 + byte(1) + 0 == 9", "byte(0x000001) == 9")] // 0s should be removed without reordering
-        [TestCase("0 + byte(1) - 9 == 0", "byte(0x000001) == 9")] // 9 should be moved to right hand side, then 0s removed
-        [TestCase("bcd(byte(1)) == 24", "byte(0x000001) == 36")] // bcd should be factored out
-        [TestCase("byte(1) != bcd(byte(2))", "byte(0x000001) != bcd(byte(0x000002))")] // bcd cannot be factored out
+        [TestCase("byte(1) + variable1 < byte(2) + 3", "byte(0x000001) + 98 < byte(0x000002) + 3")] // differing modifier should be merged
+        [TestCase("byte(2) + 1 == variable1", "byte(0x000002) + 1 == 98")] // differing modifier should be merged
+        [TestCase("variable1 == byte(2) + 1", "byte(0x000002) + 1 == 98")] // differing modifier should be merged, move constant to right side
         public void TestReplaceVariables(string input, string expected)
         {
             var tokenizer = Tokenizer.CreateTokenizer(input);
@@ -306,6 +295,7 @@ namespace RATools.Parser.Tests.Expressions
 
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+            result = ((RequirementConditionExpression)result).Optimize(new TriggerBuilderContext());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
@@ -326,6 +316,7 @@ namespace RATools.Parser.Tests.Expressions
 
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+            result = ((RequirementConditionExpression)result).Optimize(new TriggerBuilderContext());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
@@ -343,6 +334,7 @@ namespace RATools.Parser.Tests.Expressions
 
             Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
             Assert.That(result, Is.InstanceOf<RequirementConditionExpression>());
+            result = ((RequirementConditionExpression)result).Optimize(new TriggerBuilderContext());
 
             var builder = new StringBuilder();
             result.AppendString(builder);
