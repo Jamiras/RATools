@@ -26,6 +26,7 @@ namespace RATools.Parser.Expressions.Trigger
         public ExpressionBase Left { get; set; }
         public ComparisonOperation Comparison { get; set; }
         public ExpressionBase Right { get; set; }
+        private bool _isNormalized = false;
 
         ExpressionBase ICloneableExpression.Clone()
         {
@@ -79,6 +80,23 @@ namespace RATools.Parser.Expressions.Trigger
         {
             var comparison = new ComparisonExpression(Left, Comparison, Right);
             var originalComparison = comparison;
+
+            var normalized = Normalize();
+            if (!ReferenceEquals(normalized, this))
+            {
+                var normalizedCondition = normalized as RequirementConditionExpression;
+                if (normalizedCondition != null)
+                {
+                    comparison = new ComparisonExpression(normalizedCondition.Left, normalizedCondition.Comparison, normalizedCondition.Right);
+                }
+                else
+                {
+                    var requirementExpression = normalized as RequirementExpressionBase;
+                    if (requirementExpression != null)
+                        return requirementExpression.Optimize(context);
+                }
+            }
+
             do
             {
                 var comparisonNormalize = comparison.Left as IComparisonNormalizeExpression;
@@ -114,6 +132,19 @@ namespace RATools.Parser.Expressions.Trigger
         public override ErrorExpression BuildTrigger(TriggerBuilderContext context)
         {
             ErrorExpression error;
+
+            var normalized = Normalize();
+            if (!ReferenceEquals(normalized, this))
+            {
+                error = normalized as ErrorExpression;
+                if (error != null)
+                    return error;
+
+                var trigger = normalized as ITriggerExpression;
+                if (trigger != null)
+                    return trigger.BuildTrigger(context);
+            }
+
             var comparison = Comparison;
             var left = Left;
             var right = MemoryAccessorExpressionBase.ReduceToSimpleExpression(Right);
@@ -685,6 +716,9 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ExpressionBase Normalize()
         {
+            if (_isNormalized)
+                return this;
+
             if (Left is LiteralConstantExpressionBase && Right is not LiteralConstantExpressionBase)
             {
                 var reversed = new RequirementConditionExpression
@@ -734,6 +768,11 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);
+
+            var normalizedConditionExpression = result as RequirementConditionExpression;
+            if (normalizedConditionExpression != null)
+                normalizedConditionExpression._isNormalized = true;
+
             return result;
         }
 

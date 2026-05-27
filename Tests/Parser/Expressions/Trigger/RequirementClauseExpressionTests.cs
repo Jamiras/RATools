@@ -35,6 +35,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("always_true() || byte(0x001234) == 0", "1=1")] // always_true() makes everything else redundant
         [TestCase("always_true() || never(byte(0x001234) == 0)", "R:0xH001234=0")] // discard always_true() when reset is kept
         [TestCase("always_true() || unless(byte(0x001234) == 0)", "1=1")] // always_true() makes everything else redundant
+        [TestCase("(byte(1) == 1 && always_false()) || byte(2) == 2", "0xH000002=2")] // always_false() eliminates entire first clause
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

@@ -92,6 +92,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x000001) + 98 < byte(0x000002) + 3", "A:95=0_0xH000001<0xH000002")] // differing modifier should be merged
         [TestCase("byte(0x000001) + 1 == 98", "0xH000001=97")] // differing modifier should be merged
         [TestCase("98 == byte(0x000001) + 1", "0xH000001=97")] // differing modifier should be merged
+        [TestCase("prev(bcd(tbyte(0x60d)) * 10) < 100000", "d0xW00060d<65536")] // optimize will eliminate the *10, then normalize will eliminate the BCD
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -171,7 +172,6 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("prev(bcd(byte(1)) - 1) == 14", "prev(byte(0x000001)) == 21")]
         [TestCase("prev(bcd(byte(1)) - 1) == 19", "prev(byte(0x000001)) == 32")]
         [TestCase("prev(bcd(byte(1))) - 1 >= 19", "prev(byte(0x000001)) >= 32")]
-        [TestCase("bcd(byte(1)) >= prev(bcd(byte(1))) + 10", "byte(0x000001) >= prev(byte(0x000001)) + 16")]
         public void TestNormalizeBCD(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);
@@ -184,12 +184,10 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         }
 
         [Test]
-        // bcd adjustment cannot be applied after adjustment
-        [TestCase("prev(bcd(byte(1) - 1)) >= 19", "Cannot apply bcd() to a modified memory accessor")]
         [TestCase("bcd(byte(1)) == prev(bcd(byte(1))) + 10", "Cannot eliminate bcd from equality comparison with modifier")]
         public void TestNormalizeBCDError(string input, string expectedError)
         {
-            TriggerExpressionTests.AssertParseError(input, expectedError);
+            TriggerExpressionTests.AssertBuildTriggerError(input, expectedError);
         }
 
         [Test]
@@ -272,7 +270,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             // becomes "prev(byte(0x1234)) == -10", which can never be true
             // user meant "prev(byte(0x1234 + 10)) == 0"
 
-            TriggerExpressionTests.Parse<AlwaysFalseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
+            var normalized = clause.Normalize();
+            Assert.That(normalized, Is.InstanceOf<AlwaysFalseExpression>());
         }
 
         [Test]

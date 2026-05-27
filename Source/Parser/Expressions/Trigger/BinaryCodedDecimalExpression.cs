@@ -35,7 +35,7 @@ namespace RATools.Parser.Expressions.Trigger
             if (result == null)
             {
                 if (context.LastRequirement.Left.Type != FieldType.MemoryAddress)
-                    return new ErrorExpression("cannot apply multiple modifiers to memory accessor", this);
+                    return new ErrorExpression("Cannot apply multiple modifiers to memory accessor", this);
 
                 context.LastRequirement.Left = context.LastRequirement.Left.ChangeType(FieldType.BinaryCodedDecimal);
             }

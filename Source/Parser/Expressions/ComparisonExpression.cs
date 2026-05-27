@@ -198,34 +198,26 @@ namespace RATools.Parser.Expressions
             switch (comparison.Left.Type)
             {
                 case ExpressionType.MemoryAccessor:
-                    var requirement = new RequirementConditionExpression
+                    result = new RequirementConditionExpression
                     {
                         Left = comparison.Left,
                         Comparison = comparison.Operation,
                         Right = comparison.Right,
                         Location = Location
                     };
-                    result = requirement.Normalize();
-                    if (result is ErrorExpression)
-                        return false;
-                    result.Location = Location;
                     return true;
             }
 
             switch (comparison.Right.Type)
             {
                 case ExpressionType.MemoryAccessor:
-                    var requirement = new RequirementConditionExpression
+                    result = new RequirementConditionExpression
                     {
                         Left = comparison.Right,
                         Comparison = ReverseComparisonOperation(comparison.Operation),
                         Right = comparison.Left,
                         Location = Location
                     };
-                    result = requirement.Normalize();
-                    if (result is ErrorExpression)
-                        return false;
-                    result.Location = Location;
                     return true;
             }
 
