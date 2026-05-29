@@ -1,4 +1,5 @@
 ﻿using RATools.Data;
+using System.ComponentModel;
 using System.Linq;
 
 namespace RATools.ViewModels.Navigation
@@ -20,9 +21,20 @@ namespace RATools.ViewModels.Navigation
         {
             get
             {
-                _editor ??= new AchievementsListViewModel(_game, _achievementSet, Children.OfType<AchievementNavigationViewModel>());
+                _editor ??= new AchievementsListViewModel(_game, _achievementSet);
                 return _editor;
             }
+        }
+
+        protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == "IsSelected" && IsSelected)
+            {
+                if (_editor != null)
+                    _editor.Refresh(_achievementSet, Children.OfType<AchievementNavigationViewModel>());
+            }
+
+            base.OnPropertyChanged(e);
         }
     }
 }

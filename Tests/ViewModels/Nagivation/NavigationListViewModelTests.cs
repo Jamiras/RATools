@@ -110,7 +110,7 @@ namespace RATools.Tests.ViewModels.Nagivation
                 AssociateRACacheDirectory("C:\\RACache\\");
             }
 
-            public List<AchievementSetViewModel> AchievementSets
+            public new List<AchievementSetViewModel> AchievementSets
             {
                 get { return _achievementSets; }
             }
