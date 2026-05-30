@@ -149,7 +149,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -179,7 +179,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -213,7 +213,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -272,7 +272,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             // user meant "prev(byte(0x1234 + 10)) == 0"
 
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
-            var normalized = clause.Normalize();
+            var normalized = clause.Normalize(new TriggerBuilderContext());
             Assert.That(normalized, Is.InstanceOf<AlwaysFalseExpression>());
         }
 

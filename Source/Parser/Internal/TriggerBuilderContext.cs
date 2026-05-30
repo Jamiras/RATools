@@ -11,6 +11,11 @@ namespace RATools.Parser.Internal
 {
     internal class TriggerBuilderContext
     {
+        public TriggerBuilderContext()
+        {
+            CanModifyComparison = true;
+        }
+
         /// <summary>
         /// Gets the collection of requirements that forms the trigger.
         /// </summary>
@@ -33,6 +38,27 @@ namespace RATools.Parser.Internal
         /// Gets the last Remembered expression.
         /// </summary>
         public MemoryValueExpression RememberedValue { get; internal set; }
+
+        /// <summary>
+        /// If set to <c>false</c>, the comparison target is important and should not
+        /// be modified even if it simplies the resulting logic.
+        /// </summary>
+        public bool CanModifyComparison { get; set; }
+
+        public virtual TriggerBuilderContext Clone()
+        {
+            var clone = new TriggerBuilderContext();
+            CloneInto(clone);
+            return clone;
+        }
+
+        protected void CloneInto(TriggerBuilderContext clone)
+        {
+            clone.Trigger = this.Trigger;
+            clone.MinimumVersion = this.MinimumVersion;
+            clone.RememberedValue = this.RememberedValue;
+            clone.CanModifyComparison = this.CanModifyComparison;
+        }
 
         [DebuggerDisplay("{field} * {Multiplier}")]
         private class Term
@@ -65,7 +91,7 @@ namespace RATools.Parser.Internal
             }
         }
 
-        private static ExpressionBase WrapInMeasured(ExpressionBase expression)
+        private static FunctionCallExpression WrapInMeasured(ExpressionBase expression)
         {
             return new FunctionCallExpression("measured", new ExpressionBase[]
             {
@@ -586,6 +612,12 @@ namespace RATools.Parser.Internal
     /// </summary>
     internal class ValueBuilderContext : TriggerBuilderContext
     {
+        public override TriggerBuilderContext Clone()
+        {
+            var clone = new ValueBuilderContext();
+            CloneInto(clone);
+            return clone;
+        }
     }
 
     /// <summary>
@@ -593,5 +625,11 @@ namespace RATools.Parser.Internal
     /// </summary>
     internal class TallyBuilderContext : TriggerBuilderContext
     {
+        public override TriggerBuilderContext Clone()
+        {
+            var clone = new TallyBuilderContext();
+            CloneInto(clone);
+            return clone;
+        }
     }
 }

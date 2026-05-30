@@ -73,15 +73,10 @@ namespace RATools.Parser.Expressions.Trigger
 
         public override RequirementExpressionBase Optimize(TriggerBuilderContext context)
         {
-            return Optimize(context, true);
-        }
-
-        internal RequirementExpressionBase Optimize(TriggerBuilderContext context, bool canModifyRight)
-        {
             var comparison = new ComparisonExpression(Left, Comparison, Right);
             var originalComparison = comparison;
 
-            var normalized = Normalize();
+            var normalized = Normalize(context);
             if (!ReferenceEquals(normalized, this))
             {
                 var normalizedCondition = normalized as RequirementConditionExpression;
@@ -103,7 +98,7 @@ namespace RATools.Parser.Expressions.Trigger
                 if (comparisonNormalize == null)
                     break;
 
-                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation, canModifyRight);
+                var newComparison = comparisonNormalize.NormalizeComparison(comparison.Right, comparison.Operation, context.CanModifyComparison);
                 if (newComparison == null)
                 {
                     // could not make any further normalizations, we're done
@@ -133,7 +128,7 @@ namespace RATools.Parser.Expressions.Trigger
         {
             ErrorExpression error;
 
-            var normalized = Normalize();
+            var normalized = Normalize(context);
             if (!ReferenceEquals(normalized, this))
             {
                 error = normalized as ErrorExpression;
@@ -373,7 +368,7 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private ErrorExpression NormalizeBCD(out RequirementExpressionBase result)
+        private ErrorExpression NormalizeBCD(TriggerBuilderContext context, out RequirementExpressionBase result)
         {
             ExpressionBase newLeft;
             ExpressionBase newRight;
@@ -439,7 +434,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            if (leftHasBCD && rightHasBCD)
+            if (leftHasBCD && rightHasBCD && context.CanModifyComparison)
             {
                 if (Comparison == ComparisonOperation.Equal || Comparison == ComparisonOperation.NotEqual)
                 {
@@ -534,7 +529,7 @@ namespace RATools.Parser.Expressions.Trigger
             }
         }
 
-        private static void NormalizeLimits(ref RequirementExpressionBase expression)
+        private static void NormalizeLimits(TriggerBuilderContext context, ref RequirementExpressionBase expression)
         {
             var condition = expression as RequirementConditionExpression;
             if (condition == null)
@@ -702,19 +697,22 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
-            if (newComparison != condition.Comparison || !ReferenceEquals(rightValue, condition.Right))
+            if (context.CanModifyComparison || ReferenceEquals(rightValue, condition.Right))
             {
-                expression = new RequirementConditionExpression
+                if (newComparison != condition.Comparison || !ReferenceEquals(rightValue, condition.Right))
                 {
-                    Left = condition.Left,
-                    Comparison = newComparison,
-                    Right = rightValue,
-                    Location = condition.Location
-                };
+                    expression = new RequirementConditionExpression
+                    {
+                        Left = condition.Left,
+                        Comparison = newComparison,
+                        Right = rightValue,
+                        Location = condition.Location
+                    };
+                }
             }
         }
 
-        public ExpressionBase Normalize()
+        public ExpressionBase Normalize(TriggerBuilderContext context)
         {
             if (_isNormalized)
                 return this;
@@ -727,7 +725,7 @@ namespace RATools.Parser.Expressions.Trigger
                     Comparison = ComparisonExpression.ReverseComparisonOperation(Comparison),
                     Right = Left
                 };
-                return reversed.Normalize();
+                return reversed.Normalize(context);
             }
 
             var integerRight = Right as IntegerConstantExpression;
@@ -746,7 +744,7 @@ namespace RATools.Parser.Expressions.Trigger
                         Comparison = ComparisonExpression.ReverseComparisonOperation(Comparison),
                         Right = integerConstant
                     };
-                    return normalized.Normalize();
+                    return normalized.Normalize(context);
                 }
             }
 
@@ -759,12 +757,12 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             RequirementExpressionBase result;
-            var error = NormalizeBCD(out result);
+            var error = NormalizeBCD(context, out result);
             if (error != null)
                 return error;
 
             NormalizeInvert(ref result);
-            NormalizeLimits(ref result);
+            NormalizeLimits(context, ref result);
 
             if (!ReferenceEquals(result, this))
                 CopyLocation(result);
@@ -890,7 +888,7 @@ namespace RATools.Parser.Expressions.Trigger
             condition.Comparison = ComparisonExpression.GetOppositeComparisonOperation(condition.Comparison);
 
             RequirementExpressionBase result = condition;
-            NormalizeLimits(ref result);
+            NormalizeLimits(new TriggerBuilderContext(), ref result);
             result.Location = Location;
             return result;
         }
