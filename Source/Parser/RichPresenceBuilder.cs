@@ -439,7 +439,7 @@ namespace RATools.Parser
                 builder.AppendLine(value.Key);
 
                 builder.Append("FormatType=");
-                builder.AppendLine(Leaderboard.GetFormatString(value.Value.Format));
+                builder.AppendLine(Value.GetFormatString(value.Value.Format));
 
                 builder.AppendLine();
             }

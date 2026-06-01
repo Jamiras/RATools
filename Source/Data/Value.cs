@@ -282,7 +282,6 @@ namespace RATools.Data
             return new RequirementGroup(newRequirements);
         }
 
-
         private static void SerializeLegacyRequirements(IEnumerable<Requirement> requirements, StringBuilder builder, SerializationContext serializationContext)
         {
             var enumerator = requirements.GetEnumerator();
@@ -469,6 +468,156 @@ namespace RATools.Data
                 maximumAddress = Math.Max(maximumAddress, value.MaximumAddress());
 
             return maximumAddress;
+        }
+
+
+        /// <summary>
+        /// Converts a format string to a <see cref="ValueFormat"/>.
+        /// </summary>
+        /// <param name="format">The format as a string.</param>
+        /// <returns>The format as a <see cref="ValueFormat"/>, None if not valid.</returns>
+        public static ValueFormat ParseFormat(string format)
+        {
+            var formatStr = format.ToUpper();
+            switch (formatStr)
+            {
+                case "VALUE":
+                    return ValueFormat.Value;
+
+                case "SECS":
+                case "TIMESECS": // valid in runtime - maps to SECS
+                    return ValueFormat.TimeSecs;
+
+                case "FRAMES":
+                case "TIME": // valid in runtime - maps to FRAMES
+                    return ValueFormat.TimeFrames;
+
+                case "POINTS": // valid in runtime - maps to SCORE
+                case "SCORE":
+                    return ValueFormat.Score;
+
+                case "CENTISECS": // not valid in runtime. converted to MILLISECS when serialized
+                case "MILLISECS":
+                    return ValueFormat.TimeCentisecs;
+
+                case "MINUTES":
+                    return ValueFormat.TimeMinutes;
+
+                case "SECS_AS_MINS":
+                case "SECSASMINS":
+                    return ValueFormat.TimeSecsAsMins;
+
+                case "OTHER": // valid in runtime - maps to SCORE
+                    return ValueFormat.Other;
+
+                case "THOUSANDS":
+                    return ValueFormat.Thousands;
+
+                case "HUNDREDS":
+                    return ValueFormat.Hundreds;
+
+                case "TENS":
+                    return ValueFormat.Tens;
+
+                case "FIXED1":
+                    return ValueFormat.Fixed1;
+
+                case "FIXED2":
+                    return ValueFormat.Fixed2;
+
+                case "FIXED3":
+                    return ValueFormat.Fixed3;
+
+                case "FLOAT1":
+                    return ValueFormat.Float1;
+
+                case "FLOAT2":
+                    return ValueFormat.Float2;
+
+                case "FLOAT3":
+                    return ValueFormat.Float3;
+
+                case "FLOAT4":
+                    return ValueFormat.Float4;
+
+                case "FLOAT5":
+                    return ValueFormat.Float5;
+
+                case "FLOAT6":
+                    return ValueFormat.Float6;
+
+                default:
+                    return ValueFormat.None;
+            }
+        }
+
+        public static string GetFormatString(ValueFormat format)
+        {
+            switch (format)
+            {
+                case ValueFormat.Value:
+                    return "VALUE";
+
+                case ValueFormat.Score:
+                    return "SCORE";
+
+                case ValueFormat.TimeSecs:
+                    return "SECS";
+
+                case ValueFormat.TimeCentisecs:
+                    return "MILLISECS"; // server enum is incorrect
+
+                case ValueFormat.TimeFrames:
+                    return "FRAMES";
+
+                case ValueFormat.TimeMinutes:
+                    return "MINUTES";
+
+                case ValueFormat.TimeSecsAsMins:
+                    return "SECS_AS_MINS";
+
+                case ValueFormat.Other:
+                    return "OTHER";
+
+                case ValueFormat.Thousands:
+                    return "THOUSANDS";
+
+                case ValueFormat.Hundreds:
+                    return "HUNDREDS";
+
+                case ValueFormat.Tens:
+                    return "TENS";
+
+                case ValueFormat.Fixed1:
+                    return "FIXED1";
+
+                case ValueFormat.Fixed2:
+                    return "FIXED2";
+
+                case ValueFormat.Fixed3:
+                    return "FIXED3";
+
+                case ValueFormat.Float1:
+                    return "FLOAT1";
+
+                case ValueFormat.Float2:
+                    return "FLOAT2";
+
+                case ValueFormat.Float3:
+                    return "FLOAT3";
+
+                case ValueFormat.Float4:
+                    return "FLOAT4";
+
+                case ValueFormat.Float5:
+                    return "FLOAT5";
+
+                case ValueFormat.Float6:
+                    return "FLOAT6";
+
+                default:
+                    return "UNKNOWN";
+            }
         }
     }
 }

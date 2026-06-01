@@ -324,7 +324,7 @@ namespace RATools.Parser.Expressions.Trigger
                 var newField = MemoryAccessor.Field.Clone();
                 newField.Size = size;
 
-                if (MemoryAccessor.Field.IsBigEndian)
+                if (MemoryAccessor.Field.Size.IsBigEndian())
                 {
                     switch (size)
                     {
@@ -337,8 +337,8 @@ namespace RATools.Parser.Expressions.Trigger
                             break;
                     }
 
-                    var bytesBefore = Field.GetByteSize(MemoryAccessor.Field.Size);
-                    var bytesAfter = Field.GetByteSize(newField.Size);
+                    var bytesBefore = MemoryAccessor.Field.Size.GetByteSize();
+                    var bytesAfter = newField.Size.GetByteSize();
                     if (bytesAfter < bytesBefore)
                         newField.Value += (bytesBefore - bytesAfter);
                 }
@@ -653,12 +653,12 @@ namespace RATools.Parser.Expressions.Trigger
         public override void GetMinMax(out long min, out long max)
         {
             long accessorMin = 0;
-            long accessorMax = Field.GetMaxValue(MemoryAccessor.Field.Size);
+            long accessorMax = MemoryAccessor.Field.Size.GetMaxValue();
             if (MemoryAccessor.Field.Type == FieldType.Value)
                 accessorMin = accessorMax = MemoryAccessor.Field.Value;
 
             uint modifierMin = 0;
-            uint modifierMax = Field.GetMaxValue(Modifier.Size);
+            uint modifierMax = Modifier.Size.GetMaxValue();
             if (Modifier.Type == FieldType.Value)
                 modifierMin = modifierMax = Modifier.Value;
                 

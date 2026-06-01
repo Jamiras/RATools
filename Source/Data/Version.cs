@@ -93,5 +93,23 @@ namespace RATools.Data
         ///  Operators: Modulus, Add, Subtract
         /// </summary>
         public static readonly SoftwareVersion _1_3_1 = new SoftwareVersion(1, 3, 1);
+
+        /// <summary>
+        /// 1.4 - 9 Oct 2025
+        ///  No syntax features
+        /// </summary>
+        public static readonly SoftwareVersion _1_4 = new SoftwareVersion(1, 4);
+
+        /// <summary>
+        /// 1.4.1 - 24 Mar 2026
+        ///  No syntax features
+        /// </summary>
+        public static readonly SoftwareVersion _1_4_1 = new SoftwareVersion(1, 4, 1);
+
+        /// <summary>
+        /// 1.4.2 - 31 Mar 2026
+        ///  No syntax features
+        /// </summary>
+        public static readonly SoftwareVersion _1_4_2 = new SoftwareVersion(1, 4, 2);
     }
 }

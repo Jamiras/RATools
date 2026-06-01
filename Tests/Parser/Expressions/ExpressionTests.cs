@@ -56,7 +56,7 @@ namespace RATools.Parser.Tests.Expressions
                 }
                 else if (char.IsUpper(c))
                 {
-                    builder.AppendFormat("{0}(0x{1:X6})", Field.GetSizeFunction(size), (uint)(c - 'A') + 1);
+                    builder.AppendFormat("{0}(0x{1:X6})", size.GetSizeFunction(), (uint)(c - 'A') + 1);
                     size = FieldSize.Byte; // reset to default size
                 }
                 else if (sizePrefixes)

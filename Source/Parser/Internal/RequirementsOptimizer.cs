@@ -99,7 +99,7 @@ namespace RATools.Parser.Internal
                 return null;
             }
 
-            uint max = Field.GetMaxValue(requirement.Left.Size);
+            uint max = requirement.Left.Size.GetMaxValue();
             if (max == 1)
             {
                 if (requirement.Right.Value == 0)

@@ -77,7 +77,7 @@ namespace RATools.ViewModels
             };
 
             MemoryAddresses = new GridViewModel();
-            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => Field.GetSizeFunction((FieldSize)a), null)) { Width = 48 });
+            MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Size", MemoryItem.SizeProperty, new DelegateConverter(a => ((FieldSize)a).GetSizeFunction(), null)) { Width = 48 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Address", MemoryItem.AddressProperty, new DelegateConverter(a => String.Format("0x{0:X6}", a), null)) { Width = 56 });
             MemoryAddresses.Columns.Add(new TextColumnDefinition("Function Name", MemoryItem.FunctionNameProperty, new StringFieldMetadata("Function Name", 40, StringFieldAttributes.Required)) { Width = 120 });
             MemoryAddresses.Columns.Add(new DisplayTextColumnDefinition("Notes", MemoryItem.NotesProperty));
@@ -997,7 +997,7 @@ namespace RATools.ViewModels
                         {
                             if (hashSet.Contains(subAlias))
                             {
-                                var sizeSuffix = nameStyle.BuildName("x " + Field.GetSizeFunction(size)).Substring(1);
+                                var sizeSuffix = nameStyle.BuildName("x " + size.GetSizeFunction()).Substring(1);
                                 if (!subAlias.EndsWith(sizeSuffix))
                                     subAlias += sizeSuffix;
 
@@ -1178,14 +1178,14 @@ namespace RATools.ViewModels
             if (!String.IsNullOrEmpty(parentAccessor.Alias))
             {
                 parentFunctionCall = String.Format("{0}()", parentAccessor.Alias);
-                if (Field.GetMaxValue(parentAccessor.PrimarySize) > mask)
+                if (parentAccessor.PrimarySize.GetMaxValue() > mask)
                     parentFunctionCall = String.Format("({0} & 0x{1:X2})", parentFunctionCall, mask);
                 parentChain += parentFunctionCall + " + ";
             }
             else
             {
-                parentFunctionCall = String.Format("{0}({1}0x{2})", Field.GetSizeFunction(parentAccessor.PrimarySize), parentChain, scriptBuilderContext.FormatAddress(parentAccessor.Address));
-                if (Field.GetMaxValue(parentAccessor.PrimarySize) > mask)
+                parentFunctionCall = String.Format("{0}({1}0x{2})", parentAccessor.PrimarySize.GetSizeFunction(), parentChain, scriptBuilderContext.FormatAddress(parentAccessor.Address));
+                if (parentAccessor.PrimarySize.GetMaxValue() > mask)
                     parentFunctionCall = String.Format("({0} & 0x{1:X2})", parentFunctionCall, mask);
                 parentChain = parentFunctionCall + " + ";
             }
@@ -1236,7 +1236,7 @@ namespace RATools.ViewModels
                 stream.Write("function ");
                 stream.Write(memoryAccessor.Alias);
                 stream.Write("() => ");
-                stream.Write(Field.GetSizeFunction(memoryAccessor.PrimarySize));
+                stream.Write(memoryAccessor.PrimarySize.GetSizeFunction());
                 stream.WriteLine(address);
             }
 
@@ -1259,7 +1259,7 @@ namespace RATools.ViewModels
                         stream.Write("function ");
                         stream.Write(alias);
                         stream.Write("() => ");
-                        stream.Write(Field.GetSizeFunction(size));
+                        stream.Write(size.GetSizeFunction());
                         stream.WriteLine(address);
                     }
                 }
@@ -1464,7 +1464,7 @@ namespace RATools.ViewModels
                 stream.WriteLine(",");
 
                 stream.Write("    format = \"");
-                stream.Write(Leaderboard.GetFormatString(leaderboard.Format));
+                stream.Write(Value.GetFormatString(leaderboard.Format));
                 stream.Write("\"");
 
                 if (leaderboard.LowerIsBetter)
@@ -1644,7 +1644,7 @@ namespace RATools.ViewModels
                         if (macroDefinition.FormatType != ValueFormat.Value)
                         {
                             stream.Write(", format=\"");
-                            stream.Write(Leaderboard.GetFormatString(macroDefinition.FormatType));
+                            stream.Write(Value.GetFormatString(macroDefinition.FormatType));
                             stream.Write('"');
                         }
 

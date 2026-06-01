@@ -270,7 +270,7 @@ namespace RATools.Parser
             leaderboard.Value = Value.Deserialize(tokenizer.ReadQuotedString().ToString());
             tokenizer.Advance();
 
-            leaderboard.Format = Leaderboard.ParseFormat(tokenizer.ReadIdentifier().ToString());
+            leaderboard.Format = Value.ParseFormat(tokenizer.ReadIdentifier().ToString());
             tokenizer.Advance();
 
             if (tokenizer.NextChar == '"')
@@ -710,7 +710,7 @@ namespace RATools.Parser
             writer.Write(value);
             writer.Write("\":");
 
-            writer.Write(Leaderboard.GetFormatString(leaderboard.Format));
+            writer.Write(Value.GetFormatString(leaderboard.Format));
             writer.Write(":\"");
 
             WriteEscaped(writer, leaderboard.Title);

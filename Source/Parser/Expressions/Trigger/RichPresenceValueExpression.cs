@@ -16,7 +16,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         public static ValueFormat ParseFormat(string format)
         {
-            var valueFormat = Leaderboard.ParseFormat(format);
+            var valueFormat = Value.ParseFormat(format);
             if (valueFormat == ValueFormat.None)
             {
                 if (format == "ASCIICHAR")
@@ -38,7 +38,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return "UNICODECHAR";
 
                 default:
-                    return Leaderboard.GetFormatString(format);
+                    return Value.GetFormatString(format);
             }
         }
 

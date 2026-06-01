@@ -171,7 +171,7 @@ namespace RATools.Data
                 {
                     if (part == Part.Format)
                     {
-                        var formatType = Leaderboard.ParseFormat(line.Substring(11));
+                        var formatType = Value.ParseFormat(line.Substring(11));
                         _macros.Add(new MacroDefinition(macroName, formatType));
                     }
                     part = Part.None;

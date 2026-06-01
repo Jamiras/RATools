@@ -232,7 +232,7 @@ namespace RATools.Parser.Expressions.Trigger
                     return;
             }
 
-            builder.Append(Field.GetSizeFunction(Field.Size));
+            builder.Append(Field.Size.GetSizeFunction());
             builder.Append('(');
             if (_rememberPointer != null)
             {
@@ -250,7 +250,7 @@ namespace RATools.Parser.Expressions.Trigger
                 {
                     if (_pointerChain[i].Operator == RequirementOperator.BitwiseAnd)
                         builder.Append('(');
-                    builder.Append(Field.GetSizeFunction(_pointerChain[i].Left.Size));
+                    builder.Append(_pointerChain[i].Left.Size.GetSizeFunction());
                     builder.Append('(');
                 }
 
@@ -339,7 +339,7 @@ namespace RATools.Parser.Expressions.Trigger
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
-            return new ErrorExpression(Field.GetSizeFunction(Field.Size) + " has no meaning outside of a trigger clause", this);
+            return new ErrorExpression(Field.Size.GetSizeFunction() + " has no meaning outside of a trigger clause", this);
         }
 
         /// <summary>
@@ -499,7 +499,7 @@ namespace RATools.Parser.Expressions.Trigger
         public override void GetMinMax(out long min, out long max)
         {
             min = 0;
-            max = Field.GetMaxValue(Field.Size);
+            max = Field.Size.GetMaxValue();
         }
     }
 }

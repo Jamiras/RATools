@@ -148,13 +148,4 @@ namespace RATools.Data
             return null;
         }
     }
-
-    public enum AchievementType
-    {
-        None = 0,
-        Standard,
-        Missable,
-        Progression,
-        WinCondition,
-    }
 }

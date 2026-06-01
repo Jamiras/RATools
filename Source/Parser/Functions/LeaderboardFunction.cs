@@ -79,7 +79,7 @@ namespace RATools.Parser.Functions
             }
             else
             {
-                leaderboard.Format = Leaderboard.ParseFormat(format.Value);
+                leaderboard.Format = Value.ParseFormat(format.Value);
                 if (leaderboard.Format == ValueFormat.None)
                     scope.ReturnValue ??= new ErrorExpression(format.Value + " is not a supported leaderboard format", format);
             }
