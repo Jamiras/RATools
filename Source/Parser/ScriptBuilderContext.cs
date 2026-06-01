@@ -862,7 +862,7 @@ namespace RATools.Parser
             }
             else
             {
-                builder.Append(Field.GetSizeFunction(field.Size));
+                builder.Append(field.Size.GetSizeFunction());
                 builder.Append('(');
 
                 if (parent != null)

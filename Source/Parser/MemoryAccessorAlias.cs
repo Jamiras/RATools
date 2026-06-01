@@ -106,7 +106,7 @@ namespace RATools.Parser
 
             if (PrimarySize == FieldSize.None)
             {
-                if (Field.GetMaxValue(size) < 255)
+                if (size.GetMaxValue() < 255)
                     PrimarySize = FieldSize.Byte;
                 else
                     PrimarySize = size;
@@ -189,14 +189,14 @@ namespace RATools.Parser
                     // if the primary size isn't referenced (note didn't specify size or all
                     // sizes are smaller than a byte), and the size is byte or larger, make
                     // it the primary size.
-                    if (!HasReferencedSize(PrimarySize) && Field.GetMaxValue(size) >= 255)
+                    if (!HasReferencedSize(PrimarySize) && size.GetMaxValue() >= 255)
                     {
                         PrimarySize = size;
                         return alias;
                     }
 
                     // append the size to the note alias to differentiate it from the primary size accessor
-                    subNote = Field.GetSizeFunction(size);
+                    subNote = size.GetSizeFunction();
                 }
 
                 if (String.IsNullOrEmpty(alias))

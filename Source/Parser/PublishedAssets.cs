@@ -253,7 +253,7 @@ namespace RATools.Parser
                 leaderboard.Id = publishedLeaderboard.GetField("ID").IntegerValue.GetValueOrDefault();
                 leaderboard.Title = publishedLeaderboard.GetField("Title").StringValue;
                 leaderboard.Description = publishedLeaderboard.GetField("Description").StringValue;
-                leaderboard.Format = Leaderboard.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
+                leaderboard.Format = Value.ParseFormat(publishedLeaderboard.GetField("Format").StringValue);
                 leaderboard.LowerIsBetter = publishedLeaderboard.GetField("LowerIsBetter").BooleanValue;
 
                 var mem = publishedLeaderboard.GetField("Mem").StringValue;
