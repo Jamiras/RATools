@@ -15,8 +15,26 @@ namespace RATools.ViewModels
 {
     public class AchievementsListViewModel : ViewerViewModelBase
     {
-        public AchievementsListViewModel(GameViewModel owner, AchievementSet achievementSet, IEnumerable<NavigationViewModelBase> navigationNodes)
+        public AchievementsListViewModel(GameViewModel owner, AchievementSet achievementSet)
             : base(owner)
+        {
+            Title = achievementSet.Title;
+            _badgeName = achievementSet.BadgeName;
+            _id = (achievementSet != null) ? achievementSet.Id : 0;
+
+            ExportCommand = new DelegateCommand(Export);
+
+            Achievements = Enumerable.Empty<AchievementViewModel>();
+        }
+
+        private readonly int _id;
+        private readonly string _badgeName;
+
+        public override string ViewerType => "AchievementList";
+
+        public override int ViewerId { get { return _id; } }
+
+        public void Refresh(AchievementSet achievementSet, IEnumerable<NavigationViewModelBase> navigationNodes)
         {
             AchievementViewModel[] achievements;
 
@@ -27,22 +45,16 @@ namespace RATools.ViewModels
             }
             else
             {
-                achievements = owner.Editors.OfType<AchievementViewModel>()
+                achievements = _owner.Editors.OfType<AchievementViewModel>()
                     .Where(a => a.BelongsToSet(achievementSet)).ToArray();
             }
 
-            Achievements = achievements;
-
-            Title = achievementSet.Title;
             CountAchievements(achievements);
-            _badgeName = achievementSet?.BadgeName;
 
-            _id = (achievementSet != null) ? achievementSet.Id : 0;
-
-            ExportCommand = new DelegateCommand(Export);
+            Achievements = achievements;
+            OnPropertyChanged(() => Achievements);
+            OnPropertyChanged(() => Points);
         }
-
-        private readonly int _id;
 
         private void CountAchievements(AchievementViewModel[] achievements)
         {
@@ -101,12 +113,6 @@ namespace RATools.ViewModels
             Description = description.ToString();
             PointsSummary = points.ToString();
         }
-
-        private readonly string _badgeName;
-
-        public override string ViewerType => "AchievementList";
-
-        public override int ViewerId { get { return _id; } }
 
         public static readonly ModelProperty BadgeProperty = ModelProperty.RegisterDependant(typeof(AchievementsListViewModel), "Badge", typeof(ImageSource), new ModelProperty[0], GetBadge);
         public ImageSource Badge
