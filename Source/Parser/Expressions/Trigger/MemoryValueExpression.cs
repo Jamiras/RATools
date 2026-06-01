@@ -324,12 +324,6 @@ namespace RATools.Parser.Expressions.Trigger
                         _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
                     _memoryAccessors.Add(modifiedMemoryAccessor);
 
-                    if (_memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.Multiply) &&
-                        _memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.None))
-                    {
-                        CombineNeighboringMemoryReads(_memoryAccessors);
-                    }
-
                     break;
 
                 default:
@@ -337,211 +331,6 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return this;
-        }
-
-        private static void CombineNeighboringMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors)
-        {
-            int initialCount;
-            do
-            {
-                initialCount = memoryAccessors.Count;
-
-                for (int i = memoryAccessors.Count - 1; i >= 0; --i)
-                {
-                    var modifiedMemoryAccessor = memoryAccessors[i];
-                    if (modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.Multiply)
-                        continue;
-
-                    if (modifiedMemoryAccessor.Modifier.Type != FieldType.Value)
-                        continue;
-                    if (!modifiedMemoryAccessor.MemoryAccessor.Field.IsMemoryReference)
-                        continue;
-                    if (modifiedMemoryAccessor.MemoryAccessor.Field.IsFloat)
-                        continue;
-                    if (modifiedMemoryAccessor.MemoryAccessor.Field.Size.GetByteSize() == 4)
-                        continue;
-
-                    switch (modifiedMemoryAccessor.Modifier.Value)
-                    {
-                        case 0x10:
-                            MergeLowNibble(memoryAccessors, i, modifiedMemoryAccessor);
-                            break;
-
-                        case 0x100:
-                            MergeLowByte(memoryAccessors, i, modifiedMemoryAccessor, false);
-                            break;
-
-                        case 0x10000:
-                            MergeLowWord(memoryAccessors, i, modifiedMemoryAccessor, false);
-                            break;
-
-                        case 0x1000000:
-                            MergeLowTByte(memoryAccessors, i, modifiedMemoryAccessor, false);
-                            break;
-
-                        case 100:
-                            MergeLowByte(memoryAccessors, i, modifiedMemoryAccessor, true);
-                            break;
-
-                        case 10000:
-                            MergeLowWord(memoryAccessors, i, modifiedMemoryAccessor, true);
-                            break;
-
-                        case 1000000:
-                            MergeLowTByte(memoryAccessors, i, modifiedMemoryAccessor, true);
-                            break;
-                    }
-                }
-            } while (memoryAccessors.Count != initialCount && memoryAccessors.Count > 1);
-        }
-
-        private static void MergeLowNibble(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
-        {
-            if (modifiedMemoryAccessor.MemoryAccessor.Field.Size == FieldSize.HighNibble)
-            {
-                var lowNibbleIndex = FindMemoryRead(memoryAccessors, FieldSize.LowNibble,
-                    modifiedMemoryAccessor, modifiedMemoryAccessor.MemoryAccessor.Field.Value);
-                if (lowNibbleIndex != -1)
-                    MergeMemoryReads(memoryAccessors, modifiedIndex, lowNibbleIndex, FieldSize.Byte);
-            }
-        }
-
-        private static void MergeLowByte(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
-        {
-            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
-            if (isBcd != matchBcd)
-                return;
-
-            FieldSize targetSize;
-            var fieldSize = modifiedMemoryAccessor.MemoryAccessor.Field.Size;
-            switch (fieldSize)
-            {
-                case FieldSize.Byte:
-                    targetSize = FieldSize.Word;
-                    break;
-                case FieldSize.Word:
-                    targetSize = FieldSize.TByte;
-                    break;
-                case FieldSize.TByte:
-                    targetSize = FieldSize.DWord;
-                    break;
-                case FieldSize.BigEndianWord:
-                    targetSize = FieldSize.BigEndianTByte;
-                    break;
-                case FieldSize.BigEndianTByte:
-                    targetSize = FieldSize.BigEndianDWord;
-                    break;
-                default:
-                    return;
-            }
-
-            MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
-                FieldSize.Byte, fieldSize, targetSize, isBcd);
-        }
-
-        private static void MergeLowWord(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
-        {
-            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
-            if (isBcd != matchBcd)
-                return;
-
-            FieldSize targetSize;
-            var fieldSize = modifiedMemoryAccessor.MemoryAccessor.Field.Size;
-            switch (fieldSize)
-            {
-                case FieldSize.Byte:
-                    targetSize = FieldSize.TByte;
-                    break;
-                case FieldSize.Word:
-                    targetSize = FieldSize.DWord;
-                    break;
-                case FieldSize.BigEndianWord:
-                    targetSize = FieldSize.BigEndianDWord;
-                    break;
-                default:
-                    return;
-            }
-
-            MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
-                FieldSize.Word, fieldSize, targetSize, isBcd);
-        }
-
-        private static void MergeLowTByte(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
-        {
-            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
-            if (isBcd != matchBcd)
-                return;
-
-            if (modifiedMemoryAccessor.MemoryAccessor.Field.Size == FieldSize.Byte)
-            {
-                MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
-                    FieldSize.TByte, FieldSize.Byte, FieldSize.DWord, isBcd);
-            }
-        }
-
-        private static void MergeAccessors(List<ModifiedMemoryAccessorExpression> memoryAccessors,
-            int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor,
-            FieldSize mergeSize, FieldSize fieldSize, FieldSize targetSize, bool isBcd)
-        {
-            var address = modifiedMemoryAccessor.MemoryAccessor.Field.Value;
-
-            if (targetSize.IsBigEndian())
-            {
-                var lowIndex = FindMemoryRead(memoryAccessors, mergeSize.ToggleEndianness(),
-                    modifiedMemoryAccessor,
-                    address + fieldSize.GetByteSize(), isBcd);
-                if (lowIndex != -1)
-                    MergeMemoryReads(memoryAccessors, lowIndex, modifiedIndex, targetSize, isBcd);
-            }
-            else
-            {
-                var lowIndex = FindMemoryRead(memoryAccessors, mergeSize,
-                    modifiedMemoryAccessor, address - mergeSize.GetByteSize(), isBcd);
-                if (lowIndex != -1)
-                {
-                    MergeMemoryReads(memoryAccessors, modifiedIndex, lowIndex, targetSize, isBcd);
-                }
-                else if (fieldSize == FieldSize.Byte)
-                {
-                    lowIndex = FindMemoryRead(memoryAccessors, mergeSize.ToggleEndianness(),
-                        modifiedMemoryAccessor, address + 1, isBcd);
-                    if (lowIndex != -1)
-                        MergeMemoryReads(memoryAccessors, lowIndex, modifiedIndex, targetSize.ToggleEndianness(), isBcd);
-                }
-            }
-        }
-
-        private static void MergeMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors, int fromIndex, int toIndex, FieldSize newSize, bool makeBcd = false)
-        {
-            var newAccessor = memoryAccessors[toIndex].MemoryAccessor.ChangeFieldSize(newSize);
-            if (makeBcd)
-                newAccessor = new BinaryCodedDecimalExpression(newAccessor);
-
-            var newModifiedAccessor = new ModifiedMemoryAccessorExpression(newAccessor) { CombiningOperator = memoryAccessors[toIndex].CombiningOperator };
-            newModifiedAccessor.Location = newAccessor.Location.Union(memoryAccessors[fromIndex].Location);
-            memoryAccessors[toIndex] = newModifiedAccessor;
-            memoryAccessors.RemoveAt(fromIndex);
-        }
-
-        private static int FindMemoryRead(List<ModifiedMemoryAccessorExpression> memoryAccessors, FieldSize size, ModifiedMemoryAccessorExpression matchMemoryAccessor, uint address, bool matchBcd = false)
-        {
-            for (int i = 0; i < memoryAccessors.Count; ++i)
-            {
-                var modifiedMemoryAccessor = memoryAccessors[i];
-                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None &&
-                    modifiedMemoryAccessor.MemoryAccessor.Field.Value == address &&
-                    modifiedMemoryAccessor.MemoryAccessor.Field.Size == size &&
-                    modifiedMemoryAccessor.CombiningOperator == matchMemoryAccessor.CombiningOperator &&
-                    modifiedMemoryAccessor.MemoryAccessor.Field.Type == matchMemoryAccessor.MemoryAccessor.Field.Type &&
-                    modifiedMemoryAccessor.MemoryAccessor.PointerChainMatches(matchMemoryAccessor.MemoryAccessor))
-                {
-                    bool isBcd = (modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression);
-                    if (isBcd == matchBcd)
-                        return i;
-                }
-            }
-
-            return -1;
         }
 
         /// <summary>
@@ -1755,7 +1544,15 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             if (_memoryAccessors != null)
+            {
                 memoryAccessors.AddRange(_memoryAccessors);
+
+                if (_memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.Multiply) &&
+                    _memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.None))
+                {
+                    CombineNeighboringMemoryReads(memoryAccessors);
+                }
+            }
 
             if (appendConstantAccessor)
                 memoryAccessors.Add(constantAccessor);
@@ -1868,6 +1665,229 @@ namespace RATools.Parser.Expressions.Trigger
             context.LastRequirement.Type = RequirementType.None;
 
             return null;
+        }
+
+        internal MemoryValueExpression NormalizeMemoryReads()
+        {
+            if (_memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.Multiply) &&
+                _memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.None))
+            {
+                var memoryAccessors = new List<ModifiedMemoryAccessorExpression>(_memoryAccessors);
+                CombineNeighboringMemoryReads(memoryAccessors);
+                if (memoryAccessors.Count != _memoryAccessors.Count)
+                {
+                    var newMemoryValue = Clone();
+                    newMemoryValue._memoryAccessors = memoryAccessors;
+                    return newMemoryValue;
+                }
+            }
+
+            return this;
+        }
+
+        private static void CombineNeighboringMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors)
+        {
+            int initialCount;
+            do
+            {
+                initialCount = memoryAccessors.Count;
+
+                for (int i = memoryAccessors.Count - 1; i >= 0; --i)
+                {
+                    var modifiedMemoryAccessor = memoryAccessors[i];
+                    if (modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.Multiply)
+                        continue;
+
+                    if (modifiedMemoryAccessor.Modifier.Type != FieldType.Value)
+                        continue;
+                    if (!modifiedMemoryAccessor.MemoryAccessor.Field.IsMemoryReference)
+                        continue;
+                    if (modifiedMemoryAccessor.MemoryAccessor.Field.IsFloat)
+                        continue;
+                    if (modifiedMemoryAccessor.MemoryAccessor.Field.Size.GetByteSize() == 4)
+                        continue;
+
+                    switch (modifiedMemoryAccessor.Modifier.Value)
+                    {
+                        case 0x10:
+                            MergeLowNibble(memoryAccessors, i, modifiedMemoryAccessor);
+                            break;
+
+                        case 0x100:
+                            MergeLowByte(memoryAccessors, i, modifiedMemoryAccessor, false);
+                            break;
+
+                        case 0x10000:
+                            MergeLowWord(memoryAccessors, i, modifiedMemoryAccessor, false);
+                            break;
+
+                        case 0x1000000:
+                            MergeLowTByte(memoryAccessors, i, modifiedMemoryAccessor, false);
+                            break;
+
+                        case 100:
+                            MergeLowByte(memoryAccessors, i, modifiedMemoryAccessor, true);
+                            break;
+
+                        case 10000:
+                            MergeLowWord(memoryAccessors, i, modifiedMemoryAccessor, true);
+                            break;
+
+                        case 1000000:
+                            MergeLowTByte(memoryAccessors, i, modifiedMemoryAccessor, true);
+                            break;
+                    }
+                }
+            } while (memoryAccessors.Count != initialCount && memoryAccessors.Count > 1);
+        }
+
+        private static void MergeLowNibble(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor)
+        {
+            if (modifiedMemoryAccessor.MemoryAccessor.Field.Size == FieldSize.HighNibble)
+            {
+                var lowNibbleIndex = FindMemoryRead(memoryAccessors, FieldSize.LowNibble,
+                    modifiedMemoryAccessor, modifiedMemoryAccessor.MemoryAccessor.Field.Value);
+                if (lowNibbleIndex != -1)
+                    MergeMemoryReads(memoryAccessors, modifiedIndex, lowNibbleIndex, FieldSize.Byte);
+            }
+        }
+
+        private static void MergeLowByte(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
+        {
+            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
+            if (isBcd != matchBcd)
+                return;
+
+            FieldSize targetSize;
+            var fieldSize = modifiedMemoryAccessor.MemoryAccessor.Field.Size;
+            switch (fieldSize)
+            {
+                case FieldSize.Byte:
+                    targetSize = FieldSize.Word;
+                    break;
+                case FieldSize.Word:
+                    targetSize = FieldSize.TByte;
+                    break;
+                case FieldSize.TByte:
+                    targetSize = FieldSize.DWord;
+                    break;
+                case FieldSize.BigEndianWord:
+                    targetSize = FieldSize.BigEndianTByte;
+                    break;
+                case FieldSize.BigEndianTByte:
+                    targetSize = FieldSize.BigEndianDWord;
+                    break;
+                default:
+                    return;
+            }
+
+            MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
+                FieldSize.Byte, fieldSize, targetSize, isBcd);
+        }
+
+        private static void MergeLowWord(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
+        {
+            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
+            if (isBcd != matchBcd)
+                return;
+
+            FieldSize targetSize;
+            var fieldSize = modifiedMemoryAccessor.MemoryAccessor.Field.Size;
+            switch (fieldSize)
+            {
+                case FieldSize.Byte:
+                    targetSize = FieldSize.TByte;
+                    break;
+                case FieldSize.Word:
+                    targetSize = FieldSize.DWord;
+                    break;
+                case FieldSize.BigEndianWord:
+                    targetSize = FieldSize.BigEndianDWord;
+                    break;
+                default:
+                    return;
+            }
+
+            MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
+                FieldSize.Word, fieldSize, targetSize, isBcd);
+        }
+
+        private static void MergeLowTByte(List<ModifiedMemoryAccessorExpression> memoryAccessors, int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor, bool matchBcd)
+        {
+            bool isBcd = modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression;
+            if (isBcd != matchBcd)
+                return;
+
+            if (modifiedMemoryAccessor.MemoryAccessor.Field.Size == FieldSize.Byte)
+            {
+                MergeAccessors(memoryAccessors, modifiedIndex, modifiedMemoryAccessor,
+                    FieldSize.TByte, FieldSize.Byte, FieldSize.DWord, isBcd);
+            }
+        }
+
+        private static void MergeAccessors(List<ModifiedMemoryAccessorExpression> memoryAccessors,
+            int modifiedIndex, ModifiedMemoryAccessorExpression modifiedMemoryAccessor,
+            FieldSize mergeSize, FieldSize fieldSize, FieldSize targetSize, bool isBcd)
+        {
+            var address = modifiedMemoryAccessor.MemoryAccessor.Field.Value;
+
+            if (targetSize.IsBigEndian())
+            {
+                var lowIndex = FindMemoryRead(memoryAccessors, mergeSize.ToggleEndianness(),
+                    modifiedMemoryAccessor,
+                    address + fieldSize.GetByteSize(), isBcd);
+                if (lowIndex != -1)
+                    MergeMemoryReads(memoryAccessors, lowIndex, modifiedIndex, targetSize, isBcd);
+            }
+            else
+            {
+                var lowIndex = FindMemoryRead(memoryAccessors, mergeSize,
+                    modifiedMemoryAccessor, address - mergeSize.GetByteSize(), isBcd);
+                if (lowIndex != -1)
+                {
+                    MergeMemoryReads(memoryAccessors, modifiedIndex, lowIndex, targetSize, isBcd);
+                }
+                else if (fieldSize == FieldSize.Byte)
+                {
+                    lowIndex = FindMemoryRead(memoryAccessors, mergeSize.ToggleEndianness(),
+                        modifiedMemoryAccessor, address + 1, isBcd);
+                    if (lowIndex != -1)
+                        MergeMemoryReads(memoryAccessors, lowIndex, modifiedIndex, targetSize.ToggleEndianness(), isBcd);
+                }
+            }
+        }
+
+        private static void MergeMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors, int fromIndex, int toIndex, FieldSize newSize, bool makeBcd = false)
+        {
+            var newAccessor = memoryAccessors[toIndex].MemoryAccessor.ChangeFieldSize(newSize);
+            if (makeBcd)
+                newAccessor = new BinaryCodedDecimalExpression(newAccessor);
+
+            var newModifiedAccessor = new ModifiedMemoryAccessorExpression(newAccessor) { CombiningOperator = memoryAccessors[toIndex].CombiningOperator };
+            newModifiedAccessor.Location = newAccessor.Location.Union(memoryAccessors[fromIndex].Location);
+            memoryAccessors[toIndex] = newModifiedAccessor;
+            memoryAccessors.RemoveAt(fromIndex);
+        }
+
+        private static int FindMemoryRead(List<ModifiedMemoryAccessorExpression> memoryAccessors, FieldSize size, ModifiedMemoryAccessorExpression matchMemoryAccessor, uint address, bool matchBcd = false)
+        {
+            for (int i = 0; i < memoryAccessors.Count; ++i)
+            {
+                var modifiedMemoryAccessor = memoryAccessors[i];
+                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Value == address &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Size == size &&
+                    modifiedMemoryAccessor.CombiningOperator == matchMemoryAccessor.CombiningOperator &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Type == matchMemoryAccessor.MemoryAccessor.Field.Type &&
+                    modifiedMemoryAccessor.MemoryAccessor.PointerChainMatches(matchMemoryAccessor.MemoryAccessor))
+                {
+                    bool isBcd = (modifiedMemoryAccessor.MemoryAccessor is BinaryCodedDecimalExpression);
+                    if (isBcd == matchBcd)
+                        return i;
+                }
+            }
+
+            return -1;
         }
 
         public ErrorExpression Execute(InterpreterScope scope)

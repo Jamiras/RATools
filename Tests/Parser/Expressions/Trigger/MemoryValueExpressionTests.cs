@@ -7,8 +7,6 @@ using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Text;
-using System.Windows.Media.Media3D;
-using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -539,89 +537,6 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         }
 
         [Test]
-        // low4 + high4 * 16
-        [TestCase("low4(0x1234)", MathematicOperation.Add, "high4(0x1234) * 16", "byte(0x001234)")]
-        [TestCase("high4(0x1234) * 16", MathematicOperation.Add, "low4(0x1234)", "byte(0x001234)")]
-        [TestCase("low4(0x1234)", MathematicOperation.Add, "high4(0x1235) * 16", "low4(0x001234) + high4(0x001235) * 16")]
-        [TestCase("low4(0x1234)", MathematicOperation.Subtract, "high4(0x1234) * 16", "byte(0x001234) - high4(0x001234) * 16")]
-        // byte + byte * 256
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "byte(0x1235) * 256", "word(0x001234)")]
-        [TestCase("byte(0x1235) * 256", MathematicOperation.Add, "byte(0x1234)", "word(0x001234)")]
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "byte(0x1234) * 256", "byte(0x001234) + byte(0x001234) * 256")]
-        [TestCase("byte(0x1235)", MathematicOperation.Add, "byte(0x1234) * 256", "word_be(0x001234)")]
-        [TestCase("byte(0x1234) * 256", MathematicOperation.Add, "byte(0x1235)", "word_be(0x001234)")]
-        // byte + word * 256
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "word(0x1235) * 256", "tbyte(0x001234)")]
-        [TestCase("word(0x1235) * 256", MathematicOperation.Add, "byte(0x1234)", "tbyte(0x001234)")]
-        [TestCase("byte(0x1235)", MathematicOperation.Add, "word(0x1234) * 256", "byte(0x001235) + word(0x001234) * 256")]
-        // byte + tbyte * 256
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "tbyte(0x1235) * 256", "dword(0x001234)")]
-        [TestCase("tbyte(0x1235) * 256", MathematicOperation.Add, "byte(0x1234)", "dword(0x001234)")]
-        // byte + word_be * 256
-        [TestCase("byte(0x1236)", MathematicOperation.Add, "word_be(0x1234) * 256", "tbyte_be(0x001234)")]
-        [TestCase("word_be(0x1234) * 256", MathematicOperation.Add, "byte(0x1236)", "tbyte_be(0x001234)")]
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "word_be(0x1235) * 256", "byte(0x001234) + word_be(0x001235) * 256")]
-        // word + word * 65536
-        [TestCase("word(0x1234)", MathematicOperation.Add, "word(0x1236) * 65536", "dword(0x001234)")]
-        [TestCase("word(0x1236) * 65536", MathematicOperation.Add, "word(0x1234)", "dword(0x001234)")]
-        [TestCase("word(0x1234)", MathematicOperation.Add, "word(0x1235) * 65536", "word(0x001234) + word(0x001235) * 65536")]
-        // word_be + byte * 65536
-        [TestCase("word_be(0x1235)", MathematicOperation.Add, "byte(0x1234) * 65536", "tbyte_be(0x001234)")]
-        [TestCase("byte(0x1234) * 65536", MathematicOperation.Add, "word_be(0x1235)", "tbyte_be(0x001234)")]
-        [TestCase("word_be(0x1234)", MathematicOperation.Add, "byte(0x1236) * 65536", "word_be(0x001234) + byte(0x001236) * 65536")]
-        // word_be + word_be * 65536
-        [TestCase("word_be(0x1236)", MathematicOperation.Add, "word_be(0x1234) * 65536", "dword_be(0x001234)")]
-        [TestCase("word_be(0x1234) * 65536", MathematicOperation.Add, "word_be(0x1236)", "dword_be(0x001234)")]
-        [TestCase("word_be(0x1234)", MathematicOperation.Add, "word_be(0x1236) * 65536", "word_be(0x001234) + word_be(0x001236) * 65536")]
-        // tbyte + byte * 16777216
-        [TestCase("tbyte(0x1234)", MathematicOperation.Add, "byte(0x1237) * 16777216", "dword(0x001234)")]
-        [TestCase("byte(0x1237) * 16777216", MathematicOperation.Add, "tbyte(0x1234)", "dword(0x001234)")]
-        [TestCase("tbyte(0x1234)", MathematicOperation.Add, "byte(0x1235) * 16777216", "tbyte(0x001234) + byte(0x001235) * 16777216")]
-        // tbyte_be + byte * 16777216
-        [TestCase("tbyte_be(0x1235)", MathematicOperation.Add, "byte(0x1234) * 16777216", "dword_be(0x001234)")]
-        [TestCase("byte(0x1234) * 16777216", MathematicOperation.Add, "tbyte_be(0x1235)", "dword_be(0x001234)")]
-        [TestCase("tbyte_be(0x1234)", MathematicOperation.Add, "byte(0x1237) * 16777216", "tbyte_be(0x001234) + byte(0x001237) * 16777216")]
-        // prev interference
-        [TestCase("byte(0x1234)", MathematicOperation.Add, "prev(byte(0x1235)) * 256", "byte(0x001234) + prev(byte(0x001235)) * 256")]
-        [TestCase("prev(byte(0x1234))", MathematicOperation.Add, "byte(0x1235) * 256", "prev(byte(0x001234)) + byte(0x001235) * 256")]
-        [TestCase("prev(byte(0x1234))", MathematicOperation.Add, "prev(byte(0x1235) * 256)", "prev(word(0x001234))")]
-        // pointer
-        [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(dword(0x1000) + 0x1235) * 256", "word(dword(0x001000) + 0x1234)")]
-        [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(dword(0x1004) + 0x1235) * 256", "byte(dword(0x001000) + 0x1234) + byte(dword(0x001004) + 0x1235) * 256")]
-        [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(0x1235) * 256", "byte(dword(0x001000) + 0x1234) + byte(0x001235) * 256")]
-        // bcd byte + bcd byte * 100
-        [TestCase("bcd(byte(0x1234))", MathematicOperation.Add, "bcd(byte(0x1235)) * 100", "bcd(word(0x001234))")]
-        [TestCase("bcd(byte(0x1235)) * 100", MathematicOperation.Add, "bcd(byte(0x1234))", "bcd(word(0x001234))")]
-        [TestCase("bcd(byte(0x1234))", MathematicOperation.Add, "byte(0x1235) * 100", "bcd(byte(0x001234)) + byte(0x001235) * 100")]
-        // bcd word + bcd byte * 10000
-        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "bcd(byte(0x1236)) * 10000", "bcd(tbyte(0x001234))")]
-        [TestCase("bcd(byte(0x1236)) * 10000", MathematicOperation.Add, "bcd(word(0x1234))", "bcd(tbyte(0x001234))")]
-        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "byte(0x1236) * 10000", "bcd(word(0x001234)) + byte(0x001236) * 10000")]
-        // bcd word + bcd word * 10000
-        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "bcd(word(0x1236)) * 10000", "bcd(dword(0x001234))")]
-        [TestCase("bcd(word(0x1236)) * 10000", MathematicOperation.Add, "bcd(word(0x1234))", "bcd(dword(0x001234))")]
-        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "word(0x1236) * 10000", "bcd(word(0x001234)) + word(0x001236) * 10000")]
-        // bcd tbyte + bcd byte * 1000000
-        [TestCase("bcd(tbyte(0x1234))", MathematicOperation.Add, "bcd(byte(0x1237)) * 1000000", "bcd(dword(0x001234))")]
-        [TestCase("bcd(byte(0x1237)) * 1000000", MathematicOperation.Add, "bcd(tbyte(0x1234))", "bcd(dword(0x001234))")]
-        // bcd word_be + bcd byte * 10000
-        [TestCase("bcd(word_be(0x1235))", MathematicOperation.Add, "bcd(byte(0x1234)) * 10000", "bcd(tbyte_be(0x001234))")]
-        [TestCase("bcd(byte(0x1234)) * 10000", MathematicOperation.Add, "bcd(word_be(0x1235))", "bcd(tbyte_be(0x001234))")]
-        // bcd word_be + bcd word_be * 10000
-        [TestCase("bcd(word_be(0x1236))", MathematicOperation.Add, "bcd(word_be(0x1234)) * 10000", "bcd(dword_be(0x001234))")]
-        [TestCase("bcd(word_be(0x1234)) * 10000", MathematicOperation.Add, "bcd(word_be(0x1236))", "bcd(dword_be(0x001234))")]
-        public void TestCombineMemoryRead(string left, MathematicOperation operation, string right, string expected)
-        {
-            var leftExpression = ExpressionTests.Parse(left);
-            Assert.That(leftExpression, Is.InstanceOf<IMathematicCombineExpression>());
-
-            var rightExpression = ExpressionTests.Parse(right);
-            var combined = ((IMathematicCombineExpression)leftExpression).Combine(rightExpression, operation);
-
-            ExpressionTests.AssertAppendString(combined, expected);
-        }
-
-        [Test]
         [TestCase(ComparisonOperation.Equal, 8, true, "byte(0x000001) == 255")]
         [TestCase(ComparisonOperation.NotEqual, 8, true, "byte(0x000001) != 255")]
         [TestCase(ComparisonOperation.Equal, 0, true, "byte(0x000001) == 0")]
@@ -657,16 +572,90 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             }
         }
 
+
         [Test]
-        [TestCase("byte(0x1234) + byte(0x1235)*256 + byte(0x1236)*65536", "tbyte(0x001234)")]
-        [TestCase("byte(0x1236)*65536 + byte(0x1235)*256 + byte(0x1234)", "tbyte(0x001234)")]
-        [TestCase("bcd(byte(0x1234)) + bcd(byte(0x1235))*100 + bcd(byte(0x1236))*10000", "bcd(tbyte(0x001234))")]
-        [TestCase("bcd(byte(0x1236))*10000 + bcd(byte(0x1235))*100 + bcd(byte(0x1234))", "bcd(tbyte(0x001234))")]
-        public void TestCombineMemoryReadChain(string input, string expected)
+        // low4 + high4 * 16
+        [TestCase("low4(0x1234) + high4(0x1234) * 16", "0xH001234")]
+        [TestCase("high4(0x1234) * 16 + low4(0x1234)", "0xH001234")]
+        [TestCase("low4(0x1234) + high4(0x1235) * 16", "A:0xU001235*16_0xL001234")]
+        [TestCase("low4(0x1234) - high4(0x1234) * 16", "B:0xU001234*16_0xL001234")]
+        // byte + byte * 256
+        [TestCase("byte(0x1234) + byte(0x1235) * 256", "0x 001234")]
+        [TestCase("byte(0x1235) * 256 + byte(0x1234)", "0x 001234")]
+        [TestCase("byte(0x1234) + byte(0x1234) * 256", "A:0xH001234*256_0xH001234")]
+        [TestCase("byte(0x1235) + byte(0x1234) * 256", "0xI001234")]
+        [TestCase("byte(0x1234) * 256 + byte(0x1235)", "0xI001234")]
+        // byte + word * 256
+        [TestCase("byte(0x1234) + word(0x1235) * 256", "0xW001234")]
+        [TestCase("word(0x1235) * 256 + byte(0x1234)", "0xW001234")]
+        [TestCase("byte(0x1235) + word(0x1234) * 256", "A:0x 001234*256_0xH001235")]
+        // byte + tbyte * 256
+        [TestCase("byte(0x1234) + tbyte(0x1235) * 256", "0xX001234")]
+        [TestCase("tbyte(0x1235) * 256 + byte(0x1234)", "0xX001234")]
+        // byte + word_be * 256
+        [TestCase("byte(0x1236) + word_be(0x1234) * 256", "0xJ001234")]
+        [TestCase("word_be(0x1234) * 256 + byte(0x1236)", "0xJ001234")]
+        [TestCase("byte(0x1234) + word_be(0x1235) * 256", "A:0xI001235*256_0xH001234")]
+        // word + word * 65536
+        [TestCase("word(0x1234) + word(0x1236) * 65536", "0xX001234")]
+        [TestCase("word(0x1236) * 65536 + word(0x1234)", "0xX001234")]
+        [TestCase("word(0x1234) + word(0x1235) * 65536", "A:0x 001235*65536_0x 001234")]
+        // word_be + byte * 65536
+        [TestCase("word_be(0x1235) + byte(0x1234) * 65536", "0xJ001234")]
+        [TestCase("byte(0x1234) * 65536 + word_be(0x1235)", "0xJ001234")]
+        [TestCase("word_be(0x1234) + byte(0x1236) * 65536", "A:0xH001236*65536_0xI001234")]
+        // word_be + word_be * 65536
+        [TestCase("word_be(0x1236) + word_be(0x1234) * 65536", "0xG001234")]
+        [TestCase("word_be(0x1234) * 65536 + word_be(0x1236)", "0xG001234")]
+        [TestCase("word_be(0x1234) + word_be(0x1236) * 65536", "A:0xI001236*65536_0xI001234")]
+        // tbyte + byte * 16777216
+        [TestCase("tbyte(0x1234) + byte(0x1237) * 16777216", "0xX001234")]
+        [TestCase("byte(0x1237) * 16777216 + tbyte(0x1234)", "0xX001234")]
+        [TestCase("tbyte(0x1234) + byte(0x1235) * 16777216", "A:0xH001235*16777216_0xW001234")]
+        // tbyte_be + byte * 16777216
+        [TestCase("tbyte_be(0x1235) + byte(0x1234) * 16777216", "0xG001234")]
+        [TestCase("byte(0x1234) * 16777216 + tbyte_be(0x1235)", "0xG001234")]
+        [TestCase("tbyte_be(0x1234) + byte(0x1237) * 16777216", "A:0xH001237*16777216_0xJ001234")]
+        // prev interference
+        [TestCase("byte(0x1234) + prev(byte(0x1235)) * 256", "A:d0xH001235*256_0xH001234")]
+        [TestCase("prev(byte(0x1234)) + byte(0x1235) * 256", "A:0xH001235*256_d0xH001234")]
+        [TestCase("prev(byte(0x1234)) + prev(byte(0x1235) * 256)", "d0x 001234")]
+        [TestCase("byte(0x1234) + byte(0x1235) * 256 - prev(byte(0x1234)) - prev(byte(0x1235) * 256)", "B:d0x 001234=0_0x 001234")]
+        // pointer
+        [TestCase("byte(dword(0x1000) + 0x1234) + byte(dword(0x1000) + 0x1235) * 256", "I:0xX001000_0x 001234")]
+        [TestCase("byte(dword(0x1000) + 0x1234) + byte(dword(0x1004) + 0x1235) * 256", "I:0xX001004_A:0xH001235*256_I:0xX001000_0xH001234")]
+        [TestCase("byte(dword(0x1000) + 0x1234) + byte(0x1235) * 256", "A:0xH001235*256_I:0xX001000_0xH001234")]
+        // bcd byte + bcd byte * 100
+        [TestCase("bcd(byte(0x1234)) + bcd(byte(0x1235)) * 100", "b0x 001234")]
+        [TestCase("bcd(byte(0x1235)) * 100 + bcd(byte(0x1234))", "b0x 001234")]
+        [TestCase("bcd(byte(0x1234)) + byte(0x1235) * 100", "A:0xH001235*100_b0xH001234")]
+        // bcd word + bcd byte * 10000
+        [TestCase("bcd(word(0x1234)) + bcd(byte(0x1236)) * 10000", "b0xW001234")]
+        [TestCase("bcd(byte(0x1236)) * 10000 + bcd(word(0x1234))", "b0xW001234")]
+        [TestCase("bcd(word(0x1234)) + byte(0x1236) * 10000", "A:0xH001236*10000_b0x 001234")]
+        // bcd word + bcd word * 10000
+        [TestCase("bcd(word(0x1234)) + bcd(word(0x1236)) * 10000", "b0xX001234")]
+        [TestCase("bcd(word(0x1236)) * 10000 + bcd(word(0x1234))", "b0xX001234")]
+        [TestCase("bcd(word(0x1234)) + word(0x1236) * 10000", "A:0x 001236*10000_b0x 001234")]
+        // bcd tbyte + bcd byte * 1000000
+        [TestCase("bcd(tbyte(0x1234)) + bcd(byte(0x1237)) * 1000000", "b0xX001234")]
+        [TestCase("bcd(byte(0x1237)) * 1000000 + bcd(tbyte(0x1234))", "b0xX001234")]
+        // bcd word_be + bcd byte * 10000
+        [TestCase("bcd(word_be(0x1235)) + bcd(byte(0x1234)) * 10000", "b0xJ001234")]
+        [TestCase("bcd(byte(0x1234)) * 10000 + bcd(word_be(0x1235))", "b0xJ001234")]
+        // bcd word_be + bcd word_be * 10000
+        [TestCase("bcd(word_be(0x1236)) + bcd(word_be(0x1234)) * 10000", "b0xG001234")]
+        [TestCase("bcd(word_be(0x1234)) * 10000 + bcd(word_be(0x1236))", "b0xG001234")]
+        // longer chains
+        [TestCase("byte(0x1234) + byte(0x1235)*256 + byte(0x1236)*65536", "0xW001234")]
+        [TestCase("byte(0x1236)*65536 + byte(0x1235)*256 + byte(0x1234)", "0xW001234")]
+        [TestCase("bcd(byte(0x1234)) + bcd(byte(0x1235))*100 + bcd(byte(0x1236))*10000", "b0xW001234")]
+        [TestCase("bcd(byte(0x1236))*10000 + bcd(byte(0x1235))*100 + bcd(byte(0x1234))", "b0xW001234")]
+        public void TestCombineNeighboringMemoryReads(string input, string expected)
         {
             var expr = TriggerExpressionTests.Parse(input);
-
-            ExpressionTests.AssertAppendString(expr, expected);
+            Assert.That(expr, Is.InstanceOf<ITriggerExpression>());
+            TriggerExpressionTests.AssertSerialize((ITriggerExpression)expr, expected);
         }
     }
 }

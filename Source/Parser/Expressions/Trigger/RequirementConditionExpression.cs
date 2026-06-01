@@ -368,6 +368,17 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
+        private void NormalizeMemoryReads()
+        {
+            var memoryValue = Left as MemoryValueExpression;
+            if (memoryValue != null)
+                Left = memoryValue.NormalizeMemoryReads();
+
+            memoryValue = Right as MemoryValueExpression;
+            if (memoryValue != null)
+                Right = memoryValue.NormalizeMemoryReads();
+        }
+
         private ErrorExpression NormalizeBCD(TriggerBuilderContext context, out RequirementExpressionBase result)
         {
             ExpressionBase newLeft;
@@ -755,6 +766,8 @@ namespace RATools.Parser.Expressions.Trigger
                 // a MemoryValue so it can generate an AddSource chain with a 0
                 Left = new MemoryValueExpression(modifiedMemoryAccessor);
             }
+
+            NormalizeMemoryReads();
 
             RequirementExpressionBase result;
             var error = NormalizeBCD(context, out result);
