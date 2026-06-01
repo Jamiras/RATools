@@ -288,5 +288,29 @@
                     return false;
             }
         }
+
+        /// <summary>
+        /// Gets the big-endian size corresponding to the provided little-endian size or
+        /// the little-endian size corresponding to the provided big-endian size.
+        /// </summary>
+        public static FieldSize ToggleEndianness(this FieldSize size)
+        {
+            switch (size)
+            {
+                case FieldSize.Word: return FieldSize.BigEndianWord;
+                case FieldSize.TByte: return FieldSize.BigEndianTByte;
+                case FieldSize.DWord: return FieldSize.BigEndianDWord;
+                case FieldSize.Float: return FieldSize.BigEndianFloat;
+                case FieldSize.Double32: return FieldSize.BigEndianDouble32;
+                case FieldSize.BigEndianWord: return FieldSize.Word;
+                case FieldSize.BigEndianTByte: return FieldSize.TByte;
+                case FieldSize.BigEndianDWord: return FieldSize.DWord;
+                case FieldSize.BigEndianFloat: return FieldSize.Float;
+                case FieldSize.BigEndianDouble32: return FieldSize.Double32;
+                case FieldSize.MBF32: return FieldSize.LittleEndianMBF32;
+                case FieldSize.LittleEndianMBF32: return FieldSize.MBF32;
+                default: return size;
+            }
+        }
     }
 }

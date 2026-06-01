@@ -7,6 +7,8 @@ using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System;
 using System.Text;
+using System.Windows.Media.Media3D;
+using static Microsoft.ApplicationInsights.MetricDimensionNames.TelemetryContext;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -541,6 +543,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("low4(0x1234)", MathematicOperation.Add, "high4(0x1234) * 16", "byte(0x001234)")]
         [TestCase("high4(0x1234) * 16", MathematicOperation.Add, "low4(0x1234)", "byte(0x001234)")]
         [TestCase("low4(0x1234)", MathematicOperation.Add, "high4(0x1235) * 16", "low4(0x001234) + high4(0x001235) * 16")]
+        [TestCase("low4(0x1234)", MathematicOperation.Subtract, "high4(0x1234) * 16", "byte(0x001234) - high4(0x001234) * 16")]
         // byte + byte * 256
         [TestCase("byte(0x1234)", MathematicOperation.Add, "byte(0x1235) * 256", "word(0x001234)")]
         [TestCase("byte(0x1235) * 256", MathematicOperation.Add, "byte(0x1234)", "word(0x001234)")]
@@ -586,7 +589,27 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(dword(0x1000) + 0x1235) * 256", "word(dword(0x001000) + 0x1234)")]
         [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(dword(0x1004) + 0x1235) * 256", "byte(dword(0x001000) + 0x1234) + byte(dword(0x001004) + 0x1235) * 256")]
         [TestCase("byte(dword(0x1000) + 0x1234)", MathematicOperation.Add, "byte(0x1235) * 256", "byte(dword(0x001000) + 0x1234) + byte(0x001235) * 256")]
-
+        // bcd byte + bcd byte * 100
+        [TestCase("bcd(byte(0x1234))", MathematicOperation.Add, "bcd(byte(0x1235)) * 100", "bcd(word(0x001234))")]
+        [TestCase("bcd(byte(0x1235)) * 100", MathematicOperation.Add, "bcd(byte(0x1234))", "bcd(word(0x001234))")]
+        [TestCase("bcd(byte(0x1234))", MathematicOperation.Add, "byte(0x1235) * 100", "bcd(byte(0x001234)) + byte(0x001235) * 100")]
+        // bcd word + bcd byte * 10000
+        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "bcd(byte(0x1236)) * 10000", "bcd(tbyte(0x001234))")]
+        [TestCase("bcd(byte(0x1236)) * 10000", MathematicOperation.Add, "bcd(word(0x1234))", "bcd(tbyte(0x001234))")]
+        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "byte(0x1236) * 10000", "bcd(word(0x001234)) + byte(0x001236) * 10000")]
+        // bcd word + bcd word * 10000
+        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "bcd(word(0x1236)) * 10000", "bcd(dword(0x001234))")]
+        [TestCase("bcd(word(0x1236)) * 10000", MathematicOperation.Add, "bcd(word(0x1234))", "bcd(dword(0x001234))")]
+        [TestCase("bcd(word(0x1234))", MathematicOperation.Add, "word(0x1236) * 10000", "bcd(word(0x001234)) + word(0x001236) * 10000")]
+        // bcd tbyte + bcd byte * 1000000
+        [TestCase("bcd(tbyte(0x1234))", MathematicOperation.Add, "bcd(byte(0x1237)) * 1000000", "bcd(dword(0x001234))")]
+        [TestCase("bcd(byte(0x1237)) * 1000000", MathematicOperation.Add, "bcd(tbyte(0x1234))", "bcd(dword(0x001234))")]
+        // bcd word_be + bcd byte * 10000
+        [TestCase("bcd(word_be(0x1235))", MathematicOperation.Add, "bcd(byte(0x1234)) * 10000", "bcd(tbyte_be(0x001234))")]
+        [TestCase("bcd(byte(0x1234)) * 10000", MathematicOperation.Add, "bcd(word_be(0x1235))", "bcd(tbyte_be(0x001234))")]
+        // bcd word_be + bcd word_be * 10000
+        [TestCase("bcd(word_be(0x1236))", MathematicOperation.Add, "bcd(word_be(0x1234)) * 10000", "bcd(dword_be(0x001234))")]
+        [TestCase("bcd(word_be(0x1234)) * 10000", MathematicOperation.Add, "bcd(word_be(0x1236))", "bcd(dword_be(0x001234))")]
         public void TestCombineMemoryRead(string left, MathematicOperation operation, string right, string expected)
         {
             var leftExpression = ExpressionTests.Parse(left);
@@ -632,6 +655,18 @@ namespace RATools.Parser.Tests.Expressions.Trigger
                 Assert.That(comparison, Is.InstanceOf<ComparisonExpression>());
                 ExpressionTests.AssertAppendString(comparison, expected);
             }
+        }
+
+        [Test]
+        [TestCase("byte(0x1234) + byte(0x1235)*256 + byte(0x1236)*65536", "tbyte(0x001234)")]
+        [TestCase("byte(0x1236)*65536 + byte(0x1235)*256 + byte(0x1234)", "tbyte(0x001234)")]
+        [TestCase("bcd(byte(0x1234)) + bcd(byte(0x1235))*100 + bcd(byte(0x1236))*10000", "bcd(tbyte(0x001234))")]
+        [TestCase("bcd(byte(0x1236))*10000 + bcd(byte(0x1235))*100 + bcd(byte(0x1234))", "bcd(tbyte(0x001234))")]
+        public void TestCombineMemoryReadChain(string input, string expected)
+        {
+            var expr = TriggerExpressionTests.Parse(input);
+
+            ExpressionTests.AssertAppendString(expr, expected);
         }
     }
 }
