@@ -45,6 +45,13 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             "K:0x 002345&1023_A:{recall}*8_K:0xX001234_I:{recall}_0xX000004")]
         [TestCase("byte(0x3B0038 - ((dword_be(0x3180) & 0x15) / (dword_be(0x3180) & 0x15)) * 0x4C068)",
             "K:0xG003180&21_K:{recall}/{recall}_I:{recall}*4294655896_0xH3b0038")]
+        [TestCase("bcd(byte(0x1234))", "b0xH001234")]
+        [TestCase("bcd(word(0x1234))", "b0x 001234")]
+        [TestCase("bcd(dword(0x1234))", "b0xX001234")]
+        [TestCase("bcd(low4(0x1234))", "0xL001234")] // bcd redundant on low4
+        [TestCase("bcd(high4(0x1234))", "0xU001234")] // bcd redundant on high4
+        [TestCase("bcd(bit0(0x1234))", "0xM001234")] // bcd redudant on bit sizes
+        [TestCase("bcd(bit7(0x1234))", "0xT001234")] // bcd redudant on bit sizes
         public void TestBuildTrigger(string input, string expected)
         {
             var accessor = TriggerExpressionTests.Parse<MemoryAccessorExpression>(input);

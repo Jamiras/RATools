@@ -330,5 +330,22 @@ namespace RATools.Parser.Tests.Functions
                 "- 1:23 15 is not a supported value for points"
             );
         }
+
+        [Test]
+        public void TestMeasuredFunc()
+        {
+            var achievement = Evaluate(
+                "counter = word(0x1234) / 64 >= 100\r\n" +
+                "achievement(\"t\", \"d\", 5, measured(counter))");
+            var builder = new AchievementBuilder(achievement);
+            Assert.That(builder.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("A:0x 001234/64_M:0>=100"));
+
+            var achievement2 = Evaluate(
+                "achievement(\"t\", \"d\", 5, measured(word(0x1234) / 64 >= 100))");
+            var builder2 = new AchievementBuilder(achievement2);
+            Assert.That(builder2.SerializeRequirements(new SerializationContext()),
+                Is.EqualTo("A:0x 001234/64_M:0>=100"));
+        }
     }
 }

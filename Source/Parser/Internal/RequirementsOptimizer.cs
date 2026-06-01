@@ -153,67 +153,6 @@ namespace RATools.Parser.Internal
             return null;
         }
 
-        private static uint DecToHex(uint dec)
-        {
-            uint hex = (dec % 10);
-            dec /= 10;
-            hex |= (dec % 10) << 4;
-            dec /= 10;
-            hex |= (dec % 10) << 8;
-            dec /= 10;
-            hex |= (dec % 10) << 12;
-            dec /= 10;
-            hex |= (dec % 10) << 16;
-            dec /= 10;
-            hex |= (dec % 10) << 20;
-            dec /= 10;
-            hex |= (dec % 10) << 24;
-            dec /= 10;
-            hex |= (dec % 10) << 28;
-            return hex;
-        }
-
-        private static bool? NormalizeBCD(Requirement requirement)
-        {
-            if (requirement.Left.Type == FieldType.BinaryCodedDecimal)
-            {
-                switch (requirement.Right.Type)
-                {
-                    case FieldType.BinaryCodedDecimal:
-                        /* both sides are being BCD decoded, can skip that step */
-                        requirement.Left = new Field { Size = requirement.Left.Size, Type = FieldType.MemoryAddress, Value = requirement.Left.Value };
-                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.MemoryAddress, Value = requirement.Right.Value };
-                        break;
-
-                    case FieldType.Value:
-                        /* prevent overflow calling DecToHex - limits for smaller sizes will be enforced later
-                         * because DecToHex will return a value larger than the memory accessor can generate */
-                        var result = NormalizeComparisonMax(requirement, 99999999);
-                        if (result != null)
-                            return result;
-
-                        /* BCD comparison to constant - convert constant to avoid decoding overhead */
-                        requirement.Left = new Field { Size = requirement.Left.Size, Type = FieldType.MemoryAddress, Value = requirement.Left.Value };
-                        requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.Value, Value = DecToHex(requirement.Right.Value) };
-                        break;
-
-                    default:
-                        /* cannot normalize BCD comparison */
-                        break;
-                }
-
-                /* BCD decode of anything smaller than 4 bits has no effect */
-                if (requirement.Left.Type == FieldType.BinaryCodedDecimal && Field.GetMaxValue(requirement.Left.Size) < 16)
-                    requirement.Left = new Field { Size = requirement.Left.Size, Type = FieldType.MemoryAddress, Value = requirement.Left.Value };
-            }
-
-            /* BCD decode of anything smaller than 4 bits has no effect */
-            if (requirement.Right.Type == FieldType.BinaryCodedDecimal && Field.GetMaxValue(requirement.Right.Size) < 16)
-                requirement.Right = new Field { Size = requirement.Right.Size, Type = FieldType.MemoryAddress, Value = requirement.Right.Value };
-
-            return null;
-        }
-
         private static void NormalizeComparisons(IList<RequirementEx> requirements, bool forSubclause)
         {
             var alwaysTrue = new List<RequirementEx>();
@@ -228,9 +167,7 @@ namespace RATools.Parser.Internal
                 var requirement = requirementEx.Requirements[0];
 
                 // see if the requirement can be simplified down to an always_true() or always_false().
-                var result = NormalizeBCD(requirement);
-                if (result == null)
-                    result = requirement.Evaluate();
+                var result = requirement.Evaluate();
                 if (result == null)
                     result = NormalizeLimits(requirement, forSubclause);
 

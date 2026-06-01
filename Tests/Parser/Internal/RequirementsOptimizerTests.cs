@@ -91,8 +91,6 @@ namespace RATools.Parser.Tests.Internal
         [TestCase("bcd(dword(0x1234)) == 100000000", "always_false()")] // BCD of a dword cannot exceed 99999999
         [TestCase("bcd(byte(0x1234)) == bcd(byte(0x2345))", "byte(0x001234) == byte(0x002345)")] // BCD can be removed from both sides of the comparison
         [TestCase("bcd(byte(0x1234)) == byte(0x2345)", "bcd(byte(0x001234)) == byte(0x002345)")] // BCD cannot be removed when comparing to another memory address
-        [TestCase("bcd(low4(0x1234)) == low4(0x2345)", "low4(0x001234) == low4(0x002345)")] // BCD can be removed for memory accessors of 4 bits or less
-        [TestCase("low4(0x1234) == bcd(low4(0x2345))", "low4(0x001234) == low4(0x002345)")] // BCD can be removed for memory accessors of 4 bits or less
         [TestCase("bcd(low4(0x1234)) == 6", "low4(0x001234) == 6")] // BCD can be removed for memory accessors of 4 bits or less
         [TestCase("bcd(low4(0x1234)) == 10", "always_false()")] // BCD of a nummber cannot exceed 9
         // ==== NormalizeComparisons ===

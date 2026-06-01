@@ -858,8 +858,20 @@ namespace RATools.Parser.Expressions.Trigger
                         {
                             case ComparisonOperation.Equal:
                             case ComparisonOperation.NotEqual:
-                                // "a / 2 == 3" is true for 6 and 7 so cannot be "a == 6"
-                                return null;
+                                if (((IntegerConstantExpression)right).Value == 0)
+                                {
+                                    // "a / 2 == 0" is true for 0 and 1 so we can make it "a < 2" by changing it to "a / 2 < 1".
+                                    // similary, "a / 2 != 0" can be "a >= 2" by changing it to "a / 2 >= 1".
+                                    operation = (operation == ComparisonOperation.Equal)
+                                        ? ComparisonOperation.LessThan : ComparisonOperation.GreaterThanOrEqual;
+                                    right = new IntegerConstantExpression(1);
+                                }
+                                else
+                                {
+                                    // "a / 2 == 3" is true for 6 and 7 so cannot be "a == 6"
+                                    return null;
+                                }
+                                break;
 
                             case ComparisonOperation.GreaterThan:
                                 // "a / 2 > 3" cannot be "a > 6" because 7 would qualify
@@ -869,8 +881,8 @@ namespace RATools.Parser.Expressions.Trigger
                                 break;
 
                             case ComparisonOperation.LessThanOrEqual:
-                                // "a / 2 <= 3" cannot be "a <= 6" because 7 should quality
-                                // but we cane make it "a < 8" by changing it to "a / 2 < 4"
+                                // "a / 2 <= 3" cannot be "a <= 6" because 7 should qualify
+                                // but we can make it "a < 8" by changing it to "a / 2 < 4"
                                 operation = ComparisonOperation.LessThan;
                                 right = new IntegerConstantExpression(((IntegerConstantExpression)right).Value + 1);
                                 break;

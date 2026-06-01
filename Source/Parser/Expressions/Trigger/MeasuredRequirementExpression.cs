@@ -75,7 +75,9 @@ namespace RATools.Parser.Expressions.Trigger
             var whenOptimized = When.Optimize(context);
             var updated = !ReferenceEquals(whenOptimized, When);
 
-            var conditionOptimized = Condition.Optimize(context);
+            var measuredContext = context.Clone();
+            measuredContext.CanModifyComparison = false;
+            var conditionOptimized = Condition.Optimize(measuredContext);
             updated |= !ReferenceEquals(conditionOptimized, Condition);
 
             if (updated)
@@ -114,12 +116,11 @@ namespace RATools.Parser.Expressions.Trigger
             {
                 // generate the subclause using a clean set of requirements in case we need to
                 // rearrange some stuff later
-                var oldRequirements = context.Trigger;
-                context.Trigger = requirements;
+                var measuredContext = context.Clone();
+                measuredContext.Trigger = requirements;
+                measuredContext.CanModifyComparison = false;
 
-                error = Condition.BuildSubclauseTrigger(context);
-
-                context.Trigger = oldRequirements;
+                error = Condition.BuildSubclauseTrigger(measuredContext);
             }
 
             if (error != null)

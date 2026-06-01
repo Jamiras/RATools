@@ -252,7 +252,7 @@ namespace RATools.Parser.Functions
             {
                 if (memoryAccessor.Modifier.Type != FieldType.MemoryAddress)
                 {
-                    error = new ErrorExpression("cannot apply multiple modifiers to memory accessor", memoryAccessor);
+                    error = new ErrorExpression("Cannot apply multiple modifiers to memory accessor", memoryAccessor);
                     return false;
                 }
 

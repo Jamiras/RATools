@@ -35,6 +35,10 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("always_true() || byte(0x001234) == 0", "1=1")] // always_true() makes everything else redundant
         [TestCase("always_true() || never(byte(0x001234) == 0)", "R:0xH001234=0")] // discard always_true() when reset is kept
         [TestCase("always_true() || unless(byte(0x001234) == 0)", "1=1")] // always_true() makes everything else redundant
+        [TestCase("(byte(1) == 1 && always_false()) || byte(2) == 2", "0xH000002=2")] // always_false() eliminates entire first clause
+        [TestCase("byte(1) > prev(byte(1)) && byte(1) - prev(byte(1)) > 0", "0xH000001>d0xH000001")] // second clause becomes first clause
+        [TestCase("byte(1) > prev(byte(1)) && byte(1) - prev(byte(1)) == 2", "0xH000001>d0xH000001_B:d0xH000001=0_0xH000001=2")] // equality will use subsource
+        [TestCase("byte(1) > prev(byte(1)) && byte(1) - prev(byte(1)) > 2", "0xH000001>d0xH000001_A:2=0_d0xH000001<0xH000001")] // inequality has to use addsource to avoid underflow
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementClauseExpression>(input);

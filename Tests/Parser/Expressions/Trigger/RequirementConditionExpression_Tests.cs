@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using RATools.Parser.Expressions;
 using RATools.Parser.Expressions.Trigger;
+using RATools.Parser.Internal;
 
 namespace RATools.Parser.Tests.Expressions.Trigger
 {
@@ -77,6 +78,22 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             "K:0xH001234*0xH002345_A:{recall}*0xH003456_0=99")]
         [TestCase("byte(0x1234) * byte(0x2345) * byte(0x3456) * byte(0x4567) == 99",
             "K:0xH001234*0xH002345_K:{recall}*0xH003456_A:{recall}*0xH004567_0=99")]
+        [TestCase("byte(1) * 10 / 3 == 10", "K:0xH000001*10_A:{recall}/3_0=10")] // integer division ignores remainder, multiple values could be result in equality
+        [TestCase("byte(1) * 10 + 10 == 100", "0xH000001=9")] // factor out multiplication and addition
+        [TestCase("byte(1) * 10 - 10 == 100", "0xH000001=11")] // factor out multiplication and subtraction
+        [TestCase("(byte(1) - 1) * 10 == 100", "0xH000001=11")] // factor out multiplication and subtraction
+        [TestCase("(byte(1) - 1) / 10 == 10", "B:1_K:0xH000001_A:{recall}/10_0=10")] // integer division ignores remainder, multiple values could be result in equality
+        [TestCase("(byte(1) - 1) / 10 > 10", "0xH000001>=111")] // factor out division and subtraction
+        [TestCase("(byte(1) - 1) * 10 < 99", "0xH000001<=10")] // factor out multiplication and subtraction
+        [TestCase("byte(1) / 10 <= 0", "0xH000001<10")] // a/n<=x -> a/n<x+1 -> a<n*(x+1)
+        [TestCase("0 + byte(1) + 0 == 9", "0xH000001=9")] // 0s should be removed without reordering
+        [TestCase("0 + byte(1) - 9 == 0", "0xH000001=9")] // 9 should be moved to right hand side, then 0s removed
+        [TestCase("bcd(byte(1)) == 24", "0xH000001=36")] // bcd should be factored out
+        [TestCase("byte(1) != bcd(byte(2))", "0xH000001!=b0xH000002")] // bcd cannot be factored out
+        [TestCase("byte(0x000001) + 98 < byte(0x000002) + 3", "A:95=0_0xH000001<0xH000002")] // differing modifier should be merged
+        [TestCase("byte(0x000001) + 1 == 98", "0xH000001=97")] // differing modifier should be merged
+        [TestCase("98 == byte(0x000001) + 1", "0xH000001=97")] // differing modifier should be merged
+        [TestCase("prev(bcd(tbyte(0x60d)) * 10) < 100000", "d0xW00060d<65536")] // optimize will eliminate the *10, then normalize will eliminate the BCD
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
@@ -132,7 +149,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -156,25 +173,22 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("prev(bcd(byte(1)) - 1) == 14", "prev(byte(0x000001)) == 21")]
         [TestCase("prev(bcd(byte(1)) - 1) == 19", "prev(byte(0x000001)) == 32")]
         [TestCase("prev(bcd(byte(1))) - 1 >= 19", "prev(byte(0x000001)) >= 32")]
-        [TestCase("bcd(byte(1)) >= prev(bcd(byte(1))) + 10", "prev(byte(0x000001)) + 16 <= byte(0x000001)")]
         public void TestNormalizeBCD(string input, string expected)
         {
             var result = TriggerExpressionTests.Parse(input);
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
 
         [Test]
-        // bcd adjustment cannot be applied after adjustment
-        [TestCase("prev(bcd(byte(1) - 1)) >= 19", "Cannot apply bcd() to a modified memory accessor")]
         [TestCase("bcd(byte(1)) == prev(bcd(byte(1))) + 10", "Cannot eliminate bcd from equality comparison with modifier")]
         public void TestNormalizeBCDError(string input, string expectedError)
         {
-            TriggerExpressionTests.AssertParseError(input, expectedError);
+            TriggerExpressionTests.AssertBuildTriggerError(input, expectedError);
         }
 
         [Test]
@@ -199,7 +213,7 @@ namespace RATools.Parser.Tests.Expressions.Trigger
 
             var condition = result as RequirementConditionExpression;
             if (condition != null)
-                result = condition.Normalize();
+                result = condition.Normalize(new TriggerBuilderContext());
 
             ExpressionTests.AssertAppendString(result, expected);
         }
@@ -243,10 +257,11 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             input = input.Replace("WB", "word(0x2345)");
 
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
+            var optimized = clause.Optimize(new TriggerBuilderContext());
 
             expected = expected.Replace("WA", "word(0x001234)");
             expected = expected.Replace("WB", "word(0x002345)");
-            ExpressionTests.AssertAppendString(clause, expected);
+            ExpressionTests.AssertAppendString(optimized, expected);
         }
 
         [Test]
@@ -256,7 +271,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             // becomes "prev(byte(0x1234)) == -10", which can never be true
             // user meant "prev(byte(0x1234 + 10)) == 0"
 
-            TriggerExpressionTests.Parse<AlwaysFalseExpression>(input);
+            var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
+            var normalized = clause.Normalize(new TriggerBuilderContext());
+            Assert.That(normalized, Is.InstanceOf<AlwaysFalseExpression>());
         }
 
         [Test]

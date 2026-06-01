@@ -88,7 +88,10 @@ namespace RATools.Parser.Tests.Functions
 
             // bcd cannot be factored out
             var parser = Parse("achievement(\"T\", \"D\", 5, prev(bcd(byte(0x1234))) != byte(0x1234))", false);
-            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 cannot apply multiple modifiers to memory accessor"));
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:26 Cannot apply multiple modifiers to memory accessor"));
+
+            parser = Parse("achievement(\"T\", \"D\", 5, prev(bcd(byte(1) - 1)) >= 19)", false);
+            Assert.That(GetInnerErrorMessage(parser), Is.EqualTo("1:35 Cannot apply bcd() to a modified memory accessor"));
         }
 
         [Test]
