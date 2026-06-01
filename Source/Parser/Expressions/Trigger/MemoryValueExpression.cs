@@ -323,6 +323,13 @@ namespace RATools.Parser.Expressions.Trigger
                     if (_memoryAccessors == null)
                         _memoryAccessors = new List<ModifiedMemoryAccessorExpression>();
                     _memoryAccessors.Add(modifiedMemoryAccessor);
+
+                    if (_memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.Multiply) &&
+                        _memoryAccessors.Any(a => a.ModifyingOperator == RequirementOperator.None))
+                    {
+                        CombineNeighboringMemoryReads(_memoryAccessors);
+                    }
+
                     break;
 
                 default:
@@ -330,6 +337,188 @@ namespace RATools.Parser.Expressions.Trigger
             }
 
             return this;
+        }
+
+        private static void CombineNeighboringMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors)
+        {
+            FieldSize fieldSize, targetSize;
+            uint address;
+            int initialCount;
+            do
+            {
+                initialCount = memoryAccessors.Count;
+
+                var simpleReads = memoryAccessors.Where(a => a.ModifyingOperator == RequirementOperator.None).ToList();
+                for (int i = memoryAccessors.Count - 1; i >= 0; --i)
+                {
+                    var modifiedMemoryAccessor = memoryAccessors[i];
+                    if (modifiedMemoryAccessor.ModifyingOperator != RequirementOperator.Multiply)
+                        continue;
+
+                    if (modifiedMemoryAccessor.Modifier.Type != FieldType.Value)
+                        continue;
+                    if (!modifiedMemoryAccessor.MemoryAccessor.Field.Type.IsMemoryReference())
+                        continue;
+                    if (modifiedMemoryAccessor.MemoryAccessor.Field.Size.IsFloat())
+                        continue;
+                    if (modifiedMemoryAccessor.MemoryAccessor.Field.Size.GetByteSize() == 4)
+                        continue;
+
+                    fieldSize = modifiedMemoryAccessor.MemoryAccessor.Field.Size;
+                    address = modifiedMemoryAccessor.MemoryAccessor.Field.Value;
+                    switch (modifiedMemoryAccessor.Modifier.Value)
+                    {
+                        case 0x10:
+                            if (fieldSize == FieldSize.HighNibble)
+                            {
+                                var lowNibbleIndex = FindMemoryRead(memoryAccessors, FieldSize.LowNibble,
+                                    modifiedMemoryAccessor.MemoryAccessor, address);
+                                if (lowNibbleIndex != -1)
+                                    MergeMemoryReads(memoryAccessors, i, lowNibbleIndex, FieldSize.Byte);
+                            }
+                            break;
+
+                        case 0x100:
+                            switch (fieldSize)
+                            {
+                                case FieldSize.Byte:
+                                    targetSize = FieldSize.Word;
+                                    break;
+                                case FieldSize.Word:
+                                    targetSize = FieldSize.TByte;
+                                    break;
+                                case FieldSize.TByte:
+                                    targetSize = FieldSize.DWord;
+                                    break;
+                                case FieldSize.BigEndianWord:
+                                    targetSize = FieldSize.BigEndianTByte;
+                                    break;
+                                case FieldSize.BigEndianTByte:
+                                    targetSize = FieldSize.BigEndianDWord;
+                                    break;
+                                default:
+                                    continue;
+                            }
+
+                            if (targetSize.IsBigEndian())
+                            {
+                                var lowByteIndex = FindMemoryRead(memoryAccessors, FieldSize.Byte,
+                                    modifiedMemoryAccessor.MemoryAccessor,
+                                    address + fieldSize.GetByteSize());
+                                if (lowByteIndex != -1)
+                                    MergeMemoryReads(memoryAccessors, lowByteIndex, i, targetSize);
+                            }
+                            else
+                            {
+                                var lowByteIndex = FindMemoryRead(memoryAccessors, FieldSize.Byte,
+                                    modifiedMemoryAccessor.MemoryAccessor, address - 1);
+                                if (lowByteIndex != -1)
+                                {
+                                    MergeMemoryReads(memoryAccessors, i, lowByteIndex, targetSize);
+                                }
+                                else if (fieldSize == FieldSize.Byte)
+                                {
+                                    lowByteIndex = FindMemoryRead(memoryAccessors, FieldSize.Byte,
+                                        modifiedMemoryAccessor.MemoryAccessor, address + 1);
+                                    if (lowByteIndex != -1)
+                                        MergeMemoryReads(memoryAccessors, lowByteIndex, i, FieldSize.BigEndianWord);
+                                }
+                            }
+
+                            break;
+
+                        case 0x10000:
+                            switch (fieldSize)
+                            {
+                                case FieldSize.Byte:
+                                    targetSize = FieldSize.TByte;
+                                    break;
+                                case FieldSize.Word:
+                                    targetSize = FieldSize.DWord;
+                                    break;
+                                case FieldSize.BigEndianWord:
+                                    targetSize = FieldSize.BigEndianDWord;
+                                    break;
+                                default:
+                                    continue;
+                            }
+
+                            if (targetSize.IsBigEndian())
+                            {
+                                var lowWordIndex = FindMemoryRead(memoryAccessors, FieldSize.BigEndianWord,
+                                    modifiedMemoryAccessor.MemoryAccessor,
+                                    address + fieldSize.GetByteSize());
+                                if (lowWordIndex != -1)
+                                    MergeMemoryReads(memoryAccessors, lowWordIndex, i, targetSize);
+                            }
+                            else
+                            {
+                                var lowWordIndex = FindMemoryRead(memoryAccessors, FieldSize.Word,
+                                    modifiedMemoryAccessor.MemoryAccessor, address - 2);
+                                if (lowWordIndex != -1)
+                                {
+                                    MergeMemoryReads(memoryAccessors, i, lowWordIndex, targetSize);
+                                }
+                                else if (fieldSize == FieldSize.Byte)
+                                {
+                                    lowWordIndex = FindMemoryRead(memoryAccessors, FieldSize.BigEndianWord,
+                                        modifiedMemoryAccessor.MemoryAccessor, address + 1);
+                                    if (lowWordIndex != -1)
+                                        MergeMemoryReads(memoryAccessors, lowWordIndex, i, FieldSize.BigEndianTByte);
+                                }
+                            }
+
+                            break;
+
+                        case 0x1000000:
+                            if (fieldSize == FieldSize.Byte)
+                            {
+                                var lowTByteIndex = FindMemoryRead(memoryAccessors, FieldSize.TByte,
+                                    modifiedMemoryAccessor.MemoryAccessor, address - 3);
+                                if (lowTByteIndex != -1)
+                                {
+                                    MergeMemoryReads(memoryAccessors, i, lowTByteIndex, FieldSize.DWord);
+                                }
+                                else
+                                {
+                                    lowTByteIndex = FindMemoryRead(memoryAccessors, FieldSize.BigEndianTByte,
+                                        modifiedMemoryAccessor.MemoryAccessor, address + 1);
+                                    if (lowTByteIndex != -1)
+                                        MergeMemoryReads(memoryAccessors, lowTByteIndex, i, FieldSize.BigEndianDWord);
+                                }
+                            }
+
+                            break;
+                    }
+                }
+            } while (memoryAccessors.Count != initialCount && memoryAccessors.Count > 1);
+        }
+
+        private static void MergeMemoryReads(List<ModifiedMemoryAccessorExpression> memoryAccessors, int fromIndex, int toIndex, FieldSize newSize)
+        {
+            var newAccessor = memoryAccessors[toIndex].MemoryAccessor.ChangeFieldSize(newSize);
+            var newModifiedAccessor = new ModifiedMemoryAccessorExpression(newAccessor);
+            newModifiedAccessor.Location = newAccessor.Location.Union(memoryAccessors[fromIndex].Location);
+            memoryAccessors[toIndex] = newModifiedAccessor;
+            memoryAccessors.RemoveAt(fromIndex);
+        }
+
+        private static int FindMemoryRead(List<ModifiedMemoryAccessorExpression> memoryAccessors, FieldSize size, MemoryAccessorExpression memoryAccessor, uint address)
+        {
+            for (int i = 0; i < memoryAccessors.Count; ++i)
+            {
+                var modifiedMemoryAccessor = memoryAccessors[i];
+                if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Value == address &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Size == size &&
+                    modifiedMemoryAccessor.MemoryAccessor.Field.Type == memoryAccessor.Field.Type &&
+                    modifiedMemoryAccessor.MemoryAccessor.PointerChainMatches(memoryAccessor))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>
