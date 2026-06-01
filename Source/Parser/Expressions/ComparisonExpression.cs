@@ -166,7 +166,7 @@ namespace RATools.Parser.Expressions
             var comparisonNormalize = left as IComparisonNormalizeExpression;
             if (comparisonNormalize != null)
             {
-                var normalized = comparisonNormalize.NormalizeComparison(right, Operation, true);
+                var normalized = comparisonNormalize.NormalizeComparison(right, Operation, false);
                 if (normalized != null && normalized is not ComparisonExpression)
                 {
                     result = normalized;
@@ -257,11 +257,11 @@ namespace RATools.Parser.Expressions
             {
                 case ComparisonOperation.Equal:
                     // integer a == 4.2 can never be true
-                    return new ErrorExpression("Result can never be true using integer math");
+                    return new ErrorExpression("Result can never be true using integer math") { Location = left.Location.Union(right.Location) };
 
                 case ComparisonOperation.NotEqual:
                     // integer a != 4.2 is always true
-                    return new ErrorExpression("Result is always true using integer math");
+                    return new ErrorExpression("Result is always true using integer math") { Location = left.Location.Union(right.Location) };
 
                 case ComparisonOperation.LessThan:
                     // integer a < 4.2 becomes integer a <= 4

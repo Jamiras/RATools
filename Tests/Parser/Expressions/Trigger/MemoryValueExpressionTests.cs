@@ -446,9 +446,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             scope.AddFunction(new MemoryAccessorFunction("byte", FieldSize.Byte));
 
             ExpressionBase result;
-            Assert.That(expr.ReplaceVariables(scope, out result), Is.False);
-            Assert.That(result, Is.InstanceOf<ErrorExpression>());
-            Assert.That(((ErrorExpression)result).Message, Is.EqualTo("Expression can never be true"));
+            Assert.That(expr.ReplaceVariables(scope, out result), Is.True);
+            result = ((RequirementConditionExpression)result).Normalize(new TriggerBuilderContext());
+            Assert.That(result, Is.InstanceOf<AlwaysFalseExpression>());
         }
 
         [Test]
