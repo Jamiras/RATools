@@ -45,6 +45,12 @@ namespace RATools.Parser.Internal
         /// </summary>
         public bool CanModifyComparison { get; set; }
 
+        /// <summary>
+        /// If set to <c>true</c>, the operator and right operand can be set.
+        /// Otherwise, they should be left alone so the caller can set them.
+        /// </summary>
+        public bool CanModifyOperator { get; set; }
+
         public virtual TriggerBuilderContext Clone()
         {
             var clone = new TriggerBuilderContext();

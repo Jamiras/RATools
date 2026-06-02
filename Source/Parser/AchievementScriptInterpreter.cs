@@ -159,6 +159,7 @@ namespace RATools.Parser
                 _globalScope.AddFunction(new FlagConditionFunction("trigger_when", RequirementType.Trigger));
                 _globalScope.AddFunction(new MeasuredFunction());
                 _globalScope.AddFunction(new DisableWhenFunction());
+                _globalScope.AddFunction(new RememberedFunction());
 
                 _globalScope.AddFunction(new AchievementSetFunction());
                 _globalScope.AddFunction(new AchievementFunction());

@@ -46,6 +46,13 @@ namespace RATools.Parser.Expressions.Trigger
             if (modifiedMemoryAccessor != null)
                 return new RememberRecallExpression(modifiedMemoryAccessor);
 
+            var memoryAccessor = expression as MemoryAccessorExpression;
+            if (memoryAccessor != null && memoryAccessor.HasPointerChain)
+            {
+                memoryValue = new MemoryValueExpression(new ModifiedMemoryAccessorExpression(memoryAccessor));
+                return new RememberRecallExpression(memoryValue);
+            }
+
             return null;
         }
 
@@ -114,7 +121,10 @@ namespace RATools.Parser.Expressions.Trigger
 
         private ErrorExpression AppendRemember(TriggerBuilderContext context)
         {
-            RememberedValue.BuildTrigger(context);
+            var rememberContext = context.Clone();
+            rememberContext.CanModifyOperator = true;
+
+            RememberedValue.BuildTrigger(rememberContext);
             context.RememberedValue = RememberedValue;
 
             // if the RememberedValue only contains ModifiedMemoryReferences, BuildTrigger

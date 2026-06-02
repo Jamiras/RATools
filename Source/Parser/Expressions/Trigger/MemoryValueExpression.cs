@@ -1621,6 +1621,18 @@ namespace RATools.Parser.Expressions.Trigger
                 memoryAccessors.Add(last);
             }
 
+            // if there's a constant modifier that can be moved to the final clause, do so.
+            appendConstantAccessor = false;
+            if (constantAccessor != null && context.CanModifyOperator && context.MinimumVersion >= Data.Version._1_3_1)
+            {
+                var last = memoryAccessors.Last();
+                if (last.ModifyingOperator == RequirementOperator.None)
+                {
+                    memoryAccessors.Remove(constantAccessor);
+                    appendConstantAccessor = true;
+                }
+            }
+
             // output the accessor chain
             var constantAccessorIndex = -1;
             foreach (var accessor in memoryAccessors)
@@ -1649,6 +1661,12 @@ namespace RATools.Parser.Expressions.Trigger
                         }
                     }
                 }
+            }
+
+            if (appendConstantAccessor)
+            {
+                context.LastRequirement.Operator = (constantAccessor.CombiningOperator == RequirementType.SubSource) ? RequirementOperator.Subtract : RequirementOperator.Add;
+                context.LastRequirement.Right = constantAccessor.MemoryAccessor.Field;
             }
 
             // the last item will be flagged as an AddSource (or None if 0 was appended)

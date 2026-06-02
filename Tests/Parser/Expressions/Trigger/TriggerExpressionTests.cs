@@ -95,10 +95,11 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             ExpressionTests.AssertError(error, message);
         }
 
-        public static string Serialize(ITriggerExpression expression)
+        public static string Serialize(ITriggerExpression expression, TriggerBuilderContext context = null)
         {
             var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext() { Trigger = requirements };
+            context ??= new TriggerBuilderContext();
+            context.Trigger = requirements;
 
             var result = expression.BuildTrigger(context);
             Assert.That(result, Is.Null);
@@ -110,9 +111,9 @@ namespace RATools.Parser.Tests.Expressions.Trigger
             return builder.SerializeRequirements(new SerializationContext());
         }
 
-        public static void AssertSerialize(ITriggerExpression expression, string expected)
+        public static void AssertSerialize(ITriggerExpression expression, string expected, TriggerBuilderContext context = null)
         {
-            Assert.That(Serialize(expression), Is.EqualTo(expected));
+            Assert.That(Serialize(expression, context), Is.EqualTo(expected));
         }
 
         public static string SerializeValue(ITriggerExpression expression)
