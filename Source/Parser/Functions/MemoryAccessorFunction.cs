@@ -168,11 +168,23 @@ namespace RATools.Parser.Functions
                 return null;
             }
 
-            var result = new MemoryAccessorExpression();
+            var result = new MemoryAccessorExpression
+            {
+                Field = new Field { Type = FieldType.MemoryAddress, Size = size, Value = offset },
+            };
+
+            if (modifiedMemoryAccessor.ModifyingOperator == RequirementOperator.None)
+            {
+                var rememberedPointer = modifiedMemoryAccessor.MemoryAccessor as RememberRecallExpression;
+                if (rememberedPointer != null)
+                {
+                    result.RememberPointer = rememberedPointer;
+                    return result;
+                }
+            }
 
             var requirements = new List<Requirement>();
-            var context = new TriggerBuilderContext();
-            context.Trigger = requirements;
+            var context = new TriggerBuilderContext { Trigger = requirements };
             modifiedMemoryAccessor.BuildTrigger(context);
             requirements.Last().Type = RequirementType.AddAddress;
 
@@ -206,13 +218,6 @@ namespace RATools.Parser.Functions
 
             foreach (var requirement in requirements)
                 result.AddPointer(requirement);
-
-            result.Field = new Field
-            {
-                Type = FieldType.MemoryAddress,
-                Size = size,
-                Value = offset
-            };
 
             return result;
         }
