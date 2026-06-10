@@ -368,22 +368,52 @@ namespace RATools.Parser.Expressions.Trigger
             return false;
         }
 
-        private ErrorExpression NormalizeBCD(TriggerBuilderContext context, out RequirementExpressionBase result)
+        private void NormalizeMemoryReads(ref RequirementExpressionBase result)
         {
+            var condition = result as RequirementConditionExpression;
+            if (condition == null)
+                return;
+
+            ExpressionBase newLeft = condition.Left;
+            ExpressionBase newRight = condition.Right;
+
+            var memoryValue = Left as MemoryValueExpression;
+            if (memoryValue != null)
+                newLeft = memoryValue.NormalizeMemoryReads();
+
+            memoryValue = Right as MemoryValueExpression;
+            if (memoryValue != null)
+                newRight = memoryValue.NormalizeMemoryReads();
+
+            if (!ReferenceEquals(Left, newLeft) || !ReferenceEquals(Right, newRight))
+            {
+                result = new RequirementConditionExpression
+                {
+                    Left = newLeft,
+                    Comparison = condition.Comparison,
+                    Right = newRight,
+                    Location = condition.Location,
+                };
+            }
+        }
+
+        private static ErrorExpression NormalizeBCD(TriggerBuilderContext context, ref RequirementExpressionBase result)
+        {
+            var condition = result as RequirementConditionExpression;
+            if (condition == null)
+                return null;
+
             ExpressionBase newLeft;
             ExpressionBase newRight;
-            bool leftHasBCD = ExtractBCD(Left, out newLeft);
-            bool rightHasBCD = ExtractBCD(Right, out newRight);
+            bool leftHasBCD = ExtractBCD(condition.Left, out newLeft);
+            bool rightHasBCD = ExtractBCD(condition.Right, out newRight);
 
             if (!rightHasBCD)
             {
                 if (!leftHasBCD)
-                {
-                    result = this;
                     return null;
-                }
 
-                newRight = Right;
+                newRight = condition.Right;
                 var rightConstant = newRight as IntegerConstantExpression;
                 if (rightConstant != null)
                 {
@@ -399,7 +429,7 @@ namespace RATools.Parser.Expressions.Trigger
                 if (newRight == null)
                 {
                     // right value cannot be decoded into 32-bits
-                    switch (Comparison)
+                    switch (condition.Comparison)
                     {
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.LessThan:
@@ -415,11 +445,11 @@ namespace RATools.Parser.Expressions.Trigger
             }
             else if (!leftHasBCD)
             {
-                leftHasBCD = ConvertToBCD(Right, out newLeft);
+                leftHasBCD = ConvertToBCD(condition.Right, out newLeft);
                 if (newLeft == null)
                 {
                     // left value cannot be decoded into 32-bits
-                    switch (Comparison)
+                    switch (condition.Comparison)
                     {
                         case ComparisonOperation.NotEqual:
                         case ComparisonOperation.GreaterThan:
@@ -436,7 +466,7 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (leftHasBCD && rightHasBCD && context.CanModifyComparison)
             {
-                if (Comparison == ComparisonOperation.Equal || Comparison == ComparisonOperation.NotEqual)
+                if (condition.Comparison == ComparisonOperation.Equal || condition.Comparison == ComparisonOperation.NotEqual)
                 {
                     var leftMemoryValue = newLeft as MemoryValueExpression;
                     if (leftMemoryValue != null && leftMemoryValue.HasConstant)
@@ -456,15 +486,14 @@ namespace RATools.Parser.Expressions.Trigger
                 result = new RequirementConditionExpression()
                 {
                     Left = newLeft,
-                    Comparison = Comparison,
+                    Comparison = condition.Comparison,
                     Right = newRight,
-                    Location = Location,
+                    Location = condition.Location,
                 };
 
                 return null;
             }
 
-            result = this;
             return null;
         }
 
@@ -756,8 +785,10 @@ namespace RATools.Parser.Expressions.Trigger
                 Left = new MemoryValueExpression(modifiedMemoryAccessor);
             }
 
-            RequirementExpressionBase result;
-            var error = NormalizeBCD(context, out result);
+            RequirementExpressionBase result = this;
+            NormalizeMemoryReads(ref result);
+
+            var error = NormalizeBCD(context, ref result);
             if (error != null)
                 return error;
 

@@ -180,6 +180,10 @@ namespace RATools.Parser.Expressions.Trigger
             if (memoryValue != null)
                 return new MemoryValueExpression.MemoryValueRequirementExpression(memoryValue) { Location = expression.Location };
 
+            var error = expression as ErrorExpression;
+            if (error != null)
+                return new ErrorRequirementExpression(error);
+
             return null;
         }
     }
