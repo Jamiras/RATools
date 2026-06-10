@@ -1,3 +1,12 @@
+v1.17.1 - 10 Jun 2026
+* add `remembered` function
+* support for multiple user files for Specialty/Exclusive subsets
+* automatically combine data reads that build larger data sizes into the larger data size
+* deemphasize note text for AddAddress conditions in requirements viewer
+* fix pointer offset notes not appearing in requirements viewer
+* fix premature optimization of comparison stored in variable and used in measured()
+* fix achievement list not seeing new achievements created during current session
+
 v1.17.0 - 28 Apr 2026
 * upgrade to .NET 10
 * add folders to navigation list
