@@ -243,6 +243,10 @@ namespace RATools.ViewModels
                     {
                         _achievementSets.Add(new AchievementSetViewModel(set, coreSet));
                     }
+                    else if (String.IsNullOrEmpty(RACacheDirectory))
+                    {
+                        _achievementSets.Add(new AchievementSetViewModel(set, coreSet));
+                    }
                     else
                     {
                         var fileName = Path.Combine(RACacheDirectory, set.OwnerGameId + ".json");
