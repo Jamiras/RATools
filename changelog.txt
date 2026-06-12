@@ -1,3 +1,7 @@
+v1.17.2 - 11 Jun 2026
+* fix 'could not find set' error for bonus subsets
+* fix acheivement list not updating when switching between core and subset Achievement folders
+
 v1.17.1 - 10 Jun 2026
 * add `remembered` function
 * support for multiple user files for Specialty/Exclusive subsets
