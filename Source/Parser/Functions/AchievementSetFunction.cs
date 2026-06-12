@@ -44,7 +44,24 @@ namespace RATools.Parser.Functions
                     set = context.Sets.FirstOrDefault(s => s.OwnerGameId == gameId.Value);
 
                 if (set == null)
+                {
                     set = context.Sets.FirstOrDefault(s => s.Title == title.Value);
+
+                    if (set != null)
+                    {
+                        if (id != null && id.Value > 0)
+                        {
+                            result = new ErrorExpression("Set with title '" + set.Title + "' already exists with id " + set.Id, id);
+                            return false;
+                        }
+
+                        if (gameId != null && gameId.Value > 0)
+                        {
+                            result = new ErrorExpression("Set with title '" + set.Title + "' already exists with game_id " + set.OwnerGameId, gameId);
+                            return false;
+                        }
+                    }
+                }
             }
 
             if (set == null)
@@ -75,17 +92,6 @@ namespace RATools.Parser.Functions
                             result = new ErrorExpression("Unknown type: " + type.Value, type);
                             return false;
                     }
-                }
-
-                if ((set.Id != 0 || set.OwnerGameId != 0) &&
-                    set.Type.CanLoadWithBaseSet() &&
-                    context.Sets.Any(s => s.Id < AssetBase.FirstLocalId / 10))
-                {
-                    if (set.Id != 0)
-                        result = new ErrorExpression("Could not find set " + set.Id, id);
-                    else
-                        result = new ErrorExpression("Could not find set for game " + set.OwnerGameId, gameId);
-                    return false;
                 }
 
                 if (set.Id == 0)

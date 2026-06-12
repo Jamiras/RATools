@@ -36,5 +36,16 @@ namespace RATools.ViewModels.Navigation
 
             base.OnPropertyChanged(e);
         }
+
+        public override bool Equals(object obj)
+        {
+            var that = obj as AchievementsFolderNavigationViewModel;
+            return (that != null && ReferenceEquals(_achievementSet, that._achievementSet));
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
 }

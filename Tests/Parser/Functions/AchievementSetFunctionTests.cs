@@ -167,7 +167,7 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        public void TestExistingByIdNotFound()
+        public void TestExistingByWrongId()
         {
             var harness = new AchievementSetFunctionHarness();
             harness.Context.Sets.Add(new AchievementSet
@@ -180,10 +180,10 @@ namespace RATools.Parser.Tests.Functions
             });
             harness.Evaluate(
                 "// #ID=1234\r\n" +
-                "set_id = achievement_set(\"Game Bonus\", id=6666)",
+                "set_id = achievement_set(\"Banana\", id=6666)",
 
                 "2:10 achievement_set call failed\r\n" +
-                "- 2:43 Could not find set 6666"
+                "- 2:39 Set with title 'Banana' already exists with id 5555"
             );
         }
 
@@ -211,7 +211,7 @@ namespace RATools.Parser.Tests.Functions
         }
 
         [Test]
-        public void TestExistingByGameIdNotFound()
+        public void TestExistingByWrongGameId()
         {
             var harness = new AchievementSetFunctionHarness();
             harness.Context.Sets.Add(new AchievementSet
@@ -224,10 +224,10 @@ namespace RATools.Parser.Tests.Functions
             });
             harness.Evaluate(
                 "// #ID=1234\r\n" +
-                "set_id = achievement_set(\"Game Bonus\", game_id=5555)",
+                "set_id = achievement_set(\"Banana\", game_id=5555)",
 
                 "2:10 achievement_set call failed\r\n" +
-                "- 2:48 Could not find set for game 5555"
+                "- 2:44 Set with title 'Banana' already exists with game_id 6666"
             );
         }
 

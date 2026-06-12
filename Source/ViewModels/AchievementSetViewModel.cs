@@ -167,7 +167,18 @@ namespace RATools.ViewModels
                 foreach (var set in PublishedAssets.Sets)
                 {
                     if (!ReferenceEquals(_achievementSet, set))
-                        sets.Add(new AchievementSetViewModel(set, this));
+                    {
+                        var subset = sets.FirstOrDefault(s => s.AchievementSet.Id == set.Id);
+                        if (subset != null)
+                        {
+                            subset.PublishedAssets = PublishedAssets;
+                            subset.LocalAssets = LocalAssets;
+                        }
+                        else
+                        {
+                            sets.Add(new AchievementSetViewModel(set, this));
+                        }
+                    }
                 }
             }
         }
