@@ -684,8 +684,15 @@ namespace RATools.ViewModels
         {
             RACacheDirectory = raCacheDirectory;
 
-            foreach (var set in _achievementSets)
-                set.AssociateRACacheDirectory(raCacheDirectory);
+            var achievementSets = new List<AchievementSetViewModel>(_achievementSets);
+            foreach (var set in achievementSets)
+            {
+                if (set.AchievementSet.Type == AchievementSetType.Core ||
+                    !set.AchievementSet.Type.CanLoadWithBaseSet())
+                {
+                    set.AssociateRACacheDirectory(raCacheDirectory, _achievementSets);
+                }
+            }
 
             var coreSet = _achievementSets.First();
             Title = coreSet.Title;
