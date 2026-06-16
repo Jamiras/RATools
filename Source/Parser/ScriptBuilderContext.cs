@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -52,6 +53,7 @@ namespace RATools.Parser
         private Requirement _lastAndNext;
         private int _remainingWidth;
 
+        [DebuggerDisplay("{Requirement}")]
         class MemoryAccessorAliasChain
         {
             public MemoryAccessorAlias Alias { get; set; }
@@ -154,7 +156,7 @@ namespace RATools.Parser
                     if (group.Requirements.Any(r => r.Type == RequirementType.Remember))
                         break;
 
-                    if (group.Requirements.Any(r => r.Left.Type == FieldType.Recall || r.Right.Type == FieldType.Recall))
+                    if (group.HasRecall)
                     {
                         // found a Recall without a Remember, it will use the last non-pause Remember
                         hasNonPauseRecallBeforeLastPauseRemember = true;
@@ -253,7 +255,6 @@ namespace RATools.Parser
                                 Next = null,
                                 Requirement = requirement,
                             };
-                            continue;
                         }
                         else if (requirement.Left.IsMemoryReference)
                         {
@@ -850,7 +851,17 @@ namespace RATools.Parser
                     builder.Append('~');
                     break;
                 case FieldType.Recall:
-                    builder.Append(_remember);
+                    if (parentRequirement.Operator != RequirementOperator.None)
+                    {
+                        builder.Append('(');
+                        builder.Append(_remember);
+                        builder.Append(')');
+                        AppendFieldModifier(builder, parentRequirement);
+                    }
+                    else
+                    {
+                        builder.Append(_remember);
+                    }
                     return;
             }
 

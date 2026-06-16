@@ -225,6 +225,21 @@ namespace RATools.Parser.Tests.Internal
                   "once(byte(0x001234) == 1) && ((once(byte(0x002345) == 2) && unless(byte(0x002345) == 1)))")]
         [TestCase("once(byte(0x001234) == 1) && unless(once(byte(0x001234) == 1)) && (always_false() || never(byte(0x002345) == 1))", // never should not be promoted to core containing unless
                   "once(byte(0x001234) == 1) && disable_when(byte(0x001234) == 1) && (never(byte(0x002345) == 1))")]
+        [TestCase("1 == 1 && (byte((word(0x001234) & 0x3FF) * 4 + 8) == 6 || byte((word(0x001234) & 0x3FF) * 4 + 16) == 8)", // common remember should not be promoted to core without all recall references.
+                  "(byte((word(0x001234) & 0x000003FF) * 4 + 0x08) == 6) || (byte((word(0x001234) & 0x000003FF) * 4 + 0x10) == 8)")]
+        [TestCase("1 == 1 && (byte((word(0x001234) & 0x3FF) * 4 + 8) == 6 || byte((word(0x002345) & 0x3FF) * 4 + 8) == 6)", // common remember should not be promoted to core without all recall references.
+                  "(byte((word(0x001234) & 0x000003FF) * 4 + 0x08) == 6) || (byte((word(0x002345) & 0x000003FF) * 4 + 0x08) == 6)")]
+        [TestCase("1 == 1 && ((byte((word(0x001234) & 0x3FF) * 4 + 8) == 6 && prev(byte((word(0x001234) & 0x3FF) * 4 + 8)) == 5) || " +
+                             "(byte((word(0x002345) & 0x3FF) * 4 + 8) == 6 && prev(byte((word(0x002345) & 0x3FF) * 4 + 8)) == 5))", // common remember should not be promoted to core without all recall references.
+                  "(byte((word(0x001234) & 0x000003FF) * 4 + 0x08) == 6 && prev(byte((word(0x001234) & 0x000003FF) * 4 + 0x08)) == 5) || " +
+                  "(byte((word(0x002345) & 0x000003FF) * 4 + 0x08) == 6 && prev(byte((word(0x002345) & 0x000003FF) * 4 + 0x08)) == 5)")]
+        [TestCase("1 == 1 && ((byte(remembered((word(0x001234) & 0x3FF) * 4) + 8) == 6 && prev(byte(remembered((word(0x001234) & 0x3FF) * 4) + 8)) == 5) || " +
+                             "(byte(remembered((word(0x002345) & 0x3FF) * 4) + 8) == 6 && prev(byte(remembered((word(0x002345) & 0x3FF) * 4) + 8)) == 5))", // common remember should not be promoted to core without all recall references.
+                  "(byte((word(0x001234) & 0x000003FF) * 4 + 0x08) == 6 && prev(byte((word(0x001234) & 0x000003FF) * 4 + 0x08)) == 5) || " +
+                  "(byte((word(0x002345) & 0x000003FF) * 4 + 0x08) == 6 && prev(byte((word(0x002345) & 0x000003FF) * 4 + 0x08)) == 5)")]
+        [TestCase("1 == 1 && ((byte(remembered((word(0x001234) & 0x3FF) * 4) + 8) == 6 && prev(byte(remembered((word(0x001234) & 0x3FF) * 4) + 8)) == 5) || " +
+                             "(byte(remembered((word(0x001234) & 0x3FF) * 4) + 8) == 6 && prev(byte(remembered((word(0x001234) & 0x3FF) * 4) + 8)) == 5))", // common remember can be promoted to core with all recall references.
+                  "byte((word(0x001234) & 0x000003FF) * 4 + 0x08) == 6 && prev(byte((word(0x001234) & 0x000003FF) * 4 + 0x08)) == 5")]
         public void TestOptimizePromoteCommonAltsToCore(string input, string expected)
         {
             var achievement = CreateAchievement(input);
