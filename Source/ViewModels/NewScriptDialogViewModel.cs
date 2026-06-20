@@ -249,31 +249,37 @@ namespace RATools.ViewModels
             }
         }
 
+        private void LoadNote(CodeNote note)
+        {
+            var memoryAccessor = new MemoryAccessorAlias(note.Address, note);
+            var index = _memoryAccessors.BinarySearch(memoryAccessor, memoryAccessor);
+
+            var size = note.Size;
+            switch (size)
+            {
+                case FieldSize.None:
+                case FieldSize.Array:
+                    // these sizes don't have accessor functions, fallback to byte()
+                    size = FieldSize.Byte;
+                    break;
+            }
+
+            memoryAccessor.ReferenceSize(size);
+
+            if (index >= 0)
+                _memoryAccessors[index] = memoryAccessor;
+            else
+                _memoryAccessors.Insert(~index, memoryAccessor);
+        }
+
         private void LoadNotes()
         {
             _publishedAssets.LoadNotes();
-
             foreach (var note in _publishedAssets.Notes.Values)
-            {
-                var memoryAccessor = new MemoryAccessorAlias(note.Address, note);
-                var index = _memoryAccessors.BinarySearch(memoryAccessor, memoryAccessor);
+                LoadNote(note);
 
-                if (index >= 0)
-                    continue;
-
-                var size = note.Size;
-                switch (size)
-                {
-                    case FieldSize.None:
-                    case FieldSize.Array:
-                        // these sizes don't have accessor functions, fallback to byte()
-                        size = FieldSize.Byte;
-                        break;
-                }
-
-                memoryAccessor.ReferenceSize(size);
-                _memoryAccessors.Insert(~index, memoryAccessor);
-            }
+            foreach (var note in _localAssets.Notes)
+                LoadNote(new CodeNote(note.Key, note.Value));
         }
 
         private static int CompareMemoryItems(MemoryItem left, MemoryItem right)
