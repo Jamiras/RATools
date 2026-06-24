@@ -83,6 +83,20 @@ namespace RATools.Data
             }
         }
 
+        public bool HasRecall
+        {
+            get
+            {
+                foreach (var requirement in Requirements)
+                {
+                    if (requirement.HasRecall)
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
         public override string ToString()
         {
             if (Requirements.Count == 1)

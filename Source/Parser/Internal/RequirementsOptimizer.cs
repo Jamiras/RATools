@@ -1,6 +1,7 @@
 ﻿using RATools.Data;
 using RATools.Parser.Expressions;
 using RATools.Parser.Functions;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -564,6 +565,34 @@ namespace RATools.Parser.Internal
                     if (!allPromoted)
                     {
                         requirementsFoundInAll.RemoveAll(r => r.IsMeasured || r.Type == RequirementType.MeasuredIf);
+                        break;
+                    }
+                }
+            }
+
+            // Remember and Recall cannot be separated. If any Recall items are being promoted, make sure
+            // the Remember and all other Recalls are also being promoted.
+            Predicate<RequirementEx> hasRememberOrRecall = r => r.Requirements.Any(r2 => r2.Type == RequirementType.Remember || r2.HasRecall);
+            if (requirementsFoundInAll.Any(r => hasRememberOrRecall(r)))
+            {
+                for (int i = 1; i < groups.Count; i++)
+                {
+                    bool allPromoted = true;
+                    foreach (var requirementEx in groups[i])
+                    {
+                        if (hasRememberOrRecall(requirementEx))
+                        {
+                            if (!requirementsFoundInAll.Contains(requirementEx))
+                            {
+                                allPromoted = false;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (!allPromoted)
+                    {
+                        requirementsFoundInAll.RemoveAll(r => hasRememberOrRecall(r));
                         break;
                     }
                 }
@@ -1395,7 +1424,7 @@ namespace RATools.Parser.Internal
                         break;
 
                     j--;
-                    if (requirements[j].Left.Type == FieldType.Recall || requirements[j].Right.Type == FieldType.Recall)
+                    if (requirements[j].HasRecall)
                         hasRecall = true;
                 }
 
@@ -1458,11 +1487,8 @@ namespace RATools.Parser.Internal
                         // these have higher precedence than ResetNextIf, drag them with
                         i--;
 
-                        if (requirements[i].Left.Type == FieldType.Recall ||
-                            requirements[i].Right.Type == FieldType.Recall)
-                        {
+                        if (requirements[i].HasRecall)
                             hasRecall = true;
-                        }
 
                         continue;
 

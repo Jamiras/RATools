@@ -66,6 +66,18 @@ namespace RATools.Data
         }
 
         /// <summary>
+        /// Gets whether or not the requirement references a remembered value.
+        /// </summary>
+        public bool HasRecall
+        {
+            get
+            {
+                return Left.Type == FieldType.Recall || Right.Type == FieldType.Recall;
+            }
+        }
+
+
+        /// <summary>
         /// Gets or sets the requirement operator.
         /// </summary>
         public RequirementOperator Operator { get; set; }
