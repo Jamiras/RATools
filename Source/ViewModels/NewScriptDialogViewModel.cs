@@ -253,6 +253,8 @@ namespace RATools.ViewModels
         {
             var memoryAccessor = new MemoryAccessorAlias(note.Address, note);
             var index = _memoryAccessors.BinarySearch(memoryAccessor, memoryAccessor);
+            if (index >= 0 && ReferenceEquals(memoryAccessor.Note, note)) // note already loaded
+                return;
 
             var size = note.Size;
             switch (size)
@@ -263,13 +265,20 @@ namespace RATools.ViewModels
                     size = FieldSize.Byte;
                     break;
             }
-
             memoryAccessor.ReferenceSize(size);
 
             if (index >= 0)
+            {
+                // note changed - prefer newer value
+                foreach (var existingSize in _memoryAccessors[index].ReferencedSizes)
+                    memoryAccessor.ReferenceSize(existingSize);
+
                 _memoryAccessors[index] = memoryAccessor;
+            }
             else
+            {
                 _memoryAccessors.Insert(~index, memoryAccessor);
+            }
         }
 
         private void LoadNotes()
