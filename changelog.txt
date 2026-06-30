@@ -1,3 +1,7 @@
+v1.17.3 - 30 Jun 2026
+* don't promote remember to core without all associated recalls
+* include local notes in New Script dialog
+
 v1.17.2 - 11 Jun 2026
 * fix 'could not find set' error for bonus subsets
 * fix acheivement list not updating when switching between core and subset Achievement folders
