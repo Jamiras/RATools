@@ -586,5 +586,26 @@ namespace RATools.Parser.Tests.Internal
             Assert.That(achievement.SerializeRequirements(new SerializationContext()),
                 Is.EqualTo("R:0xH001234=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_R:0!=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_M:0=1.3."));
         }
+
+        [Test]
+        public void TestRepeatedRememberAcrossAlts()
+        {
+            var remembered = "remembered((dword((dword(0x001234) & 0x1FFFFFF) + 4) & 0x1FFFFFF) + 8)";
+
+            var achievement = CreateAchievement(
+                "word(" + remembered + " + 2) == 0 && (" +
+                "  (word(" + remembered + " + 6) == 1 && prev(word(" + remembered + " + 6)) == 0) ||" +
+                "  (word(" + remembered + " + 6) == 5 && prev(word(" + remembered + " + 6)) == 4)" +
+                ")");
+
+            string remember = "I:0xX001234&33554431_A:0xX000004&33554431_K:8_";
+            string expected = remember + "I:{recall}_0x 000002=0S" +
+                remember + "I:{recall}_0x 000006=1_I:{recall}_d0x 000006=0S" +
+                remember + "I:{recall}_0x 000006=5_I:{recall}_d0x 000006=4";
+
+            achievement.Optimize();
+
+            Assert.That(achievement.SerializeRequirements(new SerializationContext()), Is.EqualTo(expected));
+        }
     }
 }

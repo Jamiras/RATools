@@ -691,6 +691,7 @@ namespace RATools.Parser.Expressions.Trigger
                         {
                             context.BeginAlt();
                             altContext.Trigger = context.Trigger;
+                            altContext.RememberedValue = null;
 
                             var error = condition.BuildTrigger(altContext);
                             if (error != null)
@@ -990,6 +991,7 @@ namespace RATools.Parser.Expressions.Trigger
                 context.BeginAlt();
                 altContext.Trigger = context.Trigger;
                 altContext.HasPauseIf = HasBehavior(condition, RequirementType.PauseIf);
+                altContext.RememberedValue = null;
 
                 // Since we're creating alt groups, we don't need to call BuildSubclauseTrigger.
                 var requirement = condition as ITriggerExpression;
