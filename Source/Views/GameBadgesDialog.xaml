@@ -24,6 +24,7 @@
             <ColumnDefinition Width="80" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
@@ -31,12 +32,17 @@
         <TextBlock Grid.Row="0" Grid.Column="0" Text="Game ID:" VerticalAlignment="Center" Margin="8,0,0,0" />
         <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding GameId}" Height="20" Margin="4,2,4,0" HorizontalContentAlignment="Right" />
         <Button Grid.Row="0" Grid.Column="2" Command="{Binding SearchCommand}" Content="Search" Width="60" Margin="2,5,0,4" />
-        <CheckBox Grid.Row="0" Grid.Column="3" x:Name="showHardcoreBorderCheckBox"
-                  IsChecked="{Binding ShowHardcoreBorder}" Content="Hardcore Border" Margin="40,7,0,4" />
-        <Button Grid.Row="0" Grid.Column="5" Content="Export" Width="60" Margin="2,5,4,4"
+        <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="30,0,0,0">
+            <TextBlock Text="View:" VerticalAlignment="Center" Margin="0,0,4,0" />
+            <ComboBox Width="100" x:Name="viewSelectionComboBox" SelectedValue="{Binding SelectedView}"
+                      ItemsSource="{Binding Views}" DisplayMemberPath="Label" SelectedValuePath="Id" />
+        </StackPanel>
+        <CheckBox Grid.Row="0" Grid.Column="4" x:Name="showHardcoreBorderCheckBox"
+                  IsChecked="{Binding ShowHardcoreBorder}" Content="Hardcore Border" Margin="10,7,0,4" />
+        <Button Grid.Row="0" Grid.Column="6" Content="Export" Width="60" Margin="2,5,4,4"
                 Command="{Binding ExportCommand}" CommandParameter="{Binding ElementName=badgesListView}" />
 
-        <ItemsControl Grid.Row="1" Grid.ColumnSpan="6" x:Name="badgesListView"
+        <ItemsControl Grid.Row="1" Grid.ColumnSpan="7" x:Name="badgesListView"
                       ItemsSource="{Binding Achievements}" Background="#101012" Margin="4" Padding="8">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
@@ -55,7 +61,8 @@
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
-                        <Image Source="{Binding Badge}" Width="48" Height="48" />
+                        <Image Source="{Binding Badge}" Width="{Binding ElementName=viewSelectionComboBox, Path=DataContext.BadgeSize}"
+                                                        Height="{Binding ElementName=viewSelectionComboBox, Path=DataContext.BadgeSize}" />
                         <Border.ToolTip>
                             <ToolTip Background="#101012" BorderBrush="#2A2A2A">
                                 <Grid Margin="0,2,4,2">
