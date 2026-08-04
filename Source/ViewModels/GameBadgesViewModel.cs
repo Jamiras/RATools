@@ -38,6 +38,12 @@ namespace RATools.ViewModels
             DialogTitle = "Game Badges";
             CanClose = true;
 
+            Views = new[]
+            {
+                new ViewLookupItem(View.Profile, "Profile"),
+                new ViewLookupItem(View.FullSize, "Full-size"),
+            };
+
             _achievements = new ObservableCollection<BadgeViewModel>();
             SearchCommand = new DelegateCommand(Search);
             ExportCommand = new DelegateCommand<ItemsControl>(Export);
@@ -204,13 +210,63 @@ namespace RATools.ViewModels
         public IEnumerable<BadgeViewModel> Achievements { get {  return _achievements; } }
         private ObservableCollection<BadgeViewModel> _achievements;
 
-        public static readonly ModelProperty ShowHardcoreBorderProperty = ModelProperty.Register(typeof(GameStatsViewModel), "GameId", typeof(bool), false);
+        public enum View
+        {
+            Profile,
+            FullSize,
+        }
+
+        public class ViewLookupItem
+        {
+            public ViewLookupItem(View id, string label)
+            {
+                Id = id;
+                Label = label;
+            }
+            public View Id { get; private set; }
+            public string Label { get; private set; }
+        }
+        public IEnumerable<ViewLookupItem> Views { get; private set; }
+
+        public static readonly ModelProperty SelectedViewProperty = ModelProperty.Register(typeof(GameBadgesViewModel), "SelectedView", typeof(View), View.Profile, OnSelectedViewChanged);
+        public View SelectedView
+        {
+            get { return (View)GetValue(SelectedViewProperty); }
+            set { SetValue(SelectedViewProperty, value); }
+        }
+
+        private static void OnSelectedViewChanged(object sender, ModelPropertyChangedEventArgs e)
+        {
+            var viewModel = (GameBadgesViewModel)sender;
+
+            switch ((View)e.NewValue)
+            {
+                default:
+                    viewModel.BadgeSize = 48;
+                    break;
+                case View.FullSize:
+                    viewModel.BadgeSize = 64;
+                    break;
+            }
+        }
+
+
+
+        public static readonly ModelProperty ShowHardcoreBorderProperty = ModelProperty.Register(typeof(GameBadgesViewModel), "GameId", typeof(bool), false);
 
         public bool ShowHardcoreBorder
         {
             get { return (bool)GetValue(ShowHardcoreBorderProperty); }
             set { SetValue(ShowHardcoreBorderProperty, value); }
         }
+
+        public static readonly ModelProperty BadgeSizeProperty = ModelProperty.Register(typeof(GameBadgesViewModel), "BadgeSize", typeof(int), 48);
+        public int BadgeSize
+        {
+            get { return (int)GetValue(BadgeSizeProperty); }
+            private set { SetValue(BadgeSizeProperty, value); }
+        }
+
 
         public CommandBase<ItemsControl> ExportCommand { get; private set; }
 
