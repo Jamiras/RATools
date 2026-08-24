@@ -42,6 +42,7 @@ namespace RATools.ViewModels.Navigation
 
                     Label = _editor?.Title;
                     OnEditorCompareStateChanged();
+                    OnEditorCanUpdateChanged();
 
                     OnPropertyChanged(() => Editor);
                 }
@@ -59,6 +60,8 @@ namespace RATools.ViewModels.Navigation
         {
             if (e.PropertyName == "CompareState")
                 OnEditorCompareStateChanged();
+            else if (e.PropertyName == "CanUpdate")
+                OnEditorCanUpdateChanged();
             else if (e.PropertyName == "Title")
                 Label = _editor?.Title;
         }
@@ -66,7 +69,10 @@ namespace RATools.ViewModels.Navigation
         private void OnEditorCompareStateChanged()
         {
             CompareState = _editor?.CompareState ?? GeneratedCompareState.None;
+        }
 
+        private void OnEditorCanUpdateChanged()
+        {
             var updateLocalMenuItem = ContextMenu?.FirstOrDefault(m => m.Label == "Update Local");
             if (updateLocalMenuItem != null)
                 updateLocalMenuItem.Command = CanUpdateLocal() ? Editor.UpdateLocalCommand : DisabledCommand.Instance;
@@ -77,16 +83,7 @@ namespace RATools.ViewModels.Navigation
             if (Editor == null)
                 return false;
 
-            switch (Editor.CompareState)
-            {
-                case GeneratedCompareState.None:
-                case GeneratedCompareState.Same:
-                case GeneratedCompareState.NotGenerated:
-                    return false;
-
-                default:
-                    return true;
-            }
+            return Editor.CanUpdate;
         }
 
         public bool IsNodeFor(AssetBase asset)
