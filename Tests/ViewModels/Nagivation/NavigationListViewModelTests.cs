@@ -469,7 +469,7 @@ namespace RATools.Tests.ViewModels.Nagivation
             Assert.AreEqual(1, achievementNode.ContextMenu.Count());
             var menuItem = achievementNode.ContextMenu.First();
             Assert.AreEqual("Update Local", menuItem.Label);
-            Assert.IsFalse(menuItem.Command.CanExecute(null));
+            Assert.IsTrue(menuItem.Command.CanExecute(null)); // same, but not in local
         }
 
         [Test]
