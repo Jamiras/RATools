@@ -217,6 +217,13 @@ namespace RATools.Parser.Expressions.Trigger
                         }
 
                         var combined = integerConstant.Combine(right, operation);
+                        if (combined == null)
+                        {
+                            // cannot directly combine these. try wrapping in remember.
+                            var rememberRecallExpression = new RememberRecallExpression(this);
+                            return rememberRecallExpression.Combine(right, operation);
+                        }
+
                         var result = clone.ApplyMathematic(combined, MathematicOperation.Add);
                         if (result != null)
                             return result;
