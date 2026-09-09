@@ -46,6 +46,11 @@ namespace RATools.Tests.ViewModels.Nagivation
                 CompareState = state;
                 // CompareState updates ModificationMesssage
             }
+
+            public void SetCanUpdate(bool value)
+            {
+                CanUpdate = value;
+            }
         }
 
         [Test]
@@ -98,24 +103,42 @@ namespace RATools.Tests.ViewModels.Nagivation
         }
 
         [Test]
-        [TestCase(GeneratedCompareState.None, false)]
-        [TestCase(GeneratedCompareState.Same, false)]
-        [TestCase(GeneratedCompareState.NotGenerated, false)]
-        [TestCase(GeneratedCompareState.GeneratedOnly, true)]
-        [TestCase(GeneratedCompareState.PublishedDiffers, true)]
-        [TestCase(GeneratedCompareState.LocalDiffers, true)]
-        public void TestCanUpdateLocal(GeneratedCompareState state, bool expected)
+        public void TestCompareStateSync()
         {
             var harness = new EditorNavigationViewModelHarness();
+            Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.Same));
+
             var editor = new DummyViewerViewModel();
-            editor.SetCompareState(state);
+            editor.SetCompareState(GeneratedCompareState.NotGenerated);
 
+            // sync on assign
             harness.Editor = editor;
-            Assert.That(harness.CompareState, Is.EqualTo(state));
+            Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.NotGenerated));
 
+            // sync on update
+            editor.SetCompareState(GeneratedCompareState.GeneratedOnly);
+            Assert.That(harness.CompareState, Is.EqualTo(GeneratedCompareState.GeneratedOnly));
+        }
+
+        [Test]
+        public void TestCanUpdateSync()
+        {
+            var harness = new EditorNavigationViewModelHarness();
             Assert.That(harness.ContextMenu, Is.Not.Null);
             Assert.That(harness.ContextMenu.Count(), Is.EqualTo(1));
-            Assert.That(harness.ContextMenu.First().Command.CanExecute(null), Is.EqualTo(expected));
+            var updateLocalMenuItem = harness.ContextMenu.First();
+            Assert.That(updateLocalMenuItem.Command.CanExecute(null), Is.False);
+
+            var editor = new DummyViewerViewModel();
+            editor.SetCanUpdate(true);
+
+            // sync on assign
+            harness.Editor = editor;
+            Assert.That(updateLocalMenuItem.Command.CanExecute(null), Is.True);
+
+            // sync on update
+            editor.SetCanUpdate(false);
+            Assert.That(updateLocalMenuItem.Command.CanExecute(null), Is.False);
         }
     }
 }

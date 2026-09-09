@@ -231,7 +231,7 @@ namespace RATools.ViewModels
 
         public bool UpdateLocal(Leaderboard leaderboard, Leaderboard localLeaderboard, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
-            if (leaderboard.OwnerSetId != AchievementSet.OwnerSetId)
+            if (leaderboard != null && leaderboard.OwnerSetId != AchievementSet.OwnerSetId)
             {
                 if (leaderboard.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
                     return false;
@@ -269,7 +269,7 @@ namespace RATools.ViewModels
 
         internal bool UpdateLocal(RichPresence richPresence, RichPresence localRichPresence, Action<AssetBase, LocalAssets.LocalAssetChange> assetChangedHandler, bool refresh)
         {
-            if (richPresence.OwnerSetId != AchievementSet.OwnerSetId)
+            if (richPresence != null && richPresence.OwnerSetId != AchievementSet.OwnerSetId)
             {
                 if (richPresence.OwnerSetId != 0 || _achievementSet.Type != AchievementSetType.Core)
                     return false;
