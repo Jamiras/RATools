@@ -371,5 +371,23 @@ namespace RATools.Data.Tests
             Assert.That(n.Size, Is.EqualTo(FieldSize.None));
             Assert.That(n.Values.Count(), Is.EqualTo(0));
         }
+
+        [Test]
+        public void TestUnboundedRangeEnums()
+        {
+            var n = new CodeNote(4, "[8-bit] Chars\n" +
+                "0-=!\n" + // 0 starts a range, but without an end, it's not valid
+                "-9=?\n" + // This dash is seen as an indent marker. the mapping "9=?" is processed.
+                "-=$\n" +  // These are all seen as prefix characters and are ignored.
+                "X=0-" +   // 0 starts a range, but without an end, it's not valid
+                "Y=-9" +   // 9 ends a range, but without a start, it's not valid
+                "Z=-");    // range has neither a start nor an end. it's not valid
+
+            Assert.That(n.Summary, Is.EqualTo("Chars"));
+            Assert.That(n.Size, Is.EqualTo(FieldSize.Byte));
+            Assert.That(n.Values.Count(), Is.EqualTo(1));
+            Assert.That(n.Values.First().Key, Is.EqualTo("9"));
+            Assert.That(n.Values.First().Value, Is.EqualTo("?"));
+        }
     }
 }
