@@ -136,6 +136,19 @@ namespace RATools.Parser.Expressions
                 return stringLeft.Combine(right, operation);
             }
 
+            if (operation == MathematicOperation.Multiply)
+            {
+                if (Value == 1)
+                    return right;
+                if (Value == 0)
+                    return this;
+            }
+            else if (operation == MathematicOperation.Add)
+            {
+                if (Value == 0)
+                    return right;
+            }
+
             return null;
         }
 

@@ -44,6 +44,9 @@ namespace RATools.Parser.Tests.Expressions
         [TestCase("7", "/", "3.5", ExpressionType.FloatConstant, "2.0")]
         [TestCase("5", "%", "3.5", ExpressionType.FloatConstant, "1.5")]
         [TestCase("1", "+", "\"A\"", ExpressionType.StringConstant, "\"1A\"")]
+        [TestCase("1", "*", "byte(1)", ExpressionType.MemoryAccessor, "byte(0x000001)")]
+        [TestCase("0", "*", "byte(1)", ExpressionType.IntegerConstant, "0")]
+        [TestCase("0", "+", "byte(1)", ExpressionType.MemoryAccessor, "byte(0x000001)")]
         public void TestCombine(string left, string operation, string right, ExpressionType expectedType, string expected)
         {
             ExpressionTests.AssertCombine(left, operation, right, expectedType, expected);
