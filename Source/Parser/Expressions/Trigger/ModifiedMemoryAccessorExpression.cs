@@ -135,6 +135,9 @@ namespace RATools.Parser.Expressions.Trigger
         protected override bool Equals(ExpressionBase obj)
         {
             var that = obj as ModifiedMemoryAccessorExpression;
+            if (that == null && ModifyingOperator == RequirementOperator.None && CombiningOperator == RequirementType.None)
+                return MemoryAccessor.Equals(obj);
+
             return (that != null &&
                     ModifyingOperator == that.ModifyingOperator &&
                     MemoryAccessor == that.MemoryAccessor &&
@@ -932,7 +935,10 @@ namespace RATools.Parser.Expressions.Trigger
                     return new FloatConstantExpression(Modifier.Float);
 
                 default:
-                    return new MemoryAccessorExpression(Modifier);
+                    var accessor = new MemoryAccessorExpression(Modifier);
+                    foreach (var pointer in MemoryAccessor.PointerChain)
+                        accessor.AddPointer(pointer);
+                    return accessor;
             }
         }
 
