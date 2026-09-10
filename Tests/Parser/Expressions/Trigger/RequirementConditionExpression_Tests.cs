@@ -94,6 +94,15 @@ namespace RATools.Parser.Tests.Expressions.Trigger
         [TestCase("byte(0x000001) + 1 == 98", "0xH000001=97")] // differing modifier should be merged
         [TestCase("98 == byte(0x000001) + 1", "0xH000001=97")] // differing modifier should be merged
         [TestCase("prev(bcd(tbyte(0x60d)) * 10) < 100000", "d0xW00060d<65536")] // optimize will eliminate the *10, then normalize will eliminate the BCD
+        [TestCase("byte(2) / byte(2) == 0", "0xH000002=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(2) / byte(2) == 1", "0xH000002!=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(2) / byte(2) == 2", "0=1")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(2) / byte(2) != 0", "0xH000002!=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(2) / byte(2) != 1", "0xH000002=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(2) / byte(3) == 0", "A:0xH000002/0xH000003_0=0")] // will be 0 if either value is 0
+        [TestCase("byte(dword(2) + 4) / byte(dword(2) + 4) == 0", "I:0xX000002_0xH000004=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(dword(2) + 4) / byte(dword(2) + 4) == 1", "I:0xX000002_0xH000004!=0")] // division by self will be 0 if self is 0, otherwise 1
+        [TestCase("byte(dword(2) + 4) / byte(dword(2) + 6) == 0", "I:0xX000002_A:0xH000004/0xH000006_0=0")] // will be 0 if either value is 0
         public void TestBuildTrigger(string input, string expected)
         {
             var clause = TriggerExpressionTests.Parse<RequirementConditionExpression>(input);
