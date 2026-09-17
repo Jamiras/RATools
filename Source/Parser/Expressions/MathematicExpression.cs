@@ -506,12 +506,36 @@ namespace RATools.Parser.Expressions
 
                     case MathematicOperation.Divide:
                         // a / x < b   =>   a < b * x
-                        newRight = rightCombining.Combine(Right, MathematicOperation.Multiply);
-                        if (newRight != null && newRight is ModifiedMemoryAccessorExpression &&
-                            right is MemoryAccessorExpression)
+                        var intRight = right as IntegerConstantExpression;
+                        if (intRight != null && intRight.Value == 0)
                         {
-                            // don't cuase an unmodified memory accessor to become modified
-                            newRight = null;
+                            if (Left == Right)
+                            {
+                                // anything divided by itself will be 1 unless it's 0, then the result is 0
+                                // so, "a / a == 0" can be simplified to "a == 0"
+                                newRight = right;
+                            }
+                            else
+                            {
+                                // anything divided by something else will 0 if either value is 0. don't normalize
+                                newRight = null;
+                            }
+                        }
+                        else if (intRight != null && intRight.Value == 1 && Left == Right)
+                        {
+                            // anything divided by itself will be 1 unless it's 0, then the result is 0
+                            // so, "a / a == 1" can be simplified to "a != 0"
+                            return new ComparisonExpression(Left, ComparisonExpression.GetOppositeComparisonOperation(operation), new IntegerConstantExpression(0));
+                        }
+                        else
+                        {
+                            newRight = rightCombining.Combine(Right, MathematicOperation.Multiply);
+                            if (newRight != null && newRight is ModifiedMemoryAccessorExpression &&
+                                right is MemoryAccessorExpression)
+                            {
+                                // don't cuase an unmodified memory accessor to become modified
+                                newRight = null;
+                            }
                         }
                         break;
 
