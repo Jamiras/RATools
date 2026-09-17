@@ -661,14 +661,14 @@ namespace RATools.Data
             if (token.StartsWith("0x"))
                 index += 2;
 
-            if (index == token.Length)
+            if (index == token.Length || !IsHexDigit(token[index]))
                 return false;
 
-            while (IsHexDigit(token[index]))
+            do
             {
                 if (++index == token.Length)
                     return true;
-            }
+            } while (IsHexDigit(token[index]));
 
             while (index < token.Length && Char.IsWhiteSpace(token[index]))
                 index++;
@@ -680,7 +680,7 @@ namespace RATools.Data
                 while (index < token.Length && Char.IsWhiteSpace(token[index]))
                     index++;
 
-                if (!IsHexDigit(token[index]))
+                if (index == token.Length || !IsHexDigit(token[index]))
                     return false;
 
                 do
