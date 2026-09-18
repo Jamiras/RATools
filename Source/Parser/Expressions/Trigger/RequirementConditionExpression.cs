@@ -196,6 +196,14 @@ namespace RATools.Parser.Expressions.Trigger
                 }
             }
 
+            var rememberRight = right as RememberRecallExpression;
+            if (rememberRight != null)
+            {
+                error = rememberRight.AppendRemember(context);
+                if (error != null)
+                    return error;
+            }
+
             var memoryValue = left as MemoryValueExpression;
             if (memoryValue != null)
             {
