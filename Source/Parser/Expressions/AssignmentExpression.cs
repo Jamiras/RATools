@@ -83,6 +83,13 @@ namespace RATools.Parser.Expressions
             if (error != null)
                 return error;
 
+            scope.Trace(this, (builder) =>
+            {
+                Variable.AppendString(builder);
+                builder.Append(" = ");
+                result.AppendString(builder);
+            });
+
             var assignable = Variable as IAssignableExpression;
             if (assignable != null)
                 return assignable.Assign(scope, result);

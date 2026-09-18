@@ -1,4 +1,6 @@
-﻿using RATools.Data;
+﻿using Jamiras.Components;
+using RATools.Data;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -19,6 +21,7 @@ namespace RATools.Parser
         public Dictionary<Leaderboard, int> Leaderboards { get; set; }
         public RichPresenceBuilder RichPresence { get; set; }
         public SerializationContext SerializationContext { get; set; }
+        public Action<TextLocation, string> TraceHandler { get; set; }
 
         /// <summary>
         /// Gets an <see cref="AchievementSet"/> for the specified achievement set id.

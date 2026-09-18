@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Parser
 {
@@ -483,5 +484,40 @@ namespace RATools.Parser
         }
 
         internal int Depth { get; private set; }
+
+        internal void Trace(ExpressionBase expression, Action<StringBuilder> buildMessage)
+        {
+            AchievementScriptContext scriptContext = null;
+            var functionDepth = 0;
+            var scope = this;
+            do
+            {
+                if (scope.Context is FunctionCallExpression)
+                {
+                    functionDepth++;
+                }
+                else
+                {
+                    scriptContext = scope.Context as AchievementScriptContext;
+                    if (scriptContext != null)
+                        break;
+                }
+
+                scope = scope._parent;
+            } while (scope != null);
+
+            if (scriptContext != null && scriptContext.TraceHandler != null)
+            {
+                var builder = new StringBuilder();
+                if (functionDepth > 0)
+                    builder.Append(' ', functionDepth);
+
+                int len = builder.Length;
+                buildMessage(builder);
+
+                if (builder.Length > len)
+                    scriptContext.TraceHandler(expression.Location.Start, builder.ToString());
+            }
+        }
     }
 }

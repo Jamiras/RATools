@@ -10,6 +10,7 @@ using RATools.Parser.Expressions;
 using RATools.Services;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
@@ -168,6 +169,7 @@ namespace RATools.ViewModels
                         // run the script
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
+                        interpreter.TraceHandler = TraceHandler;
 
                         bool hadErrors, hasErrors;
                         lock (_parsedContent)
@@ -201,6 +203,15 @@ namespace RATools.ViewModels
             }
 
             base.OnUpdateSyntax(e);
+        }
+
+        private static void TraceHandler(TextLocation location, string message)
+        {
+            var str = location.ToString();
+            if (str.Length < 8)
+                str = new string(' ', 8 - str.Length) + str;
+
+            Debug.WriteLine(str + " | " + message);
         }
 
         internal void UpdateProgress(int progress, int line)

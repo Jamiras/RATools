@@ -1,4 +1,5 @@
 ﻿using Jamiras.Components;
+using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using System.Collections.Generic;
@@ -237,6 +238,21 @@ namespace RATools.Parser.Expressions
                     _referenceParameters = referenceParameters.ToArray();
             }
 
+            bool traceReturn = false;
+            functionParametersScope.Trace(this, (builder) =>
+            {
+                // don't bother tracing "call byte(0x1234) => return byte(0x1234)"
+                if (functionDefinition is MemoryAccessorFunction && functionParametersScope.GetVariable("address") is IntegerConstantExpression)
+                    return;
+
+                // don't bother tracing "call prev(byte(0x1234)) => return prev(byte(0x1234))"
+                if (functionDefinition is PrevPriorFunction && functionParametersScope.GetVariable("accessor") is MemoryAccessorExpression)
+                    return;
+
+                TraceFunctionCall(builder, functionDefinition, functionParametersScope);
+                traceReturn = true;
+            });
+
             functionParametersScope.Context = this;
             if (isInvoking)
                 functionDefinition.Invoke(functionParametersScope, out result);
@@ -256,6 +272,12 @@ namespace RATools.Parser.Expressions
                     return false;
                 }
 
+                functionParametersScope.Trace(error, (builder) =>
+                {
+                    builder.Append("error ");
+                    error.AppendString(builder);
+                });
+
                 if (_source != null)
                     result = ErrorExpression.WrapError(error, "Function call failed", (ExpressionBase)_source);
                 else
@@ -265,6 +287,16 @@ namespace RATools.Parser.Expressions
 
             if (result != null)
             {
+                if (traceReturn)
+                {
+                    var resultRef = result;
+                    functionParametersScope.Trace(result, (builder) =>
+                    {
+                        builder.Append("return ");
+                        resultRef.AppendString(builder);
+                    });
+                }
+
                 if (!result.IsReadOnly || result.Location.End.Line == 0)
                 {
                     CopyLocation(result);
@@ -278,6 +310,13 @@ namespace RATools.Parser.Expressions
                         CopyLocation(result);
                     }
                 }
+            }
+            else if (traceReturn)
+            {
+                functionParametersScope.Trace(this, (builder) =>
+                {
+                    builder.Append("return");
+                });
             }
 
             var functionCall = result as FunctionCallExpression;
@@ -302,6 +341,59 @@ namespace RATools.Parser.Expressions
             }
 
             return true;
+        }
+
+        private void TraceFunctionCall(StringBuilder builder, FunctionDefinitionExpression functionDefinition, InterpreterScope functionParametersScope)
+        {
+            builder.Append("call ");
+            if (FunctionName != null)
+                FunctionName.AppendString(builder);
+            else
+                ((ExpressionBase)_source).AppendString(builder);
+
+            builder.Append('(');
+
+            int index = 0;
+            foreach (var parameter in Parameters)
+            {
+                VariableExpressionBase var;
+
+                var assignment = parameter as AssignmentExpression;
+                if (assignment != null)
+                    var = assignment.Variable;
+                else
+                    var = functionDefinition.Parameters.ElementAt(index);
+
+                if (var.Name == "...")
+                {
+                    var varargs = functionParametersScope.GetVariable("varargs") as ArrayExpression;
+                    if (varargs.Entries.Count > 0)
+                    {
+                        foreach (var entry in varargs.Entries)
+                        {
+                            entry.AppendString(builder);
+                            builder.Append(", ");
+                        }
+                        index++;
+                    }
+                    break;
+                }
+                else
+                {
+                    var.AppendString(builder);
+                    builder.Append('=');
+                    var value = functionParametersScope.GetVariable(var.Name);
+                    value.AppendString(builder);
+                }
+
+                builder.Append(", ");
+                index++;
+            }
+
+            if (index > 0)
+                builder.Length -= 2;
+
+            builder.Append(')');
         }
 
         /// <summary>
