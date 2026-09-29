@@ -24,11 +24,7 @@ namespace RATools.Parser.Expressions.Trigger
             Operation = source.Operation;
 
             if (source._conditions != null)
-            {
-                _conditions = new List<RequirementExpressionBase>();
-                foreach (var clause in source._conditions)
-                    _conditions.Add(clause);
-            }
+                _conditions = new List<RequirementExpressionBase>(source._conditions);
         }
 
         public ConditionalOperation Operation { get; set; }
@@ -1234,26 +1230,28 @@ namespace RATools.Parser.Expressions.Trigger
                 if (requirementI is RequirementConditionExpression ||
                     requirementI is BehavioralRequirementExpression)
                 {
-                    // singular condition, see if it can be handled by any of the other conditions
+                    // Found a singular condition. See if it can be handled by any of the other conditions.
                     for (int j = 0; j < i; j++)
                     {
-                        var intersect = requirements[j].LogicalIntersect(requirementI, condition);
+                        var requirementJ = requirements[j];
+                        var intersect = requirementJ.LogicalIntersect(requirementI, condition);
                         if (intersect != null)
                         {
-                            if (ReferenceEquals(requirementI, intersect))
+                            if (ReferenceEquals(requirementJ, intersect))
                             {
-                                // latter item encompasses sooner item, discard the sooner item
+                                // The sooner item encompasses latter item. Discard the latter item.
+                                requirements.RemoveAt(i);
+                            }
+                            else if (ReferenceEquals(requirementI, intersect))
+                            {
+                                // The latter item encompasses sooner item. Discard the sooner item.
                                 requirements.RemoveAt(j);
                             }
                             else
                             {
-                                // put the intersect in the sooner place, and discard the latter item
+                                // Put the intersect in the sooner place and discard the latter item.
                                 requirements[j] = intersect;
                                 requirements.RemoveAt(i);
-
-                                // make sure to process the intersect too
-                                if (j == i + 1)
-                                    i++;
                             }
 
                             updated = true;
@@ -1296,7 +1294,7 @@ namespace RATools.Parser.Expressions.Trigger
                 }
                 else
                 {
-                    // complex condition. only merge if it's an exact match
+                    // Found a complex condition. Only merge if it's an exact match.
                     for (int j = 0; j < requirements.Count - 1; j++)
                     {
                         if (i == j)
@@ -1304,6 +1302,7 @@ namespace RATools.Parser.Expressions.Trigger
 
                         if (requirements[j] == requirementI)
                         {
+                            // Discard the latter item.
                             requirements.RemoveAt(i);
                             updated = true;
                             break;

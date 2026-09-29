@@ -3,6 +3,7 @@ using RATools.Data;
 using RATools.Parser.Expressions.Trigger;
 using RATools.Parser.Functions;
 using RATools.Parser.Internal;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -62,7 +63,10 @@ namespace RATools.Parser.Expressions
         /// </summary>
         public ICollection<ExpressionBase> Expressions { get; private set; }
 
-        public override bool IsConstant { get { return true; } }
+        /// <summary>
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
+        /// </summary>
+        public override bool IsConstant => true;
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.
@@ -643,6 +647,11 @@ namespace RATools.Parser.Expressions
         {
         }
 
+        private HashSet<string> _localVariables = null;
+        private ExpressionBase _constantResult = null;
+        private bool _checkedForConstantResult = false;
+        private bool _referenceParametersUpdated = false;
+
         /// <summary>
         /// Parses a function definition.
         /// </summary>
@@ -837,6 +846,13 @@ namespace RATools.Parser.Expressions
         /// <returns><c>true</c> if substitution was successful, <c>false</c> if something went wrong, in which case <paramref name="result"/> will likely be a <see cref="ErrorExpression"/>.</returns>
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)
         {
+            // inject local variable placeholders
+            if (_localVariables != null)
+            {
+                foreach (var localVariable in _localVariables)
+                    scope.DefineVariable(new VariableDefinitionExpression(localVariable) { IsMutable = true }, null);
+            }
+
             // user-defined functions should be evaluated (expanded) immediately.
             if (!base.Evaluate(scope, out result))
                 return false;
@@ -862,14 +878,19 @@ namespace RATools.Parser.Expressions
 
         public override bool Invoke(InterpreterScope scope, out ExpressionBase result)
         {
+            // inject local variable placeholders
+            if (_localVariables != null)
+            {
+                foreach (var localVariable in _localVariables)
+                    scope.DefineVariable(new VariableDefinitionExpression(localVariable) { IsMutable = true }, null);
+            }
+
             if (!base.Evaluate(scope, out result))
                 return false;
 
             result = null;
             return true;
         }
-
-        private bool _referenceParametersUpdated = false;
 
         internal void UpdateReferenceParameters(InterpreterScope scope)
         {
@@ -897,7 +918,7 @@ namespace RATools.Parser.Expressions
                 {
                     var parameter = Parameters.FirstOrDefault(p => p.Name == indexingExpression.Variable.Name);
                     if (parameter != null)
-                        parameter.IsMutableReference = true;
+                        parameter.IsMutable = true;
                 }
 
                 return;
@@ -920,7 +941,7 @@ namespace RATools.Parser.Expressions
             if (userFunctionDefinition != null)
                 userFunctionDefinition.UpdateReferenceParameters(scope);
 
-            if (functionDefinition.Parameters.Any(p => p.IsMutableReference))
+            if (functionDefinition.Parameters.Any(p => p.IsMutable))
             {
                 var extraScope = new InterpreterScope(scope);
                 var dummyValue = new IntegerConstantExpression(0);
@@ -931,18 +952,125 @@ namespace RATools.Parser.Expressions
                 var functionParametersScope = functionCall.GetParameters(functionDefinition, extraScope, out result);
                 if (functionParametersScope != null)
                 {
-                    foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutableReference))
+                    foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutable))
                     {
                         var value = functionParametersScope.GetVariable(mutableParameter.Name) as VariableReferenceExpression;
                         if (value != null)
                         {
                             var parameter = Parameters.FirstOrDefault(p => p.Name == value.Variable.Name);
                             if (parameter != null)
-                                parameter.IsMutableReference = true;
+                                parameter.IsMutable = true;
                         }
                     }
                 }
             }
+        }
+
+        private static bool IsResultConstant(ExpressionBase expression, InterpreterScope scope)
+        {
+            var variableExpression = expression as VariableExpressionBase;
+            if (variableExpression != null)
+            {
+                var variableDefinition = scope.GetVariableDefinition(variableExpression.Name) as VariableDefinitionExpression;
+                if (variableDefinition == null || variableDefinition.IsMutable)
+                    return false;
+
+                return true;
+            }
+
+            var functionCallExpression = expression as FunctionCallExpression;
+            if (functionCallExpression != null)
+            {
+                if (functionCallExpression.FunctionName == null) // calling function from variable/dict/array/return value
+                    return false;
+
+                var functionDefinition = scope.GetFunction(functionCallExpression.FunctionName.Name);
+                if (functionDefinition == null)
+                    return false;
+
+                var userFunctionDefinition = functionDefinition as UserFunctionDefinitionExpression;
+                if (userFunctionDefinition != null)
+                {
+                    ExpressionBase result;
+                    if (!userFunctionDefinition.GetConstantResult(scope, out result))
+                        return false;
+                }
+                else
+                {
+                    foreach (var parameter in functionCallExpression.Parameters)
+                    {
+                        if (!IsResultConstant(parameter, scope))
+                            return false;
+                    }
+                }
+
+                return true;
+            }
+
+            var nestedExpressions = expression as INestedExpressions;
+            if (nestedExpressions != null)
+            {
+                foreach (var nestedExpression in nestedExpressions.NestedExpressions)
+                {
+                    if (!IsResultConstant(nestedExpression, scope))
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        public bool GetConstantResult(InterpreterScope scope, out ExpressionBase result)
+        {
+            result = _constantResult;
+            if (result != null)
+                return true;
+
+            if (_checkedForConstantResult)
+                return false;
+
+            _checkedForConstantResult = true;
+
+            if (Expressions.Count == 1 && Parameters.Count == 0)
+            {
+                var anonymousFunction = this as AnonymousUserFunctionDefinitionExpression;
+                if (anonymousFunction != null && anonymousFunction.CapturedVariables.Any())
+                    return false;
+
+                var returnExpression = Expressions.First() as ReturnExpression;
+                if (returnExpression != null)
+                {
+                    if (!IsResultConstant(returnExpression.Value, scope))
+                        return false;
+
+                    var valueExpression = returnExpression.Value as IValueExpression;
+                    if (valueExpression != null)
+                    {
+                        result = valueExpression.Evaluate(scope);
+                        if (result is ErrorExpression)
+                            return false;
+                    }
+                    else
+                    {
+                        result = returnExpression.Value;
+                    }
+
+                    if (result.IsConstant)
+                    {
+                        result.MakeReadOnly();
+                        _constantResult = result;
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        internal void SetLocalVariables(HashSet<string> localVariables)
+        {
+            _localVariables = localVariables;
         }
     }
 
@@ -1051,7 +1179,7 @@ namespace RATools.Parser.Expressions
         public IEnumerable<VariableReferenceExpression> CapturedVariables { get; private set; }
 
         /// <summary>
-        /// Gets whether this is non-changing.
+        /// Returns <c>true</c> if <see cref="ReplaceVariables" /> could modify the expression.
         /// </summary>
         /// <remarks>
         /// An anonymous function may see variables in the current function scope.

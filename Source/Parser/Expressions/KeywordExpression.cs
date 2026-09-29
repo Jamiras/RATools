@@ -22,12 +22,9 @@ namespace RATools.Parser.Expressions
         public string Keyword { get; private set; }
 
         /// <summary>
-        /// Gets whether this is non-changing.
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
         /// </summary>
-        public override bool IsConstant
-        {
-            get { return true; }
-        }
+        public override bool IsConstant => true;
 
         // NOTE: Not returning true for IsLiteralConstant. While it is unchanging at compile-time,
         //       it won't make it to the output.

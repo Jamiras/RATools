@@ -263,6 +263,20 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
+        /// </summary>
+        public override bool IsConstant
+        {
+            get
+            {
+                if (_state == DictionaryState.Unprocessed)
+                    UpdateState();
+
+                return _state == DictionaryState.ConstantSorted;
+            }
+        }
+
+        /// <summary>
         /// Evaluates an expression
         /// </summary>
         /// <returns><see cref="ErrorExpression"/> indicating the failure, or the result of evaluating the expression.</returns>

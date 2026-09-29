@@ -11,12 +11,9 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Gets whether this is non-changing.
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
         /// </summary>
-        public override bool IsConstant
-        {
-            get { return true; }
-        }
+        public override bool IsConstant => true;
 
         /// <summary>
         /// Evaluates an expression

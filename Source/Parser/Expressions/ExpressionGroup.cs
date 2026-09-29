@@ -16,6 +16,7 @@ namespace RATools.Parser.Expressions
         private ExpressionBase _expression;
         private HashSet<string> _dependencies;
         private HashSet<string> _modifies;
+        private HashSet<string> _mutableVariables;
 
         internal bool NeedsEvaluated { get; private set; }
 
@@ -200,6 +201,25 @@ namespace RATools.Parser.Expressions
             }
         }
 
+        internal IEnumerable<string> MutableVariables
+        {
+            get
+            {
+                if (_mutableVariables != null)
+                    return _mutableVariables;
+
+                return Enumerable.Empty<string>();
+            }
+        }
+
+        internal void AddMutableVariable(string variableName)
+        {
+            if (_mutableVariables == null)
+                _mutableVariables = new HashSet<string>();
+
+            _mutableVariables.Add(variableName);
+        }
+
         public bool IsEmpty
         {
             get { return _expression == null && _expressions == null && _parseErrors == null; }
@@ -355,8 +375,14 @@ namespace RATools.Parser.Expressions
             }
             builder.Append(": ");
 
-            if (_expression != null || _expressions != null)
+            if (_expression != null)
             {
+                _expression.AppendString(builder);
+            }
+            else if (_expressions != null)
+            {
+                builder.AppendFormat("Count = {0}", _expressions.Count);
+
                 foreach (var expression in Expressions)
                 {
                     builder.AppendLine();
@@ -365,6 +391,8 @@ namespace RATools.Parser.Expressions
             }
             else
             {
+                builder.Append("Error");
+
                 foreach (var expression in ParseErrors)
                 {
                     builder.AppendLine();

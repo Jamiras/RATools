@@ -236,12 +236,14 @@ namespace RATools.Parser
             {
                 if (scope._variables != null && scope._variables.ContainsKey(variable.Name))
                 {
+                    variableDefinition.IsMutable = true;
                     scope._variables[variable.Name] = new VariableDefinitionPair(variableDefinition, value);
                     return null;
                 }
 
                 if (scope._variable.Key != null && scope._variable.Key.Name == variable.Name)
                 {
+                    variableDefinition.IsMutable = true;
                     scope._variable = new VariableDefinitionPair(variableDefinition, value);
                     return null;
                 }

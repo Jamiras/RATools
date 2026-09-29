@@ -72,7 +72,7 @@ namespace RATools.Parser.Expressions
         public bool IsLogicalUnit { get; set; }
 
         /// <summary>
-        /// Gets whether this is non-changing.
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
         /// </summary>
         public virtual bool IsConstant
         {

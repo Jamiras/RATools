@@ -17,7 +17,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Name.Name, Is.EqualTo("array_pop"));
             Assert.That(def.Parameters.Count, Is.EqualTo(1));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("array"));
-            Assert.That(def.Parameters.ElementAt(0).IsMutableReference, Is.True);
+            Assert.That(def.Parameters.ElementAt(0).IsMutable, Is.True);
         }
 
         private static ExpressionBase Evaluate(string input, InterpreterScope scope)
