@@ -5,7 +5,6 @@ using RATools.Parser.Functions;
 using RATools.Parser.Internal;
 using RATools.Parser.Tests.Expressions;
 using RATools.Parser.Tests.Expressions.Trigger;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RATools.Parser.Tests.Functions
@@ -102,6 +101,19 @@ namespace RATools.Parser.Tests.Functions
             var achievement = parser.Achievements.First();
             var serialized = achievement.Trigger.Serialize(new SerializationContext());
             Assert.That(serialized, Is.EqualTo("I:0xX001234_K:0xX000008_I:{recall}_0xH000004>5_I:{recall}_0x 000008=0"));
+        }
+
+        [Test]
+        public void TestScriptVariableRightSide()
+        {
+            var parser = AchievementScriptTests.Parse(
+                "inverse = remembered(byte(0x1234) ^ 0xFF)\n" +
+                "achievement(\"t\", \"d\", 5, byte(0x2345) == inverse)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            var serialized = achievement.Trigger.Serialize(new SerializationContext());
+            Assert.That(serialized, Is.EqualTo("K:0xH001234^255_0xH002345={recall}"));
         }
     }
 }
