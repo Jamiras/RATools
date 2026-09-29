@@ -7,7 +7,7 @@ namespace RATools.Parser.Functions
         public ArrayPopFunction()
             : base("array_pop")
         {
-            Parameters.Add(new VariableDefinitionExpression("array") { IsMutableReference = true });
+            Parameters.Add(new VariableDefinitionExpression("array") { IsMutable = true });
         }
 
         public override bool Evaluate(InterpreterScope scope, out ExpressionBase result)

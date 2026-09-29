@@ -59,7 +59,7 @@ namespace RATools.Parser.Expressions
         }
 
         /// <summary>
-        /// Gets whether this is non-changing.
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
         /// </summary>
         public override bool IsConstant
         {
@@ -196,7 +196,21 @@ namespace RATools.Parser.Expressions
 
             var userFunctionDefinition = functionDefinition as UserFunctionDefinitionExpression;
             if (userFunctionDefinition != null)
+            {
                 userFunctionDefinition.UpdateReferenceParameters(scope);
+
+                if (userFunctionDefinition.GetConstantResult(scope, out result))
+                {
+                    var cloneable = result as ICloneableExpression;
+                    if (cloneable != null)
+                    {
+                        result = cloneable.Clone();
+                        CopyLocation(result);
+                    }
+
+                    return true;
+                }
+            }
 
             var functionParametersScope = GetParameters(functionDefinition, scope, out result);
             if (functionParametersScope == null || result is ErrorExpression)
@@ -209,10 +223,10 @@ namespace RATools.Parser.Expressions
             }
 
             _referenceParameters = null;
-            if (functionDefinition.Parameters.Any(p => p.IsMutableReference))
+            if (functionDefinition.Parameters.Any(p => p.IsMutable))
             {
                 var referenceParameters = new HashSet<string>();
-                foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutableReference))
+                foreach (var mutableParameter in functionDefinition.Parameters.Where(p => p.IsMutable))
                 {
                     var value = functionParametersScope.GetVariable(mutableParameter.Name) as VariableReferenceExpression;
                     if (value != null)

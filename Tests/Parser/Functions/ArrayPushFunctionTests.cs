@@ -19,7 +19,7 @@ namespace RATools.Parser.Tests.Functions
             Assert.That(def.Name.Name, Is.EqualTo("array_push"));
             Assert.That(def.Parameters.Count, Is.EqualTo(2));
             Assert.That(def.Parameters.ElementAt(0).Name, Is.EqualTo("array"));
-            Assert.That(def.Parameters.ElementAt(0).IsMutableReference, Is.True);
+            Assert.That(def.Parameters.ElementAt(0).IsMutable, Is.True);
             Assert.That(def.Parameters.ElementAt(1).Name, Is.EqualTo("value"));
         }
 

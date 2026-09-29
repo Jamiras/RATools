@@ -34,10 +34,42 @@ namespace RATools.Parser.Expressions
             var expressionTokenizer = new ExpressionTokenizer(tokenizer, null);
             ParseGroups(expressionTokenizer, _groups, CreateGroup);
 
+            var variables = new Dictionary<string, ExpressionGroup>();
+
             foreach (var group in _groups)
             {
                 group.UpdateMetadata();
                 group.MarkForEvaluation();
+
+                // Identify any global variables (variables). If they're set more than once, mark them as mutable.
+                if (group.Modifies.Any())
+                {
+                    foreach (var assignment in group.Expressions.OfType<AssignmentExpression>())
+                    {
+                        // If the item is already in variables, then it's being set multiple times. Mark it as mutable.
+                        var variable = assignment.Variable as VariableExpression;
+                        if (variable != null)
+                        {
+                            ExpressionGroup originalGroup;
+                            if (variables.TryGetValue(variable.Name, out originalGroup))
+                                originalGroup.AddMutableVariable(variable.Name);
+                            else
+                                variables.Add(variable.Name, group);
+                        }
+                    }
+                }
+            }
+
+            // Also check for any functions modifying global variables. If found, mark them as mutable.
+            foreach (var group in _groups.Where(g => g.Expressions.OfType<UserFunctionDefinitionExpression>().Any()))
+            {
+                // ASSERT: If the group is defining a function, it's not also defining variables.
+                foreach (var modifies in group.Modifies)
+                {
+                    ExpressionGroup originalGroup;
+                    if (variables.TryGetValue(modifies, out originalGroup))
+                        originalGroup.AddMutableVariable(modifies);
+                }
             }
         }
 

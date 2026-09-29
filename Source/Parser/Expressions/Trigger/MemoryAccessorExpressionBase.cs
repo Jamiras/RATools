@@ -21,6 +21,11 @@ namespace RATools.Parser.Expressions.Trigger
         }
 
         /// <summary>
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
+        /// </summary>
+        public override bool IsConstant => true;
+
+        /// <summary>
         /// Gets the lowest and highest values that can be represented by this expression.
         /// </summary>
         public abstract void GetMinMax(out long min, out long max);
