@@ -199,15 +199,25 @@ namespace RATools.Parser.Expressions
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
+            scope.Trace(Condition, (builder) =>
+            {
+                builder.Append("if ");
+
+                Condition.AppendString(builder);
+            });
+
+            var ifScope = new InterpreterScope(scope) { Context = this };
+
             ErrorExpression error;
-            bool? result = Condition.IsTrue(scope, out error);
+            bool? result = Condition.IsTrue(ifScope, out error);
             if (result == null)
             {
                 ExpressionBase value;
-                if (!Condition.ReplaceVariables(scope, out value))
+                if (!Condition.ReplaceVariables(ifScope, out value))
                     return (ErrorExpression)value;
 
-                result = value.IsTrue(scope, out error);
+                result = value.IsTrue(ifScope, out error);
+
                 if (result == null)
                 {
                     if (AchievementScriptInterpreter.ContainsRuntimeLogic(value))
@@ -217,7 +227,7 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+            return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, ifScope);
         }
     }
 }
