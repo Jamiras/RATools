@@ -205,7 +205,7 @@ namespace RATools.ViewModels
             foreach (var node in nodes.OfType<IEditorNavigationViewModel>())
             {
                 var editor = node.Editor;
-                if (editor.ViewerType == item.EditorType && editor.ViewerId == item.EditorId)
+                if (editor != null && editor.ViewerType == item.EditorType && editor.ViewerId == item.EditorId)
                     return editor;
             }
 

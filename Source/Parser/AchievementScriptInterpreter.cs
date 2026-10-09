@@ -288,7 +288,12 @@ namespace RATools.Parser
             Debug.Assert(scope != null);
             var scriptContext = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(scriptContext != null);
-            scriptContext.TraceHandler = TraceHandler;
+
+            if (TraceHandler != null)
+            {
+                scriptContext.TraceHandler = TraceHandler;
+                scope.EnableTracing();
+            }
 
             expressionGroups.ResetErrors();
 

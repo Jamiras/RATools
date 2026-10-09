@@ -218,7 +218,7 @@ namespace RATools.Tests.Regression
 
                 _fileSystemService = this;
                 _quiet = true;
-                _trace = true;
+                _trace = Debugger.IsAttached;
             }
 
             private readonly StringWriter _writer;

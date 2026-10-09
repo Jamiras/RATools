@@ -355,6 +355,7 @@ namespace RATools
             OutputStream.Write(str);
             OutputStream.Write(" | ");
             OutputStream.Write(message);
+            OutputStream.WriteLine();
         }
 }
 
