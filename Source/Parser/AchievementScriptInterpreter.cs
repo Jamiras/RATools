@@ -106,6 +106,11 @@ namespace RATools.Parser
         /// </summary>
         public SerializationContext SerializationContext { get; internal set; }
 
+        /// <summary>
+        /// Gets or sets a function to trace progress through the script.
+        /// </summary>
+        public Action<TextLocation, string> TraceHandler { get; set; }
+
         public static ExpressionGroupCollection CreateExpressionGroupCollection(IEnumerable<AchievementSet> publishedSets)
         {
             var groups = new AssetExpressionGroupCollection();
@@ -283,6 +288,12 @@ namespace RATools.Parser
             Debug.Assert(scope != null);
             var scriptContext = scope.GetContext<AchievementScriptContext>();
             Debug.Assert(scriptContext != null);
+
+            if (TraceHandler != null)
+            {
+                scriptContext.TraceHandler = TraceHandler;
+                scope.EnableTracing();
+            }
 
             expressionGroups.ResetErrors();
 

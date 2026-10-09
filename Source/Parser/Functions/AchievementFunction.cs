@@ -142,6 +142,12 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            scope.Trace(functionCall, (builder) =>
+            {
+                builder.Append("generated ");
+                builder.Append(newAchievement.Trigger.Serialize(context.SerializationContext));
+            });
+
             return true;
         }
     }
