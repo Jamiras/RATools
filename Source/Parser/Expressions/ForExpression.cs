@@ -177,7 +177,7 @@ namespace RATools.Parser.Expressions
                 });
 
                 var loopScope = new InterpreterScope(scope);
-                loopScope.Context = this;
+                loopScope.IncreaseTraceDepth();
                 loopScope.DefineVariable(iterator, key);
 
                 var error = AchievementScriptInterpreter.Execute(Expressions, loopScope);

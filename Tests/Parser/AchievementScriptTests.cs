@@ -1,6 +1,7 @@
 ﻿using Jamiras.Components;
 using NUnit.Framework;
 using RATools.Parser.Expressions;
+using System.Diagnostics;
 
 namespace RATools.Parser.Tests
 {
@@ -56,7 +57,11 @@ namespace RATools.Parser.Tests
         public static InterpreterScope Evaluate(string script, string expectedError = null)
         {
             var scope = new InterpreterScope(AchievementScriptInterpreter.GetGlobalScope());
-            scope.Context = new AchievementScriptContext();
+            scope.Context = new AchievementScriptContext() { TraceHandler = (TextLocation location, string message) => {
+                Debug.WriteLine(message);
+            } };
+            scope.EnableTracing();
+
             return Evaluate(script, scope, expectedError);
         }
 

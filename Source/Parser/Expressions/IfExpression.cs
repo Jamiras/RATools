@@ -199,27 +199,35 @@ namespace RATools.Parser.Expressions
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
-            scope.Trace(Condition, (builder) =>
+            if (scope.IsTracing)
             {
-                builder.Append("if ");
+                scope.Trace(Condition, (builder) =>
+                {
+                    builder.Append("if ");
 
-                Condition.AppendString(builder);
-            });
+                    Condition.AppendString(builder);
+                });
 
-            var ifScope = new InterpreterScope(scope) { Context = this };
+                scope.IncreaseTraceDepth();
+            }
 
             ErrorExpression error;
-            bool? result = Condition.IsTrue(ifScope, out error);
+            bool? result = Condition.IsTrue(scope, out error);
             if (result == null)
             {
                 ExpressionBase value;
-                if (!Condition.ReplaceVariables(ifScope, out value))
+                if (!Condition.ReplaceVariables(scope, out value))
+                {
+                    scope.DecreaseTraceDepth();
                     return (ErrorExpression)value;
+                }
 
-                result = value.IsTrue(ifScope, out error);
+                result = value.IsTrue(scope, out error);
 
                 if (result == null)
                 {
+                    scope.DecreaseTraceDepth();
+
                     if (AchievementScriptInterpreter.ContainsRuntimeLogic(value))
                         return new ErrorExpression("Comparison contains runtime logic.", Condition);
 
@@ -227,7 +235,11 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, ifScope);
+            error = AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+
+            scope.DecreaseTraceDepth();
+
+            return error;
         }
     }
 }

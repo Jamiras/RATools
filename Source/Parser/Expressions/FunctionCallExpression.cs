@@ -202,11 +202,28 @@ namespace RATools.Parser.Expressions
 
                 if (userFunctionDefinition.GetConstantResult(scope, out result))
                 {
+                    scope.Trace(this, (builder) =>
+                    {
+                        TraceFunctionCall(builder, functionDefinition, scope);
+                    });
+
                     var cloneable = result as ICloneableExpression;
                     if (cloneable != null)
                     {
                         result = cloneable.Clone();
                         CopyLocation(result);
+                    }
+
+                    if (scope.IsTracing)
+                    {
+                        var resultRef = result;
+                        scope.IncreaseTraceDepth();
+                        scope.Trace(this, (builder) =>
+                        {
+                            builder.Append("return ");
+                            resultRef.AppendString(builder);
+                        });
+                        scope.DecreaseTraceDepth();
                     }
 
                     return true;
@@ -251,9 +268,12 @@ namespace RATools.Parser.Expressions
 
                 TraceFunctionCall(builder, functionDefinition, functionParametersScope);
                 traceReturn = true;
+
+                functionParametersScope.IncreaseTraceDepth();
             });
 
             functionParametersScope.Context = this;
+
             if (isInvoking)
                 functionDefinition.Invoke(functionParametersScope, out result);
             else

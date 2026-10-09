@@ -21,7 +21,7 @@ namespace RATools.Parser
             : this()
         {
             _parent = parent;
-            _isTracing = parent._isTracing;
+            _traceDepth = parent._traceDepth;
             Depth = parent.Depth + 1;
         }
 
@@ -29,7 +29,7 @@ namespace RATools.Parser
         private Dictionary<string, VariableDefinitionPair> _variables;
         private VariableDefinitionPair _variable;
         private readonly InterpreterScope _parent;
-        private bool _isTracing = false;
+        private int _traceDepth = 0;
 
         internal int VariableCount
         {
@@ -489,38 +489,34 @@ namespace RATools.Parser
 
         internal void EnableTracing()
         {
-            _isTracing = true;
+            _traceDepth = 1;
         }
+
+        internal void IncreaseTraceDepth()
+        {
+            if (IsTracing)
+                _traceDepth++;
+        }
+
+        internal void DecreaseTraceDepth()
+        {
+            if (IsTracing)
+                _traceDepth--;
+        }
+
+        internal bool IsTracing { get { return _traceDepth > 0; } }
 
         internal void Trace(ExpressionBase expression, Action<StringBuilder> buildMessage)
         {
-            if (!_isTracing)
+            if (!IsTracing)
                 return;
 
-            AchievementScriptContext scriptContext = null;
-            var functionDepth = 0;
-            var scope = this;
-            do
-            {
-                if (scope.Context is FunctionCallExpression || scope.Context is ForExpression || scope.Context is IfExpression)
-                {
-                    functionDepth++;
-                }
-                else
-                {
-                    scriptContext = scope.Context as AchievementScriptContext;
-                    if (scriptContext != null)
-                        break;
-                }
-
-                scope = scope._parent;
-            } while (scope != null);
-
+            var scriptContext = GetContext<AchievementScriptContext>();
             if (scriptContext != null && scriptContext.TraceHandler != null)
             {
                 var builder = new StringBuilder();
-                if (functionDepth > 0)
-                    builder.Append(' ', functionDepth);
+                if (_traceDepth > 1)
+                    builder.Append(' ', _traceDepth - 1);
 
                 int len = builder.Length;
                 buildMessage(builder);

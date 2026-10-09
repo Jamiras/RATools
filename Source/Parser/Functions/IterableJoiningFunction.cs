@@ -47,7 +47,7 @@ namespace RATools.Parser.Functions
             var functionCall = scope.GetContext<FunctionCallExpression>();
 
             var iteratorScope = predicate.CreateCaptureScope(scope);
-            iteratorScope.Context = new FunctionCallExpression(predicate.Name.Name, System.Array.Empty<ExpressionBase>());
+            iteratorScope.IncreaseTraceDepth();
 
             var predicateParameter = new VariableExpression(predicate.Parameters.First().Name);
             foreach (var kvp in predicate.DefaultParameters)
