@@ -21,6 +21,7 @@ namespace RATools.Parser
             : this()
         {
             _parent = parent;
+            _isTracing = parent._isTracing;
             Depth = parent.Depth + 1;
         }
 
@@ -28,6 +29,7 @@ namespace RATools.Parser
         private Dictionary<string, VariableDefinitionPair> _variables;
         private VariableDefinitionPair _variable;
         private readonly InterpreterScope _parent;
+        private bool _isTracing = false;
 
         internal int VariableCount
         {
@@ -485,14 +487,22 @@ namespace RATools.Parser
 
         internal int Depth { get; private set; }
 
+        internal void EnableTracing()
+        {
+            _isTracing = true;
+        }
+
         internal void Trace(ExpressionBase expression, Action<StringBuilder> buildMessage)
         {
+            if (!_isTracing)
+                return;
+
             AchievementScriptContext scriptContext = null;
             var functionDepth = 0;
             var scope = this;
             do
             {
-                if (scope.Context is FunctionCallExpression)
+                if (scope.Context is FunctionCallExpression || scope.Context is ForExpression || scope.Context is IfExpression)
                 {
                     functionDepth++;
                 }

@@ -168,7 +168,16 @@ namespace RATools.Parser.Expressions
                 if (!entry.ReplaceVariables(iteratorScope, out key))
                     return (ErrorExpression)key;
 
+                scope.Trace(this, (builder) =>
+                {
+                    builder.Append("for ");
+                    IteratorName.AppendString(builder);
+                    builder.Append(" = ");
+                    key.AppendString(builder);
+                });
+
                 var loopScope = new InterpreterScope(scope);
+                loopScope.Context = this;
                 loopScope.DefineVariable(iterator, key);
 
                 var error = AchievementScriptInterpreter.Execute(Expressions, loopScope);
