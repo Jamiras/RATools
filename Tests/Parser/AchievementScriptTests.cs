@@ -12,6 +12,10 @@ namespace RATools.Parser.Tests
             var tokenizer = Tokenizer.CreateTokenizer(input);
             var parser = new AchievementScriptInterpreter();
 
+            parser.TraceHandler = (TextLocation location, string message) => {
+                Debug.WriteLine(message);
+            };
+
             if (expectedSuccess)
             {
                 if (!parser.Run(tokenizer))
