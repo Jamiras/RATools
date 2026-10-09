@@ -306,6 +306,9 @@ namespace RATools.Parser
                     if (scriptContext.RichPresence == null)
                         scriptContext.RichPresence = new RichPresenceBuilder();
 
+                    foreach (var modifies in expressionGroup.MutableVariables)
+                        scope.DefineVariable(new VariableDefinitionExpression(modifies) { IsMutable = true }, null);
+
                     var error = Execute(expressionGroup.Expressions, scope, callback);
                     if (error != null)
                     {

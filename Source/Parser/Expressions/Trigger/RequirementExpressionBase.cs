@@ -13,6 +13,11 @@ namespace RATools.Parser.Expressions.Trigger
         {
         }
 
+        /// <summary>
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
+        /// </summary>
+        public override bool IsConstant => true;
+
         ErrorExpression ITriggerExpression.BuildTrigger(TriggerBuilderContext context)
         {
             var optimized = Optimize(context);

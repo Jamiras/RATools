@@ -43,7 +43,10 @@ namespace RATools.Parser.Expressions
             return _functions.FirstOrDefault(f => f.Name.Name == functionName);
         }
 
-        public override bool IsConstant { get { return true; } }
+        /// <summary>
+        /// Returns <c>false</c> if <see cref="ReplaceVariables" /> could modify the expression.
+        /// </summary>
+        public override bool IsConstant => true;
 
         /// <summary>
         /// Returns a <see cref="string" /> that represents this instance.

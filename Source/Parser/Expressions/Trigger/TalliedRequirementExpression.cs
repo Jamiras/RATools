@@ -22,6 +22,8 @@ namespace RATools.Parser.Expressions.Trigger
 
             if (source._conditions != null)
                 _conditions = new List<RequirementExpressionBase>(source._conditions);
+
+            ResetCondition = source.ResetCondition;
         }
 
         public uint HitTarget { get; set; }
