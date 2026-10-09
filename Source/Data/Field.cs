@@ -25,6 +25,7 @@ namespace RATools.Data
         /// <remarks>
         /// For <see cref="FieldType.MemoryAddress"/> or <see cref="FieldType.PreviousValue"/> fields, this is the memory address.
         /// For <see cref="FieldType.Value"/> fields, this is a raw value.
+        /// For <see cref="FieldType.Recall"/> fields, this is the index of the Remember being referenced.
         /// </remarks>
         public uint Value { get; set; }
 
@@ -136,7 +137,13 @@ namespace RATools.Data
                     break;
 
                 case FieldType.Recall:
-                    builder.Append("{recall}");
+                    builder.Append("{recall} (@");
+                    // Value stores the 1-based index of the Remembered condition.
+                    // Display the 0-based index as the expanded list will index starting at 0.
+                    // Also note, that the index is not updated if conditions get rearranged.
+                    // This just represents a unique identifier for which value is Remembered to prevent equality when everything but the target Remember is the same.
+                    builder.Append((int)Value - 1);
+                    builder.Append(')');
                     break;
 
                 case FieldType.None:
@@ -569,6 +576,9 @@ namespace RATools.Data
 
                 case FieldType.Float:
                     return (that.Float == Float);
+
+                case FieldType.Recall: // Recall uses the Value field to indicates which Remember is being recalled
+                    return (that.Value == Value);
 
                 default:
                     return (that.Value == Value && that.Size == Size);
