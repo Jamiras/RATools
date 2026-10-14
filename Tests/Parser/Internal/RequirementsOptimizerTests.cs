@@ -584,7 +584,7 @@ namespace RATools.Parser.Tests.Internal
                 ")");
             achievement.Optimize();
             Assert.That(achievement.SerializeRequirements(new SerializationContext()),
-                Is.EqualTo("R:0xH001234=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_R:0!=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_M:0=1.3."));
+                Is.EqualTo("R:0xH001234=1_N:0xH002345=2_A:0xH001111_K:0xH002222_A:{recall}%2_R:0!=1_N:0xH002345=2_A:{recall}%2_M:0=1.3."));
         }
 
         [Test]

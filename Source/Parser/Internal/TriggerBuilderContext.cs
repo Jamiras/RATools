@@ -37,7 +37,25 @@ namespace RATools.Parser.Internal
         /// <summary>
         /// Gets the last Remembered expression.
         /// </summary>
-        public MemoryValueExpression RememberedValue { get; internal set; }
+        public MemoryValueExpression RememberedValue
+        {
+            get { return _rememberedValue; }
+            internal set
+            {
+                if (!ReferenceEquals(_rememberedValue, value))
+                {
+                    _rememberedValue = value;
+                    RememberedIndex = (uint)Trigger.Count;
+                }
+            }
+        }
+        [DebuggerBrowsable(DebuggerBrowsableState.Never)]
+        private MemoryValueExpression _rememberedValue;
+
+        /// <summary>
+        /// Gets the number of things that have been Remembered.
+        /// </summary>
+        public uint RememberedIndex { get; private set; }
 
         /// <summary>
         /// If set to <c>false</c>, the comparison target is important and should not

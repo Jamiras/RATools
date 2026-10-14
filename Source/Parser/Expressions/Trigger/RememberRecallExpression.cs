@@ -112,7 +112,13 @@ namespace RATools.Parser.Expressions.Trigger
                 return error;
 
             // This outputs the {recall}
-            return base.BuildTrigger(context);
+            error = base.BuildTrigger(context);
+            if (error != null)
+                return error;
+
+            // update the "value" of the Recall so comparisons can detect when only the thing being recalled has changed.
+            context.LastRequirement.Left = new Field { Type = FieldType.Recall, Size = FieldSize.DWord, Value = context.RememberedIndex };
+            return null;
         }
 
         public ErrorExpression AppendRemember(TriggerBuilderContext context)

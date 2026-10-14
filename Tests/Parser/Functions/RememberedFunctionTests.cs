@@ -115,5 +115,52 @@ namespace RATools.Parser.Tests.Functions
             var serialized = achievement.Trigger.Serialize(new SerializationContext());
             Assert.That(serialized, Is.EqualTo("K:0xH001234^255_0xH002345={recall}"));
         }
+
+        [Test]
+        public void TestChaining()
+        {
+            var parser = AchievementScriptTests.Parse(
+                "root = dword(0x1234)" +
+                "next = remembered(dword(root + 6))" +
+                "third = remembered(dword(next + 6))" +
+                "fourth = remembered(dword(third + 6))" +
+                "achievement(\"t\", \"d\", 5, dword(root + 2) == 1 && dword(next + 2) == 1 && dword(third + 2) == 1 && dword(fourth + 2) == 1)");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            var serialized = achievement.Trigger.Serialize(new SerializationContext());
+            Assert.That(serialized, Is.EqualTo(
+                "I:0xX001234_0xX000002=1_" +                        // dword(root + 2) == 1
+                "I:0xX001234_K:0xX000006_I:{recall}_0xX000002=1_" + // dword(next + 2) == 1
+                "I:{recall}_K:0xX000006_I:{recall}_0xX000002=1_" +  // dword(third + 2) == 1
+                "I:{recall}_K:0xX000006_I:{recall}_0xX000002=1"     // dword(fourth + 2) == 1
+            ));
+        }
+
+        [Test]
+        public void TestChainingTally()
+        {
+            var parser = AchievementScriptTests.Parse(
+                "root = dword(0x1234)" +
+                "next = remembered(dword(root + 6))" +
+                "third = remembered(dword(next + 6))" +
+                "fourth = remembered(dword(third + 6))" +
+                "achievement(\"t\", \"d\", 5, tally(2, " +
+                    "word(root + 2) == 1 && word(root + 4) == 1, " +
+                    "word(next + 2) == 1 && word(next + 4) == 1, " +
+                    "word(third + 2) == 1 && word(third + 4) == 1, " +
+                    "word(fourth + 2) == 1 && word(fourth + 4) == 1)" +
+                ")");
+            Assert.That(parser.Achievements.Count(), Is.EqualTo(1));
+
+            var achievement = parser.Achievements.First();
+            var serialized = achievement.Trigger.Serialize(new SerializationContext());
+            Assert.That(serialized, Is.EqualTo(
+                "I:0xX001234_N:0x 000002=1_I:0xX001234_C:0x 000004=1_" +                       // word(root + 2) == 1 && word(root + 4) == 1
+                "I:0xX001234_K:0xX000006_I:{recall}_N:0x 000002=1_I:{recall}_C:0x 000004=1_" + // word(next + 2) == 1 && word(next + 4) == 1
+                "I:{recall}_K:0xX000006_I:{recall}_N:0x 000002=1_I:{recall}_C:0x 000004=1_" +  // word(third + 2) == 1 && word(third + 4) == 1
+                "I:{recall}_K:0xX000006_I:{recall}_N:0x 000002=1_I:{recall}_0x 000004=1.2."    // word(fourth + 2) == 1 && word(fourth + 4) == 1
+            ));
+        }
     }
 }

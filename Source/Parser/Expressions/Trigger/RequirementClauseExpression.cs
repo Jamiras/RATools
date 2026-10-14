@@ -708,7 +708,12 @@ namespace RATools.Parser.Expressions.Trigger
             if (_conditions == null)
                 return null;
 
-            var achievementContext = new AchievementBuilderContext() { MinimumVersion = subclauseContext.MinimumVersion };
+            var achievementContext = new AchievementBuilderContext()
+            {
+                MinimumVersion = subclauseContext.MinimumVersion,
+                RememberedValue = subclauseContext.RememberedValue,
+            };
+
             ErrorExpression error;
 
             if (Operation == ConditionalOperation.Or && NeedAltsForOr(_conditions))
@@ -809,7 +814,20 @@ namespace RATools.Parser.Expressions.Trigger
                 return new ErrorExpression("Combination of &&s and ||s is too complex for subclause", this);
 
             foreach (var requirement in achievementContext.Achievement.CoreRequirements)
+            {
                 subclauseContext.Trigger.Add(requirement);
+
+                if (requirement.Type == RequirementType.Remember)
+                {
+                    subclauseContext.RememberedValue = null; // force update the RememberedIndex
+                    subclauseContext.RememberedValue = achievementContext.RememberedValue;
+                }
+
+                if (requirement.Left.Type == FieldType.Recall)
+                    requirement.Left = new Field { Type = FieldType.Recall, Size = FieldSize.DWord, Value = subclauseContext.RememberedIndex };
+                if (requirement.Right.Type == FieldType.Recall)
+                    requirement.Right = new Field { Type = FieldType.Recall, Size = FieldSize.DWord, Value = subclauseContext.RememberedIndex };
+            }
 
             return null;
         }
