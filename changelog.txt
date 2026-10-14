@@ -1,3 +1,13 @@
+v1.17.4 - 14 Oct 2026
+* add selector to Game Badges dialog to allow collaging of badges at full size
+* add -t flag to rascript-cli to trace script processing
+* disable Update Local for asset where generation failed
+* optimize x/x==0 into x=0 and x/x==1 into x!=0
+* fix remember clause being lost when remembered() used on right side of comparison
+* fix remembered value not being reused across subclauses
+* fix exception processing code note that looks like an unbounded range
+* fix exception when trying to move constant out of remember
+
 v1.17.3 - 30 Jun 2026
 * don't promote remember to core without all associated recalls
 * include local notes in New Script dialog
