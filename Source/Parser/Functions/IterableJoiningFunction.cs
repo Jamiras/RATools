@@ -44,7 +44,10 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            var functionCall = scope.GetContext<FunctionCallExpression>();
+
             var iteratorScope = predicate.CreateCaptureScope(scope);
+            iteratorScope.IncreaseTraceDepth();
 
             var predicateParameter = new VariableExpression(predicate.Parameters.First().Name);
             foreach (var kvp in predicate.DefaultParameters)
@@ -58,6 +61,18 @@ namespace RATools.Parser.Functions
 
                 iteratorScope.AssignVariable(predicateParameter, result);
 
+                var resultRef = result;
+                scope.Trace(predicate, (builder) =>
+                {
+                    builder.Append("call ");
+                    if (predicate.Name != null)
+                        predicate.Name.AppendString(builder);
+
+                    builder.Append('(');
+                    resultRef.AppendString(builder);
+                    builder.Append(')');
+                });
+
                 if (!predicate.Evaluate(iteratorScope, out result))
                     return false;
 
@@ -66,6 +81,13 @@ namespace RATools.Parser.Functions
                     result = new ErrorExpression("predicate did not return a value", predicate);
                     return false;
                 }
+
+                resultRef = result;
+                iteratorScope.Trace(functionCall, (builder) =>
+                {
+                    builder.Append("return ");
+                    resultRef.AppendString(builder);
+                });
 
                 expression = Combine(expression, result, predicateParameter.GetValue(iteratorScope));
                 if (expression.Type == ExpressionType.Error)
@@ -81,6 +103,7 @@ namespace RATools.Parser.Functions
                 result = GenerateEmptyResult();
 
             result.IsLogicalUnit = true;
+            functionCall.CopyLocation(result);
             return true;
         }
 

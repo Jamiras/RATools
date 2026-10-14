@@ -1,7 +1,9 @@
-﻿using Jamiras.Services;
+﻿using Jamiras.Components;
+using Jamiras.Services;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 
 // $ for file in *; do mv "${file}" "${file/.updated/}"; done
@@ -216,6 +218,7 @@ namespace RATools.Tests.Regression
 
                 _fileSystemService = this;
                 _quiet = true;
+                _trace = Debugger.IsAttached;
             }
 
             private readonly StringWriter _writer;
@@ -246,6 +249,15 @@ namespace RATools.Tests.Regression
                 }
 
                 private readonly StringWriter _writer;
+            }
+
+            protected override void TraceHandler(TextLocation location, string message)
+            {
+                var str = location.ToString();
+                if (str.Length < 8)
+                    str = new string(' ', 8 - str.Length) + str;
+
+                Debug.WriteLine(str + " | " + message);
             }
 
             public string GenerateContents()

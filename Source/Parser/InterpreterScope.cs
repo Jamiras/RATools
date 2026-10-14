@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace RATools.Parser
 {
@@ -20,6 +21,7 @@ namespace RATools.Parser
             : this()
         {
             _parent = parent;
+            _traceDepth = parent._traceDepth;
             Depth = parent.Depth + 1;
         }
 
@@ -27,6 +29,7 @@ namespace RATools.Parser
         private Dictionary<string, VariableDefinitionPair> _variables;
         private VariableDefinitionPair _variable;
         private readonly InterpreterScope _parent;
+        private int _traceDepth = 0;
 
         internal int VariableCount
         {
@@ -483,5 +486,44 @@ namespace RATools.Parser
         }
 
         internal int Depth { get; private set; }
+
+        internal void EnableTracing()
+        {
+            _traceDepth = 1;
+        }
+
+        internal void IncreaseTraceDepth()
+        {
+            if (IsTracing)
+                _traceDepth++;
+        }
+
+        internal void DecreaseTraceDepth()
+        {
+            if (IsTracing)
+                _traceDepth--;
+        }
+
+        internal bool IsTracing { get { return _traceDepth > 0; } }
+
+        internal void Trace(ExpressionBase expression, Action<StringBuilder> buildMessage)
+        {
+            if (!IsTracing)
+                return;
+
+            var scriptContext = GetContext<AchievementScriptContext>();
+            if (scriptContext != null && scriptContext.TraceHandler != null)
+            {
+                var builder = new StringBuilder();
+                if (_traceDepth > 1)
+                    builder.Append(' ', _traceDepth - 1);
+
+                int len = builder.Length;
+                buildMessage(builder);
+
+                if (builder.Length > len)
+                    scriptContext.TraceHandler(expression.Location.Start, builder.ToString());
+            }
+        }
     }
 }

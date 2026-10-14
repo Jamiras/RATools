@@ -11,22 +11,22 @@
         None = 0,
 
         /// <summary>
-        /// Resets any HitCounts in the current requirement group if true.
+        /// Resets any HitCounts in the current trigger if true.
         /// </summary>
         ResetIf,
 
         /// <summary>
-        /// Pauses processing of the achievement if true.
+        /// Pauses processing of the current requirement group if true.
         /// </summary>
         PauseIf,
 
         /// <summary>
-        /// Adds the Left part of the requirement to the Left part of the next requirement.
+        /// Calculates a value and adds it to the next requirement.
         /// </summary>
         AddSource,
 
         /// <summary>
-        /// Subtracts the Left part of the next requirement from the Left part of the requirement.
+        /// Calculates a value and subtracts it from the next requirement.
         /// </summary>
         SubSource,
 
@@ -61,12 +61,12 @@
         MeasuredIf,
 
         /// <summary>
-        /// Adds the Left part of the requirement to the addresses in the next requirement.
+        /// Calculates a value to offset the operands of the next requirement by.
         /// </summary>
         AddAddress,
 
         /// <summary>
-        /// Resets any HitCounts on the next requirement group if true.
+        /// Resets any HitCounts on the next requirement chain if true.
         /// </summary>
         ResetNextIf,
 
@@ -81,7 +81,7 @@
         MeasuredPercent,
 
         /// <summary>
-        /// Meta-flag to capture the accumulator for further modification.
+        /// Calculates a value and captures it for later use.
         /// </summary>
         Remember,
     }

@@ -56,6 +56,12 @@ namespace RATools.Parser.Functions
             if (functionCall != null && functionCall.FunctionName.Name == this.Name.Name)
                 context.RichPresence.Line = functionCall.Location.Start.Line;
 
+            scope.Trace(functionCall, (builder) =>
+            {
+                builder.Append("generated ");
+                builder.Append(richPresenceContext.DisplayString);
+            });
+
             return true;
         }
     }

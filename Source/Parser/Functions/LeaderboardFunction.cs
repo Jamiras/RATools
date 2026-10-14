@@ -135,6 +135,19 @@ namespace RATools.Parser.Functions
                 return false;
             }
 
+            scope.Trace(functionCall, (builder) =>
+            {
+                builder.Append("generated ");
+                builder.Append("STA:");
+                builder.Append(leaderboard.Start.Serialize(context.SerializationContext));
+                builder.Append("::CAN:");
+                builder.Append(leaderboard.Cancel.Serialize(context.SerializationContext));
+                builder.Append("::SUB:");
+                builder.Append(leaderboard.Submit.Serialize(context.SerializationContext));
+                builder.Append("::VAL:");
+                builder.Append(leaderboard.Value.Serialize(context.SerializationContext));
+            });
+
             return true;
         }
 

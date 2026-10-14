@@ -36,6 +36,7 @@ namespace RATools
         protected string _inputFileName = "";
         protected bool _verbose = false;
         protected bool _quiet = false;
+        protected bool _trace = false;
 
         public void Usage()
         {
@@ -45,9 +46,10 @@ namespace RATools
 
             OutputStream.WriteLine("rascript-cli " + version);
             OutputStream.WriteLine("========================");
-            OutputStream.WriteLine("Usage: rascript-cli [-v] [-q] [-i script] [-o outdir] [-a author]");
+            OutputStream.WriteLine("Usage: rascript-cli [-v] [-t] [-q] [-i script] [-o outdir] [-a author]");
             OutputStream.WriteLine();
             OutputStream.WriteLine("  -v            (optional) enable verbose messages");
+            OutputStream.WriteLine("  -t            (optional) enable trace messages");
             OutputStream.WriteLine("  -q            (optional) disable all messages");
             OutputStream.WriteLine("  -i script     specifies the input file to process");
             OutputStream.WriteLine("  -o outdir     (optional) specifies the output directory to write to [default: current directory]");
@@ -66,18 +68,22 @@ namespace RATools
             if (args.Any(a => a == "-v"))
                 _verbose = true;
 
+            if (args.Any(a => a == "-t"))
+                _trace = true;
+
             if (args.Any(a => a == "-q"))
             {
                 _verbose = false;
+                _trace = false;
                 _quiet = true;
             }
 
             int i = 0;
             while (i < args.Length)
             {
-                if (args[i] == "-v" || args[i] == "-q")
+                if (args[i] == "-v" || args[i] == "-q" || args[i] == "-t")
                 {
-                    // verbose and quiet handled above
+                    // handled above
                 }
                 else if (args[i] == "-i")
                 {
@@ -203,6 +209,9 @@ namespace RATools
 
             // ===== load and parse the script =====
             var interpreter = new AchievementScriptInterpreter();
+            if (_trace)
+                interpreter.TraceHandler = TraceHandler;
+
             var tokenizer = new PositionalTokenizer(Tokenizer.CreateTokenizer(InputFile));
             var groups = interpreter.Parse(tokenizer);
 
@@ -335,7 +344,19 @@ namespace RATools
 
             return ReturnCode.Success;
         }
-    }
+
+        protected virtual void TraceHandler(TextLocation location, string message)
+        {
+            var str = location.ToString();
+            if (str.Length < 8)
+                str = new string(' ', 8 - str.Length) + str;
+
+            OutputStream.Write(str);
+            OutputStream.Write(" | ");
+            OutputStream.Write(message);
+            OutputStream.WriteLine();
+        }
+}
 
     public enum ReturnCode
     {

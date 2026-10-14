@@ -317,10 +317,37 @@ namespace RATools.Parser.Expressions
             if (error != null)
                 return null;
 
+            var result = Compare(left, right, Operation, out error);
+
+            scope.Trace(this, (builder) =>
+            {
+                builder.Append("compare ");
+                left.AppendString(builder);
+                builder.Append(' ');
+                builder.Append(GetOperatorString(Operation));
+                builder.Append(' ');
+                right.AppendString(builder);
+                builder.Append(" => ");
+
+                if (result == true)
+                    builder.Append("true");
+                else if (result == false)
+                    builder.Append("false");
+                else
+                    builder.Append("????");
+            });
+
+            return result;
+        }
+
+        private bool? Compare(ExpressionBase left, ExpressionBase right, ComparisonOperation operation, out ErrorExpression error)
+        {
+            error = null;
+
             var normalizeComparison = left as IComparisonNormalizeExpression;
             if (normalizeComparison != null)
             {
-                var result = normalizeComparison.NormalizeComparison(right, Operation, true);
+                var result = normalizeComparison.NormalizeComparison(right, operation, true);
                 var boolResult = result as BooleanConstantExpression;
                 if (boolResult != null)
                     return boolResult.Value;
@@ -334,7 +361,7 @@ namespace RATools.Parser.Expressions
             // a boolean expression. if both sides have the same type, do a strict equality comparison
             if (left.Type == right.Type)
             {
-                switch (Operation)
+                switch (operation)
                 {
                     case ComparisonOperation.Equal:
                         return (left == right);
@@ -350,7 +377,7 @@ namespace RATools.Parser.Expressions
 
             // different types are always not equal to each other, even if they could be coerced.
             // allow a direct equality/inequality check, but error if a relative comparison is being attemped.
-            switch (Operation)
+            switch (operation)
             {
                 case ComparisonOperation.Equal:
                     return false;

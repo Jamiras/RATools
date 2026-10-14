@@ -199,17 +199,35 @@ namespace RATools.Parser.Expressions
 
         public ErrorExpression Execute(InterpreterScope scope)
         {
+            if (scope.IsTracing)
+            {
+                scope.Trace(Condition, (builder) =>
+                {
+                    builder.Append("if ");
+
+                    Condition.AppendString(builder);
+                });
+
+                scope.IncreaseTraceDepth();
+            }
+
             ErrorExpression error;
             bool? result = Condition.IsTrue(scope, out error);
             if (result == null)
             {
                 ExpressionBase value;
                 if (!Condition.ReplaceVariables(scope, out value))
+                {
+                    scope.DecreaseTraceDepth();
                     return (ErrorExpression)value;
+                }
 
                 result = value.IsTrue(scope, out error);
+
                 if (result == null)
                 {
+                    scope.DecreaseTraceDepth();
+
                     if (AchievementScriptInterpreter.ContainsRuntimeLogic(value))
                         return new ErrorExpression("Comparison contains runtime logic.", Condition);
 
@@ -217,7 +235,11 @@ namespace RATools.Parser.Expressions
                 }
             }
 
-            return AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+            error = AchievementScriptInterpreter.Execute(result.GetValueOrDefault() ? Expressions : ElseExpressions, scope);
+
+            scope.DecreaseTraceDepth();
+
+            return error;
         }
     }
 }

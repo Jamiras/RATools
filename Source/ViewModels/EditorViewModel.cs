@@ -1,4 +1,7 @@
-﻿using Jamiras.Commands;
+﻿// uncomment this to enable tracing while debugging the editor
+// #define ENABLE_TRACING
+
+using Jamiras.Commands;
 using Jamiras.Components;
 using Jamiras.DataModels;
 using Jamiras.Services;
@@ -169,6 +172,10 @@ namespace RATools.ViewModels
                         var callback = new ScriptInterpreterCallback(this, e);
                         var interpreter = new AchievementScriptInterpreter();
 
+#if ENABLE_TRACING
+                        interpreter.TraceHandler = TraceHandler;
+#endif
+
                         bool hadErrors, hasErrors;
                         lock (_parsedContent)
                         {
@@ -202,6 +209,17 @@ namespace RATools.ViewModels
 
             base.OnUpdateSyntax(e);
         }
+
+#if ENABLE_TRACING
+        private static void TraceHandler(TextLocation location, string message)
+        {
+            var str = location.ToString();
+            if (str.Length < 8)
+                str = new string(' ', 8 - str.Length) + str;
+
+            System.Diagnostics.Debug.WriteLine(str + " | " + message);
+        }
+#endif
 
         internal void UpdateProgress(int progress, int line)
         {
